@@ -1,6 +1,9 @@
 // 仓库类别
 export type WarehouseCategory = 'raw_material' | 'finished_product' | 'exhibition' | 'general' | 'consumable' | 'fixed_asset';
 
+// 仓库属性
+export type WarehouseProperty = 'physical' | 'virtual';
+
 // 仓库
 export interface Warehouse {
   id: string;
@@ -9,6 +12,8 @@ export interface Warehouse {
   name: string;
   category: WarehouseCategory; // 仓库类别
   categoryName?: string; // 类别名称（用于显示）
+  property: WarehouseProperty; // 仓库属性
+  propertyName?: string; // 属性名称（用于显示）
   address: string;
   manager: string; // 管理人员
   contactPhone?: string; // 联系电话

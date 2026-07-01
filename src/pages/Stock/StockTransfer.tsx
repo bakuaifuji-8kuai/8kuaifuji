@@ -238,6 +238,18 @@ export default function StockTransferPage() {
       alert('调出仓库和调入仓库不能相同');
       return;
     }
+    // 校验仓库属性：实物仓和虚拟仓之间只能同仓库类别调拨
+    const fromWarehouse = warehouses.find((w) => w.id === editItem.fromWarehouseId);
+    const toWarehouse = warehouses.find((w) => w.id === editItem.toWarehouseId);
+    if (fromWarehouse && toWarehouse) {
+      // 如果属性不同，必须是同一仓库类别
+      if (fromWarehouse.property !== toWarehouse.property) {
+        if (fromWarehouse.category !== toWarehouse.category) {
+          alert(`仓库 "${fromWarehouse.name}"（${fromWarehouse.propertyName}）和仓库 "${toWarehouse.name}"（${toWarehouse.propertyName}）之间的调拨必须是相同仓库类别。\n当前调出仓库类别：${fromWarehouse.categoryName}，调入仓库类别：${toWarehouse.categoryName}`);
+          return;
+        }
+      }
+    }
     if (!editItem.details.length) {
       alert('请添加至少一个产品');
       return;
