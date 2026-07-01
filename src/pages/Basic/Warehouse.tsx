@@ -4,7 +4,7 @@ import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
-import type { Warehouse, WarehouseCategory } from '@/types';
+import type { Warehouse, WarehouseCategory, WarehouseProperty } from '@/types';
 
 const warehouseCategoryOptions: { value: WarehouseCategory; label: string }[] = [
   { value: 'general', label: '综合仓' },
@@ -13,6 +13,11 @@ const warehouseCategoryOptions: { value: WarehouseCategory; label: string }[] = 
   { value: 'exhibition', label: '会展仓' },
   { value: 'consumable', label: '低值易耗仓' },
   { value: 'fixed_asset', label: '固定资产仓' },
+];
+
+const warehousePropertyOptions: { value: WarehouseProperty; label: string }[] = [
+  { value: 'physical', label: '实物仓' },
+  { value: 'virtual', label: '虚拟仓' },
 ];
 
 // 生成仓库编码（系统自动生成，不可编辑）
@@ -63,6 +68,7 @@ export default function WarehousePage() {
     { key: 'code', title: '系统编码' },
     { key: 'name', title: '仓库名称' },
     { key: 'categoryName', title: '仓库类别', render: (row) => row.categoryName || '-' },
+    { key: 'propertyName', title: '仓库属性', render: (row) => row.propertyName || '-' },
     { key: 'manager', title: '管理人员', render: (row) => row.manager || '-' },
     { key: 'contactPhone', title: '联系电话', render: (row) => row.contactPhone || '-' },
     { key: 'address', title: '地址', render: (row) => row.address || '-' },
@@ -104,6 +110,8 @@ export default function WarehousePage() {
       name: '',
       category: 'general',
       categoryName: '综合仓',
+      property: 'physical',
+      propertyName: '实物仓',
       address: '',
       manager: '',
       contactPhone: '',
@@ -188,6 +196,22 @@ export default function WarehousePage() {
                 </select>
               </div>
               <div>
+                <div className="mb-1 text-[#606266]">仓库属性 <span className="text-[#f56c6c]">*</span></div>
+                <select
+                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-white text-[#303133] focus:outline-none focus:border-[#2f54eb]"
+                  value={editItem.property}
+                  onChange={(e) => {
+                    const prop = e.target.value as WarehouseProperty;
+                    const opt = warehousePropertyOptions.find(o => o.value === prop);
+                    setEditItem({ ...editItem, property: prop, propertyName: opt?.label || '' });
+                  }}
+                >
+                  {warehousePropertyOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <div className="mb-1 text-[#606266]">管理人员</div>
                 <input
                   className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-[#303133] focus:outline-none focus:border-[#2f54eb]"
@@ -244,8 +268,16 @@ export default function WarehousePage() {
                 alert('请填写必填项');
                 return;
               }
-              if (isNew) addWarehouse(editItem);
-              else updateWarehouse(editItem.id, editItem);
+              // 更新属性名称
+              const propOpt = warehousePropertyOptions.find(o => o.value === editItem.property);
+              const catOpt = warehouseCategoryOptions.find(o => o.value === editItem.category);
+              const finalItem = {
+                ...editItem,
+                propertyName: propOpt?.label || '',
+                categoryName: catOpt?.label || '',
+              };
+              if (isNew) addWarehouse(finalItem);
+              else updateWarehouse(finalItem.id, finalItem);
               setEditItem(null);
             }}
           >保存</PrimaryButton>
