@@ -1,0 +1,15 @@
+{
+  "tool": "generate_column_chart",
+  "args": {
+    "data": [
+      {"category": "展会物资", "value": 277},
+      {"category": "低值易耗", "value": 372}
+    ],
+    "title": "各物资分类库存对比",
+    "axisXTitle": "物资分类",
+    "axisYTitle": "库存总量",
+    "theme": "default",
+    "width": 600,
+    "height": 400
+  }
+}

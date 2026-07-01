@@ -1,0 +1,15 @@
+{
+  "tool": "generate_pie_chart",
+  "args": {
+    "data": [
+      {"category": "展会物资仓", "value": 277},
+      {"category": "低值易耗仓", "value": 372},
+      {"category": "固定资产仓", "value": 0}
+    ],
+    "title": "各仓库库存占比",
+    "theme": "default",
+    "width": 600,
+    "height": 400,
+    "innerRadius": 0.5
+  }
+}
