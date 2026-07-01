@@ -14,6 +14,7 @@ export const warehouses: Warehouse[] = [
   { id: 'WH001', code: 'WH20240101001', warehouseNo: 'ZHWZ001', name: '展会物资仓', category: 'exhibition', categoryName: '会展物资', property: 'physical', propertyName: '实物仓', address: '会展中心A区101号', manager: '张三', contactPhone: '13800138001', status: 'enabled', createTime: '2024-01-01' },
   { id: 'WH002', code: 'WH20240102001', warehouseNo: 'DZYH002', name: '低值易耗仓', category: 'consumable', categoryName: '低值易耗', property: 'physical', propertyName: '实物仓', address: '会展中心B区203号', manager: '李四', contactPhone: '13800138002', status: 'enabled', createTime: '2024-01-02' },
   { id: 'WH003', code: 'WH20240103001', warehouseNo: 'GDZC003', name: '固定资产仓', category: 'fixed_asset', categoryName: '固定资产', property: 'physical', propertyName: '实物仓', address: '会展中心C区305号', manager: '王五', contactPhone: '13800138003', status: 'enabled', createTime: '2024-01-03' },
+  { id: 'WH004', code: 'WH20260701001', warehouseNo: 'ZHWZ004', name: '2026车展仓', category: 'exhibition', categoryName: '会展物资', property: 'virtual', propertyName: '虚拟仓', address: '', manager: '', contactPhone: '', status: 'enabled', createTime: '2026-07-01' },
 ];
 
 // 仓位数据
