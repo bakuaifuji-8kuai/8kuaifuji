@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
+import MultiSelect from '@/components/common/MultiSelect';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
-import { Layers, Package, Edit3, Download } from 'lucide-react';
+import { Layers, Package, Edit3, Download, FileText } from 'lucide-react';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
 import type { BatchInventory } from '@/types';
 import * as XLSX from 'xlsx';
@@ -46,6 +47,15 @@ const helpContent = {
         '汇总库存视图按物资+仓库+仓位维度聚合',
         '批次库存视图显示每个批次的详细库存信息'
       ]
+    },
+    {
+      heading: '导出报表',
+      items: [
+        '在汇总库存视图下，选择一个仓库后可点击"导出报表"按钮',
+        '导出PDF格式的库存报表，标题为仓库名称',
+        '报表包含：物资编码、物资名称、规格、单位、在仓发料数量',
+        '在仓发料数量为生成报表时的当前库存数量'
+      ]
     }
   ]
 };
@@ -56,6 +66,7 @@ interface SummaryItem {
   productCode: string;
   productName: string;
   specification: string;
+  unit: string;
   warehouseId: string;
   warehouseName: string;
   positionId: string;
@@ -76,9 +87,16 @@ export default function StockQueryPage() {
   const [activeTab, setActiveTab] = useState<'summary' | 'batch'>('summary');
   const [filterProduct, setFilterProduct] = useState('');
   const [filterSpecification, setFilterSpecification] = useState('');
-  const [filterWarehouse, setFilterWarehouse] = useState('');
-  const [filterPosition, setFilterPosition] = useState('');
-  const [appliedFilter, setAppliedFilter] = useState({ product: '', specification: '', warehouse: '', position: '' });
+  const [filterWarehouse, setFilterWarehouse] = useState<string[]>([]);
+  const [filterPosition, setFilterPosition] = useState<string[]>([]);
+  const [filterStatuses, setFilterStatuses] = useState<string[]>(['enabled']);
+  const [appliedFilter, setAppliedFilter] = useState({
+    product: '',
+    specification: '',
+    warehouses: [] as string[],
+    positions: [] as string[],
+    statuses: ['enabled'] as string[],
+  });
 
   // 仓位修改相关
   const [editPositionRow, setEditPositionRow] = useState<SummaryItem | null>(null);
@@ -98,11 +116,15 @@ export default function StockQueryPage() {
       )
         return false;
       if (appliedFilter.specification && !spec.includes(appliedFilter.specification)) return false;
-      if (appliedFilter.warehouse && b.warehouseId !== appliedFilter.warehouse) return false;
-      if (appliedFilter.position && b.positionId !== appliedFilter.position) return false;
+      if (appliedFilter.warehouses.length > 0 && !appliedFilter.warehouses.includes(b.warehouseId)) return false;
+      if (appliedFilter.positions.length > 0 && !appliedFilter.positions.includes(b.positionId)) return false;
+      if (appliedFilter.statuses.length > 0) {
+        const wh = warehouses.find((w) => w.id === b.warehouseId);
+        if (!wh || !appliedFilter.statuses.includes(wh.status)) return false;
+      }
       return true;
     });
-  }, [batchInventories, products, appliedFilter]);
+  }, [batchInventories, products, appliedFilter, warehouses]);
 
   const summaryData = useMemo(() => {
     const filtered = batchInventories.filter((b) => {
@@ -115,8 +137,12 @@ export default function StockQueryPage() {
       )
         return false;
       if (appliedFilter.specification && !spec.includes(appliedFilter.specification)) return false;
-      if (appliedFilter.warehouse && b.warehouseId !== appliedFilter.warehouse) return false;
-      if (appliedFilter.position && b.positionId !== appliedFilter.position) return false;
+      if (appliedFilter.warehouses.length > 0 && !appliedFilter.warehouses.includes(b.warehouseId)) return false;
+      if (appliedFilter.positions.length > 0 && !appliedFilter.positions.includes(b.positionId)) return false;
+      if (appliedFilter.statuses.length > 0) {
+        const wh = warehouses.find((w) => w.id === b.warehouseId);
+        if (!wh || !appliedFilter.statuses.includes(wh.status)) return false;
+      }
       return true;
     });
 
@@ -133,6 +159,7 @@ export default function StockQueryPage() {
           productCode: batch.productCode || '',
           productName: batch.productName || '',
           specification: spec,
+          unit: product?.unit || '',
           warehouseId: batch.warehouseId,
           warehouseName: batch.warehouseName || '',
           positionId: batch.positionId,
@@ -148,7 +175,7 @@ export default function StockQueryPage() {
     });
 
     return Array.from(summaryMap.values());
-  }, [batchInventories, products, appliedFilter]);
+  }, [batchInventories, products, appliedFilter, warehouses]);
 
   const totalSummary = useMemo(() => {
     return summaryData.reduce((sum, item) => sum + (item.totalQuantity || 0), 0);
@@ -223,6 +250,7 @@ export default function StockQueryPage() {
     { key: 'productCode', title: '物资编码' },
     { key: 'productName', title: '物资名称' },
     { key: 'specification', title: '规格型号', render: (row) => row.specification || '-' },
+    { key: 'unit', title: '单位', render: (row) => row.unit || '-' },
     { key: 'warehouseName', title: '仓库' },
     {
       key: 'positionName',
@@ -332,6 +360,162 @@ export default function StockQueryPage() {
     XLSX.writeFile(wb, `库存查询_${activeTab === 'summary' ? '汇总' : '批次'}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
+  const handleExportReport = () => {
+    if (appliedFilter.warehouses.length === 0) {
+      alert('请先选择一个仓库');
+      return;
+    }
+    if (appliedFilter.warehouses.length > 1) {
+      alert('导出报表仅支持选择一个仓库');
+      return;
+    }
+    if (summaryData.length === 0) {
+      alert('没有可导出的数据');
+      return;
+    }
+
+    const warehouse = warehouses.find((w) => w.id === appliedFilter.warehouses[0]);
+    const warehouseName = warehouse?.name || '库存报表';
+    const now = new Date();
+    const printTime = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+    const totalQty = summaryData.reduce((sum, item) => sum + item.totalQuantity, 0);
+
+    const detailRows = summaryData.map((item, idx) => {
+      const product = products.find((p) => p?.id === item.productId);
+      const unit = product?.unit || '-';
+      return `
+        <tr>
+          <td style="border:1px solid #666;padding:8px;text-align:center;font-size:12px;">${idx + 1}</td>
+          <td style="border:1px solid #666;padding:8px;text-align:left;font-size:12px;">${item.productCode}</td>
+          <td style="border:1px solid #666;padding:8px;text-align:left;font-size:12px;">${item.productName}</td>
+          <td style="border:1px solid #666;padding:8px;text-align:left;font-size:12px;">${item.specification || '-'}</td>
+          <td style="border:1px solid #666;padding:8px;text-align:center;font-size:12px;">${unit}</td>
+          <td style="border:1px solid #666;padding:8px;text-align:right;font-size:12px;">${item.totalQuantity}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const printHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>${warehouseName} - 库存报表</title>
+        <style>
+          @page {
+            size: A4;
+            margin: 15mm;
+          }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            font-size: 12px;
+          }
+          .print-header {
+            text-align: center;
+            margin-bottom: 20px;
+          }
+          .print-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 10px 0;
+            letter-spacing: 4px;
+          }
+          .print-header .meta {
+            font-size: 13px;
+            color: #555;
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+          }
+          .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+          }
+          .detail-table thead tr {
+            background-color: #f0f0f0;
+          }
+          .detail-table th {
+            border: 1px solid #666;
+            padding: 10px 8px;
+            font-weight: 600;
+            font-size: 12px;
+            text-align: center;
+          }
+          .detail-table td {
+            border: 1px solid #666;
+            padding: 8px;
+          }
+          .total-row {
+            background-color: #f5f5f5;
+            font-weight: 600;
+          }
+          .print-time {
+            text-align: right;
+            margin-top: 20px;
+            font-size: 11px;
+            color: #888;
+          }
+          @media print {
+            body { margin: 0; padding: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        <div style="max-width:900px;margin:0 auto;">
+          <div class="print-header">
+            <h1>${warehouseName}</h1>
+            <div class="meta">
+              <span>库存报表</span>
+              <span>报表日期：${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}</span>
+            </div>
+          </div>
+
+          <table class="detail-table">
+            <thead>
+              <tr>
+                <th style="width:50px;">序号</th>
+                <th style="width:120px;">物资编码</th>
+                <th>物资名称</th>
+                <th style="width:150px;">规格</th>
+                <th style="width:60px;">单位</th>
+                <th style="width:100px;">在仓发料数量</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${detailRows}
+              <tr class="total-row">
+                <td colspan="5" style="border:1px solid #666;padding:8px;text-align:center;font-weight:600;">合计</td>
+                <td style="border:1px solid #666;padding:8px;text-align:right;font-weight:600;">${totalQty}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="print-time">打印时间：${printTime}</div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('无法打开打印窗口，请检查浏览器弹窗设置');
+      return;
+    }
+    printWindow.document.write(printHTML);
+    printWindow.document.close();
+    printWindow.addEventListener('load', () => {
+      printWindow.focus();
+      printWindow.print();
+    });
+  };
+
   const operationSlot = (
     <>
       <PrimaryButton
@@ -354,6 +538,11 @@ export default function StockQueryPage() {
         <h2 className="text-sm font-semibold text-[#303133]">库存查询</h2>
         <div className="flex items-center gap-2">
           <FeatureHelpButton content={helpContent} />
+          {activeTab === 'summary' && (
+            <DefaultButton onClick={handleExportReport} icon={<FileText size={14} />}>
+              导出报表
+            </DefaultButton>
+          )}
           <DefaultButton onClick={handleExport} icon={<Download size={14} />}>
             导出
           </DefaultButton>
@@ -384,14 +573,27 @@ export default function StockQueryPage() {
 
       <SearchBar
         onSearch={() =>
-          setAppliedFilter({ product: filterProduct, specification: filterSpecification, warehouse: filterWarehouse, position: filterPosition })
+          setAppliedFilter({
+            product: filterProduct,
+            specification: filterSpecification,
+            warehouses: filterWarehouse,
+            positions: filterPosition,
+            statuses: filterStatuses,
+          })
         }
         onReset={() => {
           setFilterProduct('');
           setFilterSpecification('');
-          setFilterWarehouse('');
-          setFilterPosition('');
-          setAppliedFilter({ product: '', specification: '', warehouse: '', position: '' });
+          setFilterWarehouse([]);
+          setFilterPosition([]);
+          setFilterStatuses(['enabled']);
+          setAppliedFilter({
+            product: '',
+            specification: '',
+            warehouses: [],
+            positions: [],
+            statuses: ['enabled'],
+          });
         }}
       >
         <SearchField
@@ -406,38 +608,36 @@ export default function StockQueryPage() {
           value={filterSpecification}
           onChange={setFilterSpecification}
         />
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[#606266] whitespace-nowrap">仓库：</span>
-          <select
-            className="w-[220px] h-8 px-2 border border-[#dcdfe6] text-xs text-[#303133] bg-white rounded focus:outline-none focus:border-[#2f54eb]"
-            value={filterWarehouse}
-            onChange={(e) => setFilterWarehouse(e.target.value)}
-          >
-            <option value="">全部</option>
-            {warehouses.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[#606266] whitespace-nowrap">仓位：</span>
-          <select
-            className="w-[220px] h-8 px-2 border border-[#dcdfe6] text-xs text-[#303133] bg-white rounded focus:outline-none focus:border-[#2f54eb]"
-            value={filterPosition}
-            onChange={(e) => setFilterPosition(e.target.value)}
-          >
-            <option value="">全部</option>
-            {positions
-              .filter((p) => !filterWarehouse || p.warehouseId === filterWarehouse)
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-          </select>
-        </div>
+        <MultiSelect
+          label="仓库"
+          options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
+          value={filterWarehouse}
+          onChange={(vals) => {
+            setFilterWarehouse(vals);
+            setFilterPosition([]);
+          }}
+          placeholder="全部"
+        />
+        <MultiSelect
+          label="仓位"
+          options={positions
+            .filter((p) => filterWarehouse.length === 0 || filterWarehouse.includes(p.warehouseId))
+            .map((p) => ({ value: p.id, label: p.name }))}
+          value={filterPosition}
+          onChange={setFilterPosition}
+          placeholder="全部"
+        />
+        <MultiSelect
+          label="状态"
+          options={[
+            { value: 'enabled', label: '启用' },
+            { value: 'disabled', label: '禁用' },
+          ]}
+          value={filterStatuses}
+          onChange={setFilterStatuses}
+          placeholder="全部"
+          width="w-[160px]"
+        />
       </SearchBar>
 
       {activeTab === 'summary' ? (

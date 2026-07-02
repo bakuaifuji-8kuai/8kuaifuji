@@ -18,6 +18,8 @@ import StockQueryPage from "@/pages/Stock/StockQuery";
 import StockCheckPage from "@/pages/Stock/StockCheck";
 import StockTransactionPage from "@/pages/Stock/StockTransaction";
 import StockTransferPage from "@/pages/Stock/StockTransfer";
+import ExhibitionTransferOutboundPage from "@/pages/Stock/ExhibitionTransferOutbound";
+import ExhibitionTransferInboundPage from "@/pages/Stock/ExhibitionTransferInbound";
 import StockReportPage from "@/pages/Report/StockReport";
 import InboundReportPage from "@/pages/Report/InboundReport";
 import OutboundReportPage from "@/pages/Report/OutboundReport";
@@ -86,6 +88,8 @@ export default function App() {
           <Route path="stock/query" element={<StockQueryPage />} />
           <Route path="stock/check" element={<StockCheckPage />} />
           <Route path="stock/transaction" element={<StockTransactionPage />} />
+          <Route path="stock/exhibition-transfer-outbound" element={<ExhibitionTransferOutboundPage />} />
+          <Route path="stock/exhibition-transfer-inbound" element={<ExhibitionTransferInboundPage />} />
           <Route path="stock/transfer" element={<StockTransferPage />} />
 
           {/* 固定资产管理 */}

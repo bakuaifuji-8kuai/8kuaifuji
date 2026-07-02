@@ -221,6 +221,7 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
                     setIsNew(false);
                     const cloned = JSON.parse(JSON.stringify(row));
                     setEditItem(cloned);
+                    setSelectedDetailIndices([]);
                   }}
                 >
                   编辑
@@ -251,6 +252,7 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
 
   // 编辑弹窗
   const [editItem, setEditItem] = useState<OutboundOrder | null>(null);
+  const [selectedDetailIndices, setSelectedDetailIndices] = useState<number[]>([]);
   const [isNew, setIsNew] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [workOrderPickerOpen, setWorkOrderPickerOpen] = useState(false);
@@ -273,6 +275,7 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
     };
     setIsNew(true);
     setEditItem(newOrder);
+    setSelectedDetailIndices([]);
   };
 
   // 产品选择（普通领用）
@@ -293,6 +296,7 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
     const existingIds = new Set(editItem.details.map((d) => d.productId));
     const toAdd = newDetails.filter((d) => !existingIds.has(d.productId));
     setEditItem({ ...editItem, details: [...editItem.details, ...toAdd] });
+    setSelectedDetailIndices([]);
     setPickerOpen(false);
   };
 
@@ -324,6 +328,7 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
     const toAdd = newDetails.filter((d) => !existingIds.has(`${(d as any).workOrderId}::${d.productId}`));
 
     setEditItem({ ...editItem, details: [...editItem.details, ...toAdd] });
+    setSelectedDetailIndices([]);
     setWorkOrderPickerOpen(false);
   };
 
@@ -342,6 +347,58 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
   const removeDetail = (idx: number) => {
     if (!editItem) return;
     setEditItem({ ...editItem, details: editItem.details.filter((_, i) => i !== idx) });
+    setSelectedDetailIndices(selectedDetailIndices.filter((i) => i !== idx).map((i) => i > idx ? i - 1 : i));
+  };
+
+  const toggleSelectDetail = (idx: number) => {
+    if (selectedDetailIndices.includes(idx)) {
+      setSelectedDetailIndices(selectedDetailIndices.filter((i) => i !== idx));
+    } else {
+      setSelectedDetailIndices([...selectedDetailIndices, idx]);
+    }
+  };
+
+  const toggleSelectAllDetails = () => {
+    if (!editItem) return;
+    if (selectedDetailIndices.length === editItem.details.length) {
+      setSelectedDetailIndices([]);
+    } else {
+      setSelectedDetailIndices(editItem.details.map((_, i) => i));
+    }
+  };
+
+  const handleBatchSetQuantity = () => {
+    if (!editItem) return;
+    if (selectedDetailIndices.length === 0) {
+      alert('请先勾选要批量设置数量的记录');
+      return;
+    }
+    var input = prompt('请输入要设置的数量：', '1');
+    if (input === null) return;
+    var qty = Number(input);
+    if (!qty || qty <= 0) {
+      alert('请输入有效的数量');
+      return;
+    }
+    const newDetails = [...editItem.details];
+    selectedDetailIndices.forEach(function(idx) {
+      (newDetails[idx] as any).quantity = qty;
+    });
+    setEditItem({ ...editItem, details: newDetails });
+  };
+
+  const handleBatchDelete = () => {
+    if (!editItem) return;
+    if (selectedDetailIndices.length === 0) {
+      alert('请先勾选要删除的记录');
+      return;
+    }
+    if (!confirm(`确定要删除选中的 ${selectedDetailIndices.length} 条记录吗？`)) {
+      return;
+    }
+    const indicesToDelete = new Set(selectedDetailIndices);
+    setEditItem({ ...editItem, details: editItem.details.filter((_, i) => !indicesToDelete.has(i)) });
+    setSelectedDetailIndices([]);
   };
 
   const handleSaveOnly = () => {
@@ -448,6 +505,7 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
 
   // 明细表头配置
   const detailHeaders = [
+    { label: 'checkbox', w: 'w-8' },
     { label: '#', w: 'w-8' },
     { label: '物资编码', w: 'w-28' },
     { label: '物资名称', w: 'flex-1' },
@@ -568,7 +626,7 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
                     <tbody>
                       {viewItem.details.length ? (
                         viewItem.details.map((d, i) => (
-                          <tr key={i} className="border-t border-[#ebeef5]">
+                          <tr key={i} className={`border-t border-[#ebeef5] ${selectedDetailIndices.includes(i) ? 'bg-[#ecf5ff]' : ''}`}>
                             <td className="px-4 py-3 text-[#303133]">{d.productCode}</td>
                             <td className="px-4 py-3 text-[#303133]">{d.productName}</td>
                             <td className="px-4 py-3 text-[#303133]">
@@ -774,8 +832,19 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
                   <span className="text-[#909399] font-normal">
                     （共 {editItem.details.length} 种，合计 {totalQuantity} 件）
                   </span>
+                  {selectedDetailIndices.length > 0 && <span className="ml-2 text-[#2f54eb]">已选 {selectedDetailIndices.length} 条</span>}
                 </div>
                 <div className="flex gap-2">
+                  {editItem.details.length > 0 && (
+                    <>
+                      <DefaultButton size="small" onClick={handleBatchSetQuantity}>
+                        批量设置数量
+                      </DefaultButton>
+                      <DefaultButton size="small" onClick={handleBatchDelete} className="text-[#f56c6c]">
+                        批量删除
+                      </DefaultButton>
+                    </>
+                  )}
                   {workOrderMode ? (
                     <>
                       <DefaultButton onClick={() => setWorkOrderPickerOpen(true)}>+ 选择工单</DefaultButton>
@@ -793,7 +862,14 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
                     <tr className="bg-[#f5f7fa] text-[#606266]">
                       {detailHeaders.map((h) => (
                         <th key={h.label} className={`px-2 py-2 text-left ${h.w}`}>
-                          {h.label}
+                          {h.label === 'checkbox' ? (
+                            <input
+                              type="checkbox"
+                              checked={selectedDetailIndices.length === editItem.details.length && editItem.details.length > 0}
+                              onChange={toggleSelectAllDetails}
+                              className="w-3.5 h-3.5 cursor-pointer"
+                            />
+                          ) : h.label}
                         </th>
                       ))}
                     </tr>
@@ -812,6 +888,14 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
                           .reduce((s, b) => s + b.quantity, 0);
                         return (
                           <tr key={i} className="border-t border-[#ebeef5]">
+                            <td className="px-2 py-1.5 text-center">
+                              <input
+                                type="checkbox"
+                                checked={selectedDetailIndices.includes(i)}
+                                onChange={() => toggleSelectDetail(i)}
+                                className="w-3.5 h-3.5 cursor-pointer"
+                              />
+                            </td>
                             <td className="px-2 py-1.5 text-[#909399]">{i + 1}</td>
                             <td className="px-2 py-1.5 text-[#303133]">{d.productCode}</td>
                             <td className="px-2 py-1.5 text-[#303133]">{d.productName}</td>

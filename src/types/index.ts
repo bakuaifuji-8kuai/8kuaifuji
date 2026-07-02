@@ -264,6 +264,8 @@ export interface InboundDetail {
   productId: string;
   productName?: string;
   productCode?: string;
+  specification?: string;
+  unit?: string;
   positionId?: string;
   positionName?: string;
   quantity: number;
@@ -590,6 +592,10 @@ export interface StockTransferDetail {
   toPositionName?: string;
   quantity: number;
   batchConsumptions?: BatchOutboundDetail[]; // 出库时的批次消耗记录
+  workOrderId?: string; // 关联工单ID
+  workOrderCode?: string; // 关联工单号
+  workOrderName?: string; // 关联工单名称
+  isMain?: boolean; // 是否主料
 }
 
 export type StockTransferStatus = 'pending' | 'outbound_confirmed' | 'completed' | 'cancelled';
@@ -597,8 +603,8 @@ export type StockTransferStatus = 'pending' | 'outbound_confirmed' | 'completed'
 export interface StockTransfer {
   id: string;
   transferNo: string; // 调拨单号
-  projectId: string; // 所属项目
-  projectName: string;
+  projectId?: string; // 所属项目
+  projectName?: string;
   fromWarehouseId: string; // 调出仓库
   fromWarehouseName?: string;
   toWarehouseId: string; // 调入仓库
@@ -1005,6 +1011,7 @@ export type ProcurementDemandStatus = 'draft' | 'pending' | 'approved' | 'reject
 export interface ProcurementDemandDetail {
   id: string;
   demandId: string;
+  productId?: string; // 产品ID
   projectId?: string; // 项目ID（实施项目/服务项目）
   projectNo?: string; // 项目编号
   projectName?: string; // 项目名称

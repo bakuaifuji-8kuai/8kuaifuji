@@ -181,6 +181,7 @@ export default function StockCheckPage() {
           productId: detail.productId,
           productCode: detail.productCode,
           productName: detail.productName,
+          specification: detail.specification || product?.specification || '',
           categoryId: category || '',
           categoryName: '',
           warehouseId: order.warehouseId,

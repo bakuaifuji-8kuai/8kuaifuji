@@ -36,6 +36,7 @@ export default function ProcurementOrderPage() {
   const addProcurementOrderChange = useStore((s) => s.addProcurementOrderChange) as ((c: ProcurementOrderChange) => void) | undefined;
   const updateProcurementOrderChange = useStore((s) => s.updateProcurementOrderChange) as ((id: string, data: Partial<ProcurementOrderChange>) => void) | undefined;
   const procurementDemands = useStore((s) => s.procurementDemands);
+  const products = useStore((s) => s.products);
   const contractLedgers = useStore((s) => s.contractLedgers);
   const suppliers = useStore((s) => s.suppliers);
   const currentUser = useStore((s) => s.currentUser);
@@ -298,11 +299,14 @@ export default function ProcurementOrderPage() {
     if (!demand) return;
     const newDetails: ProcurementOrderDetail[] = [];
     demand.details.forEach((d: any) => {
+      const matchedProduct = products.find(
+        (p) => p.name === d.productName && p.specification === d.specification
+      );
       newDetails.push({
         id: 'POD' + Date.now() + Math.random().toString(36).slice(2, 7),
         orderId: editItem?.id || '',
-        productId: d.productId || '',
-        productCode: d.productCode,
+        productId: d.productId || matchedProduct?.id || '',
+        productCode: d.productCode || matchedProduct?.code || '',
         productName: d.productName,
         specification: d.specification,
         unit: d.unit,

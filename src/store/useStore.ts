@@ -793,7 +793,7 @@ export const useStore = create<WarehouseState>((set) => ({
   })),
 
   // 合同采购订单
-  contractPurchaseOrders: [],
+  contractPurchaseOrders: mockData.contractPurchaseOrders || [],
   setContractPurchaseOrders: (data) => set({ contractPurchaseOrders: data }),
   addContractPurchaseOrder: (order) => set((state) => ({ contractPurchaseOrders: [...state.contractPurchaseOrders, order] })),
   updateContractPurchaseOrder: (id, data) => set((state) => ({

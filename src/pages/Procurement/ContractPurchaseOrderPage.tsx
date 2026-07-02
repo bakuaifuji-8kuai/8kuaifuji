@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
@@ -125,26 +125,13 @@ export default function ContractPurchaseOrderPage() {
   const updateContractPurchaseOrder = useStore((s) => s.updateContractPurchaseOrder);
   const deleteContractPurchaseOrder = useStore((s) => s.deleteContractPurchaseOrder);
   const procurementDemands = useStore((s) => s.procurementDemands);
+  const products = useStore((s) => s.products);
   const currentUser = useStore((s) => s.currentUser);
   // 变更相关
   const contractPurchaseOrderChanges = useStore((s) => s.contractPurchaseOrderChanges);
   const addContractPurchaseOrderChange = useStore((s) => s.addContractPurchaseOrderChange);
   const approveContractPurchaseOrderChange = useStore((s) => s.approveContractPurchaseOrderChange);
   const rejectContractPurchaseOrderChange = useStore((s) => s.rejectContractPurchaseOrderChange);
-
-  // 初始化测试数据
-  const initialized = useRef(false);
-  useEffect(() => {
-    if (initialized.current) return;
-    if (addContractPurchaseOrder) {
-      MOCK_INITIAL_ORDERS.forEach(o => {
-        if (!contractPurchaseOrders.find(existing => existing.id === o.id)) {
-          addContractPurchaseOrder(o);
-        }
-      });
-      initialized.current = true;
-    }
-  }, [addContractPurchaseOrder, contractPurchaseOrders]);
 
   const [filterNo, setFilterNo] = useState('');
   const [filterContractNo, setFilterContractNo] = useState('');
@@ -247,23 +234,27 @@ export default function ContractPurchaseOrderPage() {
   };
 
   const handleSelectDemand = (demand: any) => {
-    if (!editItem) return;
-    const newDetails: ContractPurchaseOrderDetail[] = demand.details.map((d: any, idx: number) => ({
-      id: 'D_' + Date.now() + idx,
-      orderId: editItem.id,
-      productId: d.productId || '',
-      productCode: d.productCode,
-      productName: d.productName,
-      specification: d.specification,
-      unit: d.unit,
-      contractQuantity: d.quantity,
-      deliveredQuantity: 0,
-      orderQuantity: d.quantity,
-      unitPrice: d.unitPriceIncludingTax || 0,
-      amount: d.amountIncludingTax || 0,
-      deliveryDate: demand.requiredDeliveryDate || '',
-      remark: '',
-    }));
+    const newDetails: ContractPurchaseOrderDetail[] = demand.details.map((d: any, idx: number) => {
+      const matchedProduct = products.find(
+        (p) => p.name === d.productName && p.specification === d.specification
+      );
+      return {
+        id: 'D_' + Date.now() + idx,
+        orderId: editItem.id,
+        productId: d.productId || matchedProduct?.id || '',
+        productCode: d.productCode || matchedProduct?.code || '',
+        productName: d.productName,
+        specification: d.specification,
+        unit: d.unit,
+        contractQuantity: d.quantity,
+        deliveredQuantity: 0,
+        orderQuantity: d.quantity,
+        unitPrice: d.unitPriceIncludingTax || 0,
+        amount: d.amountIncludingTax || 0,
+        deliveryDate: demand.requiredDeliveryDate || '',
+        remark: '',
+      };
+    });
     setEditItem({
       ...editItem,
       procurementDemandId: demand.id,

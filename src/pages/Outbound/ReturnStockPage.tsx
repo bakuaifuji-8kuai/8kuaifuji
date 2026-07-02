@@ -502,12 +502,14 @@ export default function ReturnStockPage() {
       const batchNo = generateBatchNo();
       const posId = d.positionId || defaultPos?.id || '';
       const posName = d.positionName || defaultPos?.name || '';
+      const product = products.find((p) => p.id === d.productId);
       addBatchInventory({
         id: 'B' + Date.now() + Math.random().toString(36).slice(2, 7),
         batchNo,
         productId: d.productId,
         productCode: d.productCode,
         productName: d.productName,
+        specification: (d as any).specification || product?.specification || '',
         warehouseId: order.warehouseId,
         warehouseName: order.warehouseName || '',
         positionId: posId,

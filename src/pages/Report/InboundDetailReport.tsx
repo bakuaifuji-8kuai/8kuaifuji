@@ -227,17 +227,6 @@ export default function InboundDetailReport() {
         return `合计: ${total}`;
       },
     },
-    {
-      accessorKey: 'unitPrice',
-      header: '单价',
-      cell: ({ row }) => row.original.unitPrice != null ? row.original.unitPrice : '-',
-    },
-    {
-      accessorKey: 'amount',
-      header: '金额',
-      cell: ({ row }) => row.original.amount != null ? row.original.amount : '-',
-    },
-    { accessorKey: 'batchNo', header: '批次号', cell: ({ row }) => row.original.batchNo || '-' },
     { accessorKey: 'custodian', header: '保管员', cell: ({ row }) => row.original.custodian || '-' },
   ];
 
@@ -262,10 +251,6 @@ export default function InboundDetailReport() {
       '规格型号': item.specification || '-',
       '单位': item.unit || '-',
       '数量': item.quantity,
-      '单价': item.unitPrice != null ? item.unitPrice : '-',
-      '金额': item.amount != null ? item.amount : '-',
-
-      '批次号': item.batchNo || '-',
       '保管员': item.custodian || '-',
     }));
 

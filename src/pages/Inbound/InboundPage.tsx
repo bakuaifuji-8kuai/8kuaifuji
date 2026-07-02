@@ -167,6 +167,9 @@ export default function InboundPage({ type = 'purchase' }: Props) {
   const [printItem, setPrintItem] = useState<InboundOrder | null>(null);
   const [printTrigger, setPrintTrigger] = useState(0);
   const [editDetails, setEditDetails] = useState<FormDetail[]>([]);
+  const [selectedDetailIndices, setSelectedDetailIndices] = useState<number[]>([]);
+  const [batchQtyModalOpen, setBatchQtyModalOpen] = useState(false);
+  const [batchQuantity, setBatchQuantity] = useState<number>(1);
   const [editWarehouseId, setEditWarehouseId] = useState('');
   const [editCustodian, setEditCustodian] = useState<string>('');
   const [editInspector, setEditInspector] = useState<string>('');
@@ -367,6 +370,7 @@ export default function InboundPage({ type = 'purchase' }: Props) {
     };
     setEditItem(newOrder);
     setEditDetails([]);
+    setSelectedDetailIndices([]);
     setEditWarehouseId(newOrder.warehouseId);
     setEditCustodian('');
     setEditInspector('');
@@ -399,6 +403,7 @@ export default function InboundPage({ type = 'purchase' }: Props) {
         unit: d.unit,
       }));
     setEditDetails(newDetails);
+    setSelectedDetailIndices([]);
     if (editItem) {
       setEditItem({
         ...editItem,
@@ -505,6 +510,55 @@ export default function InboundPage({ type = 'purchase' }: Props) {
 
   const removeDetail = (idx: number) => {
     setEditDetails(editDetails.filter((_, i) => i !== idx));
+    setSelectedDetailIndices(selectedDetailIndices.filter((i) => i !== idx).map((i) => i > idx ? i - 1 : i));
+  };
+
+  const toggleSelectDetail = (idx: number) => {
+    if (selectedDetailIndices.includes(idx)) {
+      setSelectedDetailIndices(selectedDetailIndices.filter((i) => i !== idx));
+    } else {
+      setSelectedDetailIndices([...selectedDetailIndices, idx]);
+    }
+  };
+
+  const toggleSelectAllDetails = () => {
+    if (selectedDetailIndices.length === editDetails.length) {
+      setSelectedDetailIndices([]);
+    } else {
+      setSelectedDetailIndices(editDetails.map((_, i) => i));
+    }
+  };
+
+    const handleBatchSetQuantity = () => {
+    if (selectedDetailIndices.length === 0) {
+      alert('请先勾选要批量设置数量的记录');
+      return;
+    }
+    var input = prompt('请输入要设置的数量：', '1');
+    if (input === null) return;
+    var qty = Number(input);
+    if (!qty || qty <= 0) {
+      alert('请输入有效的数量');
+      return;
+    }
+    var newDetails = [...editDetails];
+    selectedDetailIndices.forEach(function(idx) {
+      (newDetails[idx] as any).quantity = qty;
+    });
+    setEditDetails(newDetails);
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedDetailIndices.length === 0) {
+      alert('请先勾选要删除的记录');
+      return;
+    }
+    if (!confirm(`确定要删除选中的 ${selectedDetailIndices.length} 条记录吗？`)) {
+      return;
+    }
+    const indicesToDelete = new Set(selectedDetailIndices);
+    setEditDetails(editDetails.filter((_, i) => !indicesToDelete.has(i)));
+    setSelectedDetailIndices([]);
   };
 
   const doValidate = (): boolean => {
@@ -545,6 +599,8 @@ export default function InboundPage({ type = 'purchase' }: Props) {
         productId: d.productId,
         productCode: d.productCode,
         productName: d.productName,
+        specification: (d as any).specification || '',
+        unit: (d as any).unit || '',
         positionId: d.positionId,
         positionName: d.positionName,
         quantity: Number(d.quantity) || 0,
@@ -601,12 +657,14 @@ export default function InboundPage({ type = 'purchase' }: Props) {
         (b) => b.batchNo === batchNo && b.productId === d.productId
       );
       if (!existing) {
+        const product = products.find((p) => p.id === d.productId);
         addBatchInventory({
           id: 'B' + Date.now() + Math.random().toString(36).slice(2, 7),
           batchNo,
           productId: d.productId,
           productCode: d.productCode,
           productName: d.productName,
+          specification: (d as any).specification || product?.specification || '',
           warehouseId: order.warehouseId,
           warehouseName: order.warehouseName,
           positionId: posId,
@@ -775,8 +833,8 @@ export default function InboundPage({ type = 'purchase' }: Props) {
                         <td className="px-4 py-3 text-[#303133]">{i + 1}</td>
                         <td className="px-4 py-3 text-[#303133]">{d.productCode}</td>
                         <td className="px-4 py-3 text-[#303133]">{d.productName}</td>
-                        <td className="px-4 py-3 text-[#303133]">{prod?.specification || '-'}</td>
-                        <td className="px-4 py-3 text-[#303133]">{prod?.unit || '-'}</td>
+                        <td className="px-4 py-3 text-[#303133]">{(d as any).specification || prod?.specification || '-'}</td>
+                        <td className="px-4 py-3 text-[#303133]">{(d as any).unit || prod?.unit || '-'}</td>
                         <td className="px-4 py-3 text-right text-[#303133]">{d.quantity}</td>
                       </tr>
                     );
@@ -1035,8 +1093,19 @@ export default function InboundPage({ type = 'purchase' }: Props) {
             <div className="flex items-center justify-between mb-2">
               <div className="text-xs font-medium text-[#303133] border-l-2 border-[#2f54eb] pl-2">
                 产品明细（{editDetails.length} 条）{selectedPurchaseOrder && ` - 采购订单：${selectedPurchaseOrder.orderNo}`}
+                {selectedDetailIndices.length > 0 && <span className="ml-2 text-[#2f54eb]">已选 {selectedDetailIndices.length} 条</span>}
               </div>
               <div className="flex items-center gap-2">
+                {editDetails.length > 0 && (
+                  <>
+                    <DefaultButton size="small" onClick={handleBatchSetQuantity}>
+                      批量设置数量
+                    </DefaultButton>
+                    <DefaultButton size="small" onClick={handleBatchDelete} className="text-[#f56c6c]">
+                      批量删除
+                    </DefaultButton>
+                  </>
+                )}
                 {/* 采购入库 - 采购订单入库模式：显示采购订单选择按钮 */}
                 {type === 'purchase' && poMode && (
                   <PrimaryButton onClick={() => setPurchasePickerOpen(true)}>
@@ -1055,6 +1124,16 @@ export default function InboundPage({ type = 'purchase' }: Props) {
               <table className="w-full text-xs min-w-[800px]">
                 <thead>
                   <tr className="bg-[#f5f7fa] text-[#606266]">
+                    <th className="px-2 py-2 text-center w-10">
+                      {editDetails.length > 0 && (
+                        <input
+                          type="checkbox"
+                          checked={selectedDetailIndices.length === editDetails.length}
+                          onChange={toggleSelectAllDetails}
+                          className="w-3.5 h-3.5 cursor-pointer"
+                        />
+                      )}
+                    </th>
                     <th className="px-2 py-2 text-left w-10">序号</th>
                     <th className="px-2 py-2 text-left">物资编码</th>
                     <th className="px-2 py-2 text-left">物资名称</th>
@@ -1067,7 +1146,7 @@ export default function InboundPage({ type = 'purchase' }: Props) {
                 <tbody>
                   {editDetails.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-[#909399]">
+                      <td colSpan={8} className="px-3 py-8 text-center text-[#909399]">
                         {type === 'purchase' && poMode
                           ? '暂无产品明细，请点击右上角"选择采购订单"按钮添加'
                           : '暂无产品明细，请点击右上角"从物资档案选择（可多选）"按钮添加'}
@@ -1075,7 +1154,15 @@ export default function InboundPage({ type = 'purchase' }: Props) {
                     </tr>
                   ) : (
                     editDetails.map((d, idx) => (
-                      <tr key={d.id} className="border-t border-[#f0f2f5]">
+                      <tr key={d.id} className={`border-t border-[#f0f2f5] ${selectedDetailIndices.includes(idx) ? 'bg-[#ecf5ff]' : ''}`}>
+                        <td className="px-2 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedDetailIndices.includes(idx)}
+                            onChange={() => toggleSelectDetail(idx)}
+                            className="w-3.5 h-3.5 cursor-pointer"
+                          />
+                        </td>
                         <td className="px-2 py-2 text-[#303133]">{idx + 1}</td>
                         <td className="px-2 py-2 text-[#303133]">{d.productCode}</td>
                         <td className="px-2 py-2 text-[#303133]">{d.productName}</td>
@@ -1101,7 +1188,7 @@ export default function InboundPage({ type = 'purchase' }: Props) {
                   )}
                   {editDetails.length > 0 && (
                     <tr className="bg-[#f5f7fa] font-semibold border-t border-[#ebeef5]">
-                      <td className="px-2 py-2" colSpan={6}>合计</td>
+                      <td className="px-2 py-2" colSpan={7}>合计</td>
                       <td className="px-2 py-2 text-right">
                         {editDetails.reduce((a, b) => a + (Number(b.quantity) || 0), 0)}
                       </td>

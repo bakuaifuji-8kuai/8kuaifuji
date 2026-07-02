@@ -54,7 +54,7 @@ const menuItems: MenuItem[] = [
     children: [
       { title: '采购入库', path: '/inbound/purchase' },
       { title: '自制入库', path: '/inbound/production' },
-      { title: '物资归还', path: '/inbound/return-inbound' },
+      // { title: '物资归还', path: '/inbound/return-inbound' },
       { title: '退库', path: '/inbound/return-stock' },
     ],
   },
@@ -63,9 +63,17 @@ const menuItems: MenuItem[] = [
     icon: ArrowUpFromLine,
     children: [
       { title: '低值易耗领用出库', path: '/outbound/lowvalue' },
-      { title: '展会物资领用出库', path: '/outbound/exhibition' },
+      // { title: '展会物资领用出库', path: '/outbound/exhibition' },
       { title: '报废出库', path: '/outbound/scrap' },
       { title: '报损出库', path: '/outbound/damaged' },
+    ],
+  },
+  {
+    title: '展会物资调拨管理',
+    icon: ArrowRightLeft,
+    children: [
+      { title: '调拨出库', path: '/stock/exhibition-transfer-outbound' },
+      { title: '调拨入库', path: '/stock/exhibition-transfer-inbound' },
     ],
   },
   {
@@ -110,8 +118,8 @@ const menuItems: MenuItem[] = [
       { title: '入库明细', path: '/report/inbound-detail' },
       { title: '出库汇总', path: '/report/outbound' },
       { title: '出库明细', path: '/report/outbound-detail' },
-      { title: '展会物资领用报表', path: '/report/exhibition-requisition' },
-      { title: '展会物资领用报表详情', path: '/report/exhibition-requisition-detail' },
+      // { title: '展会物资领用报表', path: '/report/exhibition-requisition' },
+      // { title: '展会物资领用报表详情', path: '/report/exhibition-requisition-detail' },
       { title: '库龄分析', path: '/report/aging' },
       { title: '呆滞分析', path: '/report/sluggish' },
     ],
