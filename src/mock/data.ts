@@ -6,7 +6,7 @@
   WorkOrderProductConfig, Project, StockTransfer,
   // 采购管理类型
   ProcurementPlan, ProcurementDemand, ContractLedger, ProcurementOrder, ProcurementInspection,
-  ApprovalFlowConfig, ApprovalFlowNode
+  ApprovalFlowConfig, ApprovalFlowNode, ContractPurchaseOrder
 } from '@/types';
 
 // 仓库数据

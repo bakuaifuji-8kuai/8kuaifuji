@@ -361,6 +361,8 @@ export interface InboundOrder {
   createTime: string;
   approveTime?: string;
   approver?: string;
+  confirmTime?: string;
+  confirmer?: string;
   remark?: string;
   details: InboundDetail[];
   attachments?: Attachment[];

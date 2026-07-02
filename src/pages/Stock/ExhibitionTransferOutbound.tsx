@@ -437,13 +437,15 @@ export default function ExhibitionTransferOutboundPage() {
         }}
       >
         <SearchField label="调拨单号" placeholder="请输入" value={filterNo} onChange={setFilterNo} />
-        <SearchField label="状态" type="select" value={filterStatus} onChange={setFilterStatus}>
-          <option value="">全部</option>
-          <option value="pending">待出库确认</option>
-          <option value="outbound_confirmed">待入库确认</option>
-          <option value="completed">已完成</option>
-          <option value="cancelled">已取消</option>
-        </SearchField>
+        <SearchField label="状态" type="select" value={filterStatus} onChange={setFilterStatus}
+          options={[
+            { value: '', label: '全部' },
+            { value: 'pending', label: '待出库确认' },
+            { value: 'outbound_confirmed', label: '待入库确认' },
+            { value: 'completed', label: '已完成' },
+            { value: 'cancelled', label: '已取消' },
+          ]}
+        />
         <MultiSelect
           label="调出仓库"
           options={exhibitionWarehouses.map((w) => ({ value: w.id, label: w.name }))}
