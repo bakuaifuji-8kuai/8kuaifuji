@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   Warehouse, Position, ProductCategory, Product, Supplier, SupplierAssessment, Customer,
   Inventory, InboundOrder, InboundApplication, OutboundOrder, CheckOrder, TransferOrder, ReturnOrder, PendingReturn,
   AssetEquipment, ScrappedRecord, DamagedRecord, StockTransaction, Employee, PurchaseOrder,
@@ -15,6 +15,9 @@ export const warehouses: Warehouse[] = [
   { id: 'WH002', code: 'WH20240102001', warehouseNo: 'DZYH002', name: '低值易耗仓', category: 'consumable', categoryName: '低值易耗', property: 'physical', propertyName: '实物仓', address: '会展中心B区203号', manager: '李四', contactPhone: '13800138002', status: 'enabled', createTime: '2024-01-02' },
   { id: 'WH003', code: 'WH20240103001', warehouseNo: 'GDZC003', name: '固定资产仓', category: 'fixed_asset', categoryName: '固定资产', property: 'physical', propertyName: '实物仓', address: '会展中心C区305号', manager: '王五', contactPhone: '13800138003', status: 'enabled', createTime: '2024-01-03' },
   { id: 'WH004', code: 'WH20260701001', warehouseNo: 'ZHWZ004', name: '2026车展仓', category: 'exhibition', categoryName: '会展物资', property: 'virtual', propertyName: '虚拟仓', address: '', manager: '', contactPhone: '', status: 'enabled', createTime: '2026-07-01' },
+  { id: 'WH005', code: 'WH20260701002', warehouseNo: 'ZHWZ005', name: '2026车展仓（上海锦华）', category: 'exhibition', categoryName: '会展物资', property: 'virtual', propertyName: '虚拟仓', address: '', manager: '', contactPhone: '', status: 'enabled', createTime: '2026-07-01' },
+  { id: 'WH006', code: 'WH20260701003', warehouseNo: 'ZHWZ006', name: '2026车展仓（湖南警安）', category: 'exhibition', categoryName: '会展物资', property: 'virtual', propertyName: '虚拟仓', address: '', manager: '', contactPhone: '', status: 'enabled', createTime: '2026-07-01' },
+  { id: 'WH007', code: 'WH20260701004', warehouseNo: 'ZHWZ007', name: '2026车展仓（中裕电力）', category: 'exhibition', categoryName: '会展物资', property: 'virtual', propertyName: '虚拟仓', address: '', manager: '', contactPhone: '', status: 'enabled', createTime: '2026-07-01' },
 ];
 
 // 仓位数据
@@ -31,6 +34,10 @@ export const positions: Position[] = [
   { id: 'POS010', code: 'E01', name: 'E区01号', warehouseId: 'WH003', status: 'enabled' },
   { id: 'POS011', code: 'E02', name: 'E区02号', warehouseId: 'WH003', status: 'enabled' },
   { id: 'POS012', code: 'E03', name: 'E区03号', warehouseId: 'WH003', status: 'enabled' },
+  { id: 'POS013', code: 'V01', name: '虚拟仓位01', warehouseId: 'WH004', status: 'enabled' },
+  { id: 'POS014', code: 'V02', name: '虚拟仓位01', warehouseId: 'WH005', status: 'enabled' },
+  { id: 'POS015', code: 'V03', name: '虚拟仓位01', warehouseId: 'WH006', status: 'enabled' },
+  { id: 'POS016', code: 'V04', name: '虚拟仓位01', warehouseId: 'WH007', status: 'enabled' },
 ];
 
 // 货品分类数据
@@ -1048,6 +1055,25 @@ export const inboundOrders: InboundOrder[] = [
     details: [
       { id: 'IND_TEST_8_1', inboundOrderId: 'IN_TEST_8', productId: 'PRD111', productName: '瓷砖', productCode: 'JJ1035', positionId: 'POS009', positionName: 'D区02号', quantity: 120 },
       { id: 'IND_TEST_8_2', inboundOrderId: 'IN_TEST_8', productId: 'PRD101', productName: '圆形井盖', productCode: 'JJ1012', positionId: 'POS009', positionName: 'D区02号', quantity: 60 },
+    ]
+  },
+  {
+    id: 'IN_PR_1', orderNo: 'PR20260702931', type: 'purchase', supplierId: 'SUP001', supplierName: '华东物资供应有限公司',
+    warehouseId: 'WH001', warehouseName: '展会物资仓', status: 'pending', operator: '',
+    custodian: '张三', personInCharge: '', inspector: '赵六', salesperson: '', creator: '管理员',
+    createTime: '2026-07-02 10:42:00', approveTime: '2026-07-02 10:50:00', approver: '管理员',
+    confirmTime: '2026-07-02 10:42:00', confirmer: '管理员',
+    purchaseOrderId: 'CPO004', purchaseOrderNo: 'CPO20260702004',
+    details: [
+      { id: 'IND_PR_1_1', inboundOrderId: 'IN_PR_1', productId: 'PRD770', productName: '电缆', productCode: 'QD2001', specification: '6㎡（单线63A头/15米长）', unit: '根', positionId: 'POS001', positionName: 'A区01号', quantity: 100 },
+      { id: 'IND_PR_1_2', inboundOrderId: 'IN_PR_1', productId: 'PRD771', productName: '电缆', productCode: 'QD2002', specification: '6㎡（单线125A头/15米长）', unit: '根', positionId: 'POS001', positionName: 'A区01号', quantity: 100 },
+      { id: 'IND_PR_1_3', inboundOrderId: 'IN_PR_1', productId: 'PRD772', productName: '电缆', productCode: 'QD2003', specification: '4㎡（单线32A头/15米长）', unit: '根', positionId: 'POS001', positionName: 'A区01号', quantity: 100 },
+      { id: 'IND_PR_1_4', inboundOrderId: 'IN_PR_1', productId: 'PRD773', productName: '电缆', productCode: 'QD2004', specification: '16㎡（无头/15米长）', unit: '根', positionId: 'POS001', positionName: 'A区01号', quantity: 100 },
+      { id: 'IND_PR_1_5', inboundOrderId: 'IN_PR_1', productId: 'PRD774', productName: '电缆', productCode: 'QD2005', specification: '25㎡（无头/15米长）', unit: '根', positionId: 'POS001', positionName: 'A区01号', quantity: 100 },
+      { id: 'IND_PR_1_6', inboundOrderId: 'IN_PR_1', productId: 'PRD775', productName: '电缆', productCode: 'QD2006', specification: '35㎡（无头/15米长）', unit: '根', positionId: 'POS001', positionName: 'A区01号', quantity: 100 },
+      { id: 'IND_PR_1_7', inboundOrderId: 'IN_PR_1', productId: 'PRD776', productName: '电缆', productCode: 'QD2007', specification: '50㎡（无头/15米长）', unit: '根', positionId: 'POS001', positionName: 'A区01号', quantity: 100 },
+      { id: 'IND_PR_1_8', inboundOrderId: 'IN_PR_1', productId: 'PRD777', productName: '电缆', productCode: 'QD2008', specification: '70㎡（无头/15米长）', unit: '根', positionId: 'POS001', positionName: 'A区01号', quantity: 100 },
+      { id: 'IND_PR_1_9', inboundOrderId: 'IN_PR_1', productId: 'PRD778', productName: '电缆', productCode: 'QD2009', specification: '95㎡（无头/15米长）', unit: '根', positionId: 'POS001', positionName: 'A区01号', quantity: 100 },
     ]
   },
   // ===== 测试数据结束 =====
@@ -3256,6 +3282,83 @@ export const procurementDemands: ProcurementDemand[] = [
         stockQuantity: 0,
       },
     ],
+  },
+];
+
+
+
+// 合同采购订单数据
+export const contractPurchaseOrders: ContractPurchaseOrder[] = [
+  {
+    id: 'CPO001', orderNo: 'CPO20260601001',
+    contractId: 'C001', contractNo: 'HT-2026-001', contractName: '办公设备采购框架合同',
+    supplierId: 'SUP001', supplierName: '晨光办公用品有限公司',
+    totalDuration: '12个月', acceptanceStandard: '按合同附件技术标准验收', paymentTerms: '货到验收合格后30日内付款',
+    procurementDemandId: 'PD001', procurementDemandNo: 'CGXQ-20260601-001',
+    projectId: 'PRJ001', projectName: '2026年办公室升级项目', projectType: 'implementation_project',
+    status: 'submitted', createTime: '2026-06-01 09:00:00', creator: '管理员',
+    submitTime: '2026-06-01 10:30:00',
+    details: [
+      { id: 'D001', orderId: 'CPO001', productId: 'P001', productCode: 'BG-001', productName: '办公桌', specification: '1.4m×0.6m×0.75m', unit: '张', contractQuantity: 50, deliveredQuantity: 5, orderQuantity: 10, unitPrice: 800, amount: 8000, deliveryDate: '2026-06-15', remark: '' },
+      { id: 'D002', orderId: 'CPO001', productId: 'P002', productCode: 'BG-002', productName: '办公椅', specification: '人体工学款', unit: '把', contractQuantity: 100, deliveredQuantity: 8, orderQuantity: 15, unitPrice: 350, amount: 5250, deliveryDate: '2026-06-15', remark: '' },
+    ]
+  },
+  {
+    id: 'CPO002', orderNo: 'CPO20260605001',
+    contractId: 'C002', contractNo: 'HT-2026-002', contractName: '会展展具租赁合同',
+    supplierId: 'SUP002', supplierName: '华展展览服务有限公司',
+    totalDuration: '6个月', acceptanceStandard: '展具无损坏、功能正常', paymentTerms: '租赁期满后15日内结算',
+    procurementDemandId: 'PD002', procurementDemandNo: 'CGXQ-20260605-001',
+    projectId: 'PRJ002', projectName: '国际会展中心展台搭建', projectType: 'service_project',
+    status: 'draft', createTime: '2026-06-05 14:20:00', creator: '管理员',
+    details: [
+      { id: 'D003', orderId: 'CPO002', productId: 'P010', productCode: 'HZ-001', productName: '标准展位展板', specification: '1m×2.5m', unit: '块', contractQuantity: 200, deliveredQuantity: 10, orderQuantity: 30, unitPrice: 150, amount: 4500, deliveryDate: '2026-06-20', remark: '' },
+    ]
+  },
+  {
+    id: 'CPO003', orderNo: 'CPO20260626001',
+    contractId: 'C003', contractNo: 'HT-2026-003', contractName: '展会物资采购合同',
+    supplierId: 'SUP001', supplierName: '华东物资供应有限公司',
+    totalDuration: '3个月', acceptanceStandard: '按合同附件技术标准验收', paymentTerms: '货到验收合格后30日内付款',
+    procurementDemandId: 'PD003', procurementDemandNo: 'CGQQ20240626001',
+    projectId: 'PRJ003', projectName: '新物资采购测试', projectType: 'implementation_project',
+    status: 'submitted', createTime: '2026-06-26 10:00:00', creator: '孙七',
+    details: [
+      { id: 'D004', orderId: 'CPO003', productId: 'PRD770', productCode: 'QD2001', productName: '电缆', specification: '6㎡（单线63A头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 150, amount: 15000, deliveryDate: '2026-07-10', remark: '' },
+      { id: 'D005', orderId: 'CPO003', productId: 'PRD771', productCode: 'QD2002', productName: '电缆', specification: '6㎡（单线125A头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 180, amount: 18000, deliveryDate: '2026-07-10', remark: '' },
+      { id: 'D006', orderId: 'CPO003', productId: 'PRD772', productCode: 'QD2003', productName: '电缆', specification: '4㎡（单线32A头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 120, amount: 12000, deliveryDate: '2026-07-10', remark: '' },
+      { id: 'D007', orderId: 'CPO003', productId: 'PRD773', productCode: 'QD2004', productName: '电缆', specification: '16㎡（无头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 250, amount: 25000, deliveryDate: '2026-07-10', remark: '' },
+      { id: 'D008', orderId: 'CPO003', productId: 'PRD774', productCode: 'QD2005', productName: '电缆', specification: '25㎡（无头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 350, amount: 35000, deliveryDate: '2026-07-10', remark: '' },
+      { id: 'D009', orderId: 'CPO003', productId: 'PRD775', productCode: 'QD2006', productName: '电缆', specification: '35㎡（无头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 480, amount: 48000, deliveryDate: '2026-07-10', remark: '' },
+      { id: 'D010', orderId: 'CPO003', productId: 'PRD776', productCode: 'QD2007', productName: '电缆', specification: '50㎡（无头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 650, amount: 65000, deliveryDate: '2026-07-10', remark: '' },
+      { id: 'D011', orderId: 'CPO003', productId: 'PRD777', productCode: 'QD2008', productName: '电缆', specification: '70㎡（无头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 850, amount: 85000, deliveryDate: '2026-07-10', remark: '' },
+      { id: 'D012', orderId: 'CPO003', productId: 'PRD778', productCode: 'QD2009', productName: '电缆', specification: '95㎡（无头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 1100, amount: 110000, deliveryDate: '2026-07-10', remark: '' },
+      { id: 'D013', orderId: 'CPO003', productId: 'PRD779', productCode: 'QD2010', productName: '电缆', specification: '120㎡（无头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 1350, amount: 135000, deliveryDate: '2026-07-10', remark: '' },
+      { id: 'D014', orderId: 'CPO003', productId: 'PRD780', productCode: 'QD2011', productName: '电缆', specification: '150㎡（无头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 1650, amount: 165000, deliveryDate: '2026-07-10', remark: '' },
+      { id: 'D015', orderId: 'CPO003', productId: 'PRD781', productCode: 'QD2012', productName: '电缆', specification: '185㎡（无头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 2000, amount: 200000, deliveryDate: '2026-07-10', remark: '' },
+      { id: 'D016', orderId: 'CPO003', productId: 'PRD782', productCode: 'QD2013', productName: '电缆', specification: '240㎡（无头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 2500, amount: 250000, deliveryDate: '2026-07-10', remark: '' },
+    ]
+  },
+  {
+    id: 'CPO004', orderNo: 'CPO20260702004',
+    contractId: 'C003', contractNo: 'HT-2026-003', contractName: '展会物资采购合同',
+    supplierId: 'SUP001', supplierName: '华东物资供应有限公司',
+    totalDuration: '3个月', acceptanceStandard: '按合同附件技术标准验收', paymentTerms: '货到验收合格后30日内付款',
+    procurementDemandId: 'PD003', procurementDemandNo: 'CGQQ20240626001',
+    projectId: 'PRJ003', projectName: '新物资采购测试', projectType: 'implementation_project',
+    status: 'submitted', createTime: '2026-07-02 02:42:28', creator: '管理员',
+    submitTime: '2026-07-02 03:00:00',
+    details: [
+      { id: 'D017', orderId: 'CPO004', productId: 'PRD770', productCode: 'QD2001', productName: '电缆', specification: '6㎡（单线63A头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 150, amount: 15000, deliveryDate: '2026-07-15', remark: '' },
+      { id: 'D018', orderId: 'CPO004', productId: 'PRD771', productCode: 'QD2002', productName: '电缆', specification: '6㎡（单线125A头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 180, amount: 18000, deliveryDate: '2026-07-15', remark: '' },
+      { id: 'D019', orderId: 'CPO004', productId: 'PRD772', productCode: 'QD2003', productName: '电缆', specification: '4㎡（单线32A头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 120, amount: 12000, deliveryDate: '2026-07-15', remark: '' },
+      { id: 'D020', orderId: 'CPO004', productId: 'PRD773', productCode: 'QD2004', productName: '电缆', specification: '16㎡（无头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 250, amount: 25000, deliveryDate: '2026-07-15', remark: '' },
+      { id: 'D021', orderId: 'CPO004', productId: 'PRD774', productCode: 'QD2005', productName: '电缆', specification: '25㎡（无头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 350, amount: 35000, deliveryDate: '2026-07-15', remark: '' },
+      { id: 'D022', orderId: 'CPO004', productId: 'PRD775', productCode: 'QD2006', productName: '电缆', specification: '35㎡（无头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 480, amount: 48000, deliveryDate: '2026-07-15', remark: '' },
+      { id: 'D023', orderId: 'CPO004', productId: 'PRD776', productCode: 'QD2007', productName: '电缆', specification: '50㎡（无头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 650, amount: 65000, deliveryDate: '2026-07-15', remark: '' },
+      { id: 'D024', orderId: 'CPO004', productId: 'PRD777', productCode: 'QD2008', productName: '电缆', specification: '70㎡（无头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 850, amount: 85000, deliveryDate: '2026-07-15', remark: '' },
+      { id: 'D025', orderId: 'CPO004', productId: 'PRD778', productCode: 'QD2009', productName: '电缆', specification: '95㎡（无头/15米长）', unit: '根', contractQuantity: 200, deliveredQuantity: 0, orderQuantity: 100, unitPrice: 1100, amount: 110000, deliveryDate: '2026-07-15', remark: '' },
+    ]
   },
 ];
 

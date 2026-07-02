@@ -243,19 +243,6 @@ export default function OutboundDetailReport() {
         return `合计: ${total}`;
       },
     },
-    {
-      accessorKey: 'unitPrice',
-      header: '单价',
-      cell: ({ row }: any) => row.original.unitPrice != null ? row.original.unitPrice : '-',
-    },
-    {
-      accessorKey: 'amount',
-      header: '金额',
-      cell: ({ row }: any) => row.original.amount != null ? row.original.amount : '-',
-    },
-    { accessorKey: 'workOrderCode', header: '工单号', cell: ({ row }: any) => row.original.workOrderCode || '-' },
-    { accessorKey: 'workOrderName', header: '工单名称', cell: ({ row }: any) => row.original.workOrderName || '-' },
-    { accessorKey: 'projectName', header: '所属项目', cell: ({ row }: any) => row.original.projectName || '-' },
     { accessorKey: 'operator', header: '操作员', cell: ({ row }: any) => row.original.operator || '-' },
   ];
 
@@ -283,12 +270,6 @@ export default function OutboundDetailReport() {
       '规格型号': item.specification || '-',
       '单位': item.unit || '-',
       '数量': item.quantity,
-      '单价': item.unitPrice != null ? item.unitPrice : '-',
-      '金额': item.amount != null ? item.amount : '-',
-
-      '工单号': item.workOrderCode || '-',
-      '工单名称': item.workOrderName || '-',
-      '所属项目': item.projectName || '-',
       '操作员': item.operator || '-',
     }));
 

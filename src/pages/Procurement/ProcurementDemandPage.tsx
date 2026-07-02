@@ -193,6 +193,7 @@ export default function ProcurementDemandPage() {
         const detail: ProcurementDemandDetail = {
           id: 'PDD' + Date.now() + '_' + p.id,
           demandId: editItem?.id || '',
+          productId: p.id,
           productCode: p.code || '',
           productName: p.name,
           productType: p.categoryName || '',
@@ -221,7 +222,6 @@ export default function ProcurementDemandPage() {
             : '',
           procurementDescription: '',
         };
-        (detail as any).productId = p.id;
         return detail;
       });
 
