@@ -17,6 +17,8 @@ export default function ProcurementInspectionPage() {
   const inventories = useStore((s) => s.inventories);
   const addInventory = useStore((s) => s.addInventory);
   const updateInventory = useStore((s) => s.updateInventory);
+  const batchInventories = useStore((s) => s.batchInventories);
+  const addBatchInventory = useStore((s) => s.addBatchInventory);
   const warehouses = useStore((s) => s.warehouses);
   const positions = useStore((s) => s.positions);
 
@@ -109,34 +111,28 @@ export default function ProcurementInspectionPage() {
   };
 
   const handleApprove = (inspection: ProcurementInspection) => {
-    // 审批通过后同步库存
     const syncToInventory = () => {
       if (inspection.details.length === 0) return;
 
-      // 默认仓库和仓位（取第一个）
       const defaultWarehouse = warehouses[0];
       const defaultPosition = positions[0];
+      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
 
       inspection.details.forEach((detail) => {
         if (!detail.isQualified || detail.passQuantity <= 0) return;
 
-        // 查找商品
         const product = products.find((p) => p.id === detail.productId);
         if (!product) return;
 
-        // 查找是否已有库存记录
         const existingInventory = inventories.find(
           (inv) => inv.productId === detail.productId && inv.warehouseId === defaultWarehouse?.id
         );
 
         if (existingInventory) {
-          // 更新库存数量
           updateInventory(existingInventory.id, {
             quantity: (existingInventory.quantity || 0) + detail.passQuantity,
           });
         } else {
-          // 新增库存记录
-          const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
           const newInventory = {
             id: 'INV' + Date.now() + Math.random(),
             productId: product.id,
@@ -155,6 +151,26 @@ export default function ProcurementInspectionPage() {
           };
           addInventory(newInventory as any);
         }
+
+        const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+        const batchNo = `PC${dateStr}${random}`;
+
+        addBatchInventory({
+          id: 'B' + Date.now() + Math.random().toString(36).slice(2, 7),
+          batchNo,
+          productId: detail.productId,
+          productCode: detail.productCode,
+          productName: detail.productName,
+          specification: detail.specification || product.specification || '',
+          warehouseId: defaultWarehouse?.id || '',
+          warehouseName: defaultWarehouse?.name || '',
+          positionId: defaultPosition?.id || '',
+          positionName: defaultPosition?.name || '',
+          quantity: detail.passQuantity,
+          originalQuantity: detail.passQuantity,
+          inboundTime: new Date().toISOString().slice(0, 10),
+        });
       });
     };
 

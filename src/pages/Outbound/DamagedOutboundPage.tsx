@@ -242,7 +242,7 @@ export default function DamagedOutboundPage() {
     const details = (record as any).details || [];
     const defaultPos = positions.find((p: any) => p.warehouseId === record.warehouseId);
 
-    details.forEach((d: DamagedDetail) => {
+    for (const d of details) {
       const productId = d.productId;
       const warehouseId = record.warehouseId;
       const quantity = d.quantity;
@@ -283,7 +283,12 @@ export default function DamagedOutboundPage() {
 
         remaining -= deduct;
       }
-    });
+
+      if (remaining > 0) {
+        alert(`产品 "${d.productName}" 可用量不足，需要 ${quantity}，可用 ${quantity - remaining}`);
+        return;
+      }
+    }
 
     updateDamagedRecord(id, { ...record, status: 'confirmed' as any });
   };

@@ -66,6 +66,9 @@ export default function StockTransferPage() {
   const batchInventories = useStore((s) => s.batchInventories);
   const updateBatchInventory = useStore((s) => s.updateBatchInventory);
   const addBatchInventory = useStore((s) => s.addBatchInventory);
+  const inventories = useStore((s) => s.inventories);
+  const addInventory = useStore((s) => s.addInventory);
+  const updateInventory = useStore((s) => s.updateInventory);
   const addStockTransaction = useStore((s) => s.addStockTransaction);
   const warehouses = useStore((s) => s.warehouses);
   const positions = useStore((s) => s.positions);
@@ -370,7 +373,6 @@ export default function StockTransferPage() {
       const toPosId = d.toPositionId || defaultToPos?.id || '';
       const toPosName = d.toPositionName || defaultToPos?.name || '';
       
-      // 创建新的批次库存
       const product = products.find((p) => p.id === d.productId);
       const newBatch = {
         id: 'BI' + Date.now() + Math.random().toString(36).slice(2, 7),
@@ -389,7 +391,31 @@ export default function StockTransferPage() {
       };
       addBatchInventory(newBatch);
 
-      // 生成入库流水
+      const existingInventory = inventories.find(
+        (inv) => inv.productId === d.productId && inv.warehouseId === order.toWarehouseId
+      );
+      if (existingInventory) {
+        updateInventory(existingInventory.id, {
+          quantity: (existingInventory.quantity || 0) + d.quantity,
+        });
+      } else {
+        addInventory({
+          id: 'INV' + Date.now() + Math.random(),
+          productId: d.productId,
+          productCode: d.productCode,
+          productName: d.productName,
+          specification: (d as any).specification || product?.specification || '',
+          unit: (d as any).unit || '',
+          quantity: d.quantity,
+          frozenQuantity: 0,
+          inboundTime: now,
+          warehouseId: order.toWarehouseId,
+          warehouseName: order.toWarehouseName || '',
+          positionId: toPosId,
+          positionName: toPosName,
+        } as any);
+      }
+
       addStockTransaction({
         id: 'TX' + Date.now() + Math.random().toString(36).slice(2, 7),
         transactionNo:

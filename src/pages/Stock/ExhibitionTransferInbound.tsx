@@ -39,6 +39,9 @@ export default function ExhibitionTransferInboundPage() {
   const updateStockTransfer = useStore((s) => s.updateStockTransfer);
   const batchInventories = useStore((s) => s.batchInventories);
   const addBatchInventory = useStore((s) => s.addBatchInventory);
+  const inventories = useStore((s) => s.inventories);
+  const addInventory = useStore((s) => s.addInventory);
+  const updateInventory = useStore((s) => s.updateInventory);
   const addStockTransaction = useStore((s) => s.addStockTransaction);
   const warehouses = useStore((s) => s.warehouses);
   const positions = useStore((s) => s.positions);
@@ -172,6 +175,31 @@ export default function ExhibitionTransferInboundPage() {
         inboundTime: now,
       };
       addBatchInventory(newBatch);
+
+      const existingInventory = inventories.find(
+        (inv) => inv.productId === d.productId && inv.warehouseId === order.toWarehouseId
+      );
+      if (existingInventory) {
+        updateInventory(existingInventory.id, {
+          quantity: (existingInventory.quantity || 0) + d.quantity,
+        });
+      } else {
+        addInventory({
+          id: 'INV' + Date.now() + Math.random(),
+          productId: d.productId,
+          productCode: d.productCode,
+          productName: d.productName,
+          specification: (d as any).specification || product?.specification || '',
+          unit: (d as any).unit || '',
+          quantity: d.quantity,
+          frozenQuantity: 0,
+          inboundTime: now,
+          warehouseId: order.toWarehouseId,
+          warehouseName: order.toWarehouseName || '',
+          positionId: toPosId,
+          positionName: toPosName,
+        } as any);
+      }
 
       addStockTransaction({
         id: 'TX' + Date.now() + Math.random().toString(36).slice(2, 7),

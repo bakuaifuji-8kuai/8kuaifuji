@@ -88,6 +88,9 @@ export default function ReturnStockPage() {
   const updateReturnOrder = useStore((s) => s.updateReturnOrder);
   const deleteReturnOrder = useStore((s) => s.deleteReturnOrder);
   const addBatchInventory = useStore((s) => s.addBatchInventory);
+  const inventories = useStore((s) => s.inventories);
+  const addInventory = useStore((s) => s.addInventory);
+  const updateInventory = useStore((s) => s.updateInventory);
   const addStockTransaction = useStore((s) => s.addStockTransaction);
   const warehouses = useStore((s) => s.warehouses);
   const positions = useStore((s) => s.positions);
@@ -519,6 +522,32 @@ export default function ReturnStockPage() {
         inboundTime: completeTime,
         inboundOrderNo: order.orderNo,
       });
+
+      const existingInventory = inventories.find(
+        (inv) => inv.productId === d.productId && inv.warehouseId === order.warehouseId
+      );
+      if (existingInventory) {
+        updateInventory(existingInventory.id, {
+          quantity: (existingInventory.quantity || 0) + d.quantity,
+        });
+      } else {
+        const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+        addInventory({
+          id: 'INV' + Date.now() + Math.random(),
+          productId: d.productId,
+          productCode: d.productCode,
+          productName: d.productName,
+          specification: (d as any).specification || product?.specification || '',
+          unit: (d as any).unit || '',
+          quantity: d.quantity,
+          frozenQuantity: 0,
+          inboundTime: now,
+          warehouseId: order.warehouseId,
+          warehouseName: order.warehouseName || '',
+          positionId: posId,
+          positionName: posName,
+        } as any);
+      }
 
       addStockTransaction({
         id: 'ST' + Date.now() + Math.random().toString(36).slice(2, 7),

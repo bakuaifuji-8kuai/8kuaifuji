@@ -142,6 +142,9 @@ export default function InboundPage({ type = 'purchase' }: Props) {
   const employees = useStore((s) => s.employees);
   const batchInventories = useStore((s) => s.batchInventories);
   const addBatchInventory = useStore((s) => s.addBatchInventory);
+  const inventories = useStore((s) => s.inventories);
+  const addInventory = useStore((s) => s.addInventory);
+  const updateInventory = useStore((s) => s.updateInventory);
   const stockTransactions = useStore((s) => s.stockTransactions);
   const addStockTransaction = useStore((s) => s.addStockTransaction);
   const purchaseOrders = useStore((s) => s.purchaseOrders);
@@ -647,7 +650,6 @@ export default function InboundPage({ type = 'purchase' }: Props) {
     if (order.status !== 'submitted') return;
     if (!confirm(`确认入库 ${order.orderNo}？确认后将增加库存，不可撤销。`)) return;
 
-    // Create batch inventory records
     order.details.forEach((d) => {
       const batchNo = (d as any).batchNo || generateBatchNo();
       const defaultPos = positions.find((p: any) => p.warehouseId === order.warehouseId);
@@ -675,7 +677,34 @@ export default function InboundPage({ type = 'purchase' }: Props) {
           inboundOrderNo: order.orderNo,
         });
       }
-      // Add stock transaction
+
+      const existingInventory = inventories.find(
+        (inv) => inv.productId === d.productId && inv.warehouseId === order.warehouseId
+      );
+      if (existingInventory) {
+        updateInventory(existingInventory.id, {
+          quantity: (existingInventory.quantity || 0) + d.quantity,
+        });
+      } else {
+        const product = products.find((p) => p.id === d.productId);
+        const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+        addInventory({
+          id: 'INV' + Date.now() + Math.random(),
+          productId: d.productId,
+          productCode: d.productCode,
+          productName: d.productName,
+          specification: (d as any).specification || product?.specification || '',
+          unit: (d as any).unit || '',
+          quantity: d.quantity,
+          frozenQuantity: 0,
+          inboundTime: now,
+          warehouseId: order.warehouseId,
+          warehouseName: order.warehouseName || '',
+          positionId: posId,
+          positionName: posName,
+        } as any);
+      }
+
       addStockTransaction({
         id: 'T' + Date.now() + Math.random().toString(36).slice(2, 7),
         transactionNo: generateStockTransactionNo(),
