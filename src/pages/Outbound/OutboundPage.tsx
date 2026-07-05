@@ -113,6 +113,9 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
   const batchInventories = useStore((s) => s.batchInventories);
   const updateBatchInventory = useStore((s) => s.updateBatchInventory);
   const addStockTransaction = useStore((s) => s.addStockTransaction);
+  const inventories = useStore((s) => s.inventories);
+  const updateInventory = useStore((s) => s.updateInventory);
+  const addInventory = useStore((s) => s.addInventory);
   const warehouses = useStore((s) => s.warehouses);
   const positions = useStore((s) => s.positions);
   const products = useStore((s) => s.products);
@@ -447,7 +450,10 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
 
     const defaultPos = positions.find((p: any) => p.warehouseId === order.warehouseId);
 
-    for (const d of order.details) {
+    const allConsumptions: { detailIndex: number; batchId: string; batchNo: string; quantity: number }[] = [];
+
+    for (let di = 0; di < order.details.length; di++) {
+      const d = order.details[di];
       const productBatches = batchInventories
         .filter((b) => b.productId === d.productId && b.quantity > 0 && (!order.warehouseId || b.warehouseId === order.warehouseId))
         .sort((a, b) => a.inboundTime.localeCompare(b.inboundTime));
@@ -458,7 +464,6 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
         if (remaining <= 0) break;
         const deduct = Math.min(batch.quantity, remaining);
         consumptions.push({ batchId: batch.id, batchNo: batch.batchNo, quantity: deduct });
-        updateBatchInventory(batch.id, { quantity: batch.quantity - deduct });
         remaining -= deduct;
       }
 
@@ -466,12 +471,27 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
         alert(`产品 "${d.productName}" 可用量不足，需要 ${d.quantity}，可用 ${d.quantity - remaining}`);
         return;
       }
-      d.batchConsumptions = consumptions;
+      consumptions.forEach(c => allConsumptions.push({ detailIndex: di, ...c }));
     }
+
+    allConsumptions.forEach(c => {
+      const batch = batchInventories.find(b => b.id === c.batchId);
+      if (batch) {
+        updateBatchInventory(c.batchId, { quantity: batch.quantity - c.quantity });
+      }
+    });
 
     for (const d of order.details) {
       const posId = d.positionId || defaultPos?.id || '';
       const posName = d.positionName || defaultPos?.name || '';
+
+      const existingInv = inventories.find(
+        inv => inv.productId === d.productId && inv.warehouseId === order.warehouseId && inv.positionId === posId
+      );
+      if (existingInv) {
+        updateInventory(existingInv.id, { quantity: existingInv.quantity - d.quantity });
+      }
+
       addStockTransaction({
         id: 'TX' + Date.now() + Math.random().toString(36).slice(2, 7),
         transactionNo:
@@ -491,12 +511,21 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
         sourceOrderId: order.id,
         sourceOrderNo: order.orderNo,
         sourceType: (d as any).workOrderId ? '工单出库' : pageTitle,
-        batchNo: d.batchConsumptions?.[0]?.batchNo || '',
+        batchNo: allConsumptions.filter(c => c.detailIndex === order.details.indexOf(d))[0]?.batchNo || '',
         operator: order.operator || '',
       });
     }
 
-    updateOutboundOrder(id, { ...order, status: 'confirmed' as const });
+    const updatedDetails = order.details.map((d, di) => ({
+      ...d,
+      batchConsumptions: allConsumptions.filter(c => c.detailIndex === di).map(c => ({
+        batchId: c.batchId,
+        batchNo: c.batchNo,
+        quantity: c.quantity
+      }))
+    }));
+
+    updateOutboundOrder(id, { ...order, details: updatedDetails, status: 'confirmed' as const });
   };
 
   const totalQuantity = editItem?.details.reduce((s, d) => s + (d.quantity || 0), 0) || 0;

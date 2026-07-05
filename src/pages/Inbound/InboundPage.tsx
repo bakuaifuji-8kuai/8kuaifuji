@@ -144,6 +144,9 @@ export default function InboundPage({ type = 'purchase' }: Props) {
   const addBatchInventory = useStore((s) => s.addBatchInventory);
   const stockTransactions = useStore((s) => s.stockTransactions);
   const addStockTransaction = useStore((s) => s.addStockTransaction);
+  const inventories = useStore((s) => s.inventories);
+  const addInventory = useStore((s) => s.addInventory);
+  const updateInventory = useStore((s) => s.updateInventory);
   const purchaseOrders = useStore((s) => s.purchaseOrders);
   const updatePurchaseOrder = useStore((s) => s.updatePurchaseOrder);
   const contractPurchaseOrders = useStore((s) => s.contractPurchaseOrders);
@@ -647,7 +650,6 @@ export default function InboundPage({ type = 'purchase' }: Props) {
     if (order.status !== 'submitted') return;
     if (!confirm(`确认入库 ${order.orderNo}？确认后将增加库存，不可撤销。`)) return;
 
-    // Create batch inventory records
     order.details.forEach((d) => {
       const batchNo = (d as any).batchNo || generateBatchNo();
       const defaultPos = positions.find((p: any) => p.warehouseId === order.warehouseId);
@@ -675,7 +677,28 @@ export default function InboundPage({ type = 'purchase' }: Props) {
           inboundOrderNo: order.orderNo,
         });
       }
-      // Add stock transaction
+
+      const existingInv = inventories.find(
+        inv => inv.productId === d.productId && inv.warehouseId === order.warehouseId && inv.positionId === posId
+      );
+      if (existingInv) {
+        updateInventory(existingInv.id, { quantity: existingInv.quantity + d.quantity });
+      } else {
+        addInventory({
+          id: 'INV' + Date.now() + Math.random().toString(36).slice(2, 7),
+          productId: d.productId,
+          productCode: d.productCode,
+          productName: d.productName,
+          warehouseId: order.warehouseId,
+          warehouseName: order.warehouseName || '',
+          positionId: posId,
+          positionName: posName,
+          quantity: d.quantity,
+          frozenQuantity: 0,
+          inboundTime: new Date().toISOString().slice(0, 10),
+        });
+      }
+
       addStockTransaction({
         id: 'T' + Date.now() + Math.random().toString(36).slice(2, 7),
         transactionNo: generateStockTransactionNo(),
@@ -698,12 +721,10 @@ export default function InboundPage({ type = 'purchase' }: Props) {
       });
     });
 
-    // Update purchase order received quantity if linked
     const poId = (order as any).purchaseOrderId;
     if (poId) {
       const cpo = contractPurchaseOrders.find(p => p.id === poId);
       if (cpo) {
-        // Update received quantities
         const updatedDetails = cpo.details.map(d => {
           const inboundDetail = order.details.find(od => od.productId === d.productId);
           if (inboundDetail) {

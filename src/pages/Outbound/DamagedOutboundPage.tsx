@@ -70,6 +70,8 @@ export default function DamagedOutboundPage() {
   const batchInventories = useStore((s) => s.batchInventories);
   const updateBatchInventory = useStore((s) => s.updateBatchInventory);
   const addStockTransaction = useStore((s) => s.addStockTransaction);
+  const inventories = useStore((s) => s.inventories);
+  const updateInventory = useStore((s) => s.updateInventory);
   const warehouses = useStore((s) => s.warehouses);
   const positions = useStore((s) => s.positions);
   const products = useStore((s) => s.products);
@@ -242,47 +244,78 @@ export default function DamagedOutboundPage() {
     const details = (record as any).details || [];
     const defaultPos = positions.find((p: any) => p.warehouseId === record.warehouseId);
 
-    details.forEach((d: DamagedDetail) => {
+    const allDeductions: { productId: string; positionId: string; batchId: string; quantity: number; batchNo: string; productCode: string; productName: string }[] = [];
+
+    for (const d of details) {
       const productId = d.productId;
       const warehouseId = record.warehouseId;
       const quantity = d.quantity;
       const posId = d.positionId || defaultPos?.id || '';
-      const posName = d.positionName || defaultPos?.name || '';
 
       let remaining = quantity;
       const productBatches = batchInventories
         .filter((b) => b.productId === productId && b.warehouseId === warehouseId && b.quantity > 0)
         .sort((a: any, b: any) => a.inboundTime.localeCompare(b.inboundTime));
 
+      const deductions: { batchId: string; batchNo: string; quantity: number }[] = [];
       for (const batch of productBatches) {
         if (remaining <= 0) break;
-
         const deduct = Math.min(batch.quantity, remaining);
-        updateBatchInventory(batch.id, { quantity: batch.quantity - deduct });
-
-        addStockTransaction({
-          id: 'ST' + Date.now() + Math.random().toString(36).slice(2, 7),
-          transactionNo: generateStockTransactionNo(),
-          transactionTime: completeTime,
-          transactionType: 'outbound' as any,
-          productId: productId,
-          productCode: d.productCode,
-          productName: d.productName,
-          warehouseId: warehouseId,
-          warehouseName: record.warehouseName || '',
-          positionId: posId,
-          positionName: posName,
-          quantity: -deduct,
-          sourceOrderId: record.id,
-          sourceOrderNo: record.recordNo,
-          sourceType: '报损出库',
-          batchNo: batch.batchNo,
-          operator: record.operator || '',
-          remark: record.reason || '报损出库',
-        });
-
+        deductions.push({ batchId: batch.id, batchNo: batch.batchNo, quantity: deduct });
         remaining -= deduct;
       }
+
+      if (remaining > 0) {
+        alert(`产品 "${d.productName}" 可用量不足，需要 ${quantity}，可用 ${quantity - remaining}`);
+        return;
+      }
+
+      deductions.forEach(ded => {
+        allDeductions.push({
+          productId,
+          positionId: posId,
+          batchId: ded.batchId,
+          batchNo: ded.batchNo,
+          quantity: ded.quantity,
+          productCode: d.productCode,
+          productName: d.productName
+        });
+      });
+    }
+
+    allDeductions.forEach(ded => {
+      const batch = batchInventories.find(b => b.id === ded.batchId);
+      if (batch) {
+        updateBatchInventory(ded.batchId, { quantity: batch.quantity - ded.quantity });
+      }
+
+      const existingInv = inventories.find(
+        inv => inv.productId === ded.productId && inv.warehouseId === record.warehouseId && inv.positionId === ded.positionId
+      );
+      if (existingInv) {
+        updateInventory(existingInv.id, { quantity: existingInv.quantity - ded.quantity });
+      }
+
+      addStockTransaction({
+        id: 'ST' + Date.now() + Math.random().toString(36).slice(2, 7),
+        transactionNo: generateStockTransactionNo(),
+        transactionTime: completeTime,
+        transactionType: 'outbound' as any,
+        productId: ded.productId,
+        productCode: ded.productCode,
+        productName: ded.productName,
+        warehouseId: record.warehouseId,
+        warehouseName: record.warehouseName || '',
+        positionId: ded.positionId,
+        positionName: defaultPos?.name || '',
+        quantity: -ded.quantity,
+        sourceOrderId: record.id,
+        sourceOrderNo: record.recordNo,
+        sourceType: '报损出库',
+        batchNo: ded.batchNo,
+        operator: record.operator || '',
+        remark: record.reason || '报损出库',
+      });
     });
 
     updateDamagedRecord(id, { ...record, status: 'confirmed' as any });

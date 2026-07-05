@@ -67,6 +67,9 @@ export default function StockTransferPage() {
   const updateBatchInventory = useStore((s) => s.updateBatchInventory);
   const addBatchInventory = useStore((s) => s.addBatchInventory);
   const addStockTransaction = useStore((s) => s.addStockTransaction);
+  const inventories = useStore((s) => s.inventories);
+  const addInventory = useStore((s) => s.addInventory);
+  const updateInventory = useStore((s) => s.updateInventory);
   const warehouses = useStore((s) => s.warehouses);
   const positions = useStore((s) => s.positions);
   const products = useStore((s) => s.products);
@@ -288,6 +291,8 @@ export default function StockTransferPage() {
 
     const defaultFromPos = positions.find((p) => p.warehouseId === order.fromWarehouseId);
     const newDetails = [...order.details];
+    const allConsumptions: { detailIndex: number; batchId: string; batchNo: string; quantity: number; fromPosId: string; fromPosName: string }[] = [];
+
     for (let i = 0; i < newDetails.length; i++) {
       const d = newDetails[i];
       const fromPosId = d.fromPositionId || defaultFromPos?.id || '';
@@ -307,7 +312,6 @@ export default function StockTransferPage() {
         if (remaining <= 0) break;
         const deduct = Math.min(batch.quantity, remaining);
         consumptions.push({ batchId: batch.id, batchNo: batch.batchNo, quantity: deduct });
-        updateBatchInventory(batch.id, { quantity: batch.quantity - deduct });
         remaining -= deduct;
       }
 
@@ -315,12 +319,35 @@ export default function StockTransferPage() {
         alert(`产品 "${d.productName}" 可用量不足，需要 ${d.quantity}，可用 ${d.quantity - remaining}`);
         return;
       }
+
+      consumptions.forEach(c => {
+        allConsumptions.push({ detailIndex: i, ...c, fromPosId, fromPosName });
+      });
       (newDetails[i] as any).batchConsumptions = consumptions;
       (newDetails[i] as any).fromPositionId = fromPosId;
       (newDetails[i] as any).fromPositionName = fromPosName;
     }
 
-    // 生成出库流水
+    allConsumptions.forEach(c => {
+      const batch = batchInventories.find(b => b.id === c.batchId);
+      if (batch) {
+        updateBatchInventory(c.batchId, { quantity: batch.quantity - c.quantity });
+      }
+    });
+
+    for (let i = 0; i < newDetails.length; i++) {
+      const d = newDetails[i];
+      const fromPosId = (d as any).fromPositionId;
+      const fromPosName = (d as any).fromPositionName || '';
+
+      const existingInv = inventories.find(
+        inv => inv.productId === d.productId && inv.warehouseId === order.fromWarehouseId && inv.positionId === fromPosId
+      );
+      if (existingInv) {
+        updateInventory(existingInv.id, { quantity: existingInv.quantity - d.quantity });
+      }
+    }
+
     for (const d of newDetails) {
       addStockTransaction({
         id: 'TX' + Date.now() + Math.random().toString(36).slice(2, 7),
@@ -370,7 +397,6 @@ export default function StockTransferPage() {
       const toPosId = d.toPositionId || defaultToPos?.id || '';
       const toPosName = d.toPositionName || defaultToPos?.name || '';
       
-      // 创建新的批次库存
       const product = products.find((p) => p.id === d.productId);
       const newBatch = {
         id: 'BI' + Date.now() + Math.random().toString(36).slice(2, 7),
@@ -389,7 +415,27 @@ export default function StockTransferPage() {
       };
       addBatchInventory(newBatch);
 
-      // 生成入库流水
+      const existingInv = inventories.find(
+        inv => inv.productId === d.productId && inv.warehouseId === order.toWarehouseId && inv.positionId === toPosId
+      );
+      if (existingInv) {
+        updateInventory(existingInv.id, { quantity: existingInv.quantity + d.quantity });
+      } else {
+        addInventory({
+          id: 'INV' + Date.now() + Math.random().toString(36).slice(2, 7),
+          productId: d.productId,
+          productCode: d.productCode,
+          productName: d.productName,
+          warehouseId: order.toWarehouseId,
+          warehouseName: order.toWarehouseName || '',
+          positionId: toPosId,
+          positionName: toPosName,
+          quantity: d.quantity,
+          frozenQuantity: 0,
+          inboundTime: now.slice(0, 10),
+        });
+      }
+
       addStockTransaction({
         id: 'TX' + Date.now() + Math.random().toString(36).slice(2, 7),
         transactionNo:

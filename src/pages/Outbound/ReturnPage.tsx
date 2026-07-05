@@ -84,6 +84,9 @@ export default function ReturnPage() {
   const deleteReturnOrder = useStore((s) => s.deleteReturnOrder);
   const addBatchInventory = useStore((s) => s.addBatchInventory);
   const addStockTransaction = useStore((s) => s.addStockTransaction);
+  const inventories = useStore((s) => s.inventories);
+  const addInventory = useStore((s) => s.addInventory);
+  const updateInventory = useStore((s) => s.updateInventory);
   const warehouses = useStore((s) => s.warehouses);
   const positions = useStore((s) => s.positions);
   const outboundOrders = useStore((s) => s.outboundOrders);
@@ -437,6 +440,27 @@ export default function ReturnPage() {
         inboundTime: completeTime,
         inboundOrderNo: order.orderNo,
       });
+
+      const existingInv = inventories.find(
+        inv => inv.productId === d.productId && inv.warehouseId === order.warehouseId && inv.positionId === posId
+      );
+      if (existingInv) {
+        updateInventory(existingInv.id, { quantity: existingInv.quantity + d.quantity });
+      } else {
+        addInventory({
+          id: 'INV' + Date.now() + Math.random().toString(36).slice(2, 7),
+          productId: d.productId,
+          productCode: d.productCode,
+          productName: d.productName,
+          warehouseId: order.warehouseId,
+          warehouseName: order.warehouseName || '',
+          positionId: posId,
+          positionName: posName,
+          quantity: d.quantity,
+          frozenQuantity: 0,
+          inboundTime: completeTime.slice(0, 10),
+        });
+      }
 
       addStockTransaction({
         id: 'ST' + Date.now() + Math.random().toString(36).slice(2, 7),
