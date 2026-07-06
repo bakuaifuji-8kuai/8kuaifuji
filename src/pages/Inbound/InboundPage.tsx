@@ -20,6 +20,7 @@ interface FormDetail extends InboundDetail {
   batchNo: string;
   specification?: string;
   unit?: string;
+  maxQuantity?: number; // 剩余可入库数/出库数量/调拨数量上限
 }
 
 const helpContentMap: Record<string, any> = {
@@ -410,17 +411,21 @@ export default function InboundPage({ type = 'purchase' }: Props) {
     const batchNo = generateBatchNo();
     const newDetails: FormDetail[] = selectedPurchaseOrder.details
       .filter(d => selectedPurchaseDetailIds.includes(d.id))
-      .map(d => ({
-        id: 'IND' + Date.now() + Math.random().toString(36).slice(2, 5),
-        inboundOrderId: editItem?.id || '',
-        productId: d.productId,
-        productCode: d.productCode,
-        productName: d.productName,
-        quantity: d.orderQuantity - d.deliveredQuantity,
-        batchNo,
-        specification: d.specification || '',
-        unit: d.unit,
-      }));
+      .map(d => {
+        const remaining = d.orderQuantity - d.deliveredQuantity;
+        return {
+          id: 'IND' + Date.now() + Math.random().toString(36).slice(2, 5),
+          inboundOrderId: editItem?.id || '',
+          productId: d.productId,
+          productCode: d.productCode,
+          productName: d.productName,
+          quantity: remaining,
+          batchNo,
+          specification: d.specification || '',
+          unit: d.unit,
+          maxQuantity: remaining,
+        };
+      });
     setEditDetails(newDetails);
     setSelectedDetailIndices([]);
     if (editItem) {
@@ -478,6 +483,7 @@ export default function InboundPage({ type = 'purchase' }: Props) {
         batchNo,
         specification: products.find((p: any) => p.id === d.productId)?.specification || '',
         unit: products.find((p: any) => p.id === d.productId)?.unit || '',
+        maxQuantity: d.quantity,
       }));
     setEditDetails(newDetails);
     setOutboundPickerOpen(false);
@@ -540,7 +546,19 @@ export default function InboundPage({ type = 'purchase' }: Props) {
 
   const updateDetailField = (idx: number, field: string, value: string | number) => {
     const newDetails = [...editDetails];
-    (newDetails[idx] as any)[field] = value;
+    if (field === 'quantity') {
+      let num = Number(value);
+      if (isNaN(num)) num = 0;
+      const max = newDetails[idx].maxQuantity;
+      if (max !== undefined) {
+        num = Math.max(0, Math.min(num, max));
+      } else {
+        num = Math.max(0, num);
+      }
+      newDetails[idx].quantity = num;
+    } else {
+      (newDetails[idx] as any)[field] = value;
+    }
     setEditDetails(newDetails);
   };
 
@@ -1188,6 +1206,11 @@ export default function InboundPage({ type = 'purchase' }: Props) {
                     <th className="px-2 py-2 text-left">物资名称</th>
                     <th className="px-2 py-2 text-left">规格型号</th>
                     <th className="px-2 py-2 text-left">单位</th>
+                    {type !== 'production' && (
+                      <th className="px-2 py-2 text-right w-24">
+                        {type === 'purchase' ? '剩余可入库数' : '出库数量'}
+                      </th>
+                    )}
                     <th className="px-2 py-2 text-right w-24">数量</th>
                     <th className="px-2 py-2 text-center w-16">操作</th>
                   </tr>
@@ -1195,7 +1218,7 @@ export default function InboundPage({ type = 'purchase' }: Props) {
                 <tbody>
                   {editDetails.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-3 py-8 text-center text-[#909399]">
+                      <td colSpan={type !== 'production' ? 9 : 8} className="px-3 py-8 text-center text-[#909399]">
                         {type === 'purchase' && poMode
                           ? '暂无产品明细，请点击右上角"选择采购订单"按钮添加'
                           : '暂无产品明细，请点击右上角"从物资档案选择（可多选）"按钮添加'}
@@ -1217,12 +1240,17 @@ export default function InboundPage({ type = 'purchase' }: Props) {
                         <td className="px-2 py-2 text-[#303133]">{d.productName}</td>
                         <td className="px-2 py-2 text-[#303133]">{d.specification || '-'}</td>
                         <td className="px-2 py-2 text-[#303133]">{d.unit || '-'}</td>
+                        {type !== 'production' && (
+                          <td className="px-2 py-2 text-right text-[#606266]">
+                            {d.maxQuantity !== undefined ? d.maxQuantity : '-'}
+                          </td>
+                        )}
                         <td className="px-2 py-2">
                           <input
                             type="number"
                             value={d.quantity}
                             onChange={(e) => updateDetailField(idx, 'quantity', Number(e.target.value))}
-                            min={1}
+                            min={0}
                             className="w-full h-7 px-2 border border-[#dcdfe6] text-xs text-right text-[#303133] rounded focus:outline-none focus:border-[#2f54eb]"
                           />
                         </td>
@@ -1237,7 +1265,8 @@ export default function InboundPage({ type = 'purchase' }: Props) {
                   )}
                   {editDetails.length > 0 && (
                     <tr className="bg-[#f5f7fa] font-semibold border-t border-[#ebeef5]">
-                      <td className="px-2 py-2" colSpan={7}>合计</td>
+                      <td className="px-2 py-2" colSpan={type !== 'production' ? 7 : 6}>合计</td>
+                      {type !== 'production' && <td></td>}
                       <td className="px-2 py-2 text-right">
                         {editDetails.reduce((a, b) => a + (Number(b.quantity) || 0), 0)}
                       </td>
