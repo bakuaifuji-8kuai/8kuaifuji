@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
-import { Workflow, ArrowRightLeft, Package, FileText, CheckSquare, Layers, RefreshCw, ZoomIn, ZoomOut, Download } from 'lucide-react';
+import {
+  Workflow, ArrowRightLeft, Package, FileText, CheckSquare, Layers, RefreshCw,
+  ZoomIn, ZoomOut, Download, Network, GitBranch, Brain, Boxes, Database,
+  ArrowDownToLine, ArrowUpFromLine, LayoutGrid, Settings
+} from 'lucide-react';
 import { DefaultButton } from '@/components/common/Button';
 
 mermaid.initialize({
@@ -19,43 +23,33 @@ mermaid.initialize({
     noteBkgColor: '#fffbeb',
     noteBorderColor: '#f59e0b',
     noteTextColor: '#92400e',
-
     actorBorder: '#64748b',
     actorBkg: '#f8fafc',
     actorTextColor: '#1e293b',
-
     signalColor: '#475569',
     signalTextColor: '#1e293b',
-
     labelBoxBkgColor: '#fff',
     labelBoxBorderColor: '#64748b',
     labelBoxTextColor: '#1e293b',
-
     rectFill: '#ffffff',
     rectStroke: '#475569',
     rectFillOpacity: 1,
     rectStrokeWidth: '1px',
-
     decisionFill: '#ffffff',
     decisionStroke: '#475569',
     decisionFillOpacity: 1,
-
     diamondFill: '#ffffff',
     diamondStroke: '#475569',
     diamondFillOpacity: 1,
-
     terminalFill: '#e2e8f0',
     terminalStroke: '#475569',
     terminalFillOpacity: 1,
-
     subGraphFill: '#f8fafc',
     subGraphStroke: '#cbd5e1',
     subGraphTextColor: '#334155',
     subGraphTitleColor: '#334155',
-
     clusterBkg: '#f8fafc',
     clusterBorder: '#cbd5e1',
-
     altFill: '#fef3c7',
     altFillOpacity: 0.5,
   },
@@ -69,6 +63,29 @@ interface FlowChartItem {
   type: 'flowchart' | 'swimlane';
   code: string;
 }
+
+interface SvgDiagramItem {
+  key: string;
+  title: string;
+  description: string;
+  icon: any;
+  file: string;
+  group: '业务流程图' | '架构与模型图';
+}
+
+const svgDiagrams: SvgDiagramItem[] = [
+  { key: 'flow-warehouse', title: '仓库管理流程', description: '仓库与仓位管理业务流程', icon: Boxes, file: 'flow-warehouse.svg', group: '业务流程图' },
+  { key: 'flow-inbound', title: '入库管理流程', description: '采购入库、自制入库、退库流程', icon: ArrowDownToLine, file: 'flow-inbound.svg', group: '业务流程图' },
+  { key: 'flow-outbound', title: '出库管理流程', description: '领用、报废、报损出库流程', icon: ArrowUpFromLine, file: 'flow-outbound.svg', group: '业务流程图' },
+  { key: 'flow-exhibition-transfer', title: '展会物资调拨流程', description: '展会调拨出库与入库流程', icon: ArrowRightLeft, file: 'flow-exhibition-transfer.svg', group: '业务流程图' },
+  { key: 'flow-transfer', title: '仓库调拨流程', description: '仓库间调拨管理流程', icon: ArrowRightLeft, file: 'flow-transfer.svg', group: '业务流程图' },
+  { key: 'flow-fixed-asset', title: '固定资产管理流程', description: '资产档案与生命周期流程', icon: LayoutGrid, file: 'flow-fixed-asset.svg', group: '业务流程图' },
+  { key: 'flow-basic-data', title: '基础资料流程', description: '基础数据管理流程', icon: Settings, file: 'flow-basic-data.svg', group: '业务流程图' },
+  { key: 'er-diagram', title: 'ER图（实体关系图）', description: '数据库实体关系图，含18个核心实体', icon: Database, file: 'er-diagram.svg', group: '架构与模型图' },
+  { key: 'mindmap', title: '整体思维导图', description: '系统功能模块思维导图', icon: GitBranch, file: 'mindmap.svg', group: '架构与模型图' },
+  { key: 'agent-architecture', title: 'Agent架构图', description: 'AI Agent 输入-核心-记忆-工具-输出架构', icon: Brain, file: 'agent-architecture.svg', group: '架构与模型图' },
+  { key: 'system-architecture', title: '系统架构图', description: '用户层-前端层-路由层-数据层-部署层', icon: Network, file: 'system-architecture.svg', group: '架构与模型图' },
+];
 
 const flowCharts: FlowChartItem[] = [
   {
@@ -319,16 +336,26 @@ const flowCharts: FlowChartItem[] = [
   },
 ];
 
+type TabKey = 'mermaid' | 'svg';
+
 export default function BusinessFlowChart() {
+  const [tab, setTab] = useState<TabKey>('svg');
   const [activeKey, setActiveKey] = useState(flowCharts[0].key);
+  const [activeSvgKey, setActiveSvgKey] = useState(svgDiagrams[0].key);
   const chartRef = useRef<HTMLDivElement>(null);
   const [mermaidKey, setMermaidKey] = useState(0);
   const [zoom, setZoom] = useState(1);
 
   const activeChart = flowCharts.find((c) => c.key === activeKey) || flowCharts[0];
+  const activeSvg = svgDiagrams.find((s) => s.key === activeSvgKey) || svgDiagrams[0];
+  const svgUrl = `${import.meta.env.BASE_URL}diagrams/${activeSvg.file}`;
 
   useEffect(() => {
     setZoom(1);
+  }, [tab, activeKey, activeSvgKey]);
+
+  useEffect(() => {
+    if (tab !== 'mermaid') return;
     const renderChart = async () => {
       if (chartRef.current) {
         try {
@@ -341,35 +368,40 @@ export default function BusinessFlowChart() {
       }
     };
     renderChart();
-  }, [activeKey, mermaidKey, activeChart.code]);
+  }, [tab, activeKey, mermaidKey, activeChart.code]);
 
   const handleRefresh = () => {
     setMermaidKey((prev) => prev + 1);
   };
 
-  const handleZoomIn = () => {
-    setZoom((prev) => Math.min(prev + 0.1, 2));
-  };
-
-  const handleZoomOut = () => {
-    setZoom((prev) => Math.max(prev - 0.1, 0.5));
-  };
+  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.1, 2));
+  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.1, 0.5));
 
   const handleDownload = () => {
-    if (chartRef.current) {
-      const svg = chartRef.current.querySelector('svg');
-      if (svg) {
-        const svgData = new XMLSerializer().serializeToString(svg);
-        const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${activeChart.title}.svg`;
-        a.click();
-        URL.revokeObjectURL(url);
+    if (tab === 'mermaid') {
+      if (chartRef.current) {
+        const svg = chartRef.current.querySelector('svg');
+        if (svg) {
+          const svgData = new XMLSerializer().serializeToString(svg);
+          const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${activeChart.title}.svg`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
       }
+    } else {
+      const a = document.createElement('a');
+      a.href = svgUrl;
+      a.download = `${activeSvg.title}.svg`;
+      a.click();
     }
   };
+
+  const businessFlowDiagrams = svgDiagrams.filter((d) => d.group === '业务流程图');
+  const architectureDiagrams = svgDiagrams.filter((d) => d.group === '架构与模型图');
 
   return (
     <div className="p-4">
@@ -386,10 +418,12 @@ export default function BusinessFlowChart() {
             <ZoomIn size={16} />
           </DefaultButton>
           <div className="w-px h-6 bg-slate-200 mx-1"></div>
-          <DefaultButton onClick={handleRefresh}>
-            <RefreshCw size={16} />
-            刷新
-          </DefaultButton>
+          {tab === 'mermaid' && (
+            <DefaultButton onClick={handleRefresh}>
+              <RefreshCw size={16} />
+              刷新
+            </DefaultButton>
+          )}
           <DefaultButton onClick={handleDownload}>
             <Download size={16} />
             下载
@@ -397,64 +431,185 @@ export default function BusinessFlowChart() {
         </div>
       </div>
 
-      <div className="mb-3 flex items-center gap-3">
-        <div className="relative">
-          <select
-            value={activeKey}
-            onChange={(e) => setActiveKey(e.target.value)}
-            className="appearance-none h-8 pl-3 pr-8 border border-slate-200 rounded bg-white text-slate-700 text-sm cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-300 transition-all"
-          >
-            {flowCharts.map((chart) => (
-              <option key={chart.key} value={chart.key}>
-                {chart.title}
-              </option>
-            ))}
-          </select>
-          <svg
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </div>
-        <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600">
-          {activeChart.type === 'swimlane' ? '泳道图' : '流程图'}
-        </span>
+      {/* Tab 切换 */}
+      <div className="mb-3 flex items-center gap-1 border-b border-slate-200">
+        <button
+          onClick={() => setTab('svg')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-all ${
+            tab === 'svg'
+              ? 'border-[#2f54eb] text-[#2f54eb]'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Network size={14} className="inline mr-1" />
+          系统图表（SVG）
+        </button>
+        <button
+          onClick={() => setTab('mermaid')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-all ${
+            tab === 'mermaid'
+              ? 'border-[#2f54eb] text-[#2f54eb]'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Workflow size={14} className="inline mr-1" />
+          资产流程图（Mermaid）
+        </button>
       </div>
 
-      <div className="mb-3 flex items-center gap-3 py-2">
-        <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-600">
-          {activeChart.icon && <activeChart.icon size={16} />}
-        </div>
-        <div>
-          <h3 className="text-sm font-medium text-[#303133]">{activeChart.title}</h3>
-          <p className="text-xs text-[#909399]">{activeChart.description}</p>
-        </div>
-      </div>
+      {tab === 'svg' ? (
+        <>
+          {/* SVG 图表分组选择 */}
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">业务流程图:</span>
+              <div className="flex flex-wrap gap-1">
+                {businessFlowDiagrams.map((d) => (
+                  <button
+                    key={d.key}
+                    onClick={() => setActiveSvgKey(d.key)}
+                    className={`px-2.5 py-1 text-xs rounded border transition-all ${
+                      activeSvgKey === d.key
+                        ? 'bg-[#2f54eb] text-white border-[#2f54eb]'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    {d.title.replace('流程', '')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">架构与模型图:</span>
+              <div className="flex flex-wrap gap-1">
+                {architectureDiagrams.map((d) => (
+                  <button
+                    key={d.key}
+                    onClick={() => setActiveSvgKey(d.key)}
+                    className={`px-2.5 py-1 text-xs rounded border transition-all ${
+                      activeSvgKey === d.key
+                        ? 'bg-[#2f54eb] text-white border-[#2f54eb]'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    {d.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
-      <div
-        className="overflow-auto bg-white border border-slate-200 rounded"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, #f1f5f9 1px, transparent 1px),
-            linear-gradient(to bottom, #f1f5f9 1px, transparent 1px)
-          `,
-          backgroundSize: '20px 20px',
-        }}
-      >
-        <div
-          ref={chartRef}
-          key={mermaidKey}
-          className="min-h-[600px] flex items-start justify-center p-6"
-          style={{
-            transform: `scale(${zoom})`,
-            transformOrigin: 'top center',
-            transition: 'transform 0.2s ease',
-          }}
-        ></div>
-      </div>
+          {/* 当前图表信息 */}
+          <div className="mb-3 flex items-center gap-3 py-2">
+            <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-600">
+              {activeSvg.icon && <activeSvg.icon size={16} />}
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-[#303133]">{activeSvg.title}</h3>
+              <p className="text-xs text-[#909399]">{activeSvg.description}</p>
+            </div>
+          </div>
+
+          {/* SVG 展示区域 */}
+          <div
+            className="overflow-auto bg-white border border-slate-200 rounded"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, #f1f5f9 1px, transparent 1px),
+                linear-gradient(to bottom, #f1f5f9 1px, transparent 1px)
+              `,
+              backgroundSize: '20px 20px',
+            }}
+          >
+            <div
+              className="min-h-[600px] flex items-start justify-center p-6"
+              style={{
+                transform: `scale(${zoom})`,
+                transformOrigin: 'top center',
+                transition: 'transform 0.2s ease',
+              }}
+            >
+              <img
+                src={svgUrl}
+                alt={activeSvg.title}
+                className="max-w-none"
+                style={{ maxWidth: '1400px', width: 'auto' }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  const parent = (e.target as HTMLImageElement).parentElement;
+                  if (parent) {
+                    parent.innerHTML = `<div class="text-slate-400 text-sm py-20">SVG 图表加载失败: ${activeSvg.file}</div>`;
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Mermaid 图表选择 */}
+          <div className="mb-3 flex items-center gap-3">
+            <div className="relative">
+              <select
+                value={activeKey}
+                onChange={(e) => setActiveKey(e.target.value)}
+                className="appearance-none h-8 pl-3 pr-8 border border-slate-200 rounded bg-white text-slate-700 text-sm cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-300 transition-all"
+              >
+                {flowCharts.map((chart) => (
+                  <option key={chart.key} value={chart.key}>
+                    {chart.title}
+                  </option>
+                ))}
+              </select>
+              <svg
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+            <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600">
+              {activeChart.type === 'swimlane' ? '泳道图' : '流程图'}
+            </span>
+          </div>
+
+          <div className="mb-3 flex items-center gap-3 py-2">
+            <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-600">
+              {activeChart.icon && <activeChart.icon size={16} />}
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-[#303133]">{activeChart.title}</h3>
+              <p className="text-xs text-[#909399]">{activeChart.description}</p>
+            </div>
+          </div>
+
+          <div
+            className="overflow-auto bg-white border border-slate-200 rounded"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, #f1f5f9 1px, transparent 1px),
+                linear-gradient(to bottom, #f1f5f9 1px, transparent 1px)
+              `,
+              backgroundSize: '20px 20px',
+            }}
+          >
+            <div
+              ref={chartRef}
+              key={mermaidKey}
+              className="min-h-[600px] flex items-start justify-center p-6"
+              style={{
+                transform: `scale(${zoom})`,
+                transformOrigin: 'top center',
+                transition: 'transform 0.2s ease',
+              }}
+            ></div>
+          </div>
+        </>
+      )}
 
       <div className="mt-3 py-3">
         <h3 className="text-sm font-medium text-[#303133] mb-2">图例说明</h3>
