@@ -184,6 +184,7 @@ export default function InboundPage({ type = 'purchase' }: Props) {
   const [previewAtt, setPreviewAtt] = useState<Attachment | null>(null);
   const [purchasePickerOpen, setPurchasePickerOpen] = useState(false);
   const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<ContractPurchaseOrder | null>(null);
+  const [selectedPurchaseDetailIds, setSelectedPurchaseDetailIds] = useState<string[]>([]);
   // 入库申请单模式 vs 普通入库模式
   const [poMode, setPoMode] = useState(false);
   // 归还退库 - 出库单选择弹窗
@@ -191,6 +192,7 @@ export default function InboundPage({ type = 'purchase' }: Props) {
   const [outboundFilterNo, setOutboundFilterNo] = useState('');
   const [outboundFilterType, setOutboundFilterType] = useState('');
   const [selectedOutboundOrder, setSelectedOutboundOrder] = useState<any>(null);
+  const [selectedOutboundDetailIds, setSelectedOutboundDetailIds] = useState<string[]>([]);
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' B';
@@ -391,12 +393,23 @@ export default function InboundPage({ type = 'purchase' }: Props) {
     setPoMode(mode === 'po');
   };
 
-  // 选择采购订单后填充明细（使用待入库数量 orderQuantity - deliveredQuantity）
+  // 选择采购订单（先记录选中状态，自动勾选所有可入库物资）
   const handleSelectPurchaseOrder = (po: ContractPurchaseOrder) => {
     setSelectedPurchaseOrder(po);
+    setSelectedPurchaseDetailIds(po.details.filter(d => (d.orderQuantity - d.deliveredQuantity) > 0).map(d => d.id));
+  };
+
+  // 确认选择采购订单的勾选物资，导入到入库单
+  const handleConfirmPurchaseOrder = () => {
+    if (!selectedPurchaseOrder) return;
+    if (selectedPurchaseDetailIds.length === 0) {
+      alert('请至少选择一项物资');
+      return;
+    }
+
     const batchNo = generateBatchNo();
-    const newDetails: FormDetail[] = po.details
-      .filter(d => (d.orderQuantity - d.deliveredQuantity) > 0)
+    const newDetails: FormDetail[] = selectedPurchaseOrder.details
+      .filter(d => selectedPurchaseDetailIds.includes(d.id))
       .map(d => ({
         id: 'IND' + Date.now() + Math.random().toString(36).slice(2, 5),
         inboundOrderId: editItem?.id || '',
@@ -413,14 +426,16 @@ export default function InboundPage({ type = 'purchase' }: Props) {
     if (editItem) {
       setEditItem({
         ...editItem,
-        supplierId: po.supplierId,
-        supplierName: po.supplierName,
-        purchaseOrderId: po.id,
-        purchaseOrderNo: po.orderNo,
-        remark: `采购订单：${po.orderNo} | 合同：${po.contractNo}`,
+        supplierId: selectedPurchaseOrder.supplierId,
+        supplierName: selectedPurchaseOrder.supplierName,
+        purchaseOrderId: selectedPurchaseOrder.id,
+        purchaseOrderNo: selectedPurchaseOrder.orderNo,
+        remark: `采购订单：${selectedPurchaseOrder.orderNo} | 合同：${selectedPurchaseOrder.contractNo}`,
       });
     }
     setPurchasePickerOpen(false);
+    setSelectedPurchaseOrder(null);
+    setSelectedPurchaseDetailIds([]);
   };
 
   // 计算采购订单的剩余可入库数量
@@ -436,23 +451,38 @@ export default function InboundPage({ type = 'purchase' }: Props) {
     return po.details.some(d => (d.orderQuantity - d.deliveredQuantity) > 0);
   };
 
-  // 归还退库 - 选择出库单后填充明细和项目
+  // 归还退库 - 选择出库单（记录选中状态，自动勾选所有物资）
   const handleSelectOutboundOrder = (order: any) => {
     setSelectedOutboundOrder(order);
+    setSelectedOutboundDetailIds(order.details.map((d: any) => d.id));
+  };
+
+  // 归还退库 - 确认选择勾选的物资，导入到退库单
+  const handleConfirmOutboundOrder = () => {
+    if (!selectedOutboundOrder) return;
+    if (selectedOutboundDetailIds.length === 0) {
+      alert('请至少选择一项物资');
+      return;
+    }
+
     const batchNo = generateBatchNo();
-    const newDetails: FormDetail[] = order.details.map((d: any) => ({
-      id: 'IND' + Date.now() + Math.random().toString(36).slice(2, 5),
-      inboundOrderId: editItem?.id || '',
-      productId: d.productId,
-      productCode: d.productCode,
-      productName: d.productName,
-      quantity: d.quantity,
-      batchNo,
-      specification: products.find((p: any) => p.id === d.productId)?.specification || '',
-      unit: products.find((p: any) => p.id === d.productId)?.unit || '',
-    }));
+    const newDetails: FormDetail[] = selectedOutboundOrder.details
+      .filter((d: any) => selectedOutboundDetailIds.includes(d.id))
+      .map((d: any) => ({
+        id: 'IND' + Date.now() + Math.random().toString(36).slice(2, 5),
+        inboundOrderId: editItem?.id || '',
+        productId: d.productId,
+        productCode: d.productCode,
+        productName: d.productName,
+        quantity: d.quantity,
+        batchNo,
+        specification: products.find((p: any) => p.id === d.productId)?.specification || '',
+        unit: products.find((p: any) => p.id === d.productId)?.unit || '',
+      }));
     setEditDetails(newDetails);
     setOutboundPickerOpen(false);
+    setSelectedOutboundOrder(null);
+    setSelectedOutboundDetailIds([]);
   };
 
   const openEdit = (row: InboundOrder) => {
@@ -1381,6 +1411,20 @@ export default function InboundPage({ type = 'purchase' }: Props) {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-[#f5f7fa] text-[#606266]">
+                      <th className="px-2 py-2 text-center w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedPurchaseDetailIds.length === selectedPurchaseOrder.details.filter(d => (d.orderQuantity - d.deliveredQuantity) > 0).length && selectedPurchaseOrder.details.filter(d => (d.orderQuantity - d.deliveredQuantity) > 0).length > 0}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedPurchaseDetailIds(selectedPurchaseOrder.details.filter(d => (d.orderQuantity - d.deliveredQuantity) > 0).map(d => d.id));
+                            } else {
+                              setSelectedPurchaseDetailIds([]);
+                            }
+                          }}
+                          className="w-3.5 h-3.5 cursor-pointer"
+                        />
+                      </th>
                       <th className="px-2 py-2 text-left">物料编码</th>
                       <th className="px-2 py-2 text-left">物料名称</th>
                       <th className="px-2 py-2 text-left">规格型号</th>
@@ -1397,8 +1441,26 @@ export default function InboundPage({ type = 'purchase' }: Props) {
                   <tbody>
                     {selectedPurchaseOrder.details.map(d => {
                       const remaining = d.orderQuantity - d.deliveredQuantity;
+                      const isSelectable = remaining > 0;
+                      const isSelected = selectedPurchaseDetailIds.includes(d.id);
                       return (
-                        <tr key={d.id} className="border-t border-[#f0f2f5]">
+                        <tr key={d.id} className={`border-t border-[#f0f2f5] ${isSelected ? 'bg-[#e6f4ff]' : ''}`}>
+                          <td className="px-2 py-2 text-center">
+                            {isSelectable && (
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedPurchaseDetailIds([...selectedPurchaseDetailIds, d.id]);
+                                  } else {
+                                    setSelectedPurchaseDetailIds(selectedPurchaseDetailIds.filter(id => id !== d.id));
+                                  }
+                                }}
+                                className="w-3.5 h-3.5 cursor-pointer"
+                              />
+                            )}
+                          </td>
                           <td className="px-2 py-2 text-[#303133]">{d.productCode}</td>
                           <td className="px-2 py-2 text-[#303133]">{d.productName}</td>
                           <td className="px-2 py-2 text-[#303133]">{d.specification || '-'}</td>
@@ -1423,8 +1485,16 @@ export default function InboundPage({ type = 'purchase' }: Props) {
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-[#f0f2f5]">
-            <DefaultButton onClick={() => setPurchasePickerOpen(false)}>关闭</DefaultButton>
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#f0f2f5]">
+            <div className="text-xs text-[#606266]">
+              已选择 <span className="font-medium text-[#2f54eb]">{selectedPurchaseDetailIds.length}</span> 项物资
+            </div>
+            <div className="flex items-center gap-2">
+              <DefaultButton onClick={() => setPurchasePickerOpen(false)}>关闭</DefaultButton>
+              {selectedPurchaseOrder && selectedPurchaseDetailIds.length > 0 && (
+                <PrimaryButton onClick={handleConfirmPurchaseOrder}>确认选择</PrimaryButton>
+              )}
+            </div>
           </div>
         </div>
       </Modal>
@@ -1488,10 +1558,14 @@ export default function InboundPage({ type = 'purchase' }: Props) {
                       damaged: '报损出库',
                     }[selectedOutboundOrder.type as string] || selectedOutboundOrder.type}
                   </span>
+                  <span className="text-[#606266] ml-4">
+                    已选物资：<span className="text-[#f56c6c] font-medium">{selectedOutboundDetailIds.length}</span> 项
+                  </span>
                 </div>
                 <button
                   onClick={() => {
                     setSelectedOutboundOrder(null);
+                    setSelectedOutboundDetailIds([]);
                   }}
                   className="text-[#909399] hover:text-[#f56c6c]"
                 >清除选择</button>
@@ -1499,7 +1573,7 @@ export default function InboundPage({ type = 'purchase' }: Props) {
             </div>
           )}
 
-          <div className="border border-[#ebeef5] rounded overflow-x-auto max-h-[350px] overflow-y-auto">
+          <div className="border border-[#ebeef5] rounded overflow-x-auto max-h-[300px] overflow-y-auto">
             <table className="w-full text-xs">
               <thead className="sticky top-0">
                 <tr className="bg-[#f5f7fa] text-[#606266]">
@@ -1566,8 +1640,80 @@ export default function InboundPage({ type = 'purchase' }: Props) {
             </table>
           </div>
 
-          <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-[#f0f2f5]">
-            <DefaultButton onClick={() => setOutboundPickerOpen(false)}>关闭</DefaultButton>
+          {/* 出库单明细预览（带勾选） */}
+          {selectedOutboundOrder && (
+            <div className="mt-4">
+              <div className="text-xs font-medium text-[#303133] mb-2 border-l-2 border-[#2f54eb] pl-2">
+                出库单明细（{selectedOutboundOrder.orderNo}）
+              </div>
+              <div className="border border-[#ebeef5] rounded overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-[#f5f7fa] text-[#606266]">
+                      <th className="px-2 py-2 text-center w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedOutboundDetailIds.length === selectedOutboundOrder.details.length && selectedOutboundOrder.details.length > 0}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedOutboundDetailIds(selectedOutboundOrder.details.map((d: any) => d.id));
+                            } else {
+                              setSelectedOutboundDetailIds([]);
+                            }
+                          }}
+                          className="w-3.5 h-3.5 cursor-pointer"
+                        />
+                      </th>
+                      <th className="px-2 py-2 text-left">物资编码</th>
+                      <th className="px-2 py-2 text-left">物资名称</th>
+                      <th className="px-2 py-2 text-left">规格型号</th>
+                      <th className="px-2 py-2 text-center w-16">单位</th>
+                      <th className="px-2 py-2 text-right w-20">出库数量</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedOutboundOrder.details.map((d: any) => {
+                      const isSelected = selectedOutboundDetailIds.includes(d.id);
+                      return (
+                        <tr key={d.id} className={`border-t border-[#f0f2f5] ${isSelected ? 'bg-[#e6f4ff]' : ''}`}>
+                          <td className="px-2 py-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedOutboundDetailIds([...selectedOutboundDetailIds, d.id]);
+                                } else {
+                                  setSelectedOutboundDetailIds(selectedOutboundDetailIds.filter(id => id !== d.id));
+                                }
+                              }}
+                              className="w-3.5 h-3.5 cursor-pointer"
+                            />
+                          </td>
+                          <td className="px-2 py-2 text-[#303133]">{d.productCode}</td>
+                          <td className="px-2 py-2 text-[#303133]">{d.productName}</td>
+                          <td className="px-2 py-2 text-[#303133]">{d.specification || '-'}</td>
+                          <td className="px-2 py-2 text-center">{d.unit}</td>
+                          <td className="px-2 py-2 text-right text-[#303133]">{d.quantity}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#f0f2f5]">
+            <div className="text-xs text-[#606266]">
+              已选择 <span className="font-medium text-[#2f54eb]">{selectedOutboundDetailIds.length}</span> 项物资
+            </div>
+            <div className="flex items-center gap-2">
+              <DefaultButton onClick={() => setOutboundPickerOpen(false)}>关闭</DefaultButton>
+              {selectedOutboundOrder && selectedOutboundDetailIds.length > 0 && (
+                <PrimaryButton onClick={handleConfirmOutboundOrder}>确认选择</PrimaryButton>
+              )}
+            </div>
           </div>
         </div>
       </Modal>
