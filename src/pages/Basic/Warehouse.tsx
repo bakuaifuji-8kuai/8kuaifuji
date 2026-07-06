@@ -83,6 +83,15 @@ export default function WarehousePage() {
     },
     { key: 'remark', title: '备注', render: (row) => (row as any).remark || '-' },
     {
+      key: 'allowNegativeInventory',
+      title: '允许负库存',
+      render: (row) => (
+        <span className={row.allowNegativeInventory ? 'text-[#67c23a]' : 'text-[#909399]'}>
+          {row.allowNegativeInventory ? '是' : '否'}
+        </span>
+      ),
+    },
+    {
       key: 'op',
       title: '操作',
       render: (row) => (
@@ -256,6 +265,17 @@ export default function WarehousePage() {
                 value={editItem.remark || ''}
                 onChange={(e) => setEditItem({ ...editItem, remark: e.target.value })}
               />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="text-[#606266]">允许库存为负</div>
+              <button
+                className={`w-10 h-5 rounded-full transition-colors ${editItem.allowNegativeInventory ? 'bg-[#67c23a]' : 'bg-[#dcdfe6]'}`}
+                onClick={() => setEditItem({ ...editItem, allowNegativeInventory: !editItem.allowNegativeInventory })}
+              >
+                <span
+                  className={`block w-4 h-4 rounded-full bg-white transition-transform ${editItem.allowNegativeInventory ? 'translate-x-5' : 'translate-x-0.5'}`}
+                />
+              </button>
             </div>
           </div>
         )}

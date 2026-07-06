@@ -64,6 +64,7 @@ export default function ExhibitionTransferOutboundPage() {
   const products = useStore((s) => s.products);
   const currentUser = useStore((s) => s.currentUser);
   const workOrderConfigs = useStore((s) => s.workOrderConfigs);
+  const reverseStockTransfer = useStore((s) => s.reverseStockTransfer);
 
   const exhibitionWarehouses = useMemo(() => {
     return warehouses.filter(w => w.category === 'exhibition');
@@ -178,10 +179,30 @@ export default function ExhibitionTransferOutboundPage() {
               <TextButton onClick={() => handleOutboundConfirm(row.id)}>出库确认</TextButton>
             </>
           )}
+          {row.status === 'outbound_confirmed' && (
+            <TextButton type="warning" onClick={() => handleReverseConfirm(row.id)}>反确认</TextButton>
+          )}
+          {row.status === 'completed' && (
+            <TextButton type="warning" onClick={() => handleReverseConfirm(row.id)}>反确认</TextButton>
+          )}
         </div>
       ),
     },
   ];
+
+  const handleReverseConfirm = (id: string) => {
+    const transfer = stockTransfers.find((t) => t.id === id);
+    if (!transfer) return;
+    const statusText = transfer.status === 'outbound_confirmed' ? '待入库确认' : '已完成';
+    if (!confirm(`确认反确认调拨单 ${transfer.transferNo}（当前状态：${statusText}）？反确认后单据将回退到可编辑状态，库存将回滚，且会生成冲销流水记录。`)) return;
+
+    const result = reverseStockTransfer(id);
+    if (result.success) {
+      alert(result.message);
+    } else {
+      alert('反确认失败：' + result.message);
+    }
+  };
 
   const [viewItem, setViewItem] = useState<StockTransfer | null>(null);
   const [printItem, setPrintItem] = useState<StockTransfer | null>(null);

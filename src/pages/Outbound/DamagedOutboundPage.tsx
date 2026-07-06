@@ -75,6 +75,7 @@ export default function DamagedOutboundPage() {
   const products = useStore((s) => s.products);
   const exhibitionProjects = useStore((s) => s.exhibitionProjects);
   const procurementPlans = useStore((s) => s.procurementPlans);
+  const reverseDamagedRecord = useStore((s) => s.reverseDamagedRecord);
 
   const [filterNo, setFilterNo] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -140,10 +141,26 @@ export default function DamagedOutboundPage() {
           {row.status === 'submitted' && (
             <TextButton onClick={() => handleConfirm(row.id)}>确认出库</TextButton>
           )}
+          {['submitted', 'confirmed'].includes(row.status) && (
+            <TextButton type="warning" onClick={() => handleReverseConfirm(row.id)}>反确认</TextButton>
+          )}
         </div>
       ),
     },
   ];
+
+  const handleReverseConfirm = (id: string) => {
+    const record = damagedRecords.find((r) => r.id === id);
+    if (!record) return;
+    if (!confirm(`确认反确认报损单 ${record.recordNo}？反确认后单据将回退到可编辑状态，库存将恢复，且会生成冲销流水记录。`)) return;
+
+    const result = reverseDamagedRecord(id);
+    if (result.success) {
+      alert(result.message);
+    } else {
+      alert('反确认失败：' + result.message);
+    }
+  };
 
   const [viewItem, setViewItem] = useState<DamagedRecord | null>(null);
   const [printItem, setPrintItem] = useState<DamagedRecord | null>(null);

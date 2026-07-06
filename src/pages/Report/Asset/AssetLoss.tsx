@@ -260,10 +260,36 @@ export default function AssetLoss() {
               </TextButton>
             </>
           )}
+          {row.status === 'approved' && (
+            <TextButton type="warning" onClick={() => handleReverseConfirm(row.id)}>反确认</TextButton>
+          )}
         </div>
       ),
     },
   ];
+
+  const handleReverseConfirm = (id: string) => {
+    const item = data.find((d) => d.id === id);
+    if (!item) return;
+    if (!confirm(`确认反确认报损单 ${item.lossNo}？反确认后单据将回退到待出库状态，资产状态将恢复为领用中。`)) return;
+
+    setData(
+      data.map((d) =>
+        d.id === id
+          ? {
+              ...d,
+              status: 'pending',
+              outConfirmer: undefined,
+              outConfirmTime: undefined,
+            }
+          : d
+      )
+    );
+
+    updateAssetEquipment(item.assetId, { status: 'in_use' });
+
+    alert(`反确认成功！报损单 ${item.lossNo} 已回退到待出库状态。`);
+  };
 
   const [viewItem, setViewItem] = useState<AssetLoss | null>(null);
 

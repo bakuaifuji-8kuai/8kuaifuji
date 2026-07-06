@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   Warehouse, Position, ProductCategory, Product, Supplier, SupplierAssessment, Customer,
   Inventory, InboundOrder, InboundApplication, OutboundOrder, CheckOrder, TransferOrder, ReturnOrder, PendingReturn,
   AssetEquipment, ScrappedRecord, DamagedRecord, StockTransaction, Employee, PurchaseOrder,
@@ -928,6 +928,12 @@ export const inventories: Inventory[] = [
   { id: 'INV005', productId: 'PRD007', productName: '电机整机', productCode: 'P30002', warehouseId: 'WH003', warehouseName: '成品仓库', positionId: 'POS009', positionName: 'D区02号', quantity: 28, frozenQuantity: 0, inboundTime: '2024-04-15' },
   { id: 'INV006', productId: 'PRD010', productName: '轴承', productCode: 'P50001', warehouseId: 'WH001', warehouseName: '主仓库', positionId: 'POS004', positionName: 'B区01号', quantity: 85, frozenQuantity: 0, inboundTime: '2023-12-20' },
   { id: 'INV007', productId: 'PRD012', productName: '塑料粒子', productCode: 'P10004', warehouseId: 'WH002', warehouseName: '原材料仓库', positionId: 'POS007', positionName: 'C区02号', quantity: 45, frozenQuantity: 20, inboundTime: '2024-02-28' },
+  // ===== 测试数据开始 =====
+  { id: 'INV_TEST_1', productId: 'PRD101', productName: '圆形井盖', productCode: 'JJ1012', warehouseId: 'WH001', warehouseName: '展会物资仓', positionId: 'POS001', positionName: 'A区01号', quantity: 100, frozenQuantity: 0, inboundTime: '2026-06-20' },
+  { id: 'INV_TEST_2', productId: 'PRD102', productName: '圆形井盖', productCode: 'JJ1013', warehouseId: 'WH001', warehouseName: '展会物资仓', positionId: 'POS001', positionName: 'A区01号', quantity: 80, frozenQuantity: 0, inboundTime: '2026-06-20' },
+  { id: 'INV_TEST_3', productId: 'PRD103', productName: '方形井盖', productCode: 'JJ1016', warehouseId: 'WH001', warehouseName: '展会物资仓', positionId: 'POS001', positionName: 'A区01号', quantity: 50, frozenQuantity: 0, inboundTime: '2026-06-20' },
+  { id: 'INV_TEST_4', productId: 'PRD102', productName: '圆形井盖', productCode: 'JJ1013', warehouseId: 'WH002', warehouseName: '低值易耗仓', positionId: 'POS007', positionName: 'C区02号', quantity: 120, frozenQuantity: 0, inboundTime: '2026-06-21' },
+  { id: 'INV_TEST_5', productId: 'PRD103', productName: '方形井盖', productCode: 'JJ1016', warehouseId: 'WH002', warehouseName: '低值易耗仓', positionId: 'POS007', positionName: 'C区02号', quantity: 60, frozenQuantity: 0, inboundTime: '2026-06-21' },
 ];
 
 // 入库单数据
@@ -971,10 +977,11 @@ export const inboundOrders: InboundOrder[] = [
   // ===== 测试数据开始 =====
   {
     id: 'IN_TEST_1', orderNo: 'RK20260620001', type: 'purchase', supplierId: 'SUP001', supplierName: '华东建材有限公司',
-    warehouseId: 'WH001', warehouseName: '展会物资仓', status: 'submitted', operator: '张三',
+    warehouseId: 'WH001', warehouseName: '展会物资仓', status: 'confirmed', operator: '张三',
     custodian: '张三', personInCharge: '李四', inspector: '王五', salesperson: '赵六', creator: '孙七',
     createTime: '2026-06-20 08:10:00', approveTime: '2026-06-20 09:20:00', approver: '周八',
-    remark: '测试入库单1-采购入库',
+    confirmTime: '2026-06-20 10:30:00', confirmer: '张三',
+    remark: '测试入库单1-采购入库-已确认',
     details: [
       { id: 'IND_TEST_1_1', inboundOrderId: 'IN_TEST_1', productId: 'PRD101', productName: '圆形井盖', productCode: 'JJ1012', positionId: 'POS001', positionName: 'A区01号', quantity: 50 },
       { id: 'IND_TEST_1_2', inboundOrderId: 'IN_TEST_1', productId: 'PRD102', productName: '圆形井盖', productCode: 'JJ1013', positionId: 'POS001', positionName: 'A区01号', quantity: 25 },
@@ -982,10 +989,11 @@ export const inboundOrders: InboundOrder[] = [
   },
   {
     id: 'IN_TEST_2', orderNo: 'RK20260621002', type: 'purchase', supplierId: 'SUP002', supplierName: '华北石材集团',
-    warehouseId: 'WH002', warehouseName: '低值易耗仓', status: 'submitted', operator: '李四',
+    warehouseId: 'WH002', warehouseName: '低值易耗仓', status: 'confirmed', operator: '李四',
     custodian: '李四', personInCharge: '王五', inspector: '赵六', salesperson: '孙七', creator: '周八',
     createTime: '2026-06-21 09:15:00', approveTime: '2026-06-21 10:25:00', approver: '张三',
-    remark: '测试入库单2-采购入库',
+    confirmTime: '2026-06-21 11:35:00', confirmer: '李四',
+    remark: '测试入库单2-采购入库-已确认',
     details: [
       { id: 'IND_TEST_2_1', inboundOrderId: 'IN_TEST_2', productId: 'PRD102', productName: '圆形井盖', productCode: 'JJ1013', positionId: 'POS007', positionName: 'C区02号', quantity: 60 },
       { id: 'IND_TEST_2_2', inboundOrderId: 'IN_TEST_2', productId: 'PRD103', productName: '方形井盖', productCode: 'JJ1016', positionId: 'POS007', positionName: 'C区02号', quantity: 30 },
@@ -1197,9 +1205,9 @@ export const outboundOrders: OutboundOrder[] = [
   // ===== 测试数据开始 =====
   {
     id: 'OUT_TEST_1', orderNo: 'LY20260621001', type: 'lowvalue',
-    warehouseId: 'WH001', warehouseName: '展会物资仓', status: 'submitted', operator: '张三',
+    warehouseId: 'WH001', warehouseName: '展会物资仓', status: 'confirmed', operator: '张三',
     createTime: '2026-06-21 09:15:00', approveTime: '2026-06-21 10:30:00', approver: '李四',
-    remark: '测试出库单1-低值易耗品领用',
+    remark: '测试出库单1-低值易耗品领用-已确认',
     details: [
       { id: 'OUTD_TEST_1_1', outboundOrderId: 'OUT_TEST_1', productId: 'PRD101', productName: '圆形井盖', productCode: 'JJ1012', positionId: 'POS001', positionName: 'A区01号', quantity: 20 },
       { id: 'OUTD_TEST_1_2', outboundOrderId: 'OUT_TEST_1', productId: 'PRD103', productName: '方形井盖', productCode: 'JJ1016', positionId: 'POS001', positionName: 'A区01号', quantity: 10 },

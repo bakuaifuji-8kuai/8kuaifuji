@@ -293,14 +293,45 @@ export default function AssetRequisition() {
             </>
           )}
           {row.status === 'out_confirmed' && (
-            <TextButton onClick={() => handleQuickReturn(row)}>
-              <RotateCcw size={12} /> 一键归还
-            </TextButton>
+            <>
+              <TextButton onClick={() => handleQuickReturn(row)}>
+                <RotateCcw size={12} /> 一键归还
+              </TextButton>
+              <TextButton type="warning" onClick={() => handleReverseConfirm(row.id)}>反确认</TextButton>
+            </>
           )}
         </div>
       ),
     },
   ];
+
+  const handleReverseConfirm = (id: string) => {
+    const order = data.find((o) => o.id === id);
+    if (!order) return;
+    if (!confirm(`确认反确认领用单 ${order.requisitionNo}？反确认后单据将回退到待出库状态，资产状态将恢复为在仓。`)) return;
+
+    setData(
+      data.map((d) =>
+        d.id === id
+          ? {
+              ...d,
+              status: 'pending',
+              outConfirmer: undefined,
+              outConfirmTime: undefined,
+            }
+          : d
+      )
+    );
+
+    updateAssetEquipment(order.assetId, {
+      status: 'in_storage',
+      requisitionDepartment: undefined,
+      requisitionEmployee: undefined,
+      requisitionDate: undefined,
+    });
+
+    alert(`反确认成功！领用单 ${order.requisitionNo} 已回退到待出库状态。`);
+  };
 
   const [viewItem, setViewItem] = useState<AssetRequisition | null>(null);
   const [editItem, setEditItem] = useState<AssetRequisition | null>(null);

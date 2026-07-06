@@ -294,12 +294,42 @@ export default function AssetTransfer() {
             </>
           )}
           {row.status === 'out_confirmed' && (
-            <TextButton onClick={() => handleInConfirm(row.id)}>调入确认</TextButton>
+            <>
+              <TextButton onClick={() => handleInConfirm(row.id)}>调入确认</TextButton>
+              <TextButton type="warning" onClick={() => handleReverseConfirm(row.id)}>反确认</TextButton>
+            </>
+          )}
+          {row.status === 'completed' && (
+            <TextButton type="warning" onClick={() => handleReverseConfirm(row.id)}>反确认</TextButton>
           )}
         </div>
       ),
     },
   ];
+
+  const handleReverseConfirm = (id: string) => {
+    const order = data.find((o) => o.id === id);
+    if (!order) return;
+    const statusText = order.status === 'out_confirmed' ? '调出确认' : '已完成';
+    if (!confirm(`确认反确认调拨单 ${order.transferNo}（当前状态：${statusText}）？反确认后单据将回退到待调出状态。`)) return;
+
+    setData(
+      data.map((d) =>
+        d.id === id
+          ? {
+              ...d,
+              status: 'pending',
+              outConfirmer: undefined,
+              outConfirmTime: undefined,
+              inConfirmer: undefined,
+              inConfirmTime: undefined,
+            }
+          : d
+      )
+    );
+
+    alert(`反确认成功！调拨单 ${order.transferNo} 已回退到待调出状态。`);
+  };
 
   const [viewItem, setViewItem] = useState<AssetTransfer | null>(null);
 

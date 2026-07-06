@@ -123,6 +123,7 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
   const isWorkOrderFrozen = useStore((s) => s.isWorkOrderFrozen);
   const isExhibitionFrozen = useStore((s) => s.isExhibitionFrozen);
   const frozenExhibitions = useStore((s) => s.frozenExhibitions);
+  const reverseOutboundOrder = useStore((s) => s.reverseOutboundOrder);
 
   const isExhibition = type === 'exhibition';
   const pageTitle = isExhibition ? '展会物资领用出库' : '低值易耗领用出库';
@@ -239,11 +240,27 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
             {row.status === 'submitted' && !frozen && (
               <TextButton onClick={() => handleConfirmOutbound(row.id)}>确认出库</TextButton>
             )}
+            {['submitted', 'confirmed'].includes(row.status) && (
+              <TextButton type="warning" onClick={() => handleReverseConfirm(row.id)}>反确认</TextButton>
+            )}
           </div>
         );
       },
     },
   ];
+
+  const handleReverseConfirm = (id: string) => {
+    const order = outboundOrders.find((o) => o.id === id);
+    if (!order) return;
+    if (!confirm(`确认反确认出库单 ${order.orderNo}？反确认后单据将回退到可编辑状态，库存将恢复，且会生成冲销流水记录。`)) return;
+
+    const result = reverseOutboundOrder(id);
+    if (result.success) {
+      alert(result.message);
+    } else {
+      alert('反确认失败：' + result.message);
+    }
+  };
 
   // 查看弹窗
   const [viewItem, setViewItem] = useState<OutboundOrder | null>(null);

@@ -20,6 +20,7 @@ export interface Warehouse {
   status: 'enabled' | 'disabled';
   remark?: string;
   createTime: string;
+  allowNegativeInventory?: boolean; // 是否允许库存为负
 }
 
 export interface Position {
@@ -740,7 +741,7 @@ export interface ScrappedRecord {
   scrapQuantity: number; // 报废数量
   originalQuantity: number; // 原库存数量
   reason: string;
-  status: 'pending' | 'submitted';
+  status: 'pending' | 'submitted' | 'confirmed';
   operator: string;
   createTime: string;
   approveTime?: string;
@@ -764,7 +765,7 @@ export interface DamagedRecord {
   quantity: number;
   amount: number;
   reason: string;
-  status: 'pending' | 'submitted';
+  status: 'pending' | 'submitted' | 'confirmed';
   operator: string;
   createTime: string;
   approveTime?: string;
@@ -775,7 +776,7 @@ export interface DamagedRecord {
 }
 
 // 库存流水记录
-export type StockTransactionType = 'inbound' | 'outbound' | 'check_diff';
+export type StockTransactionType = 'inbound' | 'outbound' | 'check_diff' | 'reversal';
 
 export interface StockTransaction {
   id: string;
@@ -799,6 +800,7 @@ export interface StockTransaction {
   remark?: string;
   projectId?: string; // 所属项目ID
   projectName?: string; // 所属项目名称
+  reverseTransactionId?: string; // 被冲销的原流水ID（反确认时记录）
 }
 
 // 物资申请单明细

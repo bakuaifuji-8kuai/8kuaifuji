@@ -152,6 +152,7 @@ export default function InboundPage({ type = 'purchase' }: Props) {
   const outboundOrders = useStore((s) => s.outboundOrders);
   const exhibitionProjects = useStore((s) => s.exhibitionProjects);
   const currentUser = useStore((s) => s.currentUser);
+  const reverseInboundOrder = useStore((s) => s.reverseInboundOrder);
 
   // 搜索状态
   const [filterNo, setFilterNo] = useState('');
@@ -343,6 +344,11 @@ export default function InboundPage({ type = 'purchase' }: Props) {
           {row.status === 'submitted' && (
             <>
               <TextButton onClick={() => handleConfirm(row.id)}>确认入库</TextButton>
+            </>
+          )}
+          {['submitted', 'confirmed'].includes(row.status) && (
+            <>
+              <TextButton type="warning" onClick={() => handleReverseConfirm(row.id)}>反确认</TextButton>
             </>
           )}
         </div>
@@ -717,6 +723,19 @@ export default function InboundPage({ type = 'purchase' }: Props) {
     }
 
     updateInboundOrder(id, { ...order, status: 'confirmed' });
+  };
+
+  const handleReverseConfirm = (id: string) => {
+    const order = inboundOrders.find((o) => o.id === id);
+    if (!order) return;
+    if (!confirm(`确认反确认入库单 ${order.orderNo}？反确认后单据将回退到可编辑状态，库存将扣减，且会生成冲销流水记录。`)) return;
+
+    const result = reverseInboundOrder(id);
+    if (result.success) {
+      alert(result.message);
+    } else {
+      alert('反确认失败：' + result.message);
+    }
   };
 
   return (

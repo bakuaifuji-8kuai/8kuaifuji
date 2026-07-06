@@ -203,6 +203,16 @@ interface WarehouseState {
   setStockTransactions: (data: StockTransaction[]) => void;
   addStockTransaction: (transaction: StockTransaction) => void;
 
+  // 库存校验和反确认辅助方法
+  checkInventoryEnough: (warehouseId: string, productId: string, quantity: number) => boolean;
+  canAllowNegativeInventory: (warehouseId: string) => boolean;
+  getProductInventory: (warehouseId: string, productId: string) => number;
+  reverseInboundOrder: (orderId: string) => { success: boolean; message: string };
+  reverseOutboundOrder: (orderId: string) => { success: boolean; message: string };
+  reverseScrappedRecord: (recordId: string) => { success: boolean; message: string };
+  reverseDamagedRecord: (recordId: string) => { success: boolean; message: string };
+  reverseStockTransfer: (transferId: string) => { success: boolean; message: string };
+
   // 仓库调拨单
   stockTransfers: StockTransfer[];
   setStockTransfers: (data: StockTransfer[]) => void;
@@ -581,6 +591,333 @@ export const useStore = create<WarehouseState>((set) => ({
   stockTransactions: mockData.stockTransactions as StockTransaction[],
   setStockTransactions: (data) => set({ stockTransactions: data }),
   addStockTransaction: (transaction) => set((state) => ({ stockTransactions: [transaction, ...state.stockTransactions] })),
+
+  // 库存校验和反确认辅助方法
+  checkInventoryEnough: (warehouseId, productId, quantity) => {
+    const state = useStore.getState();
+    const warehouse = state.warehouses.find(w => w.id === warehouseId);
+    if (warehouse?.allowNegativeInventory) return true;
+    const inventory = state.inventories.find(i => i.warehouseId === warehouseId && i.productId === productId);
+    return (inventory?.quantity || 0) >= quantity;
+  },
+  canAllowNegativeInventory: (warehouseId) => {
+    const state = useStore.getState();
+    const warehouse = state.warehouses.find(w => w.id === warehouseId);
+    return warehouse?.allowNegativeInventory || false;
+  },
+  getProductInventory: (warehouseId, productId) => {
+    const state = useStore.getState();
+    const inventory = state.inventories.find(i => i.warehouseId === warehouseId && i.productId === productId);
+    return inventory?.quantity || 0;
+  },
+  reverseInboundOrder: (orderId) => {
+    const state = useStore.getState();
+    const order = state.inboundOrders.find(o => o.id === orderId);
+    if (!order) return { success: false, message: '入库单不存在' };
+    if (!['submitted', 'confirmed'].includes(order.status)) return { success: false, message: '只有已提交或已确认的单据才能反确认' };
+
+    if (order.status === 'confirmed') {
+      for (const detail of order.details) {
+        const inventory = state.inventories.find(i => i.warehouseId === order.warehouseId && i.productId === detail.productId);
+        if (!inventory) return { success: false, message: `物资 ${detail.productName} 库存记录不存在` };
+        
+        const warehouse = state.warehouses.find(w => w.id === order.warehouseId);
+        if (!warehouse?.allowNegativeInventory && (inventory.quantity - detail.quantity) < 0) {
+          return { success: false, message: `反确认后物资 ${detail.productName} 库存不足（当前库存: ${inventory.quantity}, 需要扣减: ${detail.quantity}）` };
+        }
+      }
+
+      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+      const transactionNo = 'TX' + now.replace(/-/g, '').replace(/:/g, '').slice(0, 14) + Math.random().toString(36).slice(2, 8).toUpperCase();
+
+      const newTransactions: StockTransaction[] = [];
+      for (const detail of order.details) {
+        const originalTransactions = state.stockTransactions.filter(t => 
+          t.sourceOrderId === orderId && t.productId === detail.productId && t.transactionType === 'inbound'
+        );
+        const originalId = originalTransactions[0]?.id;
+
+        newTransactions.push({
+          id: 'RT' + Date.now() + Math.random().toString(36).slice(2, 7),
+          transactionNo,
+          transactionTime: now,
+          transactionType: 'reversal',
+          productId: detail.productId,
+          productCode: detail.productCode,
+          productName: detail.productName,
+          warehouseId: order.warehouseId,
+          warehouseName: order.warehouseName,
+          positionId: '',
+          positionName: '',
+          quantity: -detail.quantity,
+          sourceOrderId: orderId,
+          sourceOrderNo: order.orderNo,
+          sourceType: order.type === 'purchase' ? '采购入库冲销' : order.type === 'production' ? '自制入库冲销' : '退库冲销',
+          batchNo: (detail as any).batchNo || '',
+          operator: state.currentUser.name,
+          remark: `反确认入库单 ${order.orderNo}`,
+          reverseTransactionId: originalId,
+        });
+      }
+
+      set({
+        inboundOrders: state.inboundOrders.map(o => o.id === orderId ? { ...o, status: 'pending' as const, confirmTime: undefined, confirmer: undefined } : o),
+        inventories: state.inventories.map(i => {
+          const detail = order.details.find(d => d.productId === i.productId && order.warehouseId === i.warehouseId);
+          if (detail) return { ...i, quantity: i.quantity - detail.quantity };
+          return i;
+        }),
+        stockTransactions: [...newTransactions, ...state.stockTransactions],
+      });
+    } else {
+      set({
+        inboundOrders: state.inboundOrders.map(o => o.id === orderId ? { ...o, status: 'pending' as const } : o),
+      });
+    }
+
+    return { success: true, message: '反确认成功' };
+  },
+  reverseOutboundOrder: (orderId) => {
+    const state = useStore.getState();
+    const order = state.outboundOrders.find(o => o.id === orderId);
+    if (!order) return { success: false, message: '出库单不存在' };
+    if (!['submitted', 'confirmed'].includes(order.status)) return { success: false, message: '只有已提交或已确认的单据才能反确认' };
+
+    if (order.status === 'confirmed') {
+      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+      const transactionNo = 'TX' + now.replace(/-/g, '').replace(/:/g, '').slice(0, 14) + Math.random().toString(36).slice(2, 8).toUpperCase();
+
+      const newTransactions: StockTransaction[] = [];
+      for (const detail of order.details) {
+        const originalTransactions = state.stockTransactions.filter(t => 
+          t.sourceOrderId === orderId && t.productId === detail.productId && t.transactionType === 'outbound'
+        );
+        const originalId = originalTransactions[0]?.id;
+
+        newTransactions.push({
+          id: 'RT' + Date.now() + Math.random().toString(36).slice(2, 7),
+          transactionNo,
+          transactionTime: now,
+          transactionType: 'reversal',
+          productId: detail.productId,
+          productCode: detail.productCode,
+          productName: detail.productName,
+          warehouseId: order.warehouseId,
+          warehouseName: order.warehouseName || '',
+          positionId: '',
+          positionName: '',
+          quantity: detail.quantity,
+          sourceOrderId: orderId,
+          sourceOrderNo: order.orderNo,
+          sourceType: order.type === 'lowvalue' ? '领用出库冲销' : '工单出库冲销',
+          batchNo: (detail as any).batchNo || '',
+          operator: state.currentUser.name,
+          remark: `反确认出库单 ${order.orderNo}`,
+          reverseTransactionId: originalId,
+        });
+      }
+
+      set({
+        outboundOrders: state.outboundOrders.map(o => o.id === orderId ? { ...o, status: 'pending' as const } : o),
+        inventories: state.inventories.map(i => {
+          const detail = order.details.find(d => d.productId === i.productId && order.warehouseId === i.warehouseId);
+          if (detail) return { ...i, quantity: i.quantity + detail.quantity };
+          return i;
+        }),
+        stockTransactions: [...newTransactions, ...state.stockTransactions],
+      });
+    } else {
+      set({
+        outboundOrders: state.outboundOrders.map(o => o.id === orderId ? { ...o, status: 'pending' as const } : o),
+      });
+    }
+
+    return { success: true, message: '反确认成功' };
+  },
+  reverseScrappedRecord: (recordId) => {
+    const state = useStore.getState();
+    const record = state.scrappedRecords.find(r => r.id === recordId);
+    if (!record) return { success: false, message: '报废记录不存在' };
+    if (!['submitted', 'confirmed'].includes(record.status)) return { success: false, message: '只有已提交或已确认的报废记录才能反确认' };
+
+    if (record.status === 'confirmed') {
+      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+      const transactionNo = 'TX' + now.replace(/-/g, '').replace(/:/g, '').slice(0, 14) + Math.random().toString(36).slice(2, 8).toUpperCase();
+      const details = (record as any).details || [];
+
+      const newTransactions: StockTransaction[] = [];
+      for (const d of details) {
+        const originalTransactions = state.stockTransactions.filter(t => 
+          t.sourceOrderId === recordId && t.productId === d.productId && t.transactionType === 'outbound'
+        );
+        const originalId = originalTransactions[0]?.id;
+
+        newTransactions.push({
+          id: 'RT' + Date.now() + Math.random().toString(36).slice(2, 7),
+          transactionNo,
+          transactionTime: now,
+          transactionType: 'reversal',
+          productId: d.productId,
+          productCode: d.productCode,
+          productName: d.productName,
+          warehouseId: record.warehouseId,
+          warehouseName: record.warehouseName,
+          positionId: '',
+          positionName: '',
+          quantity: d.quantity,
+          sourceOrderId: recordId,
+          sourceOrderNo: record.recordNo,
+          sourceType: '报废出库冲销',
+          batchNo: '',
+          operator: state.currentUser.name,
+          remark: `反确认报废单 ${record.recordNo}`,
+          reverseTransactionId: originalId,
+        });
+      }
+
+      set({
+        scrappedRecords: state.scrappedRecords.map(r => r.id === recordId ? { ...r, status: 'pending' as const } : r),
+        inventories: state.inventories.map(i => {
+          const d = details.find((detail: any) => detail.productId === i.productId && record.warehouseId === i.warehouseId);
+          if (d) return { ...i, quantity: i.quantity + d.quantity };
+          return i;
+        }),
+        stockTransactions: [...newTransactions, ...state.stockTransactions],
+      });
+    } else {
+      set({
+        scrappedRecords: state.scrappedRecords.map(r => r.id === recordId ? { ...r, status: 'pending' as const } : r),
+      });
+    }
+
+    return { success: true, message: '反确认成功' };
+  },
+  reverseDamagedRecord: (recordId) => {
+    const state = useStore.getState();
+    const record = state.damagedRecords.find(r => r.id === recordId);
+    if (!record) return { success: false, message: '报损记录不存在' };
+    if (!['submitted', 'confirmed'].includes(record.status)) return { success: false, message: '只有已提交或已确认的报损记录才能反确认' };
+
+    if (record.status === 'confirmed') {
+      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+      const transactionNo = 'TX' + now.replace(/-/g, '').replace(/:/g, '').slice(0, 14) + Math.random().toString(36).slice(2, 8).toUpperCase();
+      const details = (record as any).details || [];
+
+      const newTransactions: StockTransaction[] = [];
+      for (const d of details) {
+        const originalTransactions = state.stockTransactions.filter(t => 
+          t.sourceOrderId === recordId && t.productId === d.productId && t.transactionType === 'outbound'
+        );
+        const originalId = originalTransactions[0]?.id;
+
+        newTransactions.push({
+          id: 'RT' + Date.now() + Math.random().toString(36).slice(2, 7),
+          transactionNo,
+          transactionTime: now,
+          transactionType: 'reversal',
+          productId: d.productId,
+          productCode: d.productCode,
+          productName: d.productName,
+          warehouseId: record.warehouseId,
+          warehouseName: record.warehouseName,
+          positionId: '',
+          positionName: '',
+          quantity: d.quantity,
+          sourceOrderId: recordId,
+          sourceOrderNo: record.recordNo,
+          sourceType: '报损出库冲销',
+          batchNo: '',
+          operator: state.currentUser.name,
+          remark: `反确认报损单 ${record.recordNo}`,
+          reverseTransactionId: originalId,
+        });
+      }
+
+      set({
+        damagedRecords: state.damagedRecords.map(r => r.id === recordId ? { ...r, status: 'pending' as const } : r),
+        inventories: state.inventories.map(i => {
+          const d = details.find((detail: any) => detail.productId === i.productId && record.warehouseId === i.warehouseId);
+          if (d) return { ...i, quantity: i.quantity + d.quantity };
+          return i;
+        }),
+        stockTransactions: [...newTransactions, ...state.stockTransactions],
+      });
+    } else {
+      set({
+        damagedRecords: state.damagedRecords.map(r => r.id === recordId ? { ...r, status: 'pending' as const } : r),
+      });
+    }
+
+    return { success: true, message: '反确认成功' };
+  },
+  reverseStockTransfer: (transferId) => {
+    const state = useStore.getState();
+    const transfer = state.stockTransfers.find(t => t.id === transferId);
+    if (!transfer) return { success: false, message: '调拨单不存在' };
+    if (transfer.status === 'pending') return { success: false, message: '待提交状态的调拨单无需反确认' };
+
+    if (transfer.status === 'completed') {
+      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+      const transactionNo = 'TX' + now.replace(/-/g, '').replace(/:/g, '').slice(0, 14) + Math.random().toString(36).slice(2, 8).toUpperCase();
+
+      const newTransactions: StockTransaction[] = [];
+      for (const detail of transfer.details) {
+        newTransactions.push({
+          id: 'RT' + Date.now() + Math.random().toString(36).slice(2, 7),
+          transactionNo,
+          transactionTime: now,
+          transactionType: 'reversal',
+          productId: detail.productId,
+          productCode: detail.productCode,
+          productName: detail.productName,
+          warehouseId: transfer.sourceWarehouseId,
+          warehouseName: transfer.sourceWarehouseName,
+          positionId: '',
+          positionName: '',
+          quantity: detail.quantity,
+          sourceOrderId: transferId,
+          sourceOrderNo: transfer.transferNo,
+          sourceType: '调拨冲销',
+          batchNo: '',
+          operator: state.currentUser.name,
+          remark: `反确认调拨单 ${transfer.transferNo}`,
+        });
+      }
+
+      const targetWarehouse = state.warehouses.find(w => w.id === transfer.targetWarehouseId);
+      
+      for (const detail of transfer.details) {
+        if (!targetWarehouse?.allowNegativeInventory) {
+          const targetInv = state.inventories.find(i => i.warehouseId === transfer.targetWarehouseId && i.productId === detail.productId);
+          if (targetInv && (targetInv.quantity - detail.quantity) < 0) {
+            return { success: false, message: `反确认后目标仓库物资 ${detail.productName} 库存不足` };
+          }
+        }
+      }
+
+      set({
+        stockTransfers: state.stockTransfers.map(t => t.id === transferId ? { ...t, status: 'pending' as const } : t),
+        inventories: state.inventories.map(i => {
+          const detail = transfer.details.find(d => d.productId === i.productId);
+          if (!detail) return i;
+          if (i.warehouseId === transfer.sourceWarehouseId) {
+            return { ...i, quantity: i.quantity + detail.quantity };
+          }
+          if (i.warehouseId === transfer.targetWarehouseId) {
+            return { ...i, quantity: i.quantity - detail.quantity };
+          }
+          return i;
+        }),
+        stockTransactions: [...newTransactions, ...state.stockTransactions],
+      });
+    } else {
+      set({
+        stockTransfers: state.stockTransfers.map(t => t.id === transferId ? { ...t, status: 'pending' as const } : t),
+      });
+    }
+
+    return { success: true, message: '反确认成功' };
+  },
 
   // 仓库调拨单
   stockTransfers: mockData.stockTransfers || [],

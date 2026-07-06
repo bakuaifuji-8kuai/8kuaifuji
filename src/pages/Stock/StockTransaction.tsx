@@ -100,12 +100,14 @@ export default function StockTransactionPage() {
     if (t === 'check_diff') return '盘点差异';
     if (t === 'check_profit') return '盘点盘盈';
     if (t === 'check_loss') return '盘点盘亏';
+    if (t === 'reversal') return '冲销';
     return t;
   };
 
   const typeColor = (t: string) => {
     if (t === 'inbound') return 'text-[#67c23a]';
     if (t === 'outbound') return 'text-[#f56c6c]';
+    if (t === 'reversal') return 'text-[#909399]';
     return 'text-[#e6a23c]';
   };
 
@@ -259,6 +261,7 @@ export default function StockTransactionPage() {
             <option value="inbound">入库</option>
             <option value="outbound">出库</option>
             <option value="check_diff">盘点差异</option>
+            <option value="reversal">冲销</option>
           </select>
         </div>
         <SearchField label="起始日期" type="date" value={filterFrom} onChange={setFilterFrom} />

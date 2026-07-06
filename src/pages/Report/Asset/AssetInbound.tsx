@@ -202,10 +202,31 @@ export default function AssetInbound() {
                 </TextButton>
               </>
             )}
+            {row.status === 'completed' && (
+              <TextButton type="warning" onClick={() => handleReverseConfirm(row.id)}>反确认</TextButton>
+            )}
           </div>
         ),
       },
   ];
+
+  const handleReverseConfirm = (id: string) => {
+    const order = inboundOrders.find((o) => o.id === id);
+    if (!order) return;
+    if (!confirm(`确认反确认入库单 ${order.orderNo}？反确认后单据将回退到待入库状态，资产状态将恢复为未入库。`)) return;
+
+    setInboundOrders(inboundOrders.map((o) =>
+      o.id === id ? { ...o, status: 'pending' as const } : o
+    ));
+
+    updateAssetEquipment(order.assetId, {
+      status: 'pending',
+      warehouseId: undefined,
+      warehouseName: undefined,
+    });
+
+    alert(`反确认成功！入库单 ${order.orderNo} 已回退到待入库状态。`);
+  };
 
   const openAdd = () => {
     const newOrder: AssetInboundOrder = {
