@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc --noEmit && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "check": "tsc -b --noEmit",
+    "check": "tsc --noEmit",
     "deploy": "gh-pages -d dist -b gh-pages",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
