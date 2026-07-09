@@ -424,24 +424,24 @@ const flowCharts: FlowChartItem[] = [
     description: '仓库管理系统主要功能的用户视角视图',
     icon: Users,
     type: 'flowchart',
-    code: `graph TD
-    actor 用户 as 用户
-    actor 仓库管理员 as 仓库管理员
-    actor 财务人员 as 财务人员
-
-    rect 仓库管理系统
-        usecase 提交入库单 as UC1
-        usecase 确认入库 as UC2
-        usecase 提交出库单 as UC3
-        usecase 确认出库 as UC4
-        usecase 查询库存 as UC5
-        usecase 库存盘点 as UC6
-        usecase 物资调拨 as UC7
-        usecase 资产报废报损 as UC8
-        usecase 反确认单据 as UC9
-        usecase 打印单据 as UC10
-        usecase 生成报表 as UC11
+    code: `flowchart TD
+    subgraph 系统边界
+        UC1(提交入库单)
+        UC2(确认入库)
+        UC3(提交出库单)
+        UC4(确认出库)
+        UC5(查询库存)
+        UC6(库存盘点)
+        UC7(物资调拨)
+        UC8(资产报废报损)
+        UC9(反确认单据)
+        UC10(打印单据)
+        UC11(生成报表)
     end
+
+    用户((用户))
+    管理员((仓库管理员))
+    财务((财务人员))
 
     用户 --> UC1
     用户 --> UC3
@@ -449,13 +449,18 @@ const flowCharts: FlowChartItem[] = [
     用户 --> UC7
     用户 --> UC8
     用户 --> UC10
-    仓库管理员 --> UC2
-    仓库管理员 --> UC4
-    仓库管理员 --> UC6
-    仓库管理员 --> UC9
-    仓库管理员 --> UC10
-    财务人员 --> UC5
-    财务人员 --> UC11`,
+    管理员 --> UC2
+    管理员 --> UC4
+    管理员 --> UC6
+    管理员 --> UC9
+    管理员 --> UC10
+    财务 --> UC5
+    财务 --> UC11
+
+    style 系统边界 stroke-dasharray: 5,5,stroke:#cbd5e1,fill:#f8fafc
+    style 用户 fill:#dbeafe,stroke:#3b82f6,stroke-width:2px
+    style 管理员 fill:#dbeafe,stroke:#3b82f6,stroke-width:2px
+    style 财务 fill:#dbeafe,stroke:#3b82f6,stroke-width:2px`,
   },
   {
     key: 'state-machine',
