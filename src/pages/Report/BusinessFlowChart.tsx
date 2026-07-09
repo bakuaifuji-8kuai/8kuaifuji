@@ -3,7 +3,7 @@ import mermaid from 'mermaid';
 import {
   Workflow, ArrowRightLeft, Package, FileText, CheckSquare, Layers, RefreshCw,
   ZoomIn, ZoomOut, Download, Network, GitBranch, Brain, Boxes, Database,
-  ArrowDownToLine, ArrowUpFromLine, LayoutGrid, Settings
+  ArrowDownToLine, ArrowUpFromLine, LayoutGrid, Settings, Users
 } from 'lucide-react';
 import { DefaultButton } from '@/components/common/Button';
 
@@ -83,8 +83,6 @@ const svgDiagrams: SvgDiagramItem[] = [
   { key: 'flow-basic-data', title: '基础资料流程', description: '基础数据管理流程', icon: Settings, file: 'flow-basic-data.svg', group: '业务流程图' },
   { key: 'er-diagram', title: 'ER图（实体关系图）', description: '数据库实体关系图，含18个核心实体', icon: Database, file: 'er-diagram.svg', group: '架构与模型图' },
   { key: 'mindmap', title: '整体思维导图', description: '系统功能模块思维导图', icon: GitBranch, file: 'mindmap.svg', group: '架构与模型图' },
-  { key: 'agent-architecture', title: 'Agent架构图', description: 'AI Agent 输入-核心-记忆-工具-输出架构', icon: Brain, file: 'agent-architecture.svg', group: '架构与模型图' },
-  { key: 'system-architecture', title: '系统架构图', description: '用户层-前端层-路由层-数据层-部署层', icon: Network, file: 'system-architecture.svg', group: '架构与模型图' },
 ];
 
 const flowCharts: FlowChartItem[] = [
@@ -381,6 +379,99 @@ const flowCharts: FlowChartItem[] = [
     style 资产调拨 fill:#f8fafc,stroke:#cbd5e1,stroke-width:1px
     style 资产维护 fill:#f8fafc,stroke:#cbd5e1,stroke-width:1px
     style 资产报废 fill:#f8fafc,stroke:#cbd5e1,stroke-width:1px`,
+  },
+  {
+    key: 'inbound-sequence',
+    title: '入库单确认序列图',
+    description: '入库单从提交到确认的时间顺序交互流程，含反确认场景',
+    icon: ArrowDownToLine,
+    type: 'flowchart',
+    code: `sequenceDiagram
+    participant 用户 as 用户
+    participant 系统 as 系统
+    participant 仓库管理员 as 仓库管理员
+
+    用户->>系统: 提交入库单(物资、数量、仓库)
+    系统->>系统: 验证表单数据
+    alt 验证通过
+        系统->>系统: 保存入库单(状态:待审核)
+        系统->>仓库管理员: 发送审核通知
+        仓库管理员->>系统: 查看入库单详情
+        仓库管理员->>系统: 确认入库
+        系统->>系统: 更新库存数据
+        系统->>系统: 生成库存流水
+        系统-->>仓库管理员: 返回确认成功
+        系统-->>用户: 推送入库完成通知
+    else 验证失败
+        系统-->>用户: 返回错误信息
+    end
+
+    opt 反确认操作
+        仓库管理员->>系统: 执行反确认
+        alt 已确认单据
+            系统->>系统: 回滚库存数据
+            系统->>系统: 生成冲销流水
+            系统->>系统: 状态回退到待审核
+        else 已提交单据
+            系统->>系统: 状态回退到待审核
+        end
+        系统-->>仓库管理员: 返回反确认成功
+    end`,
+  },
+  {
+    key: 'use-case',
+    title: '系统用例图',
+    description: '仓库管理系统主要功能的用户视角视图',
+    icon: Users,
+    type: 'flowchart',
+    code: `graph TD
+    actor 用户 as 用户
+    actor 仓库管理员 as 仓库管理员
+    actor 财务人员 as 财务人员
+
+    rect 仓库管理系统
+        usecase 提交入库单 as UC1
+        usecase 确认入库 as UC2
+        usecase 提交出库单 as UC3
+        usecase 确认出库 as UC4
+        usecase 查询库存 as UC5
+        usecase 库存盘点 as UC6
+        usecase 物资调拨 as UC7
+        usecase 资产报废报损 as UC8
+        usecase 反确认单据 as UC9
+        usecase 打印单据 as UC10
+        usecase 生成报表 as UC11
+    end
+
+    用户 --> UC1
+    用户 --> UC3
+    用户 --> UC5
+    用户 --> UC7
+    用户 --> UC8
+    用户 --> UC10
+    仓库管理员 --> UC2
+    仓库管理员 --> UC4
+    仓库管理员 --> UC6
+    仓库管理员 --> UC9
+    仓库管理员 --> UC10
+    财务人员 --> UC5
+    财务人员 --> UC11`,
+  },
+  {
+    key: 'state-machine',
+    title: '单据状态机图',
+    description: '入库单、出库单、调拨单的状态转换流程',
+    icon: RefreshCw,
+    type: 'flowchart',
+    code: `stateDiagram-v2
+    [*] --> 待审核: 创建单据
+    待审核 --> 已提交: 用户提交
+    已提交 --> 已确认: 管理员确认
+    已确认 --> 已完成: 流程结束
+    已提交 --> 待审核: 反确认(仅回滚状态)
+    已确认 --> 待审核: 反确认(回滚库存+冲销流水)
+    待审核 --> [*]: 删除单据
+    已完成 --> [*]`,
   },
 ];
 
