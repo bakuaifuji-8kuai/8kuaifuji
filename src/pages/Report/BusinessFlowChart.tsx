@@ -117,12 +117,20 @@ const flowCharts: FlowChartItem[] = [
     quickReturn --> genReturn[生成归还单<br/>待入库确认]:::status
     genReturn --> inConfirm[仓库管理员入库确认]:::process
     inConfirm --> done([完成]):::startEnd
+    pending --> reverse[反确认]:::reversal
+    inUse --> reverse
+    reverse --> rollback[回滚状态到待审核]:::process
+    rollback --> checkConfirmed{已确认单据?}:::decision
+    checkConfirmed -->|是| rollbackStock[回滚库存+生成冲销流水]:::warn
+    checkConfirmed -->|否| submit
+    rollbackStock --> submit
 
     classDef startEnd fill:#e2e8f0,stroke:#475569,stroke-width:1px,color:#1e293b
     classDef process fill:#ffffff,stroke:#64748b,stroke-width:1px,color:#1e293b
     classDef decision fill:#ffffff,stroke:#64748b,stroke-width:1px,color:#1e293b
     classDef status fill:#dbeafe,stroke:#3b82f6,stroke-width:1px,color:#1e40af
-    classDef warn fill:#fef3c7,stroke:#f59e0b,stroke-width:1px,color:#92400e`,
+    classDef warn fill:#fef3c7,stroke:#f59e0b,stroke-width:1px,color:#92400e
+    classDef reversal fill:#fce7f3,stroke:#ec4899,stroke-width:1px,color:#be185d`,
   },
   {
     key: 'transfer',
@@ -144,6 +152,9 @@ const flowCharts: FlowChartItem[] = [
         B2 --> B3{是否同意?}
         B3 -->|同意| B4[调出确认]
         B3 -->|拒绝| B5[驳回申请]
+        B4 --> B6{反确认?}
+        B6 -->|是| B7[回滚状态到待审核]
+        B6 -->|否| B8[流程继续]
     end
 
     subgraph 调入部门
@@ -152,6 +163,9 @@ const flowCharts: FlowChartItem[] = [
         C2 --> C3{是否确认?}
         C3 -->|确认| C4[调入确认]
         C3 -->|有异议| C5[沟通协商]
+        C4 --> C6{反确认?}
+        C6 -->|是| C7[回滚状态到待审核]
+        C6 -->|否| C8[流程继续]
     end
 
     subgraph 仓库管理员
@@ -160,10 +174,12 @@ const flowCharts: FlowChartItem[] = [
     end
 
     A4 ==> B1
-    B4 ==> C1
-    C4 ==> D1
+    B8 ==> C1
+    C8 ==> D1
     B5 --> END([流程结束])
     C5 --> B2
+    B7 --> A1
+    C7 --> B4
     D2 --> END
 
     style 申请人 fill:#f8fafc,stroke:#cbd5e1,stroke-width:1px
@@ -174,7 +190,7 @@ const flowCharts: FlowChartItem[] = [
   {
     key: 'purchase-inbound',
     title: '采购入库流程',
-    description: '从采购计划到入库完成的完整流程',
+    description: '从采购计划到入库完成的完整流程，支持反确认',
     icon: Workflow,
     type: 'flowchart',
     code: `flowchart TD
@@ -196,21 +212,32 @@ const flowCharts: FlowChartItem[] = [
     pass -->|不合格| return[退换货处理]:::warn
     pass -->|合格| genInbound[生成入库单]:::process
     return --> deliver
-    genInbound --> confirmIn[仓库确认入库]:::process
-    confirmIn --> updateStock[更新库存数据]:::process
+    genInbound --> submit[提交审核]:::process
+    submit --> pending[待审核]:::status
+    pending --> confirmIn[仓库确认入库]:::process
+    confirmIn --> confirmed[已确认]:::status
+    confirmed --> updateStock[更新库存数据]:::process
     updateStock --> archive[台账/归档]:::process
     archive --> done([完成]):::startEnd
+    pending --> reverse[反确认]:::reversal
+    confirmed --> reverse
+    reverse --> rollback[回滚状态到待审核]:::process
+    rollback --> checkConfirmed{已确认单据?}:::decision
+    checkConfirmed -->|是| rollbackStock[回滚库存+生成冲销流水]:::warn
+    checkConfirmed -->|否| genInbound
+    rollbackStock --> genInbound
 
     classDef startEnd fill:#e2e8f0,stroke:#475569,stroke-width:1px,color:#1e293b
     classDef process fill:#ffffff,stroke:#64748b,stroke-width:1px,color:#1e293b
     classDef decision fill:#ffffff,stroke:#64748b,stroke-width:1px,color:#1e293b
     classDef status fill:#dbeafe,stroke:#3b82f6,stroke-width:1px,color:#1e40af
-    classDef warn fill:#fef3c7,stroke:#f59e0b,stroke-width:1px,color:#92400e`,
+    classDef warn fill:#fef3c7,stroke:#f59e0b,stroke-width:1px,color:#92400e
+    classDef reversal fill:#fce7f3,stroke:#ec4899,stroke-width:1px,color:#be185d`,
   },
   {
     key: 'asset-scrap',
     title: '资产报废报损流程',
-    description: '固定资产报废和报损的审批流程',
+    description: '固定资产报废和报损的审批流程，支持反确认',
     icon: FileText,
     type: 'flowchart',
     code: `flowchart TD
@@ -229,16 +256,25 @@ const flowCharts: FlowChartItem[] = [
     level3 -->|驳回| rejected
     approved --> pendingOut[待出库确认]:::status
     pendingOut --> outConfirm[仓库管理员出库确认]:::process
-    outConfirm --> writeOff[资产核销出库]:::process
+    outConfirm --> confirmed[已确认]:::status
+    confirmed --> writeOff[资产核销出库]:::process
     writeOff --> update[更新资产状态<br/>已报废/已报损]:::process
     update --> finance[财务做账]:::process
     finance --> done([完成]):::startEnd
+    pending --> reverse[反确认]:::reversal
+    confirmed --> reverse
+    reverse --> rollback[回滚状态到待审核]:::process
+    rollback --> checkConfirmed{已确认单据?}:::decision
+    checkConfirmed -->|是| rollbackStock[回滚库存+生成冲销流水]:::warn
+    checkConfirmed -->|否| upload
+    rollbackStock --> upload
 
     classDef startEnd fill:#e2e8f0,stroke:#475569,stroke-width:1px,color:#1e293b
     classDef process fill:#ffffff,stroke:#64748b,stroke-width:1px,color:#1e293b
     classDef decision fill:#ffffff,stroke:#64748b,stroke-width:1px,color:#1e293b
     classDef status fill:#dbeafe,stroke:#3b82f6,stroke-width:1px,color:#1e40af
-    classDef warn fill:#fef3c7,stroke:#f59e0b,stroke-width:1px,color:#92400e`,
+    classDef warn fill:#fef3c7,stroke:#f59e0b,stroke-width:1px,color:#92400e
+    classDef reversal fill:#fce7f3,stroke:#ec4899,stroke-width:1px,color:#be185d`,
   },
   {
     key: 'stock-check',
@@ -262,15 +298,27 @@ const flowCharts: FlowChartItem[] = [
     recheck --> confirmed{差异确认?}:::decision
     confirmed -->|是| approve
     confirmed -->|否| fieldCheck
-    approve -->|通过| adjust[调整库存数量]:::process
+    approve -->|通过| pending[待确认]:::status
     approve -->|驳回| fieldCheck
+    pending --> confirm[确认盘点结果]:::process
+    confirm --> confirmedStatus[已确认]:::status
+    confirmedStatus --> adjust[调整库存数量]:::process
     adjust --> genAdjust[生成库存调整单]:::process
     genAdjust --> done([盘点完成]):::startEnd
+    pending --> reverse[反确认]:::reversal
+    confirmedStatus --> reverse
+    reverse --> rollback[回滚状态到待审核]:::process
+    rollback --> checkConfirmed{已确认单据?}:::decision
+    checkConfirmed -->|是| rollbackStock[回滚库存+生成冲销流水]:::warn
+    checkConfirmed -->|否| inputQty
+    rollbackStock --> inputQty
 
     classDef startEnd fill:#e2e8f0,stroke:#475569,stroke-width:1px,color:#1e293b
     classDef process fill:#ffffff,stroke:#64748b,stroke-width:1px,color:#1e293b
     classDef decision fill:#ffffff,stroke:#64748b,stroke-width:1px,color:#1e293b
-    classDef warn fill:#fef3c7,stroke:#f59e0b,stroke-width:1px,color:#92400e`,
+    classDef status fill:#dbeafe,stroke:#3b82f6,stroke-width:1px,color:#1e40af
+    classDef warn fill:#fef3c7,stroke:#f59e0b,stroke-width:1px,color:#92400e
+    classDef reversal fill:#fce7f3,stroke:#ec4899,stroke-width:1px,color:#be185d`,
   },
   {
     key: 'asset-life',
@@ -643,6 +691,12 @@ export default function BusinessFlowChart() {
               提醒/异常
             </div>
             <span className="text-slate-600">注意事项</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-16 h-6 bg-pink-100 border border-pink-500 flex items-center justify-center text-pink-800 text-xs">
+              反确认
+            </div>
+            <span className="text-slate-600">撤销操作</span>
           </div>
         </div>
       </div>
