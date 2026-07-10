@@ -3,7 +3,8 @@ import mermaid from 'mermaid';
 import {
   Workflow, ArrowRightLeft, Package, FileText, CheckSquare, Layers, RefreshCw,
   ZoomIn, ZoomOut, Download, Network, GitBranch, Brain, Boxes, Database,
-  ArrowDownToLine, ArrowUpFromLine, LayoutGrid, Settings, Users
+  ArrowDownToLine, ArrowUpFromLine, LayoutGrid, Settings, Users,
+  Trash2, AlertTriangle, Truck, PackageCheck
 } from 'lucide-react';
 import { DefaultButton } from '@/components/common/Button';
 
@@ -477,6 +478,206 @@ const flowCharts: FlowChartItem[] = [
     已确认 --> 待审核: 反确认(回滚库存+冲销流水)
     待审核 --> [*]: 删除单据
     已完成 --> [*]`,
+  },
+  {
+    key: 'low-value-consumable-outbound',
+    title: '低值易耗领用出库流程',
+    description: '用户提交领用申请，经仓库管理员确认后扣减库存并生成流水，已确认状态可反确认回滚至待审核',
+    icon: ArrowUpFromLine,
+    type: 'flowchart',
+    code: `flowchart TD
+    Start((开始)) --> Submit[用户提交领用申请]
+    Submit --> Select[选择物资]
+    Select --> Fill[填写数量]
+    Fill --> CreateLY[提交出库单<br/>LY前缀]
+    CreateLY --> Audit{仓库管理员<br/>审核}
+    Audit -- 通过 --> Confirm[确认出库]
+    Audit -- 拒绝 --> Reject[退回申请]
+    Reject --> Submit
+    Confirm --> Deduct[扣减库存]
+    Deduct --> Flow[生成流水]
+    Flow --> End((结束))
+    Confirm -.-> AntiConfirm[反确认<br/>回滚至待审核]
+    style AntiConfirm fill:#fce7f3,stroke:#ec4899`,
+  },
+  {
+    key: 'scrap-outbound',
+    title: '报废出库流程',
+    description: '用户提交报废申请，经仓库管理员确认后扣减库存并生成流水，已确认可反确认回滚库存并冲销流水',
+    icon: Trash2,
+    type: 'flowchart',
+    code: `flowchart TD
+    Start((开始)) --> Submit[用户提交报废申请]
+    Submit --> Select[选择资产]
+    Select --> Fill[填写报废原因]
+    Fill --> CreateBF[提交报废单<br/>BF前缀]
+    CreateBF --> Confirm{仓库管理员确认}
+    Confirm -- 确认 --> Deduct[扣减库存]
+    Deduct --> Flow[生成流水]
+    Flow --> End((结束))
+    Confirm -.-> AntiConfirm[反确认<br/>回滚库存<br/>冲销流水]
+    style AntiConfirm fill:#fce7f3,stroke:#ec4899
+    AntiConfirm --> Submit`,
+  },
+  {
+    key: 'loss-outbound',
+    title: '报损出库流程',
+    description: '用户提交报损申请，经仓库管理员确认后扣减库存并生成流水，已确认可反确认回滚库存并冲销流水',
+    icon: AlertTriangle,
+    type: 'flowchart',
+    code: `flowchart TD
+    Start((开始)) --> Submit[用户提交报损申请]
+    Submit --> Select[选择物资]
+    Select --> Fill[填写报损原因/数量]
+    Fill --> CreateBS[提交报损单<br/>BS前缀]
+    CreateBS --> Confirm{仓库管理员确认}
+    Confirm -- 确认 --> Deduct[扣减库存]
+    Deduct --> Flow[生成流水]
+    Flow --> End((结束))
+    Confirm -.-> AntiConfirm[反确认<br/>回滚库存<br/>冲销流水]
+    style AntiConfirm fill:#fce7f3,stroke:#ec4899
+    AntiConfirm --> Submit`,
+  },
+  {
+    key: 'return-inbound',
+    title: '归还退库流程',
+    description: '用户提交退库申请，选择原领用单并填写退库数量，经仓库管理员确认后增加库存并生成流水',
+    icon: RefreshCw,
+    type: 'flowchart',
+    code: `flowchart TD
+    Start((开始)) --> Submit[用户提交退库申请]
+    Submit --> Select[选择原领用单]
+    Select --> Fill[填写退库数量]
+    Fill --> CreateTK[提交退库单]
+    CreateTK --> Confirm{仓库管理员确认}
+    Confirm -- 确认 --> Add[增加库存]
+    Add --> Flow[生成流水]
+    Flow --> End((结束))
+    Confirm -.-> AntiConfirm[反确认<br/>回滚至待审核]
+    style AntiConfirm fill:#fce7f3,stroke:#ec4899
+    AntiConfirm --> Submit`,
+  },
+  {
+    key: 'warehouse-transfer',
+    title: '仓库调拨流程',
+    description: '用户提交调拨申请，选择调出/调入仓库及物资，经调出调入仓库确认后生成流水',
+    icon: ArrowRightLeft,
+    type: 'flowchart',
+    code: `flowchart TD
+    Start((开始)) --> Submit[用户提交调拨申请]
+    Submit --> Select[选择调出仓库/调入仓库/物资]
+    Select --> Fill[填写数量]
+    Fill --> CreateDB[提交调拨单]
+    CreateDB --> OutConfirm{调出仓库确认}
+    OutConfirm -- 确认 --> Deduct[扣减调出仓库存]
+    Deduct --> InConfirm{调入仓库确认}
+    InConfirm -- 确认 --> Add[增加调入仓库存]
+    Add --> Flow[生成流水]
+    Flow --> End((结束))
+    OutConfirm -.-> AntiConfirm[反确认<br/>回滚库存<br/>冲销流水]
+    style AntiConfirm fill:#fce7f3,stroke:#ec4899
+    AntiConfirm --> Submit`,
+  },
+  {
+    key: 'exhibition-allocation-out',
+    title: '展会物资调拨出库流程',
+    description: '用户发起展会物资调拨出库，选择展会项目/工单与物资，仓库管理员确认后扣减库存',
+    icon: Truck,
+    type: 'flowchart',
+    code: `flowchart TD
+    A[用户提交展会调拨出库申请] --> B[选择展会项目/工单]
+    B --> C[选择物资]
+    C --> D[填写数量]
+    D --> E[提交调拨出库单]
+    E --> F[仓库管理员确认出库]
+    F --> G[扣减库存]
+    G --> H[生成流水]
+    H --> I[物资发往展会现场]
+    F -.-> J[反确认回滚库存+冲销流水]
+    style J fill:#fce7f3,stroke:#ec4899`,
+  },
+  {
+    key: 'exhibition-allocation-in',
+    title: '展会物资调拨入库流程',
+    description: '展会结束后发起调拨入库申请，关联原调拨出库单并填写退回数量，仓库管理员确认后增加库存',
+    icon: PackageCheck,
+    type: 'flowchart',
+    code: `flowchart TD
+    A[展会结束] --> B[提交调拨入库申请]
+    B --> C[选择原调拨出库单]
+    C --> D[填写退回数量]
+    D --> E[提交调拨入库单]
+    E --> F[仓库管理员确认入库]
+    F --> G[增加库存]
+    G --> H[生成流水]
+    F -.-> I[反确认回滚库存+冲销流水]
+    style I fill:#fce7f3,stroke:#ec4899`,
+  },
+  {
+    key: 'asset-archive',
+    title: '资产档案管理流程',
+    description: '资产从登记、信息填写、审核到生成卡片及入库关联的全生命周期管理',
+    icon: FileText,
+    type: 'flowchart',
+    code: `flowchart TD
+    Start([开始]) --> Register[资产登记]
+    Register --> FillInfo[填写资产信息<br/>编码、名称、规格<br/>部门、保管人等]
+    FillInfo --> Submit[提交档案]
+    Submit --> Audit{审核}
+    Audit -->|通过| Pass[审核通过]
+    Audit -->|驳回| FillInfo
+    Pass --> GenCard[生成资产卡片]
+    GenCard --> Relate[资产入库关联]
+    Relate --> Manage[新增/编辑/查看/删除<br/>资产档案]
+    Manage --> End([结束])
+    Pass --> Cancel[反确认<br/>作废档案]:::pink
+    Cancel --> Rollback[删除资产卡片<br/>回滚档案状态]:::pink
+    Rollback --> Register
+
+    classDef pink fill:#fce7f3,stroke:#ec4899`,
+  },
+  {
+    key: 'asset-inbound',
+    title: '资产入库流程',
+    description: '采购订单完成后提交入库申请，经仓库管理员确认后增加库存、生成流水并更新资产状态为在库',
+    icon: ArrowDownToLine,
+    type: 'flowchart',
+    code: `flowchart TD
+    Start([采购订单完成]) --> Apply[提交资产入库申请]
+    Apply --> Select[选择资产档案]
+    Select --> Fill[填写入库数量/仓库]
+    Fill --> Submit[提交资产入库单]
+    Submit --> Confirm{仓库管理员确认}
+    Confirm -->|确认| AddStock[增加库存]
+    AddStock --> GenLog[生成流水]
+    GenLog --> UpdateStatus[更新资产状态为在库]
+    UpdateStatus --> End([结束])
+    Confirm -->|反确认| Reverse[反确认回滚库存]:::pink
+    Reverse --> WriteOff[冲销流水]:::pink
+    WriteOff --> Submit
+
+    classDef pink fill:#fce7f3,stroke:#ec4899`,
+  },
+  {
+    key: 'asset-return',
+    title: '资产归还流程',
+    description: '用户提交归还申请，仓库管理员确认入库后增加库存、生成流水并更新资产状态为在库',
+    icon: RefreshCw,
+    type: 'flowchart',
+    code: `flowchart TD
+    Start([用户提交归还申请]) --> Select[选择原领用资产]
+    Select --> Fill[填写归还数量/归还仓库]
+    Fill --> Submit[提交归还单]
+    Submit --> Confirm{仓库管理员确认入库}
+    Confirm -->|确认| AddStock[增加库存]
+    AddStock --> GenLog[生成流水]
+    GenLog --> UpdateStatus[更新资产状态为在库]
+    UpdateStatus --> End([结束])
+    Confirm -->|反确认| Reverse[反确认回滚库存]:::pink
+    Reverse --> WriteOff[冲销流水]:::pink
+    WriteOff --> Submit
+
+    classDef pink fill:#fce7f3,stroke:#ec4899`,
   },
 ];
 
