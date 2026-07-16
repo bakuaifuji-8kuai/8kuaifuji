@@ -13,6 +13,7 @@ interface AgingData {
   productId: string;
   productCode: string;
   productName: string;
+  categoryName: string;
   specification: string;
   unit: string;
   quantity: number;
@@ -55,7 +56,7 @@ const helpContent = {
 };
 
 export default function LowValueAgingReportPage() {
-  const { inventories, warehouses, products } = useStore();
+  const { inventories, warehouses, products, categories } = useStore();
   const [warehouseFilter, setWarehouseFilter] = useState('');
   const [appliedFilter, setAppliedFilter] = useState({ warehouse: '' });
 
@@ -83,10 +84,12 @@ export default function LowValueAgingReportPage() {
         range360_ = inv.quantity;
       }
 
+      const category = categories.find(c => c.id === product?.categoryId);
       return {
         productId: inv.productId,
         productCode: product?.code || '',
         productName: product?.name || '',
+        categoryName: category?.name || '',
         specification: product?.specification || '',
         unit: product?.unit || '',
         quantity: inv.quantity,
@@ -124,7 +127,7 @@ export default function LowValueAgingReportPage() {
 
   const columns: ColumnDef<AgingData, unknown>[] = [
     { accessorKey: 'productCode', header: '物料代码' },
-    { accessorKey: 'categoryName', header: '专业板块' },
+    { accessorKey: 'categoryName', header: '物资分类' },
     { accessorKey: 'specification', header: '规格型号' },
     { accessorKey: 'quantity', header: '库存数量', cell: ({ row }) => formatNumber(row.original.quantity) },
     { accessorKey: 'unit', header: '单位' },

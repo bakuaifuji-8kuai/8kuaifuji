@@ -73,6 +73,8 @@ export default function StockTransferPage() {
   const currentUser = useStore((s) => s.currentUser);
   const reverseStockTransfer = useStore((s) => s.reverseStockTransfer);
 
+  const physicalWarehouses = warehouses.filter(w => w.property === 'physical');
+
   // 筛选条件
   const [filterNo, setFilterNo] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -205,10 +207,10 @@ export default function StockTransferPage() {
     const newOrder: StockTransfer = {
       id: 'TF' + Date.now(),
       transferNo: generateTransferNo(),
-      fromWarehouseId: warehouses[0]?.id || '',
-      fromWarehouseName: warehouses[0]?.name || '',
-      toWarehouseId: warehouses[1]?.id || '',
-      toWarehouseName: warehouses[1]?.name || '',
+      fromWarehouseId: physicalWarehouses[0]?.id || '',
+      fromWarehouseName: physicalWarehouses[0]?.name || '',
+      toWarehouseId: physicalWarehouses[1]?.id || '',
+      toWarehouseName: physicalWarehouses[1]?.name || '',
       status: 'pending',
       creator: currentUser.name,
       createTime: new Date().toISOString().slice(0, 16).replace('T', ' '),
@@ -260,17 +262,15 @@ export default function StockTransferPage() {
       alert('调出仓库和调入仓库不能相同');
       return;
     }
-    // 校验仓库属性：实物仓和虚拟仓之间只能同仓库类别调拨
     const fromWarehouse = warehouses.find((w) => w.id === editItem.fromWarehouseId);
     const toWarehouse = warehouses.find((w) => w.id === editItem.toWarehouseId);
-    if (fromWarehouse && toWarehouse) {
-      // 如果属性不同，必须是同一仓库类别
-      if (fromWarehouse.property !== toWarehouse.property) {
-        if (fromWarehouse.category !== toWarehouse.category) {
-          alert(`仓库 "${fromWarehouse.name}"（${fromWarehouse.propertyName}）和仓库 "${toWarehouse.name}"（${toWarehouse.propertyName}）之间的调拨必须是相同仓库类别。\n当前调出仓库类别：${fromWarehouse.categoryName}，调入仓库类别：${toWarehouse.categoryName}`);
-          return;
-        }
-      }
+    if (fromWarehouse && fromWarehouse.property !== 'physical') {
+      alert(`调出仓库 "${fromWarehouse.name}" 必须是实物仓`);
+      return;
+    }
+    if (toWarehouse && toWarehouse.property !== 'physical') {
+      alert(`调入仓库 "${toWarehouse.name}" 必须是实物仓`);
+      return;
     }
     if (!editItem.details.length) {
       alert('请添加至少一个产品');
@@ -619,13 +619,13 @@ export default function StockTransferPage() {
               </div>
               <div>
                 <div className="mb-1 text-[#606266]">
-                  <span className="text-[#f56c6c]">*</span> 调出仓库
+                  <span className="text-[#f56c6c]">*</span> 调出仓库（仅实物仓）
                 </div>
                 <select
                   className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-white text-[#303133] focus:outline-none focus:border-[#2f54eb]"
                   value={editItem.fromWarehouseId}
                   onChange={(e) => {
-                    const wh = warehouses.find((w) => w.id === e.target.value);
+                    const wh = physicalWarehouses.find((w) => w.id === e.target.value);
                     setEditItem({
                       ...editItem,
                       fromWarehouseId: e.target.value,
@@ -633,7 +633,7 @@ export default function StockTransferPage() {
                     });
                   }}
                 >
-                  {warehouses.map((w) => (
+                  {physicalWarehouses.map((w) => (
                     <option key={w.id} value={w.id}>
                       {w.name}
                     </option>
@@ -642,13 +642,13 @@ export default function StockTransferPage() {
               </div>
               <div>
                 <div className="mb-1 text-[#606266]">
-                  <span className="text-[#f56c6c]">*</span> 调入仓库
+                  <span className="text-[#f56c6c]">*</span> 调入仓库（仅实物仓）
                 </div>
                 <select
                   className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-white text-[#303133] focus:outline-none focus:border-[#2f54eb]"
                   value={editItem.toWarehouseId}
                   onChange={(e) => {
-                    const wh = warehouses.find((w) => w.id === e.target.value);
+                    const wh = physicalWarehouses.find((w) => w.id === e.target.value);
                     setEditItem({
                       ...editItem,
                       toWarehouseId: e.target.value,
@@ -656,7 +656,7 @@ export default function StockTransferPage() {
                     });
                   }}
                 >
-                  {warehouses.map((w) => (
+                  {physicalWarehouses.map((w) => (
                     <option key={w.id} value={w.id}>
                       {w.name}
                     </option>

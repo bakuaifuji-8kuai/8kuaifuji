@@ -618,12 +618,14 @@ export const useStore = create<WarehouseState>((set) => ({
 
     if (order.status === 'confirmed') {
       for (const detail of order.details) {
-        const inventory = state.inventories.find(i => i.warehouseId === order.warehouseId && i.productId === detail.productId);
-        if (!inventory) return { success: false, message: `物资 ${detail.productName} 库存记录不存在` };
+        const batchInventoriesForProduct = state.batchInventories.filter(
+          b => b.warehouseId === order.warehouseId && b.productId === detail.productId && b.quantity > 0
+        );
+        const totalQuantity = batchInventoriesForProduct.reduce((sum, b) => sum + b.quantity, 0);
         
         const warehouse = state.warehouses.find(w => w.id === order.warehouseId);
-        if (!warehouse?.allowNegativeInventory && (inventory.quantity - detail.quantity) < 0) {
-          return { success: false, message: `反确认后物资 ${detail.productName} 库存不足（当前库存: ${inventory.quantity}, 需要扣减: ${detail.quantity}）` };
+        if (!warehouse?.allowNegativeInventory && (totalQuantity - detail.quantity) < 0) {
+          return { success: false, message: `反确认后物资 ${detail.productName} 库存不足（当前库存: ${totalQuantity}, 需要扣减: ${detail.quantity}）` };
         }
       }
 
@@ -660,13 +662,27 @@ export const useStore = create<WarehouseState>((set) => ({
         });
       }
 
+      let remainingDetails = [...order.details];
+      const updatedBatchInventories = state.batchInventories.map(batch => {
+        if (batch.warehouseId !== order.warehouseId) return batch;
+        const detailIndex = remainingDetails.findIndex(
+          d => d.productId === batch.productId && d.quantity > 0
+        );
+        if (detailIndex === -1) return batch;
+        
+        const detail = remainingDetails[detailIndex];
+        if (batch.quantity >= detail.quantity) {
+          remainingDetails[detailIndex] = { ...detail, quantity: 0 };
+          return { ...batch, quantity: batch.quantity - detail.quantity };
+        } else {
+          remainingDetails[detailIndex] = { ...detail, quantity: detail.quantity - batch.quantity };
+          return { ...batch, quantity: 0 };
+        }
+      }).filter(b => b.quantity > 0);
+
       set({
         inboundOrders: state.inboundOrders.map(o => o.id === orderId ? { ...o, status: 'pending' as const, confirmTime: undefined, confirmer: undefined } : o),
-        inventories: state.inventories.map(i => {
-          const detail = order.details.find(d => d.productId === i.productId && order.warehouseId === i.warehouseId);
-          if (detail) return { ...i, quantity: i.quantity - detail.quantity };
-          return i;
-        }),
+        batchInventories: updatedBatchInventories,
         stockTransactions: [...newTransactions, ...state.stockTransactions],
       });
     } else {
