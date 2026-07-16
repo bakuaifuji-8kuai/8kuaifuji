@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, ChevronRight } from 'lucide-react';
 import Modal from '@/components/common/Modal';
 import { PrimaryButton, DefaultButton } from '@/components/common/Button';
@@ -44,27 +44,43 @@ export default function WorkOrderPickerModal({
   title = '选择工单',
 }: WorkOrderPickerModalProps) {
   const { workOrderConfigs } = useStore();
-  const [search, setSearch] = useState('');
+
+  // 四个筛选条件
+  const [filterWorkOrderCode, setFilterWorkOrderCode] = useState('');
+  const [filterWorkOrderName, setFilterWorkOrderName] = useState('');
+  const [filterExhibitionName, setFilterExhibitionName] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
+  // 下拉选项（去重）
+  const exhibitionOptions = useMemo((): string[] => {
+    return Array.from(new Set(workOrderConfigs.map((o) => o.exhibitionName).filter((v): v is string => !!v)));
+  }, [workOrderConfigs]);
+
+  const categoryOptions = useMemo((): string[] => {
+    return Array.from(new Set(workOrderConfigs.map((o) => o.category).filter((v): v is string => !!v)));
+  }, [workOrderConfigs]);
+
   useEffect(() => {
     if (open) {
-      setSearch('');
+      setFilterWorkOrderCode('');
+      setFilterWorkOrderName('');
+      setFilterExhibitionName('');
+      setFilterCategory('');
       setExpandedOrders(new Set());
       setSelectedItems(new Set());
     }
   }, [open]);
 
-  const filteredOrders = workOrderConfigs.filter(
-    (o) =>
-      !search ||
-      o.workOrderCode.toLowerCase().includes(search.toLowerCase()) ||
-      o.workOrderName.toLowerCase().includes(search.toLowerCase()) ||
-      o.projectName.toLowerCase().includes(search.toLowerCase()) ||
-      o.exhibitionName?.toLowerCase().includes(search.toLowerCase()) ||
-      o.category.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredOrders = workOrderConfigs.filter((o) => {
+    if (filterWorkOrderCode && !o.workOrderCode.toLowerCase().includes(filterWorkOrderCode.toLowerCase())) return false;
+    if (filterWorkOrderName && !o.workOrderName.toLowerCase().includes(filterWorkOrderName.toLowerCase())) return false;
+    if (filterExhibitionName && o.exhibitionName !== filterExhibitionName) return false;
+    if (filterCategory && o.category !== filterCategory) return false;
+    return true;
+  });
 
   const toggleOrder = (orderId: string) => {
     const next = new Set(expandedOrders);
@@ -116,22 +132,53 @@ export default function WorkOrderPickerModal({
 
   return (
     <Modal open={open} title={title} onClose={onClose} width="max-w-[900px]">
-      <div className="mb-3">
+      {/* 四个筛选条件 */}
+      <div className="mb-3 grid grid-cols-2 gap-2">
         <div className="relative">
           <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-[#c0c4cc]" />
           <input
             type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="搜索工单编码 / 工单名称 / 展会名称 / 作业分类"
+            value={filterWorkOrderCode}
+            onChange={(e) => setFilterWorkOrderCode(e.target.value)}
+            placeholder="工单编码（模糊匹配）"
             className="w-full h-8 pl-8 pr-2 border border-[#dcdfe6] text-xs rounded text-[#303133] focus:outline-none focus:border-[#2f54eb]"
           />
         </div>
+        <div className="relative">
+          <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-[#c0c4cc]" />
+          <input
+            type="text"
+            value={filterWorkOrderName}
+            onChange={(e) => setFilterWorkOrderName(e.target.value)}
+            placeholder="工单名称（模糊匹配）"
+            className="w-full h-8 pl-8 pr-2 border border-[#dcdfe6] text-xs rounded text-[#303133] focus:outline-none focus:border-[#2f54eb]"
+          />
+        </div>
+        <select
+          value={filterExhibitionName}
+          onChange={(e) => setFilterExhibitionName(e.target.value)}
+          className="h-8 px-2 border border-[#dcdfe6] text-xs rounded text-[#303133] focus:outline-none focus:border-[#2f54eb] bg-white"
+        >
+          <option value="">全部展会</option>
+          {exhibitionOptions.map((name) => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+        </select>
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className="h-8 px-2 border border-[#dcdfe6] text-xs rounded text-[#303133] focus:outline-none focus:border-[#2f54eb] bg-white"
+        >
+          <option value="">全部作业分类</option>
+          {categoryOptions.map((cat) => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
       </div>
 
       <div className="flex items-center gap-2 mb-2 text-xs text-[#606266] font-medium bg-[#f5f7fa] rounded px-3 py-2">
         <div className="w-8"></div>
-        <div className="flex-1">工单 / {search ? '筛选' : '全部'}({filteredOrders.length})</div>
+        <div className="flex-1">工单 / 筛选({filteredOrders.length})</div>
         <div className="w-36 text-center">展会名称</div>
         <div className="w-40 text-center">作业分类</div>
         <div className="w-20 text-center">主料数</div>

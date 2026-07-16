@@ -7,11 +7,8 @@ import { useStore } from '@/store/useStore';
 import type { Warehouse, WarehouseCategory, WarehouseProperty } from '@/types';
 
 const warehouseCategoryOptions: { value: WarehouseCategory; label: string }[] = [
-  { value: 'general', label: '综合仓' },
-  { value: 'raw_material', label: '原料仓' },
-  { value: 'finished_product', label: '成品仓' },
-  { value: 'exhibition', label: '会展仓' },
-  { value: 'consumable', label: '低值易耗仓' },
+  { value: 'exhibition', label: '展会物资仓' },
+  { value: 'consumable', label: '低值易耗品仓' },
   { value: 'fixed_asset', label: '固定资产仓' },
 ];
 
@@ -117,8 +114,8 @@ export default function WarehousePage() {
       code: generateWarehouseCode(),
       warehouseNo: generateWarehouseNo(warehouses),
       name: '',
-      category: 'general',
-      categoryName: '综合仓',
+      category: 'exhibition',
+      categoryName: '展会物资仓',
       property: 'physical',
       propertyName: '实物仓',
       address: '',

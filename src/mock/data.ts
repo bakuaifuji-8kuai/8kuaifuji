@@ -43,7 +43,19 @@ export const positions: Position[] = [
 // 货品分类数据
 export const productCategories: ProductCategory[] = [
   { id: 'CAT001', code: '01', name: '展会物资', codePrefix: 'HY', sort: 1 },
-  { id: 'CAT002', code: '02', name: '低值易耗', codePrefix: 'DZ', sort: 2 },
+  { id: 'CAT002', code: '02', name: '低值易耗品', codePrefix: 'DZ', sort: 2 },
+  // 低值易耗品子分类（类别码作为编码前缀）
+  { id: 'CAT003', code: 'QD', name: '强电物资', codePrefix: 'QD', sort: 3, parentId: 'CAT002' },
+  { id: 'CAT004', code: 'RD', name: '弱电物资', codePrefix: 'RD', sort: 4, parentId: 'CAT002' },
+  { id: 'CAT005', code: 'JD', name: '机电物资', codePrefix: 'JD', sort: 5, parentId: 'CAT002' },
+  { id: 'CAT006', code: 'JJ', name: '基建物资', codePrefix: 'JJ', sort: 6, parentId: 'CAT002' },
+  { id: 'CAT007', code: 'PS', name: '给排水物资', codePrefix: 'PS', sort: 7, parentId: 'CAT002' },
+  { id: 'CAT008', code: 'BJ', name: '保洁物资', codePrefix: 'BJ', sort: 8, parentId: 'CAT002' },
+  { id: 'CAT009', code: 'XF', name: '消防物资', codePrefix: 'XF', sort: 9, parentId: 'CAT002' },
+  { id: 'CAT010', code: 'AB', name: '安保物资', codePrefix: 'AB', sort: 10, parentId: 'CAT002' },
+  { id: 'CAT011', code: 'DD', name: '吊点物资', codePrefix: 'DD', sort: 11, parentId: 'CAT002' },
+  { id: 'CAT012', code: 'ZJ', name: '展具物资', codePrefix: 'ZJ', sort: 12, parentId: 'CAT002' },
+  { id: 'CAT013', code: 'HY', name: '会议物资', codePrefix: 'HY', sort: 13, parentId: 'CAT002' },
 ];
 
 // 货品数据

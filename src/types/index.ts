@@ -1,5 +1,5 @@
 // 仓库类别
-export type WarehouseCategory = 'raw_material' | 'finished_product' | 'exhibition' | 'general' | 'consumable' | 'fixed_asset';
+export type WarehouseCategory = 'exhibition' | 'consumable' | 'fixed_asset';
 
 // 仓库属性
 export type WarehouseProperty = 'physical' | 'virtual';

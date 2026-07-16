@@ -66,8 +66,14 @@ export default function ExhibitionTransferOutboundPage() {
   const workOrderConfigs = useStore((s) => s.workOrderConfigs);
   const reverseStockTransfer = useStore((s) => s.reverseStockTransfer);
 
-  const exhibitionWarehouses = useMemo(() => {
-    return warehouses.filter(w => w.category === 'exhibition');
+  // 调出仓库：展会物资仓 + 实物仓
+  const fromWarehouses = useMemo(() => {
+    return warehouses.filter(w => w.category === 'exhibition' && w.property === 'physical');
+  }, [warehouses]);
+
+  // 调入仓库：展会物资仓 + 虚拟仓
+  const toWarehouses = useMemo(() => {
+    return warehouses.filter(w => w.category === 'exhibition' && w.property === 'virtual');
   }, [warehouses]);
 
   const [filterNo, setFilterNo] = useState('');
@@ -217,10 +223,10 @@ export default function ExhibitionTransferOutboundPage() {
     const newOrder: StockTransfer = {
       id: 'TF' + Date.now(),
       transferNo: generateTransferNo(),
-      fromWarehouseId: exhibitionWarehouses[0]?.id || '',
-      fromWarehouseName: exhibitionWarehouses[0]?.name || '',
-      toWarehouseId: exhibitionWarehouses[1]?.id || exhibitionWarehouses[0]?.id || '',
-      toWarehouseName: exhibitionWarehouses[1]?.name || exhibitionWarehouses[0]?.name || '',
+      fromWarehouseId: fromWarehouses[0]?.id || '',
+      fromWarehouseName: fromWarehouses[0]?.name || '',
+      toWarehouseId: toWarehouses[0]?.id || '',
+      toWarehouseName: toWarehouses[0]?.name || '',
       status: 'pending',
       creator: currentUser.name,
       createTime: new Date().toISOString().slice(0, 16).replace('T', ' '),
@@ -305,12 +311,12 @@ export default function ExhibitionTransferOutboundPage() {
     }
     const fromWarehouse = warehouses.find((w) => w.id === editItem.fromWarehouseId);
     const toWarehouse = warehouses.find((w) => w.id === editItem.toWarehouseId);
-    if (fromWarehouse && fromWarehouse.category !== 'exhibition') {
-      alert(`调出仓库 "${fromWarehouse.name}" 不是展会物资仓库`);
+    if (fromWarehouse && (fromWarehouse.category !== 'exhibition' || fromWarehouse.property !== 'physical')) {
+      alert(`调出仓库 "${fromWarehouse.name}" 必须是展会物资实物仓库`);
       return;
     }
-    if (toWarehouse && toWarehouse.category !== 'exhibition') {
-      alert(`调入仓库 "${toWarehouse.name}" 不是展会物资仓库`);
+    if (toWarehouse && (toWarehouse.category !== 'exhibition' || toWarehouse.property !== 'virtual')) {
+      alert(`调入仓库 "${toWarehouse.name}" 必须是展会物资虚拟仓库`);
       return;
     }
     if (!editItem.details.length) {
@@ -469,14 +475,14 @@ export default function ExhibitionTransferOutboundPage() {
         />
         <MultiSelect
           label="调出仓库"
-          options={exhibitionWarehouses.map((w) => ({ value: w.id, label: w.name }))}
+          options={fromWarehouses.map((w) => ({ value: w.id, label: w.name }))}
           value={filterFromWarehouse}
           onChange={setFilterFromWarehouse}
           placeholder="全部"
         />
         <MultiSelect
           label="调入仓库"
-          options={exhibitionWarehouses.map((w) => ({ value: w.id, label: w.name }))}
+          options={toWarehouses.map((w) => ({ value: w.id, label: w.name }))}
           value={filterToWarehouse}
           onChange={setFilterToWarehouse}
           placeholder="全部"
@@ -581,13 +587,13 @@ export default function ExhibitionTransferOutboundPage() {
               </div>
               <div>
                 <div className="mb-1 text-[#606266]">
-                  <span className="text-[#f56c6c]">*</span> 调出仓库
+                  <span className="text-[#f56c6c]">*</span> 调出仓库（实物仓）
                 </div>
                 <select
                   className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-white text-[#303133] focus:outline-none focus:border-[#2f54eb]"
                   value={editItem.fromWarehouseId}
                   onChange={(e) => {
-                    const wh = exhibitionWarehouses.find((w) => w.id === e.target.value);
+                    const wh = fromWarehouses.find((w) => w.id === e.target.value);
                     setEditItem({
                       ...editItem,
                       fromWarehouseId: e.target.value,
@@ -595,7 +601,7 @@ export default function ExhibitionTransferOutboundPage() {
                     });
                   }}
                 >
-                  {exhibitionWarehouses.map((w) => (
+                  {fromWarehouses.map((w) => (
                     <option key={w.id} value={w.id}>
                       {w.name}
                     </option>
@@ -604,13 +610,13 @@ export default function ExhibitionTransferOutboundPage() {
               </div>
               <div>
                 <div className="mb-1 text-[#606266]">
-                  <span className="text-[#f56c6c]">*</span> 调入仓库
+                  <span className="text-[#f56c6c]">*</span> 调入仓库（虚拟仓）
                 </div>
                 <select
                   className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-white text-[#303133] focus:outline-none focus:border-[#2f54eb]"
                   value={editItem.toWarehouseId}
                   onChange={(e) => {
-                    const wh = exhibitionWarehouses.find((w) => w.id === e.target.value);
+                    const wh = toWarehouses.find((w) => w.id === e.target.value);
                     setEditItem({
                       ...editItem,
                       toWarehouseId: e.target.value,
@@ -618,7 +624,7 @@ export default function ExhibitionTransferOutboundPage() {
                     });
                   }}
                 >
-                  {exhibitionWarehouses.map((w) => (
+                  {toWarehouses.map((w) => (
                     <option key={w.id} value={w.id}>
                       {w.name}
                     </option>
