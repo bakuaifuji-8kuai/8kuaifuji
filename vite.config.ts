@@ -6,7 +6,7 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/8kuaifuji/', // GitHub Pages 仓库名作为基础路径
+  base: './',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

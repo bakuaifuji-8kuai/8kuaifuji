@@ -57,7 +57,7 @@ import ProcurementPlanSummaryPage from "@/pages/Procurement/ProcurementPlanSumma
 
 export default function App() {
   return (
-    <Router basename={import.meta.env.BASE_URL}>
+    <Router>
       <Routes>
         <Route path="/" element={<AppLayout />}>
           <Route index element={<StockQueryPage />} />

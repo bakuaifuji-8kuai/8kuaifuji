@@ -3,12 +3,10 @@ import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Bu
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
-import ProductPickerModal from '@/components/common/ProductPickerModal';
 import PrintDocument from '@/components/common/PrintDocument';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
 import { useStore } from '@/store/useStore';
 import { generateBatchNo, generateStockTransactionNo } from '@/mock/data';
-import type { ProductPickerItem } from '@/components/common/ProductPickerModal';
 import type { ReturnOrder, OutboundOrder, OutboundDetail, ScrappedRecord, DamagedRecord } from '@/types';
 import { Printer } from 'lucide-react';
 
@@ -41,12 +39,9 @@ const helpContent = {
       heading: '新增退库单',
       items: [
         '点击"新增退库单"按钮打开新增弹窗',
-        '支持两种退库方式：选择来源单出库退货、直接选择物资退库',
-        '选择来源单出库退货：选择已出库的物资（领用出库、报废出库、报损出库）',
-        '选择来源单据后，系统自动带出物资明细',
-        '可修改实际归还数量（不能超过原出库数量）',
-        '直接选择物资退库：从物资档案中直接选择物资进行退库',
-        '直接选择物资时需先选择仓库，再选择物资',
+        '选择来源出库单（领用出库、报废出库、报损出库）',
+        '选择来源单据后，系统自动带出物资明细和出库数量',
+        '填写实际归还数量（不能超过原出库数量）',
         '点击"保存"生成退库单，状态为待提交',
         '点击"保存并提交"提交退库单，状态为已提交'
       ]
@@ -317,8 +312,6 @@ export default function ReturnStockPage() {
   const [printTrigger, setPrintTrigger] = useState(0);
   const [isNew, setIsNew] = useState(false);
   const [selectedSourceOrder, setSelectedSourceOrder] = useState<UnifiedSourceOrder | null>(null);
-  const [returnMode, setReturnMode] = useState<'source' | 'direct'>('source');
-  const [pickerOpen, setPickerOpen] = useState(false);
 
   const generateReturnOrderNo = () => {
     const date = new Date();
@@ -347,39 +340,10 @@ export default function ReturnStockPage() {
     };
     setIsNew(true);
     setSelectedSourceOrder(null);
-    setReturnMode('source');
     setSourceFilterNo('');
     setSourceFilterType('');
     setSourceFilterProject('');
     setEditItem(newOrder);
-  };
-
-  const handlePickerConfirm = (selectedProducts: ProductPickerItem[]) => {
-    if (!editItem) return;
-    const newDetails: any[] = selectedProducts.map((p) => {
-      return {
-        id: 'D' + Date.now() + Math.random().toString(36).slice(2, 7),
-        returnOrderId: editItem.id,
-        productId: p.id,
-        productCode: p.code || '',
-        productName: p.name || '',
-        positionId: '',
-        positionName: '',
-        warehouseId: editItem.warehouseId,
-        warehouseName: editItem.warehouseName,
-        quantity: 0,
-        maxQuantity: 999999,
-        sourceType: 'direct',
-        sourceOrderId: '',
-        sourceOrderNo: '',
-        specification: p.specification || '',
-        unit: p.unit || '',
-      };
-    });
-    const existingIds = new Set(editItem.details.map((d: any) => d.productId));
-    const toAdd = newDetails.filter((d) => !existingIds.has(d.productId));
-    setEditItem({ ...editItem, details: [...editItem.details, ...toAdd] });
-    setPickerOpen(false);
   };
 
   const handleSelectSourceOrder = (order: UnifiedSourceOrder) => {
@@ -686,31 +650,7 @@ export default function ReturnStockPage() {
           <div className="space-y-3 text-xs">
             {isNew && (
               <div className="border border-[#ebeef5] rounded p-3 bg-[#f5f7fa]">
-                <div className="mb-3 font-medium text-[#303133]">请选择退库方式</div>
-                <div className="flex gap-2 mb-3">
-                  <button
-                    className={`px-4 py-2 text-xs rounded border ${returnMode === 'source' ? 'bg-[#2f54eb] text-white border-[#2f54eb]' : 'bg-white text-[#303133] border-[#dcdfe6] hover:border-[#2f54eb]'}`}
-                    onClick={() => {
-                      setReturnMode('source');
-                      setSelectedSourceOrder(null);
-                      setEditItem({ ...editItem, details: [], sourceType: '', sourceOrderId: '', sourceOrderNo: '' });
-                    }}
-                  >
-                    选择来源单出库退货
-                  </button>
-                  <button
-                    className={`px-4 py-2 text-xs rounded border ${returnMode === 'direct' ? 'bg-[#2f54eb] text-white border-[#2f54eb]' : 'bg-white text-[#303133] border-[#dcdfe6] hover:border-[#2f54eb]'}`}
-                    onClick={() => {
-                      setReturnMode('direct');
-                      setSelectedSourceOrder(null);
-                      setEditItem({ ...editItem, details: [], sourceType: 'direct', sourceOrderId: '', sourceOrderNo: '' });
-                    }}
-                  >
-                    直接选择物资退库
-                  </button>
-                </div>
-
-                {returnMode === 'source' && !selectedSourceOrder && (
+                {!selectedSourceOrder && (
                   <>
                     <div className="mb-3 font-medium text-[#303133]">请选择出库单（领用/报废/报损）</div>
 
@@ -806,45 +746,10 @@ export default function ReturnStockPage() {
                   </>
                 )}
 
-                {returnMode === 'direct' && (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <div className="mb-1 text-[#606266]">仓库</div>
-                        <select
-                          className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-white text-[#303133] focus:outline-none focus:border-[#2f54eb]"
-                          value={editItem.warehouseId}
-                          onChange={(e) => {
-                            const wh = filteredWarehouses.find((w) => w.id === e.target.value);
-                            setEditItem({
-                              ...editItem,
-                              warehouseId: e.target.value,
-                              warehouseName: wh?.name || '',
-                              details: editItem.details.map((d: any) => ({
-                                ...d,
-                                warehouseId: e.target.value,
-                                warehouseName: wh?.name || '',
-                              })),
-                            });
-                          }}
-                        >
-                          {filteredWarehouses.map((w) => (
-                            <option key={w.id} value={w.id}>
-                              {w.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex items-end">
-                        <DefaultButton onClick={() => setPickerOpen(true)}>+ 选择物资</DefaultButton>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
-            {(selectedSourceOrder || returnMode === 'direct' || !isNew) && (
+            {(selectedSourceOrder || !isNew) && (
               <>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
@@ -910,21 +815,14 @@ export default function ReturnStockPage() {
                   />
                 </div>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="font-medium text-[#303133]">
-                    产品明细{editItem.sourceType === 'direct' ? '（直接选择物资）' : '（来源于出库单）'}
-                  </div>
-                  {editItem.sourceType === 'direct' && isNew && (
-                    <DefaultButton size="small" onClick={() => setPickerOpen(true)}>+ 添加物资</DefaultButton>
-                  )}
+                  <div className="font-medium text-[#303133]">产品明细（来源于出库单）</div>
                 </div>
                 <table className="w-full text-xs border border-[#ebeef5] rounded overflow-hidden">
                   <thead>
                     <tr className="bg-[#f5f7fa] text-[#606266]">
                       <th className="px-2 py-2 text-left">物资编码</th>
                       <th className="px-2 py-2 text-left">物资名称</th>
-                      {editItem.sourceType !== 'direct' && (
-                        <th className="px-2 py-2 text-right">出库数量</th>
-                      )}
+                      <th className="px-2 py-2 text-right">出库数量</th>
                       <th className="px-2 py-2 text-right">归还数量</th>
                       <th className="px-2 py-2 text-center">操作</th>
                     </tr>
@@ -935,14 +833,12 @@ export default function ReturnStockPage() {
                         <tr key={i} className="border-t border-[#ebeef5]">
                           <td className="px-2 py-2 text-[#303133]">{d.productCode}</td>
                           <td className="px-2 py-2 text-[#303133]">{d.productName}</td>
-                          {d.sourceType !== 'direct' && (
-                            <td className="px-2 py-2 text-right text-[#606266]">{d.maxQuantity}</td>
-                          )}
+                          <td className="px-2 py-2 text-right text-[#606266]">{d.maxQuantity}</td>
                           <td className="px-2 py-2 text-right">
                             <input
                               type="number"
                               min={0}
-                              max={d.sourceType === 'direct' ? undefined : d.maxQuantity}
+                              max={d.maxQuantity}
                               className="w-24 h-8 px-2 border border-[#dcdfe6] rounded text-right text-[#303133] focus:outline-none focus:border-[#2f54eb]"
                               value={d.quantity}
                               onChange={(e) => updateDetail(i, 'quantity', parseInt(e.target.value, 10) || 0)}
@@ -954,7 +850,7 @@ export default function ReturnStockPage() {
                         </tr>
                       ))
                     ) : (
-                      <tr><td colSpan={editItem.sourceType === 'direct' ? 4 : 5} className="py-6 text-center text-[#909399]">暂无明细</td></tr>
+                      <tr><td colSpan={5} className="py-6 text-center text-[#909399]">暂无明细</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -964,7 +860,7 @@ export default function ReturnStockPage() {
         )}
         <div className="mt-4 flex justify-end gap-2">
           <DefaultButton onClick={() => setEditItem(null)}>取消</DefaultButton>
-          {(selectedSourceOrder || returnMode === 'direct' || !isNew) && (
+          {(selectedSourceOrder || !isNew) && (
             <PrimaryButton
               onClick={() => {
                 if (!editItem) return;
@@ -994,15 +890,6 @@ export default function ReturnStockPage() {
           )}
         </div>
       </Modal>
-
-      <ProductPickerModal
-        open={pickerOpen}
-        title="选择物资"
-        onClose={() => setPickerOpen(false)}
-        onConfirm={handlePickerConfirm}
-        showStockQty={true}
-        onlyStocked={false}
-      />
     </div>
   );
 }
