@@ -28,8 +28,6 @@ interface AssetLoss {
   approver?: string;
   approveTime?: string;
   approveRemark?: string;
-  isExhibition?: boolean;
-  exhibitionName?: string;
   outConfirmer?: string;
   outConfirmTime?: string;
   warehouseId?: string;
@@ -60,7 +58,6 @@ const initialData: AssetLoss[] = [
     remark: '车间搬运时不慎跌落',
     applicant: '张三',
     applyDate: '2024-06-01 09:30',
-    isExhibition: false,
     warehouseId: 'WH003',
     warehouseName: '固定资产仓',
   },
@@ -83,8 +80,6 @@ const initialData: AssetLoss[] = [
     approver: '王经理',
     approveTime: '2024-06-03 10:00',
     approveRemark: '同意报损，安排维修',
-    isExhibition: true,
-    exhibitionName: '2024国际工业博览会',
     warehouseId: 'WH003',
     warehouseName: '固定资产仓',
   },
@@ -107,7 +102,6 @@ const initialData: AssetLoss[] = [
     approver: '王经理',
     approveTime: '2024-06-03 15:30',
     approveRemark: '不影响使用，不同意报损',
-    isExhibition: false,
     warehouseId: 'WH003',
     warehouseName: '固定资产仓',
   },
@@ -315,8 +309,6 @@ export default function AssetLoss() {
       remark: '',
       applicant: '当前用户',
       applyDate: new Date().toISOString().slice(0, 16).replace('T', ' '),
-      isExhibition: false,
-      exhibitionName: '',
       warehouseId: defaultWarehouse?.id || '',
       warehouseName: defaultWarehouse?.name || '',
     };
@@ -356,10 +348,6 @@ export default function AssetLoss() {
     }
     if (!editItem.reason) {
       alert('请填写报损原因');
-      return;
-    }
-    if (editItem.isExhibition && !editItem.exhibitionName) {
-      alert('请选择展会名称');
       return;
     }
     if (isNew) {
@@ -434,7 +422,6 @@ export default function AssetLoss() {
         items: [
           '点击"新增报损单"按钮',
           '选择要报损的资产（领用中的资产）',
-          '选择是否为展会物资，如是则选择展会名称',
           '选择报损类型（全部报损/部分报损）',
           '填写报损原因和备注后保存'
         ]
@@ -456,13 +443,6 @@ export default function AssetLoss() {
       }
     ]
   };
-
-  const exhibitionOptions = [
-    '2024国际工业博览会',
-    '2024上海国际车展',
-    '2024广州进出口商品交易会',
-    '2024深圳高交会',
-  ];
 
   const statusOptions = [
     { value: '', label: '全部' },
@@ -592,14 +572,6 @@ export default function AssetLoss() {
               <div className="text-[#303133] col-span-2">¥{viewItem.originalValue.toLocaleString()}</div>
               <div className="text-[#606266]">报损类型：</div>
               <div className="text-[#303133] col-span-2">{lossTypeText(viewItem.lossType)}</div>
-              <div className="text-[#606266]">是否展会物资：</div>
-              <div className="text-[#303133] col-span-2">{viewItem.isExhibition ? '是' : '否'}</div>
-              {viewItem.isExhibition && viewItem.exhibitionName && (
-                <>
-                  <div className="text-[#606266]">展会名称：</div>
-                  <div className="text-[#303133] col-span-2">{viewItem.exhibitionName}</div>
-                </>
-              )}
               <div className="text-[#606266]">状态：</div>
               <div className={statusColor(viewItem.status) + ' col-span-2'}>
                 {statusText(viewItem.status)}
@@ -730,46 +702,6 @@ export default function AssetLoss() {
                   <span className="text-[#606266]">{editItem.unit}</span>
                 </div>
               </div>
-              <div className="col-span-2">
-                <div className="mb-1 text-[#606266]">是否展会物资</div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      checked={!editItem.isExhibition}
-                      onChange={() => setEditItem({ ...editItem, isExhibition: false, exhibitionName: '' })}
-                    />
-                    <span>否</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      checked={editItem.isExhibition}
-                      onChange={() => setEditItem({ ...editItem, isExhibition: true })}
-                    />
-                    <span>是</span>
-                  </label>
-                </div>
-              </div>
-              {editItem.isExhibition && (
-                <div className="col-span-2">
-                  <div className="mb-1 text-[#606266]">
-                    <span className="text-[#f56c6c]">*</span> 展会名称
-                  </div>
-                  <select
-                    className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-white text-[#303133] focus:outline-none focus:border-[#2f54eb]"
-                    value={editItem.exhibitionName || ''}
-                    onChange={(e) => setEditItem({ ...editItem, exhibitionName: e.target.value })}
-                  >
-                    <option value="">请选择展会</option>
-                    {exhibitionOptions.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
             </div>
             <div>
               <div className="mb-1 text-[#606266]">
@@ -903,7 +835,7 @@ export default function AssetLoss() {
               quantity: printItem.quantity,
               unitPrice: printItem.originalValue,
               amount: printItem.originalValue,
-              remark: `报损类型：${lossTypeText(printItem.lossType)}，报损原因：${printItem.reason}${printItem.isExhibition ? `，展会：${printItem.exhibitionName}` : ''}`,
+              remark: `报损类型：${lossTypeText(printItem.lossType)}，报损原因：${printItem.reason}`,
             },
           ]}
           detailColumns={[

@@ -783,16 +783,24 @@ export const customers: Customer[] = [
 
 // 员工数据（用于保管人、验收人、业务员等下拉）
 export const employees: Employee[] = [
-  { id: 'EMP001', name: '张三', role: '保管人', status: 'enabled' },
-  { id: 'EMP002', name: '李四', role: '保管人', status: 'enabled' },
-  { id: 'EMP003', name: '王五', role: '保管人', status: 'enabled' },
-  { id: 'EMP004', name: '赵六', role: '验收人', status: 'enabled' },
-  { id: 'EMP005', name: '孙七', role: '验收人', status: 'enabled' },
-  { id: 'EMP006', name: '周八', role: '验收人', status: 'enabled' },
-  { id: 'EMP007', name: '吴九', role: '业务员', status: 'enabled' },
-  { id: 'EMP008', name: '郑十', role: '业务员', status: 'enabled' },
-  { id: 'EMP009', name: '刘十一', role: '负责人', status: 'enabled' },
-  { id: 'EMP010', name: '陈十二', role: '制单人', status: 'enabled' },
+  { id: 'EMP001', name: '张三', role: '保管人', department: '展览部', status: 'enabled' },
+  { id: 'EMP002', name: '李四', role: '保管人', department: '市场部', status: 'enabled' },
+  { id: 'EMP003', name: '王五', role: '保管人', department: '技术部', status: 'enabled' },
+  { id: 'EMP004', name: '赵六', role: '验收人', department: '行政部', status: 'enabled' },
+  { id: 'EMP005', name: '孙七', role: '验收人', department: '财务部', status: 'enabled' },
+  { id: 'EMP006', name: '周八', role: '验收人', department: '生产部', status: 'enabled' },
+  { id: 'EMP007', name: '吴九', role: '业务员', department: '宣传部', status: 'enabled' },
+  { id: 'EMP008', name: '郑十', role: '业务员', department: '活动部', status: 'enabled' },
+  { id: 'EMP009', name: '刘十一', role: '负责人', department: '展览部', status: 'enabled' },
+  { id: 'EMP010', name: '陈十二', role: '制单人', department: '技术部', status: 'enabled' },
+  { id: 'EMP011', name: '钱十三', role: '保管人', department: '市场部', status: 'enabled' },
+  { id: 'EMP012', name: '冯十四', role: '保管人', department: '行政部', status: 'enabled' },
+  { id: 'EMP013', name: '褚十五', role: '验收人', department: '财务部', status: 'enabled' },
+  { id: 'EMP014', name: '卫十六', role: '业务员', department: '宣传部', status: 'enabled' },
+  { id: 'EMP015', name: '蒋十七', role: '负责人', department: '活动部', status: 'enabled' },
+  { id: 'EMP016', name: '沈十八', role: '制单人', department: '生产部', status: 'enabled' },
+  { id: 'EMP017', name: '韩十九', role: '保管人', department: '技术部', status: 'enabled' },
+  { id: 'EMP018', name: '杨二十', role: '验收人', department: '展览部', status: 'enabled' },
 ];
 
 // 实施项目数据

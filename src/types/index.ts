@@ -458,6 +458,7 @@ export interface Employee {
   id: string;
   name: string;
   role?: string; // 角色：保管人/验收人/业务员 等
+  department?: string; // 所属部门
   status: 'enabled' | 'disabled';
 }
 

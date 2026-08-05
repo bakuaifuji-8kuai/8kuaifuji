@@ -5,9 +5,10 @@ import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { ArrowRightLeft, Plus, Package, Clock, CheckCircle2, Printer, Search } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import type { AssetEquipment } from '@/types';
+import type { AssetEquipment, Employee } from '@/types';
 import PrintDocument from '@/components/common/PrintDocument';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { employees as allEmployees } from '@/mock/data';
 
 interface AssetTransferDetail {
   id: string;
@@ -42,6 +43,7 @@ interface AssetTransfer {
   outConfirmer?: string;
   inConfirmTime?: string;
   inConfirmer?: string;
+  inConfirmerEmployee?: string;
 }
 
 const departments = [
@@ -148,7 +150,7 @@ const initialData: AssetTransfer[] = [
 ];
 
 export default function AssetTransfer() {
-  const { assetEquipments, warehouses } = useStore();
+  const { assetEquipments, warehouses, updateAssetEquipment } = useStore();
 
   const [data, setData] = useState<AssetTransfer[]>(initialData);
 
@@ -424,20 +426,56 @@ export default function AssetTransfer() {
     const order = data.find((o) => o.id === id);
     if (!order) return;
     if (order.status !== 'out_confirmed') return;
-    if (!confirm(`确认调入 ${order.transferNo}？`)) return;
+    setInConfirmOrder(order);
+    setInConfirmEmployee('');
+    setInConfirmModalOpen(true);
+  };
+
+  const [inConfirmModalOpen, setInConfirmModalOpen] = useState(false);
+  const [inConfirmOrder, setInConfirmOrder] = useState<AssetTransfer | null>(null);
+  const [inConfirmEmployee, setInConfirmEmployee] = useState('');
+
+  const filteredInConfirmEmployees = useMemo(() => {
+    if (!inConfirmOrder) return [];
+    return allEmployees.filter(
+      (e) => e.department === inConfirmOrder.toDepartment && e.status === 'enabled'
+    );
+  }, [inConfirmOrder]);
+
+  const confirmInConfirm = () => {
+    if (!inConfirmOrder) return;
+    if (!inConfirmEmployee) {
+      alert('请选择调入部门的领用人');
+      return;
+    }
+
+    const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    const employee = allEmployees.find((e) => e.id === inConfirmEmployee);
 
     setData(
       data.map((d) =>
-        d.id === id
+        d.id === inConfirmOrder.id
           ? {
               ...d,
               status: 'completed',
-              inConfirmTime: new Date().toISOString().slice(0, 16).replace('T', ' '),
+              inConfirmTime: now,
               inConfirmer: '当前用户',
+              inConfirmerEmployee: employee?.name || '',
             }
           : d
       )
     );
+
+    // 更新资产的领用人信息
+    updateAssetEquipment(inConfirmOrder.assetId, {
+      requisitionDepartment: inConfirmOrder.toDepartment,
+      requisitionEmployee: employee?.name || '',
+      requisitionDate: now.slice(0, 10),
+    });
+
+    setInConfirmModalOpen(false);
+    setInConfirmOrder(null);
+    setInConfirmEmployee('');
   };
 
   const [printTrigger, setPrintTrigger] = useState(0);
@@ -468,7 +506,8 @@ export default function AssetTransfer() {
           '待调出确认状态的调拨单，点击"调出确认"',
           '调出确认后状态变为"已调出待调入"',
           '待调入确认状态的调拨单，点击"调入确认"',
-          '调入确认后调拨完成'
+          '调入确认弹框显示调入部门，需选择该部门的领用人（必填）',
+          '确认后资产的领用部门和领用人自动更新为调入部门及所选人员'
         ]
       },
       {
@@ -642,6 +681,12 @@ export default function AssetTransfer() {
                 <>
                   <div className="text-[#606266]">调入确认人：</div>
                   <div className="text-[#303133] col-span-2">{viewItem.inConfirmer}</div>
+                  {viewItem.inConfirmerEmployee && (
+                    <>
+                      <div className="text-[#606266]">调入部门领用人：</div>
+                      <div className="text-[#303133] col-span-2">{viewItem.inConfirmerEmployee}</div>
+                    </>
+                  )}
                   <div className="text-[#606266]">调入确认时间：</div>
                   <div className="text-[#303133] col-span-2">{viewItem.inConfirmTime}</div>
                 </>
@@ -877,6 +922,79 @@ export default function AssetTransfer() {
               </table>
             )}
           </div>
+        </div>
+      </Modal>
+
+      {/* 调入确认弹框 */}
+      <Modal
+        open={inConfirmModalOpen}
+        title="调入确认"
+        onClose={() => {
+          setInConfirmModalOpen(false);
+          setInConfirmOrder(null);
+          setInConfirmEmployee('');
+        }}
+        width="max-w-[500px]"
+      >
+        {inConfirmOrder && (
+          <div className="space-y-4 text-sm">
+            <div className="p-4 border border-[#ebeef5] rounded bg-[#f5f7fa]">
+              <div className="grid grid-cols-2 gap-y-2">
+                <div className="text-[#606266]">调拨单号：</div>
+                <div className="text-[#303133]">{inConfirmOrder.transferNo}</div>
+                <div className="text-[#606266]">资产名称：</div>
+                <div className="text-[#303133]">
+                  {inConfirmOrder.assetName} {inConfirmOrder.specification && `（${inConfirmOrder.specification}）`}
+                </div>
+                <div className="text-[#606266]">调出部门：</div>
+                <div className="text-[#303133]">{inConfirmOrder.fromDepartment}</div>
+                <div className="text-[#606266]">
+                  <span className="text-[#f56c6c]">*</span> 调入部门：
+                </div>
+                <div className="text-[#303133] font-medium">{inConfirmOrder.toDepartment}</div>
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-1 text-[#606266]">
+                <span className="text-[#f56c6c]">*</span> 调入部门领用人
+                <span className="text-[#909399] text-xs ml-1">（必须选择）</span>
+              </div>
+              <select
+                className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-white text-[#303133] focus:outline-none focus:border-[#2f54eb]"
+                value={inConfirmEmployee}
+                onChange={(e) => setInConfirmEmployee(e.target.value)}
+              >
+                <option value="">请选择领用人</option>
+                {filteredInConfirmEmployees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name}
+                  </option>
+                ))}
+              </select>
+              {filteredInConfirmEmployees.length === 0 && (
+                <div className="text-xs text-[#e6a23c] mt-1">
+                  该部门暂无员工，请先在员工档案中添加
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 border border-[#ebeef5] rounded bg-[#ecf5ff] text-xs text-[#409eff]">
+              确认后，资产的领用部门将变更为「{inConfirmOrder.toDepartment}」，领用人将变更为所选人员，领用日期为今日。
+            </div>
+          </div>
+        )}
+        <div className="mt-4 flex justify-end gap-2">
+          <DefaultButton
+            onClick={() => {
+              setInConfirmModalOpen(false);
+              setInConfirmOrder(null);
+              setInConfirmEmployee('');
+            }}
+          >
+            取消
+          </DefaultButton>
+          <PrimaryButton onClick={confirmInConfirm}>确认调入</PrimaryButton>
         </div>
       </Modal>
 
