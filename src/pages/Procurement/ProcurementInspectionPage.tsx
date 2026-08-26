@@ -45,6 +45,7 @@ export default function ProcurementInspectionPage() {
       title: '状态',
       render: (row) => {
         const statusMap: Record<string, { label: string; color: string }> = {
+          draft: { label: '草稿', color: 'text-[#909399]' },
           pending: { label: '待审批', color: 'text-[#e6a23c]' },
           approved: { label: '已通过', color: 'text-[#67c23a]' },
           rejected: { label: '已驳回', color: 'text-[#f56c6c]' },
@@ -69,6 +70,9 @@ export default function ProcurementInspectionPage() {
         <div className="flex items-center gap-3">
           <TextButton onClick={() => setEditItem(row)}>编辑</TextButton>
           <TextButton onClick={() => viewDetail(row)}>查看详情</TextButton>
+          {row.status === 'draft' && (
+            <TextButton onClick={() => handleSubmit(row)}>提交审批</TextButton>
+          )}
           {row.status === 'pending' && (
             <>
               <TextButton onClick={() => handleApprove(row)}>审批通过</TextButton>
@@ -168,8 +172,21 @@ export default function ProcurementInspectionPage() {
   const handleReject = (inspection: ProcurementInspection) => {
     const reason = prompt('请输入驳回原因：');
     if (reason) {
-      updateProcurementInspection(inspection.id, { status: 'rejected', approveTime: new Date().toISOString().replace('T', ' ').slice(0, 19), approver: currentUser.name });
+      updateProcurementInspection(inspection.id, {
+        status: 'draft',
+        approveTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
+        approver: currentUser.name,
+        remark: `驳回原因：${reason}`,
+      });
     }
+  };
+
+  const handleSubmit = (inspection: ProcurementInspection) => {
+    updateProcurementInspection(inspection.id, {
+      status: 'pending',
+      approveTime: undefined,
+      approver: undefined,
+    });
   };
 
   const handleSave = () => {
@@ -273,6 +290,7 @@ export default function ProcurementInspectionPage() {
           onChange={setFilterStatus}
           options={[
             { value: '', label: '全部' },
+            { value: 'draft', label: '草稿' },
             { value: 'pending', label: '待审批' },
             { value: 'approved', label: '已通过' },
             { value: 'rejected', label: '已驳回' },

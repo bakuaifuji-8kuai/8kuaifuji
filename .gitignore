@@ -43,6 +43,10 @@ check_iife2.cjs
 *.bat
 *.rar
 
+# 腾讯云密钥
+.env.cos
+.env.*
+
 # 旧项目文件
 仓库沟通材料/
 仓库沟通材料.rar

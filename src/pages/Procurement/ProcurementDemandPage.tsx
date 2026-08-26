@@ -155,6 +155,7 @@ export default function ProcurementDemandPage() {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<ProductPickerItem[]>([]);
   const [projectPickerOpen, setProjectPickerOpen] = useState(false); // 项目选择弹窗
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null); // 选中的项目
 
   // 查询某物资是否有有效合同
   const findActiveContractForProduct = (productId: string): { contract: Contract; productContract: ProductContract } | null => {
@@ -193,6 +194,10 @@ export default function ProcurementDemandPage() {
         const detail: ProcurementDemandDetail = {
           id: 'PDD' + Date.now() + '_' + p.id,
           demandId: editItem?.id || '',
+          projectId: selectedProject?.id,
+          projectNo: selectedProject?.projectNo,
+          projectName: selectedProject?.projectName,
+          projectType: editItem?.demandType === 'implementation_project' ? 'implementation' : editItem?.demandType === 'service_project' ? 'service' : undefined,
           productId: p.id,
           productCode: p.code || '',
           productName: p.name,
@@ -227,10 +232,12 @@ export default function ProcurementDemandPage() {
 
     if (newDetails.length === 0) {
       setProductPickerOpen(false);
+      setSelectedProject(null);
       return;
     }
     setDetails([...details, ...newDetails]);
     setProductPickerOpen(false);
+    setSelectedProject(null);
   };
 
   const openAdd = () => {
@@ -369,7 +376,7 @@ export default function ProcurementDemandPage() {
 
       // 提示用户
       if (contractDetailsMap.size > 0) {
-        alert(`审批通过！已根据有效期合同自动生成 ${contractDetailsMap.size} 个采购订单。\n请到「采购管理 → 采购订单管理」查看。`);
+        alert(`审批通过！已根据有效期合同自动生成 ${contractDetailsMap.size} 个采购订单。\n请到「招采合约管理 → 采购订单管理」查看。`);
       }
     }
   };
@@ -378,9 +385,10 @@ export default function ProcurementDemandPage() {
     const reason = prompt('请输入驳回原因：');
     if (reason) {
       updateProcurementDemand(demand.id, {
-        status: 'rejected',
+        status: 'draft',
         approveTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
-        approver: currentUser.name
+        approver: currentUser.name,
+        remark: `驳回原因：${reason}`,
       });
     }
   };
@@ -416,12 +424,13 @@ export default function ProcurementDemandPage() {
   const addDetail = () => {
     if (!editItem) return;
 
-    // 所有需求类型都直接进入物资档案选择
-    // ProductPickerModal 会根据 defaultAttributeFilter 自动筛选属性：
-    // - 实施项目类型 → 默认筛选"实施项目类"属性
-    // - 服务项目类型 → 默认筛选"服务项目类"属性
-    // - 物资采购类型 → 不筛选属性
+    // 服务项目和实施项目类型：先选择项目，再选择物资
+    if (editItem.demandType === 'implementation_project' || editItem.demandType === 'service_project') {
+      setProjectPickerOpen(true);
+      return;
+    }
 
+    // 物资采购类型：直接进入物资档案选择
     // 物资采购类型：按采购类型过滤物资（框架采购/单次采购）
     const now = new Date();
     const hasContract = (pid: string) => {
@@ -453,8 +462,8 @@ export default function ProcurementDemandPage() {
 
   // 选择项目后打开物资选择弹窗
   const handleProjectSelected = (project: Project) => {
+    setSelectedProject(project);
     setProjectPickerOpen(false);
-    // 根据项目类型设置物资过滤（只显示该项目关联的物资，这里简化为显示全部）
     setFilteredProducts([]);
     setProductPickerOpen(true);
   };
@@ -755,9 +764,19 @@ export default function ProcurementDemandPage() {
                 </div>
                 <div className="border border-dashed border-[#dcdfe6] rounded p-2">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-[#606266] font-semibold">成本审核单上传</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-[#606266] font-semibold">附件上传</span>
+                      <span className="relative group cursor-help">
+                        <svg className="w-3.5 h-3.5 text-[#909399]" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                        <div className="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-[#303133] text-white text-xs rounded shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                          支持会议纪要及上会材料、签呈审批相关文件、预算审核文件、用户需求书/施工方案等多种附件上传。支持上传多个附件。
+                        </div>
+                      </span>
+                    </div>
                     <label className="cursor-pointer text-xs text-[#409eff] hover:underline">
-                      + 上传审核单
+                      + 上传附件
                       <input
                         type="file"
                         multiple
@@ -772,7 +791,7 @@ export default function ProcurementDemandPage() {
                     </label>
                   </div>
                   {attachments.length === 0 ? (
-                    <div className="text-xs text-[#c0c4cc] text-center py-2">暂未上传审核单</div>
+                    <div className="text-xs text-[#c0c4cc] text-center py-2">暂未上传附件</div>
                   ) : (
                     <ul className="space-y-1 max-h-16 overflow-auto">
                       {attachments.map((f, idx) => (
@@ -818,10 +837,11 @@ export default function ProcurementDemandPage() {
                 </div>
               </div>
               <div className="border border-[#dcdfe6] rounded overflow-auto" style={{ maxHeight: 'calc(100vh - 440px)', minHeight: '360px' }}>
-                <table className="text-xs" style={{ minWidth: 2600 }}>
+                <table className="text-xs" style={{ minWidth: 2800 }}>
                   <thead className="sticky top-0 bg-[#f5f7fa]">
                     {/* 第一层：分组表头 */}
                     <tr>
+                      <th colSpan={2} className="px-2 py-2 text-left border border-[#dcdfe6]">项目信息</th>
                       <th colSpan={6} className="px-2 py-2 text-left border border-[#dcdfe6]"></th>
                       <th className="px-2 py-2 text-left border border-[#dcdfe6]"></th>
                       <th colSpan={9} className="px-2 py-2 text-center border border-[#dcdfe6] font-semibold">采购申请</th>
@@ -833,6 +853,8 @@ export default function ProcurementDemandPage() {
                     </tr>
                     {/* 第二层：列名 */}
                     <tr>
+                      <th className="px-2 py-2 text-left border border-[#dcdfe6] w-24">项目编号</th>
+                      <th className="px-2 py-2 text-left border border-[#dcdfe6] w-32">项目名称</th>
                       <th className="px-2 py-2 text-left border border-[#dcdfe6] w-20">产品属性</th>
                       <th className="px-2 py-2 text-left border border-[#dcdfe6] w-20">商品编码</th>
                       <th className="px-2 py-2 text-left border border-[#dcdfe6] w-24">产品类型</th>
@@ -865,6 +887,22 @@ export default function ProcurementDemandPage() {
                         key={detail.id}
                         className={`border-t border-[#dcdfe6] ${detail.isContractItem ? 'bg-[#fffbeb]' : ''}`}
                       >
+                        {/* 项目编号 */}
+                        <td className="px-2 py-1 border border-[#ebeef5]">
+                          {detail.projectNo ? (
+                            <span className="text-[#606266]">{detail.projectNo}</span>
+                          ) : (
+                            <span className="text-[#c0c4cc]">-</span>
+                          )}
+                        </td>
+                        {/* 项目名称 */}
+                        <td className="px-2 py-1 border border-[#ebeef5]">
+                          {detail.projectName ? (
+                            <span className="text-[#606266]">{detail.projectName}</span>
+                          ) : (
+                            <span className="text-[#c0c4cc]">-</span>
+                          )}
+                        </td>
                         {/* 产品属性 */}
                         <td className="px-2 py-1 border border-[#ebeef5]">
                           <input

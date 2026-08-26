@@ -7,6 +7,7 @@ import {
   Trash2, AlertTriangle, Truck, PackageCheck
 } from 'lucide-react';
 import { DefaultButton } from '@/components/common/Button';
+import { getSvgContent } from '@/assets/diagrams';
 
 mermaid.initialize({
   startOnLoad: false,
@@ -693,7 +694,8 @@ export default function BusinessFlowChart() {
 
   const activeChart = flowCharts.find((c) => c.key === activeKey) || flowCharts[0];
   const activeSvg = svgDiagrams.find((s) => s.key === activeSvgKey) || svgDiagrams[0];
-  const svgUrl = `${import.meta.env.BASE_URL}diagrams/${activeSvg.file}`;
+  const svgContent = getSvgContent(activeSvg.file);
+  const svgDataUrl = svgContent ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgContent)}` : '';
 
   useEffect(() => {
     setZoom(1);
@@ -738,10 +740,15 @@ export default function BusinessFlowChart() {
         }
       }
     } else {
-      const a = document.createElement('a');
-      a.href = svgUrl;
-      a.download = `${activeSvg.title}.svg`;
-      a.click();
+      if (svgContent) {
+        const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${activeSvg.title}.svg`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     }
   };
 
@@ -877,7 +884,7 @@ export default function BusinessFlowChart() {
               }}
             >
               <img
-                src={svgUrl}
+                src={svgDataUrl}
                 alt={activeSvg.title}
                 className="max-w-none"
                 style={{ maxWidth: '1400px', width: 'auto' }}

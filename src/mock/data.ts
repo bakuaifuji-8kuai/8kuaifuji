@@ -6,7 +6,9 @@ import type {
   WorkOrderProductConfig, Project, StockTransfer,
   // 采购管理类型
   ProcurementPlan, ProcurementDemand, ContractLedger, ProcurementOrder, ProcurementInspection,
-  ApprovalFlowConfig, ApprovalFlowNode, ContractPurchaseOrder
+  ApprovalFlowConfig, ApprovalFlowNode, ContractPurchaseOrder,
+  // 履约评估
+  EvaluationTemplate, EvaluationRecord,
 } from '@/types';
 
 // 仓库数据
@@ -3772,6 +3774,128 @@ export const procurementInspections: ProcurementInspection[] = [
         isQualified: false,
         remark: '2套有轻微划痕',
       },
+    ],
+  },
+];
+
+// ==================== 履约评估Mock数据 ====================
+
+export const evaluationTemplates: EvaluationTemplate[] = [
+  {
+    id: 'ET001',
+    name: '工程类供应商季度考核模板',
+    type: 'quarterly',
+    description: '适用于工程类供应商的季度综合考核评估',
+    creator: '管理员',
+    createTime: '2026-01-01 09:00:00',
+    isDefault: true,
+    totalWeight: 100,
+    indicators: [
+      { id: 'IND001', name: '质量合格率', category: '质量', weight: 30, maxScore: 100, description: '交付产品/服务的质量达标率' },
+      { id: 'IND002', name: '交付准时率', category: '交付', weight: 25, maxScore: 100, description: '按约定时间交付的比率' },
+      { id: 'IND003', name: '响应速度', category: '服务', weight: 20, maxScore: 100, description: '问题响应和解决的及时性' },
+      { id: 'IND004', name: '服务态度', category: '服务', weight: 15, maxScore: 100, description: '沟通协作的配合程度' },
+      { id: 'IND005', name: '价格合理性', category: '价格', weight: 10, maxScore: 100, description: '价格与市场水平的对比' },
+    ],
+  },
+  {
+    id: 'ET002',
+    name: '展览类项目单次考核模板',
+    type: 'single',
+    description: '适用于展览项目的单次供应商考核',
+    creator: '管理员',
+    createTime: '2026-01-15 10:00:00',
+    totalWeight: 100,
+    indicators: [
+      { id: 'IND006', name: '方案创新性', category: '创意', weight: 35, maxScore: 100, description: '设计方案的创新程度和独特性' },
+      { id: 'IND007', name: '执行质量', category: '执行', weight: 30, maxScore: 100, description: '现场执行的专业程度' },
+      { id: 'IND008', name: '配合度', category: '服务', weight: 20, maxScore: 100, description: '与主办方的配合协作' },
+      { id: 'IND009', name: '成本控制', category: '成本', weight: 15, maxScore: 100, description: '预算执行和成本控制能力' },
+    ],
+  },
+  {
+    id: 'ET003',
+    name: '质保履约考核模板',
+    type: 'warranty',
+    description: '适用于质保期内供应商履约情况的考核',
+    creator: '管理员',
+    createTime: '2026-02-01 11:00:00',
+    totalWeight: 100,
+    indicators: [
+      { id: 'IND010', name: '故障响应', category: '服务', weight: 40, maxScore: 100, description: '故障报修后的响应时间' },
+      { id: 'IND011', name: '修复质量', category: '质量', weight: 35, maxScore: 100, description: '问题修复的彻底性和质量' },
+      { id: 'IND012', name: '预防性维护', category: '维护', weight: 25, maxScore: 100, description: '定期巡检和预防性维护的执行情况' },
+    ],
+  },
+];
+
+export const evaluationRecords: EvaluationRecord[] = [
+  {
+    id: 'ER001',
+    templateId: 'ET001',
+    templateName: '工程类供应商季度考核模板',
+    supplierId: 'SUP001',
+    supplierName: '华东钢材有限公司',
+    contractId: 'CL001',
+    contractNo: 'HT20260101001',
+    projectName: '2026春季展',
+    type: 'quarterly',
+    evaluator: '采购部-张经理',
+    evaluationDate: '2026-03-31',
+    status: 'approved',
+    totalScore: 88.5,
+    scores: [
+      { indicatorId: 'IND001', indicatorName: '质量合格率', score: 95, weight: 30, weightedScore: 28.5, comment: '质量稳定，合格率高' },
+      { indicatorId: 'IND002', indicatorName: '交付准时率', score: 90, weight: 25, weightedScore: 22.5, comment: '基本准时' },
+      { indicatorId: 'IND003', indicatorName: '响应速度', score: 85, weight: 20, weightedScore: 17, comment: '响应较快' },
+      { indicatorId: 'IND004', indicatorName: '服务态度', score: 92, weight: 15, weightedScore: 13.8, comment: '态度良好' },
+      { indicatorId: 'IND005', indicatorName: '价格合理性', score: 75, weight: 10, weightedScore: 7.5, comment: '价格偏高' },
+    ],
+    remark: '整体表现优秀，建议继续合作',
+    approvalHistory: [
+      { approver: '采购主管-李', action: 'approved', time: '2026-04-01 10:00:00', comment: '同意考核结果' },
+    ],
+  },
+  {
+    id: 'ER002',
+    templateId: 'ET002',
+    templateName: '展览类项目单次考核模板',
+    supplierId: 'SUP002',
+    supplierName: '盛世展览服务有限公司',
+    contractId: 'CL002',
+    contractNo: 'HT20260215002',
+    projectName: '2026夏季展',
+    type: 'single',
+    evaluator: '项目组-王主管',
+    evaluationDate: '2026-06-30',
+    status: 'pending',
+    totalScore: 0,
+    scores: [],
+    remark: '待完成评分',
+  },
+  {
+    id: 'ER003',
+    templateId: 'ET003',
+    templateName: '质保履约考核模板',
+    supplierId: 'SUP003',
+    supplierName: '展具租赁服务有限公司',
+    contractId: 'CL003',
+    contractNo: 'HT20260101003',
+    projectName: '2026秋季展',
+    type: 'warranty',
+    evaluator: '运维部-刘主管',
+    evaluationDate: '2026-07-15',
+    status: 'completed',
+    totalScore: 92.0,
+    scores: [
+      { indicatorId: 'IND010', indicatorName: '故障响应', score: 95, weight: 40, weightedScore: 38, comment: '响应迅速' },
+      { indicatorId: 'IND011', indicatorName: '修复质量', score: 90, weight: 35, weightedScore: 31.5, comment: '修复彻底' },
+      { indicatorId: 'IND012', indicatorName: '预防性维护', score: 88, weight: 25, weightedScore: 22, comment: '维护到位' },
+    ],
+    remark: '质保期间表现优异',
+    approvalHistory: [
+      { approver: '运维主管-陈', action: 'approved', time: '2026-07-16 09:00:00', comment: '同意考核结果' },
+      { approver: '总经理-赵', action: 'approved', time: '2026-07-16 14:00:00', comment: '优秀供应商' },
     ],
   },
 ];

@@ -36,6 +36,7 @@ import AssetScrapPage from "@/pages/Report/Asset/AssetScrap";
 import AssetLossPage from "@/pages/Report/Asset/AssetLoss";
 
 import AssetReportPage from "@/pages/Report/Asset/AssetReport";
+import MeetingNotesPage from "@/pages/Report/Asset/MeetingNotes";
 import ExhibitionRequisitionReport from "@/pages/Report/ExhibitionRequisitionReport";
 import ExhibitionRequisitionDetailReport from "@/pages/Report/ExhibitionRequisitionDetailReport";
 import BusinessFlowChart from "@/pages/Report/BusinessFlowChart";
@@ -51,9 +52,13 @@ import CompetitiveBiddingPage from "@/pages/Procurement/CompetitiveBiddingPage";
 import SupplierQuotePage from "@/pages/Procurement/SupplierQuotePage";
 import WebsiteInfoPage from "@/pages/Procurement/WebsiteInfoPage";
 import ContractTemplatePage from "@/pages/Procurement/ContractTemplatePage";
+import ProcurementFunctionDocs from "@/pages/Procurement/ProcurementFunctionDocs";
 import ApprovalFlowConfigPage from "@/pages/Procurement/ApprovalFlowConfigPage";
 import ContractPurchaseOrderPage from "@/pages/Procurement/ContractPurchaseOrderPage";
 import ProcurementPlanSummaryPage from "@/pages/Procurement/ProcurementPlanSummaryPage";
+import EvaluationTemplatePage from "@/pages/Procurement/EvaluationTemplatePage";
+import EvaluationExecutePage from "@/pages/Procurement/EvaluationExecutePage";
+import EvaluationRecordPage from "@/pages/Procurement/EvaluationRecordPage";
 
 export default function App() {
   return (
@@ -101,6 +106,7 @@ export default function App() {
           <Route path="asset/scrap" element={<AssetScrapPage />} />
           <Route path="asset/loss" element={<AssetLossPage />} />
           <Route path="asset/report" element={<AssetReportPage />} />
+          <Route path="asset/meeting-notes" element={<MeetingNotesPage />} />
 
           {/* 采购管理 */}
           <Route path="procurement/plan" element={<ProcurementPlanPage />} />
@@ -116,7 +122,11 @@ export default function App() {
           <Route path="procurement/supplier-quote" element={<SupplierQuotePage />} />
           <Route path="procurement/website-info" element={<WebsiteInfoPage />} />
           <Route path="procurement/contract-template" element={<ContractTemplatePage />} />
+          <Route path="procurement/function-docs" element={<ProcurementFunctionDocs />} />
           <Route path="procurement/approval-flow" element={<ApprovalFlowConfigPage />} />
+          <Route path="procurement/evaluation-template" element={<EvaluationTemplatePage />} />
+          <Route path="procurement/evaluation-execute" element={<EvaluationExecutePage />} />
+          <Route path="procurement/evaluation-record" element={<EvaluationRecordPage />} />
 
           {/* 报表管理 */}
           <Route path="report/stock" element={<StockReportPage />} />

@@ -42,14 +42,14 @@ const lanes: SwimLane[] = [
         icon: Eye,
         steps: ['了解各菜单功能与流转关系', '点击卡片快捷跳转到业务模块', '从左侧菜单进入对应业务'],
         result: '流程总览、快捷导航',
-        notes: '本页面作为采购管理的门户入口，对新员工友好',
+        notes: '本页面作为招采合约管理的门户入口，对新员工友好',
       },
       {
         id: 'plan-mgmt',
-        name: '采购计划管理',
+        name: '招采计划管理',
         description: '编制年度/月度采购计划并完成审批',
         menuPath: '/procurement/plan',
-        menuTitle: '采购计划管理',
+        menuTitle: '招采计划管理',
         color: 'text-[#409eff]',
         bg: 'bg-[#ecf5ff]',
         border: 'border-[#91c5ff]',
@@ -92,10 +92,10 @@ const lanes: SwimLane[] = [
       },
       {
         id: 'workorder',
-        name: '采购工单',
-        description: '采购部接收需求并形成采购执行工单',
+        name: '招采工单',
+        description: '针对采购需求发起招标/竞价工单',
         menuPath: '/procurement/bidding',
-        menuTitle: '采购工单',
+        menuTitle: '招采工单',
         color: 'text-[#fa8c16]',
         bg: 'bg-[#fff4e6]',
         border: 'border-[#ffc069]',
@@ -105,10 +105,10 @@ const lanes: SwimLane[] = [
       },
       {
         id: 'quote',
-        name: '报价单管理',
-        description: '收集并管理供应商报价单',
+        name: '报价单',
+        description: '供应商对采购工单的报价响应',
         menuPath: '/procurement/supplier-quote',
-        menuTitle: '报价单管理',
+        menuTitle: '报价单',
         color: 'text-[#fa8c16]',
         bg: 'bg-[#fff4e6]',
         border: 'border-[#ffc069]',
@@ -151,10 +151,10 @@ const lanes: SwimLane[] = [
       },
       {
         id: 'contract-order',
-        name: '采购订单管理',
-        description: '由需求/合同生成采购订单并发送供应商',
+        name: '招采订单管理',
+        description: '从需求/合同生成采购订单',
         menuPath: '/procurement/contract-purchase-order',
-        menuTitle: '采购订单管理',
+        menuTitle: '招采订单管理',
         color: 'text-[#722ed1]',
         bg: 'bg-[#f9f0ff]',
         border: 'border-[#d3adf7]',
@@ -171,10 +171,10 @@ const lanes: SwimLane[] = [
     stages: [
       {
         id: 'inspection',
-        name: '验收管理',
-        description: '按订单明细对到货物资进行验收登记',
+        name: '招采项目验收',
+        description: '对到货物资进行验收',
         menuPath: '/procurement/inspection',
-        menuTitle: '验收管理',
+        menuTitle: '招采项目验收',
         color: 'text-[#13c2c2]',
         bg: 'bg-[#e6fffb]',
         border: 'border-[#87e8de]',
@@ -255,7 +255,7 @@ export default function ProcurementBusinessFlowPage() {
           <h2 className="text-sm font-semibold text-[#303133]">采购业务流程</h2>
         </div>
         <div className="text-xs text-[#909399]">
-          以下展示"采购管理"模块各菜单组成的业务泳道图，可点击卡片查看详情与跳转至对应业务页面
+          以下展示"招采合约管理"模块各菜单组成的业务泳道图，可点击卡片查看详情与跳转至对应业务页面
         </div>
       </div>
 
@@ -432,7 +432,7 @@ export default function ProcurementBusinessFlowPage() {
       {/* 业务模块菜单清单 */}
       <div className="rounded border border-[#dcdfe6] bg-white p-4">
         <div className="text-sm font-semibold text-[#303133] mb-3">
-          📋 采购管理模块菜单清单
+          📋 招采合约管理模块菜单清单
         </div>
         <table className="w-full text-xs">
           <thead className="bg-[#f5f7fa] text-[#606266]">
@@ -446,17 +446,17 @@ export default function ProcurementBusinessFlowPage() {
           <tbody>
             {[
               { title: '采购业务流程', path: '/procurement/business-flow', lane: '计划阶段（门户入口）' },
-              { title: '采购计划管理', path: '/procurement/plan', lane: '计划阶段' },
-              { title: '采购计划汇总', path: '/procurement/plan-summary', lane: '计划阶段' },
-              { title: '采购需求申请', path: '/procurement/demand', lane: '需求与采购执行阶段' },
-              { title: '采购工单', path: '/procurement/bidding', lane: '需求与采购执行阶段' },
-              { title: '报价单管理', path: '/procurement/supplier-quote', lane: '需求与采购执行阶段' },
+              { title: '招采计划', path: '/procurement/plan', lane: '计划阶段' },
+              { title: '招采计划汇总', path: '/procurement/plan-summary', lane: '计划阶段' },
+              { title: '招采需求申请管理', path: '/procurement/demand', lane: '需求与采购执行阶段' },
+              { title: '招采工单', path: '/procurement/bidding', lane: '需求与采购执行阶段' },
+              { title: '报价单', path: '/procurement/supplier-quote', lane: '需求与采购执行阶段' },
               { title: '网站信息报送审核发布', path: '/procurement/website-info', lane: '合同与订单阶段' },
-              { title: '合同台账管理', path: '/procurement/contract', lane: '合同与订单阶段' },
-              { title: '采购订单管理', path: '/procurement/contract-purchase-order', lane: '合同与订单阶段' },
-              { title: '验收管理', path: '/procurement/inspection', lane: '履约与验收阶段' },
-              { title: '供应商管理', path: '/procurement/supplier', lane: '履约与验收阶段' },
-              { title: '合同模板管理', path: '/procurement/contract-template', lane: '基础配置与统计' },
+              { title: '合同台账', path: '/procurement/contract', lane: '合同与订单阶段' },
+              { title: '招采订单管理', path: '/procurement/contract-purchase-order', lane: '合同与订单阶段' },
+              { title: '招采项目验收', path: '/procurement/inspection', lane: '履约与验收阶段' },
+              { title: '供应商列表', path: '/procurement/supplier', lane: '履约与验收阶段' },
+              { title: '合同文本管理', path: '/procurement/contract-template', lane: '基础配置与统计' },
               { title: '审批流程配置', path: '/procurement/approval-flow', lane: '基础配置与统计' },
             ].map((m, i) => (
               <tr key={m.path} className="border-t border-[#ebeef5] hover:bg-[#fafafa]">
@@ -474,22 +474,22 @@ export default function ProcurementBusinessFlowPage() {
       <div className="rounded border border-[#ffe7ba] bg-[#fff7e6] p-3 text-xs text-[#606266] leading-5">
         <div className="font-medium text-[#fa8c16] mb-1">业务流程说明：</div>
         <div>
-          ① 计划阶段：通过"采购计划管理"编制年度/月度计划 → 审批后生效；通过"采购计划汇总"进行多维度统计。
+          ① 计划阶段：通过"招采计划"编制年度/月度计划 → 审批后生效；通过"招采计划汇总"进行多维度统计。
         </div>
         <div>
-          ② 需求与采购执行阶段：业务部门通过"采购需求申请"发起具体物资需求 → 采购部在"采购工单"中组织询价/比价 →
-          "报价单管理"收集多家供应商报价并形成比价结论。
+          ② 需求与采购执行阶段：业务部门通过"招采需求申请管理"发起具体物资需求 → 采购部在"招采工单"中组织询价/比价 →
+          "报价单"收集多家供应商报价并形成比价结论。
         </div>
         <div>
           ③ 合同与订单阶段：必要时通过"网站信息报送审核发布"发布采购公告 →
-          "合同台账管理"登记合同并完成审批 → "采购订单管理"从需求/合同生成订单并发送供应商（支持变更与回写）。
+          "合同台账"登记合同并完成审批 → "招采订单管理"从需求/合同生成订单并发送供应商（支持变更与回写）。
         </div>
         <div>
-          ④ 履约与验收阶段：供应商交货 → "验收管理"进行到货物资验收（可生成入库凭据） →
-          全程由"供应商管理"维护供应商档案与评级。
+          ④ 履约与验收阶段：供应商交货 → "招采项目验收"进行到货物资验收（可生成入库凭据） →
+          全程由"供应商列表"维护供应商档案与评级。
         </div>
         <div>
-          ⑤ 基础配置与统计：通过"合同模板管理"统一合同模板；"审批流程配置"为各业务模块配置审批节点。
+          ⑤ 基础配置与统计：通过"合同文本管理"统一合同模板；"审批流程配置"为各业务模块配置审批节点。
         </div>
       </div>
     </div>

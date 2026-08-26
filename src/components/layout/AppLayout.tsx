@@ -39,6 +39,7 @@ const pathLabelMap: Record<string, string> = {
   '/asset/scrap': '资产报废',
   '/asset/loss': '资产报损',
   '/asset/report': '资产报表',
+  '/asset/meeting-notes': '会议纪要',
   '/report/stock': '库存报表',
   '/report/inbound': '入库汇总',
   '/report/inbound-detail': '入库明细',

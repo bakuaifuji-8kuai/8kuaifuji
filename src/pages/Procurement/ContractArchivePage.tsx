@@ -14,7 +14,7 @@ interface ContractArchive {
   applyTime: string;
   reason: string;
   attachments: Attachment[];
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'draft' | 'pending' | 'approved' | 'rejected';
   approver?: string;
   approveTime?: string;
   approveRemark?: string;
@@ -37,6 +37,7 @@ export default function ContractArchivePage() {
   const [selectedContractIds, setSelectedContractIds] = useState<string[]>([]);
   const [archiveReason, setArchiveReason] = useState('');
   const [archiveFiles, setArchiveFiles] = useState<Attachment[]>([]);
+  const [editArchiveData, setEditArchiveData] = useState<ContractArchive | null>(null);
 
   const filteredContracts = useMemo(() => {
     return contractLedgers.filter((c) => {
@@ -94,23 +95,61 @@ export default function ContractArchivePage() {
     }
 
     const selectedContracts = contractLedgers.filter((c) => selectedContractIds.includes(c.id));
-    const newArchive: ContractArchive = {
-      id: 'ARC' + Date.now(),
-      archiveNo: 'CA' + new Date().getFullYear() + String(archives.length + 1).padStart(4, '0'),
-      contractIds: selectedContractIds,
-      contractNos: selectedContracts.map((c) => c.contractNo),
-      applicant: currentUser.name,
-      applyTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
-      reason: archiveReason,
-      attachments: archiveFiles,
-      status: 'pending',
-    };
-    setArchives([...archives, newArchive]);
-    alert('归档申请已提交');
+    if (editArchiveData) {
+      setArchives(
+        archives.map((a) =>
+          a.id === editArchiveData.id
+            ? {
+                ...a,
+                contractIds: selectedContractIds,
+                contractNos: selectedContracts.map((c) => c.contractNo),
+                reason: archiveReason,
+                attachments: archiveFiles,
+              }
+            : a
+        )
+      );
+      alert('归档申请已更新');
+    } else {
+      const newArchive: ContractArchive = {
+        id: 'ARC' + Date.now(),
+        archiveNo: 'CA' + new Date().getFullYear() + String(archives.length + 1).padStart(4, '0'),
+        contractIds: selectedContractIds,
+        contractNos: selectedContracts.map((c) => c.contractNo),
+        applicant: currentUser.name,
+        applyTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
+        reason: archiveReason,
+        attachments: archiveFiles,
+        status: 'pending',
+      };
+      setArchives([...archives, newArchive]);
+      alert('归档申请已提交');
+    }
     setCreateModalOpen(false);
+    setEditArchiveData(null);
     setSelectedContractIds([]);
     setArchiveReason('');
     setArchiveFiles([]);
+  };
+
+  // 重新提交归档申请（驳回后重新提交）
+  const handleResubmitArchive = (archive: ContractArchive) => {
+    setArchives(
+      archives.map((a) =>
+        a.id === archive.id
+          ? { ...a, status: 'pending', approver: undefined, approveTime: undefined }
+          : a
+      )
+    );
+  };
+
+  // 编辑归档申请
+  const setEditArchive = (archive: ContractArchive) => {
+    setEditArchiveData(archive);
+    setSelectedContractIds(archive.contractIds);
+    setArchiveReason(archive.reason);
+    setArchiveFiles(archive.attachments || []);
+    setCreateModalOpen(true);
   };
 
   // 审批归档申请
@@ -121,10 +160,10 @@ export default function ContractArchivePage() {
         a.id === archive.id
           ? {
               ...a,
-              status: approved ? 'approved' : 'rejected',
+              status: approved ? 'approved' : 'draft',
               approver: currentUser.name,
               approveTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
-              approveRemark: approved ? '审批通过' : '审批驳回',
+              approveRemark: approved ? '审批通过' : `驳回原因：${archive.approveRemark || '驳回后可编辑重新提交'}`,
             }
           : a
       )
@@ -133,6 +172,7 @@ export default function ContractArchivePage() {
   };
 
   const statusMap: Record<string, { label: string; color: string; bg: string }> = {
+    draft: { label: '草稿', color: 'text-[#909399]', bg: 'bg-[#f4f4f5]' },
     pending: { label: '待审批', color: 'text-[#e6a23c]', bg: 'bg-[#fdf6ec]' },
     approved: { label: '已归档', color: 'text-[#67c23a]', bg: 'bg-[#f0f9eb]' },
     rejected: { label: '已驳回', color: 'text-[#f56c6c]', bg: 'bg-[#fef0f0]' },
@@ -163,9 +203,10 @@ export default function ContractArchivePage() {
             onChange={setFilterStatus}
             options={[
               { value: '', label: '全部' },
-              { value: 'pending', label: '待审批' },
-              { value: 'approved', label: '已归档' },
-              { value: 'rejected', label: '已驳回' },
+              { value: 'draft', label: '草稿' },
+            { value: 'pending', label: '待审批' },
+            { value: 'approved', label: '已归档' },
+            { value: 'rejected', label: '已驳回' },
             ]}
           />
         </SearchBar>
@@ -225,7 +266,12 @@ export default function ContractArchivePage() {
                     <span className={'px-2 py-0.5 rounded text-xs ' + s.color + ' ' + s.bg}>{s.label}</span>
                   </td>
                   <td className="px-3 py-2 text-center">
-                    {archive.status === 'pending' ? (
+                    {archive.status === 'draft' ? (
+                      <div className="flex items-center justify-center gap-1">
+                        <TextButton onClick={() => handleResubmitArchive(archive)}>提交审批</TextButton>
+                        <TextButton onClick={() => setEditArchive(archive)}>编辑</TextButton>
+                      </div>
+                    ) : archive.status === 'pending' ? (
                       <div className="flex items-center justify-center gap-1">
                         <TextButton type="danger" onClick={() => handleApprove(archive, false)}>驳回</TextButton>
                         <TextButton type="primary" onClick={() => handleApprove(archive, true)}>审批通过</TextButton>
@@ -247,7 +293,7 @@ export default function ContractArchivePage() {
       <Modal
         open={createModalOpen}
         title="合同归档申请"
-        onClose={() => setCreateModalOpen(false)}
+        onClose={() => { setCreateModalOpen(false); setEditArchiveData(null); }}
         footer={
           <>
             <DefaultButton onClick={() => setCreateModalOpen(false)}>取消</DefaultButton>

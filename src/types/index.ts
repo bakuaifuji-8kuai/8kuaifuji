@@ -1257,19 +1257,248 @@ export interface Project {
 
 // ==================== 合同模板类型 ====================
 
-// 合同模板
+// 组件类型枚举
+export type ComponentType =
+  | 'heading' | 'paragraph' | 'text' | 'textarea' | 'number'
+  | 'date' | 'select' | 'checkbox' | 'radio' | 'checkboxGroup'
+  | 'attachment' | 'image' | 'signature' | 'stamp' | 'table'
+  | 'divider' | 'alert'
+  | 'col2' | 'section' | 'tab'
+  | 'contractNo' | 'signDate' | 'partyA' | 'partyB'
+  | 'contractAmount' | 'contractPeriod' | 'paymentTerms'
+  | 'liquidatedDamages' | 'disputeResolution' | 'signArea';
+
+// 组件分类
+export type ComponentCategory = 'basic' | 'advanced' | 'layout' | 'contract';
+
+// 组件元数据（用于组件库展示）
+export interface ComponentMeta {
+  type: ComponentType;
+  label: string;
+  category: ComponentCategory;
+  icon: string;
+  description: string;
+  defaultProps: Record<string, any>;
+}
+
+// 校验规则
+export interface ValidationRule {
+  type: 'required' | 'minLength' | 'maxLength' | 'min' | 'max' |
+        'pattern' | 'email' | 'phone' | 'idCard' | 'fileType' | 'fileSize';
+  value?: any;
+  message: string;
+}
+
+// 模板组件
+export interface TemplateComponent {
+  id: string;
+  type: ComponentType;
+  props: Record<string, any>;
+  validation?: ValidationRule[];
+  children?: TemplateComponent[];
+  order: number;
+  locked?: boolean;
+}
+
+// 表格列配置
+export interface TableColumnConfig {
+  key: string;
+  title: string;
+  type: 'text' | 'number' | 'date' | 'select';
+  required: boolean;
+  options?: string[];
+}
+
+// 条件显示规则
+export interface VisibleWhenRule {
+  field: string;
+  operator: 'equals' | 'notEquals' | 'contains';
+  value: any;
+}
+
+// 模板结构
+export interface TemplateStructure {
+  components: TemplateComponent[];
+  styles: {
+    fontFamily: string;
+    fontSize: number;
+    lineHeight: number;
+    themeColor: string;
+  };
+}
+
+// 组件属性接口
+export interface ComponentProps {
+  // 通用属性
+  label: string;
+  fieldName: string;
+  placeholder: string;
+  description: string;
+  required: boolean;
+  requiredMessage: string;
+  width: 'full' | 'half' | 'third';
+  visible: boolean;
+  disabled: boolean;
+  readOnly: boolean;
+  defaultValue: any;
+  visibleWhen?: VisibleWhenRule;
+  
+  // 数字框
+  min?: number;
+  max?: number;
+  decimal?: number;
+  unit?: string;
+  allowNegative?: boolean;
+  format?: 'number' | 'currency' | 'percent';
+  
+  // 日期框
+  dateFormat?: 'YYYY-MM-DD' | 'YYYY/MM/DD' | 'YYYY年MM月DD日';
+  minDate?: string;
+  maxDate?: string;
+  defaultToday?: boolean;
+  
+  // 选择框
+  options?: { label: string; value: string }[];
+  multiple?: boolean;
+  searchable?: boolean;
+  clearable?: boolean;
+  
+  // 附件
+  acceptTypes?: string[];
+  maxFileSize?: number;
+  maxFileCount?: number;
+  minFileCount?: number;
+  autoUpload?: boolean;
+  requireAllTypes?: boolean;
+  
+  // 图片
+  maxWidth?: number;
+  maxHeight?: number;
+  allowCrop?: boolean;
+  
+  // 签字板
+  penColor?: string;
+  penWidth?: number;
+  allowClear?: boolean;
+  
+  // 表格
+  columns?: TableColumnConfig[];
+  minRows?: number;
+  maxRows?: number;
+  allowAddRow?: boolean;
+  allowDeleteRow?: boolean;
+  sumColumn?: string;
+  
+  // 提示框
+  alertType?: 'info' | 'warning' | 'success' | 'error';
+  
+  // 标题
+  level?: 1 | 2 | 3;
+  
+  // 段落
+  content?: string;
+  
+  // 合同专属
+  partyRole?: '甲方' | '乙方';
+  contactFields?: boolean;
+  amountInWords?: boolean;
+  interestRate?: number;
+  paymentNodes?: { label: string; ratio: number }[];
+  disputeType?: 'arbitration' | 'litigation';
+}
+
+// 合同模板批注
+export interface TemplateAnnotation {
+  id: string;
+  templateId: string;
+  version: number;
+  position?: string;
+  content: string;
+  author: string;
+  createTime: string;
+  isResolved: boolean;
+  resolvedBy?: string;
+  resolvedTime?: string;
+}
+
+// ==================== 数据源映射类型 ====================
+
+// 数据源类型
+export type DataSourceType = 'bidding' | 'demand' | 'supplier' | 'custom';
+
+// 数据源字段映射配置
+export interface DataSourceMapping {
+  id: string;
+  componentId: string; // 模板组件ID
+  dataSource: DataSourceType; // 数据源类型
+  sourceField: string; // 数据源字段名
+  sourceFieldLabel: string; // 数据源字段标签（显示用）
+  targetField: string; // 目标字段（组件的fieldName）
+  transform?: string; // 转换函数名（可选）
+  defaultValue?: string; // 默认值（数据源无值时使用）
+}
+
+// 采购工单可映射字段配置
+export const BIDDING_FIELDS = [
+  { key: 'biddingNo', label: '竞价编号' },
+  { key: 'biddingName', label: '竞价名称' },
+  { key: 'projectName', label: '项目名称' },
+  { key: 'creator', label: '创建人' },
+  { key: 'winningSupplierName', label: '成交供应商' },
+  { key: 'totalPriceLimit', label: '整单上限总价' },
+  { key: 'createTime', label: '创建时间' },
+  { key: 'status', label: '工单状态' },
+  { key: 'procurementMethod', label: '采购方式' },
+  { key: 'bidEvaluationMethod', label: '评标办法' },
+];
+
+// 需求单可映射字段配置
+export const DEMAND_FIELDS = [
+  { key: 'demandNo', label: '需求编号' },
+  { key: 'title', label: '需求标题' },
+  { key: 'demandType', label: '需求类型' },
+  { key: 'department', label: '需求部门' },
+  { key: 'creator', label: '创建人' },
+  { key: 'budget', label: '预算金额' },
+  { key: 'createTime', label: '创建时间' },
+];
+
+// 供应商可映射字段配置
+export const SUPPLIER_FIELDS = [
+  { key: 'supplierCode', label: '供应商编码' },
+  { key: 'supplierName', label: '供应商名称' },
+  { key: 'contactPerson', label: '联系人' },
+  { key: 'contactPhone', label: '联系电话' },
+  { key: 'contactEmail', label: '联系邮箱' },
+  { key: 'address', label: '地址' },
+  { key: 'bankAccount', label: '银行账号' },
+  { key: 'taxNumber', label: '税号' },
+];
+
+// 合同模板（扩展支持拖拽结构和数据源映射）
 export interface ContractTemplate {
   id: string;
   name: string;
   category: ContractCategory;
-  content: string; // 模板内容
-  version: number; // 版本号
-  isDefault: boolean; // 是否默认模板
+  content: string;
+  structure?: TemplateComponent[];
+  version: number;
+  isDefault: boolean;
   createTime: string;
   creator: string;
   updateTime?: string;
   updater?: string;
   remark?: string;
+  versions?: ContractTemplateVersion[];
+  annotations?: TemplateAnnotation[];
+  dataSourceMappings?: DataSourceMapping[]; // 数据源映射配置
+}
+
+// 历史记录状态
+export interface HistoryState {
+  past: TemplateComponent[][];
+  present: TemplateComponent[];
+  future: TemplateComponent[][];
 }
 
 // 合同模板版本记录
@@ -1342,7 +1571,12 @@ export interface WebsiteInfo {
 }
 
 // 合同类型
-export type ContractCategory = 'exhibition_service' | 'exhibition_display' | 'procurement' | 'investment' | 'other';
+export type ContractCategory = 
+  | 'exhibition_service'
+  | 'exhibition_display' 
+  | 'procurement' 
+  | 'investment' 
+  | 'other';
 
 // 合同形成方式
 export type ContractFormation = 'online' | 'offline';
@@ -1474,7 +1708,7 @@ export interface ProcurementInspection {
   supplierName?: string;
   inspectionDate: string;
   inspector: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'draft' | 'pending' | 'approved' | 'rejected';
   remark?: string;
   details: {
     id: string;
@@ -1512,3 +1746,153 @@ export interface FreezeLog {
   operateTime: string;
   remark?: string;
 }
+
+// ==================== 会议纪要类型 ====================
+
+export interface MeetingNoteItem {
+  id: string;
+  content: string;
+}
+
+export interface MeetingNote {
+  id: string;
+  meetingDate: string;
+  title?: string;
+  items: MeetingNoteItem[];
+  images: string[]; // base64
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==================== 合同文本管理类型 ====================
+
+export type ContractTextType = 'model' | 'non_model';
+export type ContractTextStatus = 'draft' | 'active' | 'archived';
+
+export interface ContractText {
+  id: string;
+  name: string;
+  type: ContractTextType;
+  category: ContractCategory;
+  content: string;
+  structure?: TemplateComponent[];
+  version: number;
+  status: ContractTextStatus;
+  isModel?: boolean;
+  baseTemplateId?: string;
+  supplements: TextSupplement[];
+  attachments: Attachment[];
+  annotations: TextAnnotation[];
+  creator: string;
+  createTime: string;
+  updater?: string;
+  updateTime?: string;
+  remark?: string;
+}
+
+export interface TextSupplement {
+  id: string;
+  title: string;
+  content: string;
+  sort: number;
+}
+
+export interface TextAnnotation {
+  id: string;
+  textId: string;
+  version: number;
+  position?: string;
+  content: string;
+  author: string;
+  createTime: string;
+  isResolved: boolean;
+  resolvedBy?: string;
+  resolvedTime?: string;
+}
+
+export interface ContractTextVersion {
+  id: string;
+  textId: string;
+  version: number;
+  content: string;
+  structure?: TemplateComponent[];
+  supplements: TextSupplement[];
+  changeLog: string;
+  createTime: string;
+  creator: string;
+}
+
+// ==================== 履约评估类型 ====================
+
+export type EvaluationType = 'quarterly' | 'single' | 'warranty';
+export type EvaluationStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'completed';
+
+export interface EvaluationIndicator {
+  id: string;
+  name: string;
+  category: string;
+  weight: number;
+  maxScore: number;
+  description?: string;
+}
+
+export interface EvaluationTemplate {
+  id: string;
+  name: string;
+  type: EvaluationType;
+  indicators: EvaluationIndicator[];
+  totalWeight: number;
+  description?: string;
+  creator: string;
+  createTime: string;
+  updateTime?: string;
+  isDefault?: boolean;
+}
+
+export interface EvaluationScoreItem {
+  indicatorId: string;
+  indicatorName: string;
+  score: number;
+  weight: number;
+  weightedScore: number;
+  comment?: string;
+}
+
+export interface EvaluationRecord {
+  id: string;
+  templateId: string;
+  templateName: string;
+  supplierId: string;
+  supplierName: string;
+  contractId?: string;
+  contractNo?: string;
+  projectName?: string;
+  type: EvaluationType;
+  scores: EvaluationScoreItem[];
+  totalScore: number;
+  evaluator: string;
+  evaluationDate: string;
+  status: EvaluationStatus;
+  attachments?: Attachment[];
+  approvalHistory?: Array<{
+    approver: string;
+    action: 'approved' | 'rejected' | 'pending';
+    time: string;
+    comment?: string;
+  }>;
+  remark?: string;
+}
+
+export const EVALUATION_TYPE_LABELS: Record<EvaluationType, string> = {
+  quarterly: '季度考核',
+  single: '项目单次考核',
+  warranty: '质保履约考核',
+};
+
+export const EVALUATION_STATUS_LABELS: Record<EvaluationStatus, string> = {
+  draft: '草稿',
+  pending: '待审批',
+  approved: '已通过',
+  rejected: '已驳回',
+  completed: '已完成',
+};

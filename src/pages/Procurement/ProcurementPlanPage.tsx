@@ -481,7 +481,7 @@ export default function ProcurementPlanPage() {
   return (
     <div className="p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-[#303133]">采购计划管理</h2>
+        <h2 className="text-sm font-semibold text-[#303133]">招采计划</h2>
         <div className="flex gap-2">
           <PrimaryButton onClick={openAdd}>+ 新增计划</PrimaryButton>
         </div>

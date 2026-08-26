@@ -14,7 +14,11 @@ import type {
   // 合同采购订单
   ContractPurchaseOrder, ContractPurchaseOrderChangeRecord,
   // 项目冻结
-  FrozenExhibition, FreezeLog
+  FrozenExhibition, FreezeLog,
+  // 合同文本管理
+  ContractText, ContractTextVersion, TextAnnotation, TextSupplement, Attachment,
+  // 履约评估
+  EvaluationTemplate, EvaluationRecord, EvaluationIndicator,
 } from '@/types';
 import * as mockData from '@/mock/data';
 
@@ -351,6 +355,30 @@ interface WarehouseState {
   unfreezeExhibitions: (exhibitionNames: string[], operator: string, remark?: string) => void;
   isExhibitionFrozen: (exhibitionName: string) => boolean;
   isWorkOrderFrozen: (workOrderId: string) => boolean;
+
+  // 合同文本管理
+  contractTexts: ContractText[];
+  setContractTexts: (data: ContractText[]) => void;
+  addContractText: (text: ContractText) => void;
+  updateContractText: (id: string, data: Partial<ContractText>) => void;
+  deleteContractText: (id: string) => void;
+  contractTextVersions: ContractTextVersion[];
+  addContractTextVersion: (version: ContractTextVersion) => void;
+  getContractTextVersions: (textId: string) => ContractTextVersion[];
+  addTextAnnotation: (textId: string, annotation: TextAnnotation) => void;
+  updateTextAnnotation: (textId: string, annotationId: string, data: Partial<TextAnnotation>) => void;
+
+  // 履约评估
+  evaluationTemplates: EvaluationTemplate[];
+  setEvaluationTemplates: (data: EvaluationTemplate[]) => void;
+  addEvaluationTemplate: (template: EvaluationTemplate) => void;
+  updateEvaluationTemplate: (id: string, data: Partial<EvaluationTemplate>) => void;
+  deleteEvaluationTemplate: (id: string) => void;
+  evaluationRecords: EvaluationRecord[];
+  setEvaluationRecords: (data: EvaluationRecord[]) => void;
+  addEvaluationRecord: (record: EvaluationRecord) => void;
+  updateEvaluationRecord: (id: string, data: Partial<EvaluationRecord>) => void;
+  deleteEvaluationRecord: (id: string) => void;
 }
 
 export const useStore = create<WarehouseState>((set) => ({
@@ -1242,4 +1270,54 @@ export const useStore = create<WarehouseState>((set) => ({
   // 当前登录账号（默认取第一个员工）
   currentUser: { id: 'EMP001', name: '管理员', role: '系统管理员', department: '综合管理部' },
   setCurrentUser: (user) => set({ currentUser: user }),
+
+  // 合同文本管理
+  contractTexts: [],
+  setContractTexts: (data) => set({ contractTexts: data }),
+  addContractText: (text) => set((state) => ({ contractTexts: [...state.contractTexts, text] })),
+  updateContractText: (id, data) => set((state) => ({
+    contractTexts: state.contractTexts.map((t) => t.id === id ? { ...t, ...data } : t)
+  })),
+  deleteContractText: (id) => set((state) => ({
+    contractTexts: state.contractTexts.filter((t) => t.id !== id)
+  })),
+  contractTextVersions: [],
+  addContractTextVersion: (version) => set((state) => ({ contractTextVersions: [...state.contractTextVersions, version] })),
+  getContractTextVersions: (textId) => {
+    const state = useStore.getState();
+    return state.contractTextVersions.filter((v) => v.textId === textId).sort((a, b) => b.version - a.version);
+  },
+  addTextAnnotation: (textId, annotation) => set((state) => ({
+    contractTexts: state.contractTexts.map((t) =>
+      t.id === textId ? { ...t, annotations: [...t.annotations, annotation] } : t
+    )
+  })),
+  updateTextAnnotation: (textId, annotationId, data) => set((state) => ({
+    contractTexts: state.contractTexts.map((t) =>
+      t.id === textId ? {
+        ...t,
+        annotations: t.annotations.map((a) => a.id === annotationId ? { ...a, ...data } : a)
+      } : t
+    )
+  })),
+
+  // 履约评估
+  evaluationTemplates: mockData.evaluationTemplates || [],
+  setEvaluationTemplates: (data) => set({ evaluationTemplates: data }),
+  addEvaluationTemplate: (template) => set((state) => ({ evaluationTemplates: [...state.evaluationTemplates, template] })),
+  updateEvaluationTemplate: (id, data) => set((state) => ({
+    evaluationTemplates: state.evaluationTemplates.map((t) => t.id === id ? { ...t, ...data } : t)
+  })),
+  deleteEvaluationTemplate: (id) => set((state) => ({
+    evaluationTemplates: state.evaluationTemplates.filter((t) => t.id !== id)
+  })),
+  evaluationRecords: mockData.evaluationRecords || [],
+  setEvaluationRecords: (data) => set({ evaluationRecords: data }),
+  addEvaluationRecord: (record) => set((state) => ({ evaluationRecords: [...state.evaluationRecords, record] })),
+  updateEvaluationRecord: (id, data) => set((state) => ({
+    evaluationRecords: state.evaluationRecords.map((r) => r.id === id ? { ...r, ...data } : r)
+  })),
+  deleteEvaluationRecord: (id) => set((state) => ({
+    evaluationRecords: state.evaluationRecords.filter((r) => r.id !== id)
+  })),
 }));

@@ -3,15 +3,13 @@ import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Bu
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
-import { Plus, AlertTriangle, Clock, CheckCircle2, DollarSign, Printer, Search } from 'lucide-react';
+import { Plus, AlertTriangle, Clock, CheckCircle2, DollarSign, Printer, Search, Trash2 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import type { AssetEquipment } from '@/types';
 import PrintDocument from '@/components/common/PrintDocument';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
 
-interface AssetLoss {
-  id: string;
-  lossNo: string;
+interface LossDetail {
   assetId: string;
   assetCode: string;
   assetName: string;
@@ -19,6 +17,14 @@ interface AssetLoss {
   unit: string;
   quantity: number;
   originalValue: number;
+  warehouseId: string;
+  warehouseName: string;
+}
+
+interface AssetLoss {
+  id: string;
+  lossNo: string;
+  details: LossDetail[];
   lossType: 'full' | 'partial';
   status: 'pending' | 'approved' | 'rejected';
   reason: string;
@@ -30,8 +36,6 @@ interface AssetLoss {
   approveRemark?: string;
   outConfirmer?: string;
   outConfirmTime?: string;
-  warehouseId?: string;
-  warehouseName?: string;
 }
 
 const generateLossNo = () => {
@@ -45,32 +49,42 @@ const initialData: AssetLoss[] = [
   {
     id: 'AL001',
     lossNo: 'ZCBS20240601001',
-    assetId: 'AE001',
-    assetCode: 'SB20240001',
-    assetName: '数控车床',
-    specification: 'CJK6136',
-    unit: '台',
-    quantity: 1,
-    originalValue: 150000,
+    details: [
+      {
+        assetId: 'AE001',
+        assetCode: 'SB20240001',
+        assetName: '数控车床',
+        specification: 'CJK6136',
+        unit: '台',
+        quantity: 1,
+        originalValue: 150000,
+        warehouseId: 'WH003',
+        warehouseName: '固定资产仓',
+      },
+    ],
     lossType: 'full',
     status: 'pending',
     reason: '意外事故损坏，无法修复',
     remark: '车间搬运时不慎跌落',
     applicant: '张三',
     applyDate: '2024-06-01 09:30',
-    warehouseId: 'WH003',
-    warehouseName: '固定资产仓',
   },
   {
     id: 'AL002',
     lossNo: 'ZCBS20240602001',
-    assetId: 'AE002',
-    assetCode: 'SB20240002',
-    assetName: '铣床',
-    specification: 'X5032',
-    unit: '台',
-    quantity: 1,
-    originalValue: 85000,
+    details: [
+      {
+        assetId: 'AE002',
+        assetCode: 'SB20240002',
+        assetName: '铣床',
+        specification: 'X5032',
+        unit: '台',
+        quantity: 1,
+        originalValue: 85000,
+        warehouseId: 'WH003',
+        warehouseName: '固定资产仓',
+      },
+    ],
     lossType: 'partial',
     status: 'approved',
     reason: '展会运输途中损坏',
@@ -80,19 +94,23 @@ const initialData: AssetLoss[] = [
     approver: '王经理',
     approveTime: '2024-06-03 10:00',
     approveRemark: '同意报损，安排维修',
-    warehouseId: 'WH003',
-    warehouseName: '固定资产仓',
   },
   {
     id: 'AL003',
     lossNo: 'ZCBS20240603001',
-    assetId: 'AE005',
-    assetCode: 'SB20240005',
-    assetName: '叉车',
-    specification: 'CPCD30',
-    unit: '辆',
-    quantity: 1,
-    originalValue: 68000,
+    details: [
+      {
+        assetId: 'AE005',
+        assetCode: 'SB20240005',
+        assetName: '叉车',
+        specification: 'CPCD30',
+        unit: '辆',
+        quantity: 1,
+        originalValue: 68000,
+        warehouseId: 'WH003',
+        warehouseName: '固定资产仓',
+      },
+    ],
     lossType: 'full',
     status: 'rejected',
     reason: '外观刮擦',
@@ -102,8 +120,6 @@ const initialData: AssetLoss[] = [
     approver: '王经理',
     approveTime: '2024-06-03 15:30',
     approveRemark: '不影响使用，不同意报损',
-    warehouseId: 'WH003',
-    warehouseName: '固定资产仓',
   },
 ];
 
@@ -127,7 +143,10 @@ export default function AssetLoss() {
   const filteredData = useMemo(() => {
     return data.filter((o) => {
       if (applied.no && !o.lossNo.includes(applied.no)) return false;
-      if (applied.assetName && !o.assetName.includes(applied.assetName)) return false;
+      if (applied.assetName) {
+        const firstDetail = o.details[0];
+        if (!firstDetail || !firstDetail.assetName.includes(applied.assetName)) return false;
+      }
       if (applied.status && o.status !== applied.status) return false;
       if (applied.from && o.applyDate < applied.from) return false;
       if (applied.to && o.applyDate > applied.to + ' 23:59:59') return false;
@@ -143,7 +162,7 @@ export default function AssetLoss() {
     const approvedCount = data.filter((d) => d.status === 'approved').length;
     const totalAmount = data
       .filter((d) => d.status === 'approved')
-      .reduce((sum, d) => sum + d.originalValue, 0);
+      .reduce((sum, d) => sum + d.details.reduce((s, det) => s + det.originalValue, 0), 0);
     return { monthCount, pendingCount, approvedCount, totalAmount };
   }, [data]);
 
@@ -197,15 +216,22 @@ export default function AssetLoss() {
 
   const columns: ColumnDef<AssetLoss>[] = [
     { key: 'lossNo', title: '报损单号' },
-    { key: 'assetName', title: '资产名称' },
-    { key: 'warehouseName', title: '所在仓库' },
-    { key: 'specification', title: '规格型号' },
-    { key: 'quantity', title: '数量', align: 'right' },
+    {
+      key: 'itemCount',
+      title: '物资项数',
+      render: (row) => <span>{row.details.length} 项</span>,
+    },
+    {
+      key: 'quantity',
+      title: '数量',
+      align: 'right',
+      render: (row) => row.details.reduce((s, d) => s + d.quantity, 0),
+    },
     {
       key: 'originalValue',
       title: '原值',
       align: 'right',
-      render: (row) => `¥${row.originalValue.toLocaleString()}`,
+      render: (row) => `¥${row.details.reduce((s, d) => s + d.originalValue, 0).toLocaleString()}`,
     },
     {
       key: 'lossType',
@@ -234,6 +260,7 @@ export default function AssetLoss() {
                   setIsNew(false);
                   const cloned = JSON.parse(JSON.stringify(row));
                   setEditItem(cloned);
+                  setEditDetails(cloned.details);
                 }}
               >
                 编辑
@@ -280,7 +307,9 @@ export default function AssetLoss() {
       )
     );
 
-    updateAssetEquipment(item.assetId, { status: 'in_use' });
+    item.details.forEach((det) => {
+      updateAssetEquipment(det.assetId, { status: 'in_use' });
+    });
 
     alert(`反确认成功！报损单 ${item.lossNo} 已回退到待出库状态。`);
   };
@@ -290,72 +319,117 @@ export default function AssetLoss() {
   const [editItem, setEditItem] = useState<AssetLoss | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [assetPickerOpen, setAssetPickerOpen] = useState(false);
+  const [editDetails, setEditDetails] = useState<LossDetail[]>([]);
+  const [pickerSelectedIds, setPickerSelectedIds] = useState<string[]>([]);
 
   const openAdd = () => {
     const defaultWarehouse = fixedAssetWarehouses.length === 1 ? fixedAssetWarehouses[0] : null;
     const newItem: AssetLoss = {
       id: 'AL' + Date.now(),
       lossNo: generateLossNo(),
-      assetId: '',
-      assetCode: '',
-      assetName: '',
-      specification: '',
-      unit: '台',
-      quantity: 1,
-      originalValue: 0,
+      details: [],
       lossType: 'full',
       status: 'pending',
       reason: '',
       remark: '',
       applicant: '当前用户',
       applyDate: new Date().toISOString().slice(0, 16).replace('T', ' '),
-      warehouseId: defaultWarehouse?.id || '',
-      warehouseName: defaultWarehouse?.name || '',
     };
     setIsNew(true);
     setEditItem(newItem);
+    setEditDetails([]);
+    setPickerSelectedIds([]);
     if (defaultWarehouse) {
       setSelectedWarehouseId(defaultWarehouse.id);
     }
   };
 
-  const handleSelectAsset = (asset: AssetEquipment) => {
-    if (!editItem) return;
-    const assetWarehouse = warehouses.find((w) => w.id === asset.warehouseId);
-    setEditItem({
-      ...editItem,
-      assetId: asset.id,
-      assetCode: asset.code,
-      assetName: asset.name,
-      specification: asset.specification || '',
-      unit: asset.unit,
-      originalValue: asset.amount,
-      warehouseId: asset.warehouseId,
-      warehouseName: assetWarehouse?.name || '',
-    });
+  const openAssetPicker = () => {
+    setPickerSelectedIds(editDetails.map((d) => d.assetId));
+    setAssetPickerOpen(true);
+  };
+
+  const togglePickerAsset = (assetId: string) => {
+    setPickerSelectedIds((prev) =>
+      prev.includes(assetId) ? prev.filter((id) => id !== assetId) : [...prev, assetId]
+    );
+  };
+
+  const togglePickerSelectAll = () => {
+    if (pickerSelectedIds.length === filteredAssets.length) {
+      setPickerSelectedIds([]);
+    } else {
+      setPickerSelectedIds(filteredAssets.map((a) => a.id));
+    }
+  };
+
+  const confirmPickerSelection = () => {
+    const newDetails = pickerSelectedIds.map((assetId) => {
+      const asset = assetEquipments.find((a) => a.id === assetId);
+      if (!asset) return null;
+      const assetWarehouse = warehouses.find((w) => w.id === asset.warehouseId);
+      const existing = editDetails.find((d) => d.assetId === assetId);
+      return {
+        assetId: asset.id,
+        assetCode: asset.code,
+        assetName: asset.name,
+        specification: asset.specification || '',
+        unit: asset.unit,
+        quantity: existing ? existing.quantity : 1,
+        originalValue: asset.amount,
+        warehouseId: asset.warehouseId,
+        warehouseName: assetWarehouse?.name || '',
+      };
+    }).filter(Boolean) as LossDetail[];
+    setEditDetails(newDetails);
+    if (editItem) {
+      setEditItem({ ...editItem, details: newDetails });
+    }
     setAssetPickerOpen(false);
+  };
+
+  const removeDetail = (assetId: string) => {
+    const newDetails = editDetails.filter((d) => d.assetId !== assetId);
+    setEditDetails(newDetails);
+    if (editItem) {
+      setEditItem({ ...editItem, details: newDetails });
+    }
+  };
+
+  const updateDetailQuantity = (assetId: string, quantity: number) => {
+    const newDetails = editDetails.map((d) =>
+      d.assetId === assetId ? { ...d, quantity: Math.max(1, quantity) } : d
+    );
+    setEditDetails(newDetails);
+    if (editItem) {
+      setEditItem({ ...editItem, details: newDetails });
+    }
   };
 
   const handleSave = () => {
     if (!editItem) return;
-    if (!editItem.assetId) {
-      alert('请选择资产');
+    if (!editDetails.length) {
+      alert('请至少选择一项资产');
       return;
     }
-    if (!editItem.quantity || editItem.quantity <= 0) {
-      alert('报损数量必须大于0');
-      return;
+    for (const det of editDetails) {
+      if (!det.quantity || det.quantity < 1) {
+        alert(`资产 ${det.assetName} 的报损数量必须大于等于1`);
+        return;
+      }
     }
     if (!editItem.reason) {
       alert('请填写报损原因');
       return;
     }
+    const toSave: AssetLoss = { ...editItem, details: editDetails };
     if (isNew) {
-      setData([editItem, ...data]);
+      setData([toSave, ...data]);
     } else {
-      setData(data.map((d) => (d.id === editItem.id ? editItem : d)));
+      setData(data.map((d) => (d.id === editItem.id ? toSave : d)));
     }
     setEditItem(null);
+    setEditDetails([]);
   };
 
   const handleOutConfirm = (id: string) => {
@@ -378,7 +452,9 @@ export default function AssetLoss() {
     );
 
     if (item.lossType === 'full') {
-      updateAssetEquipment(item.assetId, { status: 'written_off' });
+      item.details.forEach((det) => {
+        updateAssetEquipment(det.assetId, { status: 'written_off' });
+      });
     }
   };
 
@@ -415,13 +491,14 @@ export default function AssetLoss() {
 
   const helpContent = {
     title: '资产报损功能说明',
-    description: '资产报损用于对因意外事故、自然灾害等原因造成损失的固定资产进行报损处理，确认出库后单据状态变更为已出库，资产状态变更为已报损。',
+    description: '资产报损用于对因意外事故、自然灾害等原因造成损失的固定资产进行报损处理，支持多资产批量选择，确认出库后单据状态变更为已出库，资产状态变更为已报损。',
     sections: [
       {
         heading: '新增操作',
         items: [
           '点击"新增报损单"按钮',
-          '选择要报损的资产（领用中的资产）',
+          '在资产选择弹窗中勾选多项资产（支持全选）',
+          '在报损明细表格中编辑每项资产的报损数量',
           '选择报损类型（全部报损/部分报损）',
           '填写报损原因和备注后保存'
         ]
@@ -430,7 +507,7 @@ export default function AssetLoss() {
         heading: '出库流程',
         items: [
           '待出库状态的报损单，点击"确认出库"',
-          '确认出库后单据状态变更为已出库，资产状态变更为已报损',
+          '确认出库后单据状态变更为已出库，各项资产状态变更为已报损',
           '点击"驳回"可驳回报损申请，需填写驳回原因'
         ]
       },
@@ -439,6 +516,23 @@ export default function AssetLoss() {
         items: [
           '报损单生成后即可打印，与状态无关',
           '点击操作栏的"打印"按钮即可打印报损单'
+        ]
+      },
+      {
+        heading: '统计卡片说明',
+        items: [
+          '本月报损：按制单日期为本月统计，包含所有状态的报损单数量',
+          '待审核：状态为 pending 的报损单数量',
+          '已报损：状态为 approved 的报损单数量',
+          '已驳回：状态为 rejected 的报损单数量'
+        ]
+      },
+      {
+        heading: '反确认',
+        items: [
+          '已出库(approved)的报损单可执行反确认',
+          '反确认操作会回退单据状态为待出库，并将资产状态恢复为领用中',
+          '点击操作栏的"反确认"按钮，确认后即可执行'
         ]
       }
     ]
@@ -450,6 +544,8 @@ export default function AssetLoss() {
     { value: 'approved', label: '已出库' },
     { value: 'rejected', label: '已驳回' },
   ];
+
+  const allPickerSelected = filteredAssets.length > 0 && pickerSelectedIds.length === filteredAssets.length;
 
   return (
     <div className="p-4">
@@ -554,24 +650,24 @@ export default function AssetLoss() {
             <div className="grid grid-cols-3 gap-y-2 text-sm p-4 border border-[#ebeef5] rounded bg-[#f5f7fa]">
               <div className="text-[#606266]">报损单号：</div>
               <div className="text-[#303133] col-span-2">{viewItem.lossNo}</div>
-              <div className="text-[#606266]">资产名称：</div>
-              <div className="text-[#303133] col-span-2">{viewItem.assetName}</div>
-              {viewItem.warehouseName && (
+              <div className="text-[#606266]">资产明细：</div>
+              <div className="text-[#303133] col-span-2">共 {viewItem.details.length} 项</div>
+              {viewItem.details.length > 0 && viewItem.details[0].warehouseName && (
                 <>
                   <div className="text-[#606266]">所在仓库：</div>
-                  <div className="text-[#303133] col-span-2">{viewItem.warehouseName}</div>
+                  <div className="text-[#303133] col-span-2">{viewItem.details[0].warehouseName}</div>
                 </>
               )}
-              <div className="text-[#606266]">规格型号：</div>
-              <div className="text-[#303133] col-span-2">{viewItem.specification}</div>
-              <div className="text-[#606266]">数量：</div>
-              <div className="text-[#303133] col-span-2">
-                {viewItem.quantity} {viewItem.unit}
-              </div>
-              <div className="text-[#606266]">原值：</div>
-              <div className="text-[#303133] col-span-2">¥{viewItem.originalValue.toLocaleString()}</div>
               <div className="text-[#606266]">报损类型：</div>
               <div className="text-[#303133] col-span-2">{lossTypeText(viewItem.lossType)}</div>
+              <div className="text-[#606266]">合计数量：</div>
+              <div className="text-[#303133] col-span-2">
+                {viewItem.details.reduce((s, d) => s + d.quantity, 0)} 项
+              </div>
+              <div className="text-[#606266]">合计原值：</div>
+              <div className="text-[#303133] col-span-2">
+                ¥{viewItem.details.reduce((s, d) => s + d.originalValue, 0).toLocaleString()}
+              </div>
               <div className="text-[#606266]">状态：</div>
               <div className={statusColor(viewItem.status) + ' col-span-2'}>
                 {statusText(viewItem.status)}
@@ -597,6 +693,37 @@ export default function AssetLoss() {
                 </>
               )}
             </div>
+
+            <div className="text-sm">
+              <div className="text-[#606266] mb-1">报损明细：</div>
+              <div className="border border-[#ebeef5] rounded overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-[#f5f7fa]">
+                    <tr>
+                      <th className="px-2 py-2 text-left text-[#606266] font-normal">物资编码</th>
+                      <th className="px-2 py-2 text-left text-[#606266] font-normal">物资名称</th>
+                      <th className="px-2 py-2 text-left text-[#606266] font-normal">规格</th>
+                      <th className="px-2 py-2 text-left text-[#606266] font-normal">单位</th>
+                      <th className="px-2 py-2 text-right text-[#606266] font-normal">数量</th>
+                      <th className="px-2 py-2 text-right text-[#606266] font-normal">原值</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {viewItem.details.map((d) => (
+                      <tr key={d.assetId} className="border-t border-[#ebeef5]">
+                        <td className="px-2 py-2 text-[#303133]">{d.assetCode}</td>
+                        <td className="px-2 py-2 text-[#303133]">{d.assetName}</td>
+                        <td className="px-2 py-2 text-[#303133]">{d.specification}</td>
+                        <td className="px-2 py-2 text-[#303133]">{d.unit}</td>
+                        <td className="px-2 py-2 text-right text-[#303133]">{d.quantity}</td>
+                        <td className="px-2 py-2 text-right text-[#303133]">¥{d.originalValue.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <div className="text-sm">
               <div className="text-[#606266] mb-1">报损原因：</div>
               <div className="text-[#303133] p-3 bg-[#f5f7fa] rounded">{viewItem.reason}</div>
@@ -623,8 +750,11 @@ export default function AssetLoss() {
       <Modal
         open={!!editItem}
         title={isNew ? '新增报损单' : '编辑报损单'}
-        onClose={() => setEditItem(null)}
-        width="max-w-[700px]"
+        onClose={() => {
+          setEditItem(null);
+          setEditDetails([]);
+        }}
+        width="max-w-[800px]"
       >
         {editItem && (
           <div className="space-y-4 text-sm">
@@ -639,35 +769,16 @@ export default function AssetLoss() {
               </div>
               <div>
                 <div className="mb-1 text-[#606266]">
-                  <span className="text-[#f56c6c]">*</span> 资产名称
+                  <span className="text-[#f56c6c]">*</span> 资产选择
                 </div>
                 <div className="flex gap-2">
                   <input
                     readOnly
                     className="flex-1 h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa] text-[#303133] cursor-pointer"
-                    value={editItem.assetName || '请选择资产'}
-                    onClick={() => setAssetPickerOpen(true)}
+                    value={editDetails.length > 0 ? `已选 ${editDetails.length} 项资产` : '请选择资产'}
+                    onClick={openAssetPicker}
                   />
-                  <DefaultButton onClick={() => setAssetPickerOpen(true)}>选择</DefaultButton>
-                </div>
-              </div>
-              <div>
-                <div className="mb-1 text-[#606266]">规格型号</div>
-                <input
-                  readOnly
-                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa] text-[#303133]"
-                  value={editItem.specification}
-                />
-              </div>
-              <div>
-                <div className="mb-1 text-[#606266]">原值</div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[#303133]">¥</span>
-                  <input
-                    readOnly
-                    className="flex-1 h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa] text-[#303133]"
-                    value={editItem.originalValue.toLocaleString()}
-                  />
+                  <DefaultButton onClick={openAssetPicker}>选择</DefaultButton>
                 </div>
               </div>
               <div>
@@ -686,23 +797,70 @@ export default function AssetLoss() {
                 </select>
               </div>
               <div>
-                <div className="mb-1 text-[#606266]">
-                  <span className="text-[#f56c6c]">*</span> 数量
-                </div>
+                <div className="mb-1 text-[#606266]">合计原值</div>
                 <div className="flex items-center gap-2">
+                  <span className="text-[#303133]">¥</span>
                   <input
-                    type="number"
-                    min="0"
-                    className="flex-1 h-8 px-2 border border-[#dcdfe6] rounded text-[#303133] focus:outline-none focus:border-[#2f54eb]"
-                    value={editItem.quantity || ''}
-                    onChange={(e) =>
-                      setEditItem({ ...editItem, quantity: parseInt(e.target.value, 10) || 0 })
-                    }
+                    readOnly
+                    className="flex-1 h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa] text-[#303133]"
+                    value={editDetails.reduce((s, d) => s + d.originalValue, 0).toLocaleString()}
                   />
-                  <span className="text-[#606266]">{editItem.unit}</span>
                 </div>
               </div>
             </div>
+
+            {editDetails.length > 0 && (
+              <div>
+                <div className="mb-1 text-[#606266]">报损明细（可编辑数量）</div>
+                <div className="border border-[#ebeef5] rounded overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#f5f7fa]">
+                      <tr>
+                        <th className="px-2 py-2 text-left text-[#606266] font-normal">物资编码</th>
+                        <th className="px-2 py-2 text-left text-[#606266] font-normal">物资名称</th>
+                        <th className="px-2 py-2 text-left text-[#606266] font-normal">规格</th>
+                        <th className="px-2 py-2 text-left text-[#606266] font-normal">单位</th>
+                        <th className="px-2 py-2 text-right text-[#606266] font-normal w-[100px]">数量</th>
+                        <th className="px-2 py-2 text-right text-[#606266] font-normal">原值</th>
+                        <th className="px-2 py-2 text-center text-[#606266] font-normal w-[60px]">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {editDetails.map((d) => (
+                        <tr key={d.assetId} className="border-t border-[#ebeef5]">
+                          <td className="px-2 py-2 text-[#303133]">{d.assetCode}</td>
+                          <td className="px-2 py-2 text-[#303133]">{d.assetName}</td>
+                          <td className="px-2 py-2 text-[#303133]">{d.specification}</td>
+                          <td className="px-2 py-2 text-[#303133]">{d.unit}</td>
+                          <td className="px-2 py-2 text-right text-[#303133]">
+                            <input
+                              type="number"
+                              min={1}
+                              className="w-full h-7 px-1 text-right border border-[#dcdfe6] rounded text-[#303133] focus:outline-none focus:border-[#2f54eb]"
+                              value={d.quantity}
+                              onChange={(e) =>
+                                updateDetailQuantity(d.assetId, parseInt(e.target.value, 10) || 1)
+                              }
+                            />
+                          </td>
+                          <td className="px-2 py-2 text-right text-[#303133]">¥{d.originalValue.toLocaleString()}</td>
+                          <td className="px-2 py-2 text-center">
+                            <button
+                              className="text-[#f56c6c] hover:text-[#d9363e] inline-flex items-center"
+                              onClick={() => removeDetail(d.assetId)}
+                              title="删除"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             <div>
               <div className="mb-1 text-[#606266]">
                 <span className="text-[#f56c6c]">*</span> 报损原因
@@ -728,12 +886,19 @@ export default function AssetLoss() {
           </div>
         )}
         <div className="mt-4 flex justify-end gap-2">
-          <DefaultButton onClick={() => setEditItem(null)}>取消</DefaultButton>
+          <DefaultButton
+            onClick={() => {
+              setEditItem(null);
+              setEditDetails([]);
+            }}
+          >
+            取消
+          </DefaultButton>
           <PrimaryButton onClick={handleSave}>保存</PrimaryButton>
         </div>
       </Modal>
 
-      <Modal open={assetPickerOpen} title="选择资产" onClose={() => setAssetPickerOpen(false)} width="max-w-[800px]">
+      <Modal open={assetPickerOpen} title="选择资产（支持多选）" onClose={() => setAssetPickerOpen(false)} width="max-w-[800px]">
         <div className="space-y-3">
           {fixedAssetWarehouses.length > 1 && (
             <div className="flex items-center gap-2">
@@ -773,10 +938,25 @@ export default function AssetLoss() {
               />
             </div>
           </div>
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-1.5 text-sm text-[#606266] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={allPickerSelected}
+                onChange={togglePickerSelectAll}
+                className="w-4 h-4"
+              />
+              全选（已选 {pickerSelectedIds.length}/{filteredAssets.length}）
+            </label>
+            <div className="text-sm text-[#606266]">
+              已选 <span className="text-[#2f54eb] font-medium">{pickerSelectedIds.length}</span> 项
+            </div>
+          </div>
           <div className="max-h-[400px] overflow-y-auto border border-[#ebeef5] rounded">
             <table className="w-full text-sm">
               <thead className="bg-[#f5f7fa] sticky top-0">
                 <tr>
+                  <th className="text-left p-2 text-[#606266] font-normal w-[40px]"></th>
                   <th className="text-left p-2 text-[#606266] font-normal">设备编码</th>
                   <th className="text-left p-2 text-[#606266] font-normal">设备名称</th>
                   <th className="text-left p-2 text-[#606266] font-normal">规格型号</th>
@@ -788,12 +968,21 @@ export default function AssetLoss() {
               <tbody>
                 {filteredAssets.map((asset) => {
                   const wh = warehouses.find((w) => w.id === asset.warehouseId);
+                  const isChecked = pickerSelectedIds.includes(asset.id);
                   return (
                     <tr
                       key={asset.id}
-                      className="border-t border-[#ebeef5] cursor-pointer hover:bg-[#ecf5ff]"
-                      onClick={() => handleSelectAsset(asset)}
+                      className={`border-t border-[#ebeef5] cursor-pointer hover:bg-[#ecf5ff] ${isChecked ? 'bg-[#ecf5ff]' : ''}`}
+                      onClick={() => togglePickerAsset(asset.id)}
                     >
+                      <td className="p-2">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          readOnly
+                          className="w-4 h-4 pointer-events-none"
+                        />
+                      </td>
                       <td className="p-2 text-[#303133]">{asset.code}</td>
                       <td className="p-2 text-[#303133]">{asset.name}</td>
                       <td className="p-2 text-[#303133]">{asset.specification || '-'}</td>
@@ -805,12 +994,16 @@ export default function AssetLoss() {
                 })}
                 {filteredAssets.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="p-4 text-center text-[#606266]">暂无数据</td>
+                    <td colSpan={7} className="p-4 text-center text-[#606266]">暂无数据</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <DefaultButton onClick={() => setAssetPickerOpen(false)}>取消</DefaultButton>
+          <PrimaryButton onClick={confirmPickerSelection}>确认选择</PrimaryButton>
         </div>
       </Modal>
 
@@ -823,21 +1016,19 @@ export default function AssetLoss() {
           orderNo={printItem.lossNo}
           orderType="资产报损"
           orderDate={printItem.applyDate.slice(0, 10)}
-          warehouseName=""
+          warehouseName={printItem.details[0]?.warehouseName || ''}
           custodian={printItem.applicant}
           remark={printItem.remark}
-          details={[
-            {
-              productCode: printItem.assetCode,
-              productName: printItem.assetName,
-              specification: printItem.specification,
-              unit: printItem.unit,
-              quantity: printItem.quantity,
-              unitPrice: printItem.originalValue,
-              amount: printItem.originalValue,
-              remark: `报损类型：${lossTypeText(printItem.lossType)}，报损原因：${printItem.reason}`,
-            },
-          ]}
+          details={printItem.details.map((d) => ({
+            productCode: d.assetCode,
+            productName: d.assetName,
+            specification: d.specification,
+            unit: d.unit,
+            quantity: d.quantity,
+            unitPrice: d.originalValue,
+            amount: d.originalValue,
+            remark: `报损类型：${lossTypeText(printItem.lossType)}，报损原因：${printItem.reason}`,
+          }))}
           detailColumns={[
             { key: 'index', label: '序号', align: 'center' },
             { key: 'productCode', label: '设备编码' },

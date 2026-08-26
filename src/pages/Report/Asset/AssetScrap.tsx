@@ -5,13 +5,10 @@ import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { Plus, Trash2, Clock, CheckCircle2, DollarSign, Printer, Search } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import type { AssetEquipment } from '@/types';
 import PrintDocument from '@/components/common/PrintDocument';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
 
-interface AssetScrap {
-  id: string;
-  scrapNo: string;
+interface ScrapDetail {
   assetId: string;
   assetCode: string;
   assetName: string;
@@ -19,6 +16,14 @@ interface AssetScrap {
   unit: string;
   quantity: number;
   originalValue: number;
+  warehouseId: string;
+  warehouseName: string;
+}
+
+interface AssetScrap {
+  id: string;
+  scrapNo: string;
+  details: ScrapDetail[];
   scrapType: 'full' | 'partial';
   status: 'pending' | 'approved' | 'rejected';
   reason: string;
@@ -30,8 +35,6 @@ interface AssetScrap {
   approveRemark?: string;
   outConfirmer?: string;
   outConfirmTime?: string;
-  warehouseId: string;
-  warehouseName: string;
 }
 
 const generateScrapNo = () => {
@@ -45,32 +48,42 @@ const initialData: AssetScrap[] = [
   {
     id: 'AS001',
     scrapNo: 'ZCBF20240601001',
-    assetId: 'AE001',
-    assetCode: 'SB20240001',
-    assetName: '数控车床',
-    specification: 'CJK6136',
-    unit: '台',
-    quantity: 1,
-    originalValue: 150000,
+    details: [
+      {
+        assetId: 'AE001',
+        assetCode: 'SB20240001',
+        assetName: '数控车床',
+        specification: 'CJK6136',
+        unit: '台',
+        quantity: 1,
+        originalValue: 150000,
+        warehouseId: 'WH003',
+        warehouseName: '固定资产仓',
+      },
+    ],
     scrapType: 'full',
     status: 'pending',
     reason: '设备老化，无法正常使用',
     remark: '使用年限已达8年',
     applicant: '张三',
     applyDate: '2024-06-01 09:30',
-    warehouseId: 'WH003',
-    warehouseName: '固定资产仓',
   },
   {
     id: 'AS002',
     scrapNo: 'ZCBF20240602001',
-    assetId: 'AE002',
-    assetCode: 'SB20240002',
-    assetName: '铣床',
-    specification: 'X5032',
-    unit: '台',
-    quantity: 1,
-    originalValue: 85000,
+    details: [
+      {
+        assetId: 'AE002',
+        assetCode: 'SB20240002',
+        assetName: '铣床',
+        specification: 'X5032',
+        unit: '台',
+        quantity: 1,
+        originalValue: 85000,
+        warehouseId: 'WH003',
+        warehouseName: '固定资产仓',
+      },
+    ],
     scrapType: 'partial',
     status: 'approved',
     reason: '损坏严重，无法修复',
@@ -80,19 +93,23 @@ const initialData: AssetScrap[] = [
     approver: '王经理',
     approveTime: '2024-06-03 10:00',
     approveRemark: '同意报废',
-    warehouseId: 'WH003',
-    warehouseName: '固定资产仓',
   },
   {
     id: 'AS003',
     scrapNo: 'ZCBF20240603001',
-    assetId: 'AE005',
-    assetCode: 'SB20240005',
-    assetName: '叉车',
-    specification: 'CPCD30',
-    unit: '辆',
-    quantity: 1,
-    originalValue: 68000,
+    details: [
+      {
+        assetId: 'AE005',
+        assetCode: 'SB20240005',
+        assetName: '叉车',
+        specification: 'CPCD30',
+        unit: '辆',
+        quantity: 1,
+        originalValue: 68000,
+        warehouseId: 'WH003',
+        warehouseName: '固定资产仓',
+      },
+    ],
     scrapType: 'full',
     status: 'rejected',
     reason: '外观老旧',
@@ -102,19 +119,23 @@ const initialData: AssetScrap[] = [
     approver: '王经理',
     approveTime: '2024-06-03 15:30',
     approveRemark: '可以继续使用，不同意报废',
-    warehouseId: 'WH003',
-    warehouseName: '固定资产仓',
   },
   {
     id: 'AS004',
     scrapNo: 'ZCBF20240605001',
-    assetId: 'AE007',
-    assetCode: 'SB20240007',
-    assetName: '钻床',
-    specification: 'Z516',
-    unit: '台',
-    quantity: 1,
-    originalValue: 12000,
+    details: [
+      {
+        assetId: 'AE007',
+        assetCode: 'SB20240007',
+        assetName: '钻床',
+        specification: 'Z516',
+        unit: '台',
+        quantity: 1,
+        originalValue: 12000,
+        warehouseId: 'WH003',
+        warehouseName: '固定资产仓',
+      },
+    ],
     scrapType: 'full',
     status: 'approved',
     reason: '主轴损坏，维修成本过高',
@@ -124,8 +145,6 @@ const initialData: AssetScrap[] = [
     approver: '李总监',
     approveTime: '2024-06-06 09:00',
     approveRemark: '同意报废处理',
-    warehouseId: 'WH003',
-    warehouseName: '固定资产仓',
   },
 ];
 
@@ -149,7 +168,7 @@ export default function AssetScrap() {
   const filteredData = useMemo(() => {
     return data.filter((o) => {
       if (applied.no && !o.scrapNo.includes(applied.no)) return false;
-      if (applied.assetName && !o.assetName.includes(applied.assetName)) return false;
+      if (applied.assetName && !o.details.some((d) => d.assetName.includes(applied.assetName))) return false;
       if (applied.status && o.status !== applied.status) return false;
       if (applied.from && o.applyDate < applied.from) return false;
       if (applied.to && o.applyDate > applied.to + ' 23:59:59') return false;
@@ -165,7 +184,7 @@ export default function AssetScrap() {
     const approvedCount = data.filter((d) => d.status === 'approved').length;
     const totalAmount = data
       .filter((d) => d.status === 'approved')
-      .reduce((sum, d) => sum + d.originalValue, 0);
+      .reduce((sum, d) => sum + d.details.reduce((s, det) => s + det.originalValue, 0), 0);
     return { monthCount, pendingCount, approvedCount, totalAmount };
   }, [data]);
 
@@ -222,14 +241,17 @@ export default function AssetScrap() {
 
   const columns: ColumnDef<AssetScrap>[] = [
     { key: 'scrapNo', title: '报废单号' },
-    { key: 'assetName', title: '资产名称' },
-    { key: 'specification', title: '规格型号' },
-    { key: 'quantity', title: '数量', align: 'right' },
     {
-      key: 'originalValue',
-      title: '原值',
+      key: 'totalQuantity',
+      title: '数量',
       align: 'right',
-      render: (row) => `¥${row.originalValue.toLocaleString()}`,
+      render: (row) => row.details.reduce((s, d) => s + d.quantity, 0),
+    },
+    {
+      key: 'totalValue',
+      title: '原值合计',
+      align: 'right',
+      render: (row) => `¥${row.details.reduce((s, d) => s + d.originalValue, 0).toLocaleString()}`,
     },
     {
       key: 'scrapType',
@@ -242,7 +264,12 @@ export default function AssetScrap() {
       render: (row) => <span className={statusColor(row.status)}>{statusText(row.status)}</span>,
     },
     { key: 'applyDate', title: '申请日期' },
-    { key: 'warehouseName', title: '所在仓库' },
+    {
+      key: 'itemCount',
+      title: '明细数',
+      align: 'right',
+      render: (row) => row.details.length,
+    },
     {
       key: 'op',
       title: '操作',
@@ -259,6 +286,7 @@ export default function AssetScrap() {
                   setIsNew(false);
                   const cloned = JSON.parse(JSON.stringify(row));
                   setEditItem(cloned);
+                  setEditDetails(cloned.details);
                 }}
               >
                 编辑
@@ -305,7 +333,9 @@ export default function AssetScrap() {
       )
     );
 
-    updateAssetEquipment(item.assetId, { status: 'in_use' });
+    item.details.forEach((detail) => {
+      updateAssetEquipment(detail.assetId, { status: 'in_use' });
+    });
 
     alert(`反确认成功！报废单 ${item.scrapNo} 已回退到待出库状态。`);
   };
@@ -313,75 +343,106 @@ export default function AssetScrap() {
   const [viewItem, setViewItem] = useState<AssetScrap | null>(null);
 
   const [editItem, setEditItem] = useState<AssetScrap | null>(null);
+  const [editDetails, setEditDetails] = useState<ScrapDetail[]>([]);
   const [isNew, setIsNew] = useState(false);
   const [assetPickerOpen, setAssetPickerOpen] = useState(false);
 
   const openAdd = () => {
-    const defaultWarehouseId = fixedAssetWarehouses.length === 1 ? fixedAssetWarehouses[0].id : '';
-    const defaultWarehouseName = fixedAssetWarehouses.length === 1 ? fixedAssetWarehouses[0].name : '';
     const newItem: AssetScrap = {
       id: 'AS' + Date.now(),
       scrapNo: generateScrapNo(),
-      assetId: '',
-      assetCode: '',
-      assetName: '',
-      specification: '',
-      unit: '台',
-      quantity: 1,
-      originalValue: 0,
+      details: [],
       scrapType: 'full',
       status: 'pending',
       reason: '',
       remark: '',
       applicant: '当前用户',
       applyDate: new Date().toISOString().slice(0, 16).replace('T', ' '),
-      warehouseId: defaultWarehouseId,
-      warehouseName: defaultWarehouseName,
     };
     setIsNew(true);
     setEditItem(newItem);
+    setEditDetails([]);
     if (fixedAssetWarehouses.length === 1) {
       setSelectedWarehouseId(fixedAssetWarehouses[0].id);
     }
   };
 
-  const handleSelectAsset = (asset: AssetEquipment) => {
-    if (!editItem) return;
-    const assetWarehouse = warehouses.find((w) => w.id === asset.warehouseId);
-    setEditItem({
-      ...editItem,
-      assetId: asset.id,
-      assetCode: asset.code,
-      assetName: asset.name,
-      specification: asset.specification,
-      unit: asset.unit,
-      originalValue: asset.amount,
-      warehouseId: asset.warehouseId || '',
-      warehouseName: assetWarehouse?.name || '',
-    });
+  const [pickerSelectedIds, setPickerSelectedIds] = useState<string[]>([]);
+
+  const togglePickerAsset = (assetId: string) => {
+    setPickerSelectedIds((prev) =>
+      prev.includes(assetId) ? prev.filter((id) => id !== assetId) : [...prev, assetId]
+    );
+  };
+
+  const togglePickerSelectAll = () => {
+    if (pickerSelectedIds.length === filteredAssets.length) {
+      setPickerSelectedIds([]);
+    } else {
+      setPickerSelectedIds(filteredAssets.map((a) => a.id));
+    }
+  };
+
+  const addSelectedAssets = () => {
+    if (!editItem || pickerSelectedIds.length === 0) {
+      setAssetPickerOpen(false);
+      return;
+    }
+    const newDetails = pickerSelectedIds
+      .map((id) => {
+        const asset = filteredAssets.find((a) => a.id === id);
+        if (!asset) return null;
+        const warehouse = warehouses.find((w) => w.id === asset.warehouseId);
+        return {
+          assetId: asset.id,
+          assetCode: asset.code,
+          assetName: asset.name,
+          specification: asset.specification || '',
+          unit: asset.unit,
+          quantity: 1,
+          originalValue: asset.amount,
+          warehouseId: asset.warehouseId || '',
+          warehouseName: warehouse?.name || '',
+        } as ScrapDetail;
+      })
+      .filter((d): d is ScrapDetail => d !== null);
+
+    setEditDetails([...editDetails, ...newDetails]);
+    setPickerSelectedIds([]);
     setAssetPickerOpen(false);
+  };
+
+  const removeDetail = (index: number) => {
+    setEditDetails(editDetails.filter((_, i) => i !== index));
+  };
+
+  const updateDetailQuantity = (index: number, value: number) => {
+    if (value < 1) return;
+    setEditDetails(editDetails.map((d, i) => (i === index ? { ...d, quantity: value } : d)));
   };
 
   const handleSave = () => {
     if (!editItem) return;
-    if (!editItem.assetId) {
-      alert('请选择资产');
+    if (editDetails.length === 0) {
+      alert('请至少选择一项资产');
       return;
     }
-    if (!editItem.quantity || editItem.quantity <= 0) {
-      alert('报废数量必须大于0');
+    if (editDetails.some((d) => d.quantity < 1)) {
+      alert('每项资产数量必须大于等于1');
       return;
     }
     if (!editItem.reason) {
       alert('请填写报废原因');
       return;
     }
+    const toSave: AssetScrap = { ...editItem, details: editDetails };
     if (isNew) {
-      setData([editItem, ...data]);
+      setData([toSave, ...data]);
     } else {
-      setData(data.map((d) => (d.id === editItem.id ? editItem : d)));
+      setData(data.map((d) => (d.id === editItem.id ? toSave : d)));
     }
     setEditItem(null);
+    setEditDetails([]);
   };
 
   const handleOutConfirm = (id: string) => {
@@ -404,7 +465,9 @@ export default function AssetScrap() {
     );
 
     if (item.scrapType === 'full') {
-      updateAssetEquipment(item.assetId, { status: 'scrapped' });
+      item.details.forEach((detail) => {
+        updateAssetEquipment(detail.assetId, { status: 'scrapped' });
+      });
     }
   };
 
@@ -441,13 +504,14 @@ export default function AssetScrap() {
 
   const helpContent = {
     title: '资产报废功能说明',
-    description: '资产报废用于对达到使用年限或无法修复的固定资产进行报废处理，确认出库后单据状态变更为已出库，资产状态变更为已报废。',
+    description: '资产报废用于对达到使用年限或无法修复的固定资产进行报废处理，支持多选资产批量报废，确认出库后单据状态变更为已出库，资产状态变更为已报废。',
     sections: [
       {
         heading: '新增操作',
         items: [
           '点击"新增报废单"按钮',
-          '选择要报废的资产（领用中的资产）',
+          '点击"选择资产"打开资产选择弹窗，支持多选和全选',
+          '每项资产可单独编辑数量（最少为1）',
           '选择报废类型（全部报废/部分报废）',
           '填写报废原因和备注后保存'
         ]
@@ -456,7 +520,7 @@ export default function AssetScrap() {
         heading: '出库流程',
         items: [
           '待出库状态的报废单，点击"确认出库"',
-          '确认出库后单据状态变更为已出库，资产状态变更为已报废',
+          '确认出库后单据状态变更为已出库，所有资产状态变更为已报废',
           '点击"驳回"可驳回报废申请，需填写驳回原因'
         ]
       },
@@ -464,7 +528,25 @@ export default function AssetScrap() {
         heading: '打印功能',
         items: [
           '报废单生成后即可打印，与状态无关',
-          '点击操作栏的"打印"按钮即可打印报废单'
+          '点击操作栏的"打印"按钮即可打印报废单',
+          '打印内容包含所有报废资产明细'
+        ]
+      },
+      {
+        heading: '统计卡片说明',
+        items: [
+          '本月报废：按制单日期为本月统计，包含所有状态的报废单数量',
+          '待审核：状态为 pending 的报废单数量',
+          '已报废：状态为 approved 的报废单数量',
+          '已驳回：状态为 rejected 的报废单数量'
+        ]
+      },
+      {
+        heading: '反确认',
+        items: [
+          '已出库(approved)的报废单可执行反确认',
+          '反确认操作会回退单据状态为待出库，并将资产状态恢复为领用中',
+          '点击操作栏的"反确认"按钮，确认后即可执行'
         ]
       }
     ]
@@ -584,22 +666,12 @@ export default function AssetScrap() {
       </div>
 
       {/* 查看弹窗 */}
-      <Modal open={!!viewItem} title="报废单详情" onClose={() => setViewItem(null)}>
+      <Modal open={!!viewItem} title="报废单详情" onClose={() => setViewItem(null)} width="max-w-[800px]">
         {viewItem && (
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-y-2 text-sm p-4 border border-[#ebeef5] rounded bg-[#f5f7fa]">
               <div className="text-[#606266]">报废单号：</div>
               <div className="text-[#303133] col-span-2">{viewItem.scrapNo}</div>
-              <div className="text-[#606266]">资产名称：</div>
-              <div className="text-[#303133] col-span-2">{viewItem.assetName}</div>
-              <div className="text-[#606266]">规格型号：</div>
-              <div className="text-[#303133] col-span-2">{viewItem.specification}</div>
-              <div className="text-[#606266]">数量：</div>
-              <div className="text-[#303133] col-span-2">
-                {viewItem.quantity} {viewItem.unit}
-              </div>
-              <div className="text-[#606266]">原值：</div>
-              <div className="text-[#303133] col-span-2">¥{viewItem.originalValue.toLocaleString()}</div>
               <div className="text-[#606266]">报废类型：</div>
               <div className="text-[#303133] col-span-2">{scrapTypeText(viewItem.scrapType)}</div>
               <div className="text-[#606266]">状态：</div>
@@ -610,8 +682,8 @@ export default function AssetScrap() {
               <div className="text-[#303133] col-span-2">{viewItem.applicant}</div>
               <div className="text-[#606266]">申请日期：</div>
               <div className="text-[#303133] col-span-2">{viewItem.applyDate}</div>
-              <div className="text-[#606266]">所在仓库：</div>
-              <div className="text-[#303133] col-span-2">{viewItem.warehouseName || '-'}</div>
+              <div className="text-[#606266]">明细数：</div>
+              <div className="text-[#303133] col-span-2">{viewItem.details.length} 项</div>
               {viewItem.outConfirmer && (
                 <>
                   <div className="text-[#606266]">出库确认人：</div>
@@ -629,6 +701,51 @@ export default function AssetScrap() {
                 </>
               )}
             </div>
+
+            <div className="text-sm">
+              <div className="text-[#606266] mb-1 font-medium">报废资产明细：</div>
+              <div className="border border-[#ebeef5] rounded overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-[#f5f7fa] text-[#606266]">
+                    <tr>
+                      <th className="px-2 py-2 text-left font-medium">物资编码</th>
+                      <th className="px-2 py-2 text-left font-medium">物资名称</th>
+                      <th className="px-2 py-2 text-left font-medium">规格</th>
+                      <th className="px-2 py-2 text-left font-medium">单位</th>
+                      <th className="px-2 py-2 text-right font-medium">数量</th>
+                      <th className="px-2 py-2 text-right font-medium">原值</th>
+                      <th className="px-2 py-2 text-left font-medium">所在仓库</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {viewItem.details.map((d, i) => (
+                      <tr key={`${d.assetId}-${i}`} className="border-t border-[#ebeef5]">
+                        <td className="px-2 py-2 text-[#303133]">{d.assetCode}</td>
+                        <td className="px-2 py-2 text-[#303133]">{d.assetName}</td>
+                        <td className="px-2 py-2 text-[#606266]">{d.specification}</td>
+                        <td className="px-2 py-2 text-[#606266]">{d.unit}</td>
+                        <td className="px-2 py-2 text-right text-[#303133]">{d.quantity}</td>
+                        <td className="px-2 py-2 text-right text-[#303133]">¥{d.originalValue.toLocaleString()}</td>
+                        <td className="px-2 py-2 text-[#606266]">{d.warehouseName || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t border-[#ebeef5] bg-[#fafbfc]">
+                      <td colSpan={4} className="px-2 py-2 text-right text-[#606266]">合计：</td>
+                      <td className="px-2 py-2 text-right font-medium text-[#303133]">
+                        {viewItem.details.reduce((s, d) => s + d.quantity, 0)}
+                      </td>
+                      <td className="px-2 py-2 text-right font-medium text-[#303133]">
+                        ¥{viewItem.details.reduce((s, d) => s + d.originalValue, 0).toLocaleString()}
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+
             <div className="text-sm">
               <div className="text-[#606266] mb-1">报废原因：</div>
               <div className="text-[#303133] p-3 bg-[#f5f7fa] rounded">{viewItem.reason}</div>
@@ -656,8 +773,11 @@ export default function AssetScrap() {
       <Modal
         open={!!editItem}
         title={isNew ? '新增报废单' : '编辑报废单'}
-        onClose={() => setEditItem(null)}
-        width="max-w-[700px]"
+        onClose={() => {
+          setEditItem(null);
+          setEditDetails([]);
+        }}
+        width="max-w-[800px]"
       >
         {editItem && (
           <div className="space-y-4 text-sm">
@@ -669,39 +789,6 @@ export default function AssetScrap() {
                   value={editItem.scrapNo}
                   onChange={(e) => setEditItem({ ...editItem, scrapNo: e.target.value })}
                 />
-              </div>
-              <div>
-                <div className="mb-1 text-[#606266]">
-                  <span className="text-[#f56c6c]">*</span> 资产名称
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    readOnly
-                    className="flex-1 h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa] text-[#303133] cursor-pointer"
-                    value={editItem.assetName || '请选择资产'}
-                    onClick={() => setAssetPickerOpen(true)}
-                  />
-                  <DefaultButton onClick={() => setAssetPickerOpen(true)}>选择</DefaultButton>
-                </div>
-              </div>
-              <div>
-                <div className="mb-1 text-[#606266]">规格型号</div>
-                <input
-                  readOnly
-                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa] text-[#303133]"
-                  value={editItem.specification}
-                />
-              </div>
-              <div>
-                <div className="mb-1 text-[#606266]">原值</div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[#303133]">¥</span>
-                  <input
-                    readOnly
-                    className="flex-1 h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa] text-[#303133]"
-                    value={editItem.originalValue.toLocaleString()}
-                  />
-                </div>
               </div>
               <div>
                 <div className="mb-1 text-[#606266]">
@@ -718,24 +805,86 @@ export default function AssetScrap() {
                   <option value="partial">部分报废</option>
                 </select>
               </div>
-              <div>
-                <div className="mb-1 text-[#606266]">
-                  <span className="text-[#f56c6c]">*</span> 数量
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="0"
-                    className="flex-1 h-8 px-2 border border-[#dcdfe6] rounded text-[#303133] focus:outline-none focus:border-[#2f54eb]"
-                    value={editItem.quantity || ''}
-                    onChange={(e) =>
-                      setEditItem({ ...editItem, quantity: parseInt(e.target.value, 10) || 0 })
-                    }
-                  />
-                  <span className="text-[#606266]">{editItem.unit}</span>
-                </div>
-              </div>
             </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-[#606266]">
+                  <span className="text-[#f56c6c]">*</span> 报废资产明细
+                  {editDetails.length > 0 && (
+                    <span className="ml-2 text-[#909399]">共 {editDetails.length} 项</span>
+                  )}
+                </div>
+                <DefaultButton onClick={() => setAssetPickerOpen(true)}>选择资产</DefaultButton>
+              </div>
+              {editDetails.length === 0 ? (
+                <div
+                  className="border border-dashed border-[#dcdfe6] rounded py-8 text-center text-[#909399] cursor-pointer hover:border-[#2f54eb] hover:text-[#2f54eb] transition-colors"
+                  onClick={() => setAssetPickerOpen(true)}
+                >
+                  请点击"选择资产"添加要报废的资产
+                </div>
+              ) : (
+                <div className="border border-[#ebeef5] rounded overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#f5f7fa] text-[#606266]">
+                      <tr>
+                        <th className="px-2 py-2 text-left font-medium">物资编码</th>
+                        <th className="px-2 py-2 text-left font-medium">物资名称</th>
+                        <th className="px-2 py-2 text-left font-medium">规格</th>
+                        <th className="px-2 py-2 text-left font-medium">单位</th>
+                        <th className="px-2 py-2 text-right font-medium w-[100px]">数量</th>
+                        <th className="px-2 py-2 text-right font-medium">原值</th>
+                        <th className="px-2 py-2 text-center font-medium w-[60px]">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {editDetails.map((d, i) => (
+                        <tr key={`${d.assetId}-${i}`} className="border-t border-[#ebeef5]">
+                          <td className="px-2 py-2 text-[#303133]">{d.assetCode}</td>
+                          <td className="px-2 py-2 text-[#303133]">{d.assetName}</td>
+                          <td className="px-2 py-2 text-[#606266]">{d.specification}</td>
+                          <td className="px-2 py-2 text-[#606266]">{d.unit}</td>
+                          <td className="px-2 py-2 text-right">
+                            <input
+                              type="number"
+                              min={1}
+                              value={d.quantity}
+                              onChange={(e) => updateDetailQuantity(i, parseInt(e.target.value, 10) || 1)}
+                              className="w-[70px] h-7 px-2 border border-[#dcdfe6] rounded text-right text-[#303133] focus:outline-none focus:border-[#2f54eb]"
+                            />
+                          </td>
+                          <td className="px-2 py-2 text-right text-[#303133]">
+                            ¥{d.originalValue.toLocaleString()}
+                          </td>
+                          <td className="px-2 py-2 text-center">
+                            <button
+                              className="text-[#f56c6c] hover:opacity-80"
+                              onClick={() => removeDetail(i)}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t border-[#ebeef5] bg-[#fafbfc]">
+                        <td colSpan={4} className="px-2 py-2 text-right text-[#606266]">合计：</td>
+                        <td className="px-2 py-2 text-right font-medium text-[#303133]">
+                          {editDetails.reduce((s, d) => s + d.quantity, 0)}
+                        </td>
+                        <td className="px-2 py-2 text-right font-medium text-[#303133]">
+                          ¥{editDetails.reduce((s, d) => s + d.originalValue, 0).toLocaleString()}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
+
             <div>
               <div className="mb-1 text-[#606266]">
                 <span className="text-[#f56c6c]">*</span> 报废原因
@@ -761,13 +910,28 @@ export default function AssetScrap() {
           </div>
         )}
         <div className="mt-4 flex justify-end gap-2">
-          <DefaultButton onClick={() => setEditItem(null)}>取消</DefaultButton>
+          <DefaultButton
+            onClick={() => {
+              setEditItem(null);
+              setEditDetails([]);
+            }}
+          >
+            取消
+          </DefaultButton>
           <PrimaryButton onClick={handleSave}>保存</PrimaryButton>
         </div>
       </Modal>
 
       {/* 资产选择弹窗 */}
-      <Modal open={assetPickerOpen} title="选择资产" onClose={() => setAssetPickerOpen(false)} width="max-w-[900px]">
+      <Modal
+        open={assetPickerOpen}
+        title="选择资产"
+        onClose={() => {
+          setAssetPickerOpen(false);
+          setPickerSelectedIds([]);
+        }}
+        width="max-w-[900px]"
+      >
         <div className="space-y-3">
           {fixedAssetWarehouses.length > 1 && (
             <div className="flex items-center gap-2 pb-2 border-b border-[#ebeef5]">
@@ -813,10 +977,27 @@ export default function AssetScrap() {
               />
             </div>
           </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-1.5 text-sm cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={filteredAssets.length > 0 && pickerSelectedIds.length === filteredAssets.length}
+                  onChange={togglePickerSelectAll}
+                  className="w-4 h-4 accent-[#2f54eb]"
+                />
+                <span className="text-[#606266]">全选</span>
+              </label>
+              {pickerSelectedIds.length > 0 && (
+                <span className="text-sm text-[#2f54eb]">已选 {pickerSelectedIds.length} 项</span>
+              )}
+            </div>
+          </div>
           <div className="max-h-[400px] overflow-y-auto border border-[#ebeef5] rounded">
             <table className="w-full text-sm">
               <thead className="bg-[#f5f7fa] text-[#606266]">
                 <tr>
+                  <th className="px-3 py-2 w-[40px]"></th>
                   <th className="px-3 py-2 text-left font-medium">设备编码</th>
                   <th className="px-3 py-2 text-left font-medium">设备名称</th>
                   <th className="px-3 py-2 text-left font-medium">规格型号</th>
@@ -828,12 +1009,22 @@ export default function AssetScrap() {
               <tbody>
                 {filteredAssets.map((asset) => {
                   const assetWarehouse = warehouses.find((w) => w.id === asset.warehouseId);
+                  const checked = pickerSelectedIds.includes(asset.id);
                   return (
                     <tr
                       key={asset.id}
-                      className="border-t border-[#ebeef5] cursor-pointer hover:bg-[#ecf5ff]"
-                      onClick={() => handleSelectAsset(asset)}
+                      className={`border-t border-[#ebeef5] cursor-pointer hover:bg-[#ecf5ff] ${checked ? 'bg-[#ecf5ff]' : ''}`}
+                      onClick={() => togglePickerAsset(asset.id)}
                     >
+                      <td className="px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => togglePickerAsset(asset.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 accent-[#2f54eb]"
+                        />
+                      </td>
                       <td className="px-3 py-2 text-[#303133]">{asset.code}</td>
                       <td className="px-3 py-2 text-[#303133]">{asset.name}</td>
                       <td className="px-3 py-2 text-[#606266]">{asset.specification}</td>
@@ -845,12 +1036,25 @@ export default function AssetScrap() {
                 })}
                 {filteredAssets.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-3 py-8 text-center text-[#909399]">暂无数据</td>
+                    <td colSpan={7} className="px-3 py-8 text-center text-[#909399]">暂无数据</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <DefaultButton
+            onClick={() => {
+              setAssetPickerOpen(false);
+              setPickerSelectedIds([]);
+            }}
+          >
+            取消
+          </DefaultButton>
+          <PrimaryButton onClick={addSelectedAssets}>
+            确认添加 {pickerSelectedIds.length > 0 && `(${pickerSelectedIds.length})`}
+          </PrimaryButton>
         </div>
       </Modal>
 
@@ -866,18 +1070,16 @@ export default function AssetScrap() {
           warehouseName=""
           custodian={printItem.applicant}
           remark={printItem.remark}
-          details={[
-            {
-              productCode: printItem.assetCode,
-              productName: printItem.assetName,
-              specification: printItem.specification,
-              unit: printItem.unit,
-              quantity: printItem.quantity,
-              unitPrice: printItem.originalValue,
-              amount: printItem.originalValue,
-              remark: `报废类型：${scrapTypeText(printItem.scrapType)}，报废原因：${printItem.reason}`,
-            },
-          ]}
+          details={printItem.details.map((d) => ({
+            productCode: d.assetCode,
+            productName: d.assetName,
+            specification: d.specification,
+            unit: d.unit,
+            quantity: d.quantity,
+            unitPrice: d.originalValue,
+            amount: d.originalValue,
+            remark: `报废类型：${scrapTypeText(printItem.scrapType)}，报废原因：${printItem.reason}`,
+          }))}
           detailColumns={[
             { key: 'index', label: '序号', align: 'center' },
             { key: 'productCode', label: '设备编码' },

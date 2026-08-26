@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   Boxes, ArrowDownToLine, ArrowUpFromLine, Package, FileText, ChevronRight, Warehouse, RotateCcw, AlertTriangle,
-  ClipboardList, Users, FileCheck, ShoppingCart, CheckSquare, ArrowRightLeft, LayoutGrid, Workflow
+  ClipboardList, Users, FileCheck, ShoppingCart, CheckSquare, ArrowRightLeft, LayoutGrid, Workflow, Award
 } from 'lucide-react';
 
 interface MenuChild {
   title: string;
   path: string;
   visible?: boolean;
+  icon?: any;
   children?: MenuChild[];
 }
 
@@ -21,22 +22,40 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   {
-    title: '采购管理',
+    title: '功能说明',
+    icon: FileText,
+    path: '/procurement/function-docs',
+  },
+  {
+    title: '招采合约管理',
     icon: ClipboardList,
     children: [
-      { title: '采购计划管理', path: '/procurement/plan' },
-      { title: '采购计划汇总', path: '/procurement/plan-summary' },
-      { title: '采购需求申请', path: '/procurement/demand' },
-      { title: '采购工单', path: '/procurement/bidding' },
-      { title: '报价单管理', path: '/procurement/supplier-quote' },
-      { title: '网站信息报送审核发布', path: '/procurement/website-info' },
-      { title: '合同台账管理', path: '/procurement/contract' },
-      { title: '合同归档管理', path: '/procurement/contract-archive' },
-      { title: '采购订单管理', path: '/procurement/contract-purchase-order' },
-      { title: '验收管理', path: '/procurement/inspection' },
-      { title: '合同模板管理', path: '/procurement/contract-template' },
-      { title: '审批流程配置', path: '/procurement/approval-flow' },
-      { title: '供应商管理', path: '/procurement/supplier' },
+      { title: '招采计划管理', path: '/procurement/plan-group', children: [
+        { title: '招采计划', path: '/procurement/plan' },
+        { title: '招采计划汇总', path: '/procurement/plan-summary' },
+      ]},
+      { title: '招采需求申请管理', path: '/procurement/demand' },
+      { title: '招采实施过程管理', path: '/procurement/process-group', children: [
+        { title: '招采工单', path: '/procurement/bidding' },
+        { title: '报价单', path: '/procurement/supplier-quote' },
+      ]},
+      { title: '合约管理', path: '/procurement/contract-group', children: [
+        { title: '合同文本管理', path: '/procurement/contract-template' },
+        { title: '合同台账', path: '/procurement/contract' },
+        { title: '合同归档', path: '/procurement/contract-archive' },
+      ]},
+      { title: '供应商管理', path: '/procurement/supplier-group', children: [
+        { title: '供应商列表', path: '/procurement/supplier' },
+        { title: '履约评估管理', path: '/procurement/evaluation', icon: Award, children: [
+          { title: '评估模板管理', path: '/procurement/evaluation-template' },
+          { title: '评估执行', path: '/procurement/evaluation-execute' },
+          { title: '评估记录', path: '/procurement/evaluation-record' },
+        ]},
+      ]},
+      { title: '招采订单管理', path: '/procurement/contract-purchase-order' },
+      { title: '招采项目验收', path: '/procurement/inspection' },
+      { title: '网站信息报送审核发布', path: '/procurement/website-info', visible: false },
+      { title: '审批流程配置', path: '/procurement/approval-flow', visible: false },
     ],
   },
   {
@@ -95,6 +114,7 @@ const menuItems: MenuItem[] = [
       { title: '资产报废', path: '/asset/scrap' },
       { title: '资产报损', path: '/asset/loss' },
       { title: '资产报表', path: '/asset/report' },
+      { title: '会议纪要', path: '/asset/meeting-notes' },
     ],
   },
   {
@@ -142,16 +162,22 @@ export default function Sidebar() {
 
   const renderSubMenu = (child: MenuChild, depth: number = 2) => {
     const hasChildren = child.children && child.children.length > 0;
-    const paddingLeft = depth === 2 ? 'pl-12' : 'pl-16';
+    const paddingMap: Record<number, string> = {
+      2: 'pl-12',
+      3: 'pl-16',
+      4: 'pl-20',
+    };
+    const paddingLeft = paddingMap[depth] || 'pl-20';
 
     if (hasChildren) {
+      const Icon = child.icon;
       return (
         <div key={child.path}>
           <button
             onClick={() => toggleMenu(child.title)}
             className={`w-full flex items-center gap-3 ${paddingLeft} pr-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-all duration-200`}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400/60"></span>
+            {Icon ? <Icon size={16} className="text-indigo-300" /> : <span className="w-1.5 h-1.5 rounded-full bg-indigo-400/60"></span>}
             <span className="flex-1 text-left">{child.title}</span>
             <ChevronRight
               size={14}
@@ -162,40 +188,26 @@ export default function Sidebar() {
           </button>
           {expandedMenus.includes(child.title) && (
             <div className="bg-black/20">
-              {child.children!.filter(c => c.visible !== false).map((c) => (
-              <NavLink
-                key={c.path}
-                to={c.path}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 pl-20 pr-4 py-2.5 text-sm transition-all duration-200 ${
-                    isActive
-                      ? 'bg-gradient-to-r from-indigo-500/90 to-purple-600/90 text-white shadow-lg shadow-indigo-900/30'
-                      : 'text-slate-400 hover:text-white hover:bg-white/5'
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <span className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${
-                      isActive ? 'bg-white' : 'bg-slate-500'
-                    }`}></span>
-                    <span>{c.title}</span>
-                  </>
-                )}
-              </NavLink>
-            ))}
+              {child.children!.filter(c => c.visible !== false).map((c) => renderSubMenu(c, depth + 1))}
             </div>
           )}
         </div>
       );
     }
 
+    const childPaddingMap: Record<number, string> = {
+      2: 'pl-16',
+      3: 'pl-20',
+      4: 'pl-24',
+    };
+    const childPaddingLeft = childPaddingMap[depth] || 'pl-24';
+
     return (
       <NavLink
         key={child.path}
         to={child.path}
         className={({ isActive }) =>
-          `flex items-center gap-3 ${paddingLeft} pr-4 py-2.5 text-sm transition-all duration-200 ${
+          `flex items-center gap-3 ${childPaddingLeft} pr-4 py-2.5 text-sm transition-all duration-200 ${
             isActive
               ? 'bg-gradient-to-r from-indigo-500/90 to-purple-600/90 text-white shadow-lg shadow-indigo-900/30'
               : 'text-slate-400 hover:text-white hover:bg-white/5'
