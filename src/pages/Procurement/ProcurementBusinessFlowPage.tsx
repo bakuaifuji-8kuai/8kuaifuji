@@ -42,7 +42,7 @@ const lanes: SwimLane[] = [
         icon: Eye,
         steps: ['了解各菜单功能与流转关系', '点击卡片快捷跳转到业务模块', '从左侧菜单进入对应业务'],
         result: '流程总览、快捷导航',
-        notes: '本页面作为招采合约管理的门户入口，对新员工友好',
+        notes: '本页面作为招采及合约管理的门户入口，对新员工友好',
       },
       {
         id: 'plan-mgmt',
@@ -87,7 +87,7 @@ const lanes: SwimLane[] = [
         bg: 'bg-[#fff4e6]',
         border: 'border-[#ffc069]',
         icon: FileText,
-        steps: ['发起需求申请，填写物资、规格、数量、预算', '关联已生效采购计划（或走无计划流程）', '提交部门负责人审批 → 采购部复核', '审批通过后成为可生成采购订单的需求'],
+        steps: ['发起需求申请，填写物资、规格、数量、预算', '独立创建需求，填写项目名称、申请部门等信息', '提交部门负责人审批 → 采购部复核', '审批通过后成为可生成采购订单的需求'],
         result: '已生效的需求申请单',
       },
       {
@@ -255,7 +255,7 @@ export default function ProcurementBusinessFlowPage() {
           <h2 className="text-sm font-semibold text-[#303133]">采购业务流程</h2>
         </div>
         <div className="text-xs text-[#909399]">
-          以下展示"招采合约管理"模块各菜单组成的业务泳道图，可点击卡片查看详情与跳转至对应业务页面
+          以下展示"招采及合约管理"模块各菜单组成的业务泳道图，可点击卡片查看详情与跳转至对应业务页面
         </div>
       </div>
 
@@ -432,7 +432,7 @@ export default function ProcurementBusinessFlowPage() {
       {/* 业务模块菜单清单 */}
       <div className="rounded border border-[#dcdfe6] bg-white p-4">
         <div className="text-sm font-semibold text-[#303133] mb-3">
-          📋 招采合约管理模块菜单清单
+          📋 招采及合约管理模块菜单清单
         </div>
         <table className="w-full text-xs">
           <thead className="bg-[#f5f7fa] text-[#606266]">
@@ -477,7 +477,7 @@ export default function ProcurementBusinessFlowPage() {
           ① 计划阶段：通过"招采计划"编制年度/月度计划 → 审批后生效；通过"招采计划汇总"进行多维度统计。
         </div>
         <div>
-          ② 需求与采购执行阶段：业务部门通过"招采需求申请管理"发起具体物资需求 → 采购部在"招采工单"中组织询价/比价 →
+          ② 需求与采购执行阶段：业务部门通过"招采需求申请管理"独立发起物资需求 → 采购部在"招采工单"中组织询价/比价 →
           "报价单"收集多家供应商报价并形成比价结论。
         </div>
         <div>

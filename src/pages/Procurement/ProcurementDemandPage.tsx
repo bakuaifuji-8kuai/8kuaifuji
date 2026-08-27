@@ -376,7 +376,7 @@ export default function ProcurementDemandPage() {
 
       // 提示用户
       if (contractDetailsMap.size > 0) {
-        alert(`审批通过！已根据有效期合同自动生成 ${contractDetailsMap.size} 个采购订单。\n请到「招采合约管理 → 采购订单管理」查看。`);
+        alert(`审批通过！已根据有效期合同自动生成 ${contractDetailsMap.size} 个采购订单。\n请到「招采及合约管理 → 招采订单管理」查看。`);
       }
     }
   };

@@ -52,22 +52,22 @@ const operationFlows: OperationFlow[] = [
     bg: 'bg-[#ecf5ff]',
     border: 'border-[#91c5ff]',
     description: '编制年度/月度采购计划，明确采购物资、预算金额、采购方式，并完成审批流程。',
-    businessLogic: '采购计划是采购执行的依据，需经过部门负责人/管理层审批后方可生效。计划审批通过后，可作为采购需求申请的来源引用。',
+    businessLogic: '采购计划是采购执行的依据，需经过部门负责人/管理层审批后方可生效。计划审批通过后，可用于预算参考和采购汇总统计。',
     steps: [
       { stepNo: 1, title: '新增计划', description: '点击「新增计划」按钮，填写计划基本信息（计划名称、计划期间、采购类型等）', operator: '采购专员', systemAction: '生成计划编号，初始化草稿状态', businessRule: '计划期间通常为年度或月度', output: '草稿计划记录' },
       { stepNo: 2, title: '添加物资明细', description: '在明细表中添加采购物资（物资编码、名称、规格、数量、预算单价、采购方式）', operator: '采购专员', systemAction: '自动计算明细金额和计划总金额', businessRule: '采购方式可选：公开招标、邀请招标、竞争性谈判、询价采购、单一来源', prerequisite: '至少添加一条物资明细', output: '完整物资明细表' },
       { stepNo: 3, title: '提交审批', description: '确认计划内容无误后，点击「提交审批」', operator: '采购专员', systemAction: '状态变更为「待审批」，记录提交时间和提交人', businessRule: '提交前必须填写计划名称和至少一条明细', nextStep: '等待审批' },
       { stepNo: 4, title: '审批通过/驳回', description: '部门负责人或管理层查看计划详情，决定通过或驳回', operator: '审批人', systemAction: '通过：状态变更为「已生效」；驳回：状态变更为「已驳回」，记录审批意见', businessRule: '审批人可查看计划明细、预算金额、采购方式合理性', exception: '驳回后可修改后重新提交', output: '已生效/已驳回计划' },
-      { stepNo: 5, title: '计划引用', description: '已生效计划可作为采购需求申请的来源引用', operator: '采购专员', systemAction: '在需求申请时可选择关联计划', businessRule: '引用计划后，需求物资自动从计划明细带入', nextStep: '采购需求申请' },
+      { stepNo: 5, title: '计划汇总', description: '已生效计划可在"招采计划汇总"中进行多维度统计分析', operator: '采购专员', systemAction: '汇总页面自动统计计划数据', businessRule: '支持按部门/类别/时间段分组统计', nextStep: '招采计划汇总' },
     ],
     keyFields: ['计划编号', '计划名称', '计划期间', '采购类型', '物资明细', '预算金额', '审批状态'],
     statusFlow: [
       { status: 'draft', label: '草稿', color: 'text-[#909399]', description: '新增后初始状态，可编辑修改' },
       { status: 'pending', label: '待审批', color: 'text-[#e6a23c]', description: '已提交审批，等待审批人处理' },
-      { status: 'approved', label: '已生效', color: 'text-[#67c23a]', description: '审批通过，可作为需求来源引用' },
+      { status: 'approved', label: '已生效', color: 'text-[#67c23a]', description: '审批通过，可用于预算参考' },
       { status: 'rejected', label: '已驳回', color: 'text-[#f56c6c]', description: '审批驳回，可修改后重新提交' },
     ],
-    relatedModules: ['招采计划汇总', '招采需求申请管理'],
+    relatedModules: ['招采计划汇总'],
     tips: ['计划审批通过后不可修改，如需调整请发起变更申请', '计划总金额 = 各明细预算金额之和', '建议按年度/月度编制计划，便于后续汇总统计'],
   },
   {
@@ -80,10 +80,10 @@ const operationFlows: OperationFlow[] = [
     bg: 'bg-[#fdf6ec]',
     border: 'border-[#f5dab1]',
     description: '各部门提交采购需求申请，明确采购物资、数量、预算，并完成审批流程。',
-    businessLogic: '需求申请可从采购计划引用或独立创建。审批通过后，需求进入招采工单生成环节。',
+    businessLogic: '需求申请独立创建，不依赖采购计划。审批通过后，需求进入招采工单生成环节。',
     steps: [
       { stepNo: 1, title: '新增需求', description: '点击「新增需求」，填写需求基本信息（需求类型、项目名称、申请部门、申请人）', operator: '需求申请人', systemAction: '生成需求编号，初始化草稿状态', businessRule: '需求类型可选：物资采购、服务采购、工程项目', output: '草稿需求记录' },
-      { stepNo: 2, title: '选择物资来源', description: '选择物资来源：从采购计划引用 或 从物资库选择', operator: '需求申请人', systemAction: '引用计划：自动带入计划明细；物资库：手动选择物资', businessRule: '引用计划时，物资明细自动锁定', prerequisite: '必须选择至少一条物资', output: '物资明细表' },
+      { stepNo: 2, title: '选择物资', description: '从物资库中选择所需物资，或选择实施项目/服务项目', operator: '需求申请人', systemAction: '从物资档案选择物资或选择项目后自动带出物资', businessRule: '实施项目/服务项目需先选择项目再选择物资', prerequisite: '必须选择至少一条物资', output: '物资明细表' },
       { stepNo: 3, title: '填写采购申请信息', description: '填写采购申请单价（含税）、数量，系统自动计算含税金额、不含税金额、税额', operator: '需求申请人', systemAction: '自动计算金额，税率默认13%', businessRule: '含税金额 = 数量 × 采购申请单价（含税）；税额 = 含税金额 / (1+税率) × 税率', output: '完整需求明细' },
       { stepNo: 4, title: '提交审批', description: '确认需求内容后，点击「提交审批」', operator: '需求申请人', systemAction: '状态变更为「待审批」', businessRule: '提交前必须填写物资明细和采购申请单价', nextStep: '等待审批' },
       { stepNo: 5, title: '审批通过/驳回', description: '审批人审核需求合理性，决定通过或驳回', operator: '审批人', systemAction: '通过：状态变更为「已通过」；驳回：状态变更为「已驳回」', businessRule: '审批人可查看需求明细、预算金额、采购方式', exception: '驳回后可修改重新提交', output: '已通过/已驳回需求' },
@@ -97,8 +97,8 @@ const operationFlows: OperationFlow[] = [
       { status: 'rejected', label: '已驳回', color: 'text-[#f56c6c]', description: '审批驳回，可修改重新提交' },
       { status: 'changed', label: '已变更', color: 'text-[#409eff]', description: '已通过后发起变更申请' },
     ],
-    relatedModules: ['招采计划', '招采工单'],
-    tips: ['引用采购计划时，物资明细自动带入且不可修改', '含税金额、税额由系统自动计算，无需手动填写', '审批通过后如需调整，请发起变更申请'],
+    relatedModules: ['招采工单'],
+    tips: ['需求申请独立创建，不依赖采购计划', '含税金额、税额由系统自动计算，无需手动填写', '审批通过后如需调整，请发起变更申请'],
   },
   {
     id: 'bidding',
@@ -265,9 +265,9 @@ export default function ProcurementOperationFlowPage() {
       {/* 页面标题 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-[#303133]">招采合约管理功能操作流程</h1>
+          <h1 className="text-lg font-bold text-[#303133]">招采及合约管理功能操作流程</h1>
           <p className="text-xs text-[#909399] mt-1">
-            本页面展示招采合约管理模块各功能的详细操作流程与业务逻辑说明，点击卡片查看完整流程。
+            本页面展示招采及合约管理模块各功能的详细操作流程与业务逻辑说明，点击卡片查看完整流程。
           </p>
         </div>
       </div>

@@ -40,10 +40,10 @@ const docs: DocItem[] = [
       '支持配置审批流程，按流程节点逐级审批',
       '退回操作可指定退回节点（含起草人），并需填写退回原因',
       '驳回后回到草稿状态，可编辑后重新提交',
-      '已审批计划的数据为后续"招采需求申请管理"的基础数据源',
+      '已审批计划的数据为后续采购执行提供预算参考',
     ],
     upstream: '无（手工创建，或由预算系统生成）',
-    downstream: '招采需求申请管理、招采计划汇总',
+    downstream: '招采计划汇总',
   },
   {
     id: 'plan-summary',
@@ -68,9 +68,9 @@ const docs: DocItem[] = [
   {
     id: 'demand',
     title: '招采需求申请管理',
-    overview: '基于已审批的采购计划创建具体的采购需求申请，进入采购执行环节。',
+    overview: '各部门发起采购需求申请，填写物资、数量、预算等信息，进入采购执行环节。',
     features: [
-      '从采购计划快速创建需求',
+      '独立创建采购需求申请',
       '需求明细增删改',
       '需求审批流转',
       '发起需求变更（修改需求内容）',
@@ -80,7 +80,7 @@ const docs: DocItem[] = [
     logic: [
       '状态流转：草稿(draft) → 待审批(pending) → 已审批(approved) / 已驳回(rejected) / 变更中(changed)',
       '驳回后回到草稿状态，可编辑后重新提交',
-      '创建需求时需关联已审批的采购计划',
+      '需求申请独立创建，不依赖采购计划',
       '框架采购类型审批通过后自动生成采购订单',
       '需求变更需要走审批流程，原需求数据保留',
     ],
@@ -104,7 +104,7 @@ const docs: DocItem[] = [
       {
         field: '项目名称',
         options: [
-          { value: '从采购计划选择', logic: '下拉选项来源于已审批的采购计划明细项目；确定后自动带出项目预算和需求部门信息' },
+          { value: '手动填写', logic: '手动输入项目名称；确定后自动带出项目预算和需求部门信息' },
         ],
       },
       {
@@ -114,7 +114,7 @@ const docs: DocItem[] = [
         ],
       },
     ],
-    upstream: '招采计划管理',
+    upstream: '无（独立创建）',
     downstream: '招采工单、招采订单管理',
   },
   {
@@ -353,7 +353,7 @@ export default function ProcurementFunctionDocs() {
             <FileText size={18} className="text-indigo-600" />
             功能说明
           </h2>
-          <p className="text-xs text-gray-400 mt-1">招采合约管理模块</p>
+          <p className="text-xs text-gray-400 mt-1">招采及合约管理模块</p>
         </div>
         <nav className="p-2">
           {docs.map((doc) => (
@@ -477,7 +477,7 @@ export default function ProcurementFunctionDocs() {
 
           {/* Footer */}
           <div className="text-center text-sm text-gray-400 py-8">
-            — 招采合约管理模块功能说明文档 —
+            — 招采及合约管理模块功能说明文档 —
           </div>
         </div>
       </div>

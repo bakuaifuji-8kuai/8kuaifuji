@@ -27,7 +27,7 @@ const menuItems: MenuItem[] = [
     path: '/procurement/function-docs',
   },
   {
-    title: '招采合约管理',
+    title: '招采及合约管理',
     icon: ClipboardList,
     children: [
       { title: '招采计划管理', path: '/procurement/plan-group', children: [

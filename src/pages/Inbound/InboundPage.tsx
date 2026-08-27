@@ -1422,7 +1422,7 @@ export default function InboundPage({ type = 'purchase' }: Props) {
                 {contractPurchaseOrders.filter(po => po.status === 'submitted' && hasRemainingInventory(po)).length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-3 py-8 text-center text-[#909399]">
-                      暂无可用的采购订单。请先在&quot;招采合约管理 &gt; 招采订单管理&quot;中创建并提交采购订单。
+                      暂无可用的采购订单。请先在&quot;招采及合约管理 &gt; 招采订单管理&quot;中创建并提交采购订单。
                     </td>
                   </tr>
                 )}
