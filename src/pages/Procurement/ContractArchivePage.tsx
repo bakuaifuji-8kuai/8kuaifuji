@@ -3,6 +3,7 @@ import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Bu
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
+import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import type { ContractLedger, Attachment } from '@/types';
 
 interface ContractArchive {
@@ -113,7 +114,7 @@ export default function ContractArchivePage() {
     } else {
       const newArchive: ContractArchive = {
         id: 'ARC' + Date.now(),
-        archiveNo: 'CA' + new Date().getFullYear() + String(archives.length + 1).padStart(4, '0'),
+        archiveNo: genSerialNo(SERIAL_CONFIG.ARCHIVE, archives.map(a => a.archiveNo)),
         contractIds: selectedContractIds,
         contractNos: selectedContracts.map((c) => c.contractNo),
         applicant: currentUser.name,

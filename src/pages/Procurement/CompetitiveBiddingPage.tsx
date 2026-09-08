@@ -4,6 +4,7 @@ import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
+import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import { MOCK_BIDDINGS, MOCK_SUPPLIER_QUOTES } from '@/mock/biddingMockData';
 import type { Bidding, BiddingQuote, BiddingItem, BiddingQuoteDetail, ProcurementDemand, Attachment } from '@/types';
 
@@ -236,7 +237,7 @@ export default function CompetitiveBiddingPage() {
     const now = new Date();
     const newBidding: Bidding = {
       id: 'BID' + Date.now(),
-      biddingNo: `JJ${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String((biddings?.length || 0) + 1).padStart(3, '0')}`,
+      biddingNo: '',   // 保存时才生成编号
       biddingName: '',
       biddingType: 'market',
       status: 'draft',
@@ -381,6 +382,10 @@ export default function CompetitiveBiddingPage() {
 
   const handleSave = () => {
     if (!editItem) return;
+    // 新增时才生成编号，编辑保留原编号
+    if (isNew && !editItem.biddingNo) {
+      editItem.biddingNo = genSerialNo(SERIAL_CONFIG.BIDDING, biddings.map(b => b.biddingNo));
+    }
     if (!editItem.items || editItem.items.length === 0) {
       alert('请先选择采购需求，并至少选择一条物资设置单品上限！');
       return;
@@ -534,7 +539,8 @@ export default function CompetitiveBiddingPage() {
                 <div className="mb-1 text-xs text-[#606266]">工单编号</div>
                 <input
                   className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa] text-sm"
-                  value={editItem.biddingNo}
+                  value={editItem.biddingNo || ''}
+                  placeholder={isNew ? '保存后自动生成' : undefined}
                   disabled
                 />
               </div>

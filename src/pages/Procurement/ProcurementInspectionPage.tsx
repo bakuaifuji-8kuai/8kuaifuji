@@ -4,6 +4,7 @@ import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
+import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import type { ProcurementInspection } from '@/types';
 
 export default function ProcurementInspectionPage() {
@@ -98,7 +99,7 @@ export default function ProcurementInspectionPage() {
     const now = new Date();
     const newInspection: ProcurementInspection = {
       id: 'PI' + Date.now(),
-      inspectionNo: `YS${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(procurementInspections.length + 1).padStart(3, '0')}`,
+      inspectionNo: '',   // 保存时才生成编号
       inspectionDate: now.toISOString().slice(0, 10),
       inspector: currentUser.name,
       status: 'pending',
@@ -191,6 +192,10 @@ export default function ProcurementInspectionPage() {
 
   const handleSave = () => {
     if (!editItem) return;
+    // 新增时才生成编号，编辑保留原编号
+    if (isNew && !editItem.inspectionNo) {
+      editItem.inspectionNo = genSerialNo(SERIAL_CONFIG.INSPECTION, procurementInspections.map(i => i.inspectionNo));
+    }
     if (isNew) {
       addProcurementInspection(editItem);
     } else {
@@ -317,11 +322,17 @@ export default function ProcurementInspectionPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="mb-1 text-[#606266]">验收编号</div>
-                <input
-                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
-                  value={editItem.inspectionNo}
-                  onChange={(e) => setEditItem({ ...editItem, inspectionNo: e.target.value })}
-                />
+                {isNew ? (
+                  <input disabled placeholder="保存后自动生成"
+                    className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa] text-[#c0c4cc]"
+                    value={editItem.inspectionNo || ''}
+                  />
+                ) : (
+                  <input disabled
+                    className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa]"
+                    value={editItem.inspectionNo}
+                  />
+                )}
               </div>
               <div>
                 <div className="mb-1 text-[#606266]">关联订单</div>

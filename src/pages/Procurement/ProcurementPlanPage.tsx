@@ -4,6 +4,7 @@ import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
+import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import type { ProcurementPlan, ProcurementPlanDetail, ProjectNature, ProcurementMethod, BidEvaluationMethod, ApprovalRecord, ApprovalFlowConfig } from '@/types';
 
 export default function ProcurementPlanPage() {
@@ -129,7 +130,7 @@ export default function ProcurementPlanPage() {
     const now = new Date();
     const newPlan: ProcurementPlan = {
       id: 'PP' + Date.now(),
-      planNo: `CGJH${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(procurementPlans.length + 1).padStart(3, '0')}`,
+      planNo: '',   // 保存时才生成编号
       planType: 'monthly',
       planMode: 'approval',
       year: String(now.getFullYear()),
@@ -323,6 +324,10 @@ export default function ProcurementPlanPage() {
 
   const handleSave = () => {
     if (!editItem) return;
+    // 新增时才生成编号，编辑保留原编号
+    if (isNew && !editItem.planNo) {
+      editItem.planNo = genSerialNo(SERIAL_CONFIG.PLAN, procurementPlans.map(p => p.planNo));
+    }
     const isApprovalMod = editItem.status === 'pending' || editItem.status === 'returned';
     const savePlan = {
       ...editItem,
@@ -542,11 +547,20 @@ export default function ProcurementPlanPage() {
           <div className="grid grid-cols-5 gap-3">
             <div>
               <div className="mb-1 text-[#606266]">计划编号</div>
-              <input
-                className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
-                value={editItem?.planNo || ''}
-                onChange={(e) => editItem && setEditItem({ ...editItem, planNo: e.target.value })}
-              />
+              {isNew ? (
+                <input
+                  disabled
+                  placeholder="保存后自动生成"
+                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa] text-[#c0c4cc]"
+                  value={editItem?.planNo || ''}
+                />
+              ) : (
+                <input
+                  disabled
+                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa]"
+                  value={editItem?.planNo || ''}
+                />
+              )}
             </div>
             <div>
                 <div className="mb-1 text-[#606266]">计划方式</div>

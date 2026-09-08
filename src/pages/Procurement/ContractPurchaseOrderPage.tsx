@@ -4,6 +4,7 @@ import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
+import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import type { ContractPurchaseOrder, ContractPurchaseOrderDetail, ContractPurchaseOrderStatus, ContractPurchaseOrderChangeRecord } from '@/types';
 
 // 测试数据：执行中的合同
@@ -213,13 +214,9 @@ export default function ContractPurchaseOrderPage() {
 
   const openAdd = () => {
     const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    const seq = String(contractPurchaseOrders.length + 1).padStart(3, '0');
     setEditItem({
       id: 'CPO_' + Date.now(),
-      orderNo: `CPO${y}${m}${d}${seq}`,
+      orderNo: '',   // 保存时才生成编号
       contractId: '', contractNo: '', contractName: '',
       supplierId: '', supplierName: '',
       totalDuration: '', acceptanceStandard: '', paymentTerms: '',
@@ -306,12 +303,17 @@ export default function ContractPurchaseOrderPage() {
   const handleSave = () => {
     if (!editItem) return;
     if (!doValidate()) return;
+    // 新增时才生成编号，编辑保留原编号
+    const existing = contractPurchaseOrders.find(o => o.id === editItem.id);
+    const isNew = !existing;
+    if (isNew && !editItem.orderNo) {
+      editItem.orderNo = genSerialNo(SERIAL_CONFIG.CPO, contractPurchaseOrders.map(o => o.orderNo));
+    }
     const updated: ContractPurchaseOrder = {
       ...editItem,
       remark: editRemark,
       details: editDetails.map(d => ({ ...d })),
     };
-    const existing = contractPurchaseOrders.find(o => o.id === editItem.id);
     if (existing) updateContractPurchaseOrder?.(editItem.id, updated);
     else addContractPurchaseOrder?.(updated);
     setEditItem(null);
@@ -566,7 +568,7 @@ export default function ContractPurchaseOrderPage() {
             <div className="border border-[#dcdfe6] rounded">
               <div className="bg-[#f5f7fa] px-3 py-2 text-[#303133] font-bold text-xs border-b border-[#dcdfe6]">订单信息</div>
               <div className="p-4 grid grid-cols-3 gap-3 text-xs">
-                <div><span className="text-[#909399]">订单编号：</span>{editItem.orderNo}</div>
+                <div><span className="text-[#909399]">订单编号：</span>{editItem.orderNo || <span className="text-[#c0c4cc]">保存后自动生成</span>}</div>
                 <div><span className="text-[#909399]">创建时间：</span>{editItem.createTime}</div>
                 <div><span className="text-[#909399]">制单人：</span>{editItem.creator}</div>
                 <div className="col-span-3">

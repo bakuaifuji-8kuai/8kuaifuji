@@ -5,6 +5,7 @@ import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import ProductPickerModal, { ProductPickerItem } from '@/components/common/ProductPickerModal';
 import { useStore } from '@/store/useStore';
+import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import type { ProcurementDemand, ProcurementDemandDetail, ProcurementDemandChange, Contract, ProductContract, ProcurementType, ProcurementMode, ProjectRow, DemandChangeRecord, Project, ContractPurchaseOrder, ContractPurchaseOrderDetail } from '@/types';
 
 export default function ProcurementDemandPage() {
@@ -257,7 +258,7 @@ export default function ProcurementDemandPage() {
     const now = new Date();
     const newDemand: ProcurementDemand = {
       id: 'PD' + Date.now(),
-      demandNo: `CGQQ${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(procurementDemands.length + 1).padStart(3, '0')}`,
+      demandNo: '',   // 保存时才生成编号
       demandType: 'material',
       procurementType: 'outside_framework',
       applicant: currentUser.name,
@@ -424,6 +425,10 @@ export default function ProcurementDemandPage() {
 
   const handleSave = () => {
     if (!editItem) return;
+    // 新增时才生成编号，编辑保留原编号
+    if (isNew && !editItem.demandNo) {
+      editItem.demandNo = genSerialNo(SERIAL_CONFIG.DEMAND, procurementDemands.map(d => d.demandNo));
+    }
     const saveDemand = { ...editItem, details, projectRows };
     if (isNew) {
       addProcurementDemand(saveDemand);
@@ -757,11 +762,20 @@ export default function ProcurementDemandPage() {
               <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr 1fr 2fr' }}>
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">采购编号</div>
-                  <input
-                    className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm"
-                    value={editItem.demandNo}
-                    onChange={(e) => setEditItem({ ...editItem, demandNo: e.target.value })}
-                  />
+                  {isNew ? (
+                    <input
+                      disabled
+                      placeholder="保存后自动生成"
+                      className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm bg-[#f5f7fa] text-[#c0c4cc]"
+                      value={editItem.demandNo || ''}
+                    />
+                  ) : (
+                    <input
+                      disabled
+                      className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm bg-[#f5f7fa]"
+                      value={editItem.demandNo}
+                    />
+                  )}
                 </div>
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">申请人</div>

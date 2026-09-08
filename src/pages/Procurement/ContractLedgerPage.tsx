@@ -4,6 +4,7 @@ import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
+import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import type { ContractLedger, Bidding } from '@/types';
 import { Printer, FileSpreadsheet, FileDown, Bell } from 'lucide-react';
 
@@ -396,7 +397,7 @@ export default function ContractLedgerPage() {
     const newLedger: ContractLedger = {
       id: 'CL' + Date.now(),
       contractId: 'CT' + Date.now(),
-      contractNo: `HT${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(contractLedgers.length + 1).padStart(3, '0')}`,
+      contractNo: '',   // 保存时才生成编号
       contractName: '',
       category: 'procurement',
       contractType: 'non_engineering',
@@ -436,6 +437,10 @@ export default function ContractLedgerPage() {
 
   const handleSave = () => {
     if (!editItem) return;
+    // 新增时才生成编号，编辑保留原编号
+    if (isNew && !editItem.contractNo) {
+      editItem.contractNo = genSerialNo(SERIAL_CONFIG.CONTRACT, contractLedgers.map(c => c.contractNo));
+    }
     if (!editItem.contractName) {
       alert('请填写合同名称');
       return;
@@ -932,10 +937,17 @@ export default function ContractLedgerPage() {
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <div className="mb-1 text-[#606266]">合同编码 *</div>
-                <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
-                  value={editItem.contractNo}
-                  onChange={(e) => setEditItem({ ...editItem, contractNo: e.target.value })}
-                />
+                {isNew ? (
+                  <input disabled placeholder="保存后自动生成"
+                    className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa] text-[#c0c4cc]"
+                    value={editItem.contractNo || ''}
+                  />
+                ) : (
+                  <input disabled
+                    className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa]"
+                    value={editItem.contractNo}
+                  />
+                )}
               </div>
               <div>
                 <div className="mb-1 text-[#606266]">合同形成方式</div>
