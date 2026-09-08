@@ -14,6 +14,7 @@ export default function ProcurementPlanSummaryPage() {
   const [filterYear, setFilterYear] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
   const [filterType, setFilterType] = useState('');
+  const [filterMode, setFilterMode] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('');
   const [groupBy, setGroupBy] = useState<GroupBy>('department');
   const [viewMode, setViewMode] = useState<'summary' | 'detail'>('summary');
@@ -31,14 +32,15 @@ export default function ProcurementPlanSummaryPage() {
       if (filterYear && p.year !== filterYear) return false;
       if (filterMonth && p.month !== filterMonth) return false;
       if (filterType && p.planType !== filterType) return false;
+      if (filterMode && (p.planMode || 'approval') !== filterMode) return false;
       if (filterDepartment && p.department !== filterDepartment) return false;
       return true;
     });
-  }, [procurementPlans, filterYear, filterMonth, filterType, filterDepartment]);
+  }, [procurementPlans, filterYear, filterMonth, filterType, filterMode, filterDepartment]);
 
   // 汇总统计数据
   const summary = useMemo(() => {
-    const allDetails: (ProcurementPlanDetail & { _planNo: string; _department: string; _planType: string; _year: string; _month: string })[] = [];
+    const allDetails: (ProcurementPlanDetail & { _planNo: string; _department: string; _planType: string; _planMode: string; _year: string; _month: string })[] = [];
     filteredPlans.forEach((p) => {
       p.details.forEach((d) => {
         allDetails.push({
@@ -46,6 +48,7 @@ export default function ProcurementPlanSummaryPage() {
           _planNo: p.planNo,
           _department: p.department,
           _planType: p.planType,
+          _planMode: p.planMode || 'approval',
           _year: p.year,
           _month: p.month || '',
         });
@@ -93,8 +96,13 @@ export default function ProcurementPlanSummaryPage() {
         key = d.projectNature || '未分类';
         label = key;
       } else if (groupBy === 'period') {
-        key = d._planType === 'annual' ? `${d._year}年` : `${d._year}-${d._month}`;
-        label = d._planType === 'annual' ? `${d._year}年度计划` : `${d._year}年${d._month}月`;
+        if (d._planMode === 'filing') {
+          key = `${d._year}-filing`;
+          label = `${d._year}年 · 报备制`;
+        } else {
+          key = d._planType === 'annual' ? `${d._year}年-approval` : `${d._year}-${d._month}-approval`;
+          label = d._planType === 'annual' ? `${d._year}年度计划` : `${d._year}年${d._month}月`;
+        }
       }
       if (!groups[key]) {
         groups[key] = {
@@ -119,8 +127,11 @@ export default function ProcurementPlanSummaryPage() {
     filteredPlans.forEach((p) => {
       let key = '';
       if (groupBy === 'department') key = p.department;
-      else if (groupBy === 'period') key = p.planType === 'annual' ? `${p.year}年` : `${p.year}-${p.month}`;
-      else if (groupBy === 'category') return; // 明细维度
+      else if (groupBy === 'period') {
+        const mode = p.planMode || 'approval';
+        if (mode === 'filing') key = `${p.year}-filing`;
+        else key = p.planType === 'annual' ? `${p.year}年-approval` : `${p.year}-${p.month}-approval`;
+      } else if (groupBy === 'category') return; // 明细维度
       if (groups[key]) groups[key].planCount++;
     });
 
@@ -162,14 +173,16 @@ export default function ProcurementPlanSummaryPage() {
   // 导出明细
   const handleExportDetail = () => {
     const headers = [
-      '序号', '时间', '需求部门', '项目名称', '项目类别', '项目概况', '项目估（预）算（万元）',
+      '序号', '计划方式', '计划类型', '时间', '需求部门', '项目名称', '项目类别', '项目概况', '项目估（预）算（万元）',
       '用户需求书编制计划完成时间', '预算编制审批计划完成时间', '合同前置审核计划完成时间',
       '计划采购启动时间', '计划采购完成时间'
     ];
     const rows = summary.allDetails.map((d) => {
       const period = d._planType === 'annual' ? `${d._year}年` : `${d._year}年${d._month}月`;
+      const planModeLabel = d._planMode === 'filing' ? '报备制' : '审批制';
+      const planTypeLabel = d._planMode === 'filing' ? '—' : (d._planType === 'annual' ? '年度计划' : '月度计划');
       return [
-        d.seq, period, d._department, d.projectName, d.projectNature || '', d.projectOverview || '',
+        d.seq, planModeLabel, planTypeLabel, period, d._department, d.projectName, d.projectNature || '', d.projectOverview || '',
         d.budgetAmount.toFixed(2), d.userRequirementDocDate || '', d.budgetApprovalDate || '',
         d.contractReviewDate || '', d.planProcurementStartDate || '', d.planProcurementEndDate || ''
       ];
@@ -210,11 +223,23 @@ export default function ProcurementPlanSummaryPage() {
           setFilterYear('');
           setFilterMonth('');
           setFilterType('');
+          setFilterMode('');
           setFilterDepartment('');
         }}
       >
         <SearchField label="年份" placeholder="如 2026" value={filterYear} onChange={setFilterYear} />
         <SearchField label="月份" placeholder="如 06" value={filterMonth} onChange={setFilterMonth} />
+        <SearchField
+          label="计划方式"
+          value={filterMode}
+          onChange={setFilterMode}
+          type="select"
+          options={[
+            { value: '', label: '全部' },
+            { value: 'approval', label: '审批制' },
+            { value: 'filing', label: '报备制' },
+          ]}
+        />
         <SearchField
           label="计划类型"
           value={filterType}
@@ -367,6 +392,8 @@ export default function ProcurementPlanSummaryPage() {
                 <thead className="bg-[#f5f7fa] sticky top-0">
                   <tr>
                     <th className="px-2 py-2 text-xs text-center">序号</th>
+                    <th className="px-2 py-2 text-xs text-center">计划方式</th>
+                    <th className="px-2 py-2 text-xs text-center">计划类型</th>
                     <th className="px-2 py-2 text-xs text-center">时间</th>
                     <th className="px-2 py-2 text-xs text-left">需求部门</th>
                     <th className="px-2 py-2 text-xs text-left">项目名称</th>
@@ -383,9 +410,14 @@ export default function ProcurementPlanSummaryPage() {
                 <tbody>
                   {summary.allDetails.map((d, i) => {
                     const period = d._planType === 'annual' ? `${d._year}年` : `${d._year}年${d._month}月`;
+                    const planModeLabel = d._planMode === 'filing' ? '报备制' : '审批制';
+                    const planModeColor = d._planMode === 'filing' ? 'bg-slate-100 text-slate-600' : 'bg-indigo-100 text-indigo-600';
+                    const planTypeLabel = d._planMode === 'filing' ? '—' : (d._planType === 'annual' ? '年度计划' : '月度计划');
                     return (
                       <tr key={i} className="border-t border-[#ebeef5] hover:bg-[#f5f7fa]">
                         <td className="px-2 py-1.5 text-xs text-center">{d.seq || i + 1}</td>
+                        <td className="px-2 py-1.5 text-xs text-center"><span className={`px-1.5 py-0.5 rounded ${planModeColor}`}>{planModeLabel}</span></td>
+                        <td className="px-2 py-1.5 text-xs text-center">{planTypeLabel}</td>
                         <td className="px-2 py-1.5 text-xs text-center">{period}</td>
                         <td className="px-2 py-1.5 text-xs">{d._department || '-'}</td>
                         <td className="px-2 py-1.5 text-xs">{d.projectName}</td>

@@ -42,7 +42,7 @@ export default function ProcurementPlanPage() {
   {
     key: 'planType',
     title: '计划类型',
-    render: (row) => (row.planType === 'monthly' ? '月度计划' : '年度计划'),
+    render: (row) => row.planMode === 'filing' ? '—' : (row.planType === 'monthly' ? '月度计划' : '年度计划'),
   },
     { key: 'year', title: '年份' },
     { key: 'month', title: '月份', render: (row) => row.planType === 'annual' ? '-' : (row.month || '-') },
@@ -558,7 +558,7 @@ export default function ProcurementPlanPage() {
                       const mode = e.target.value as 'approval' | 'filing';
                       setNewPlanMode(mode);
                       if (mode === 'filing') {
-                        // 报备制自动锁为月度
+                        // 报备制计划类型显示 "—"
                         setNewPlanType('monthly');
                         if (editItem) setEditItem({ ...editItem, planMode: mode, planType: 'monthly' });
                       } else {
@@ -580,31 +580,32 @@ export default function ProcurementPlanPage() {
             <div>
                 <div className="mb-1 text-[#606266]">计划类型</div>
                 {isNew ? (
-                  <select
-                    className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
-                    value={newPlanType}
-                    disabled={newPlanMode === 'filing'}
-                    onChange={(e) => {
-                      const val = e.target.value as 'annual' | 'monthly';
-                      setNewPlanType(val);
-                      if (editItem) {
-                        setEditItem({ ...editItem, planType: val });
-                      }
-                    }}
-                  >
-                    {newPlanMode === 'approval' ? (
-                      <>
-                        <option value="annual">年度计划</option>
-                        <option value="monthly">月度计划</option>
-                      </>
-                    ) : (
+                  newPlanMode === 'filing' ? (
+                    <input
+                      className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-[#c0c4cc] bg-[#f5f7fa]"
+                      value="—"
+                      readOnly
+                    />
+                  ) : (
+                    <select
+                      className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
+                      value={newPlanType}
+                      onChange={(e) => {
+                        const val = e.target.value as 'annual' | 'monthly';
+                        setNewPlanType(val);
+                        if (editItem) {
+                          setEditItem({ ...editItem, planType: val });
+                        }
+                      }}
+                    >
+                      <option value="annual">年度计划</option>
                       <option value="monthly">月度计划</option>
-                    )}
-                  </select>
+                    </select>
+                  )
                 ) : (
                   <input
-                    className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-[#606266] bg-[#f5f7fa]"
-                    value={editItem?.planType === 'annual' ? '年度计划' : '月度计划'}
+                    className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-[#c0c4cc] bg-[#f5f7fa]"
+                    value={editItem?.planMode === 'filing' ? '—' : (editItem?.planType === 'annual' ? '年度计划' : '月度计划')}
                     readOnly
                   />
                 )}

@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" font-family="Microsoft YaHei, sans-serif">
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3b82f6"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#10b981"/>
+    </marker>
+    <marker id="arrow-cyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#06b3d4"/>
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#f59e0b"/>
+    </marker>
+    <marker id="arrow-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+    <linearGradient id="agent-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="hex-fill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f5f3ff"/>
+      <stop offset="100%" stop-color="#ede9fe"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="700" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="600" y="32" text-anchor="middle" font-size="22" font-weight="bold" fill="#1e293b">AI Agent 辅助仓库管理 - 架构图</text>
+
+  <!-- ===== Input Layer (Left) ===== -->
+  <rect x="30" y="60" width="240" height="430" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="5,3" rx="8"/>
+  <text x="50" y="90" font-size="15" font-weight="bold" fill="#3b82f6">输入层</text>
+  <text x="50" y="108" font-size="10" fill="#3b82f6">Input Layer</text>
+
+  <!-- Input 1: 用户查询 -->
+  <rect x="60" y="130" width="180" height="70" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <circle cx="85" cy="165" r="11" fill="#3b82f6"/>
+  <circle cx="85" cy="161" r="4" fill="#ffffff"/>
+  <path d="M77 173 Q85 167 93 173" fill="none" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="160" y="162" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">用户查询</text>
+  <text x="160" y="180" text-anchor="middle" font-size="10" fill="#3b82f6">User Query</text>
+
+  <!-- Input 2: 自然语言指令 -->
+  <rect x="60" y="240" width="180" height="70" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <path d="M76 270 L92 270 M80 264 L92 264 M84 276 L92 276" stroke="#3b82f6" stroke-width="1.2"/>
+  <rect x="95" y="262" width="14" height="18" rx="2" fill="#ffffff" stroke="#3b82f6" stroke-width="1"/>
+  <text x="160" y="272" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">自然语言指令</text>
+  <text x="160" y="290" text-anchor="middle" font-size="10" fill="#3b82f6">NL Command</text>
+
+  <!-- Input 3: 批量操作 -->
+  <rect x="60" y="350" width="180" height="70" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <rect x="76" y="378" width="8" height="14" rx="1" fill="#3b82f6"/>
+  <rect x="86" y="374" width="8" height="18" rx="1" fill="#3b82f6"/>
+  <rect x="96" y="380" width="8" height="12" rx="1" fill="#3b82f6"/>
+  <text x="160" y="382" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">批量操作</text>
+  <text x="160" y="400" text-anchor="middle" font-size="10" fill="#3b82f6">Batch Ops</text>
+
+  <!-- ===== Agent Core (Middle) - Hexagon ===== -->
+  <polygon points="340,80 580,80 620,280 580,480 340,480 300,280" fill="url(#hex-fill)" stroke="url(#agent-grad)" stroke-width="2.5"/>
+  <text x="460" y="108" text-anchor="middle" font-size="15" font-weight="bold" fill="#7c3aed">Agent 核心</text>
+  <text x="460" y="125" text-anchor="middle" font-size="10" fill="#8b5cf6">Agent Core</text>
+
+  <!-- Sub-item 1: LLM推理 (top-left) -->
+  <rect x="335" y="140" width="110" height="60" rx="8" fill="#ffffff" stroke="#8b5cf6" stroke-width="1.5"/>
+  <circle cx="355" cy="170" r="9" fill="none" stroke="#8b5cf6" stroke-width="1.2"/>
+  <path d="M351 167 L359 167 M351 173 L359 173 M353 164 L357 164 M353 176 L357 176" stroke="#8b5cf6" stroke-width="0.8"/>
+  <text x="395" y="167" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">LLM推理</text>
+  <text x="395" y="184" text-anchor="middle" font-size="9" fill="#8b5cf6">Reasoning</text>
+
+  <!-- Sub-item 2: 任务规划 (top-right) -->
+  <rect x="475" y="140" width="110" height="60" rx="8" fill="#ffffff" stroke="#8b5cf6" stroke-width="1.5"/>
+  <rect x="492" y="160" width="4" height="14" fill="#8b5cf6"/>
+  <rect x="498" y="156" width="4" height="18" fill="#8b5cf6"/>
+  <rect x="504" y="164" width="4" height="10" fill="#8b5cf6"/>
+  <rect x="510" y="158" width="4" height="16" fill="#8b5cf6"/>
+  <text x="535" y="167" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">任务规划</text>
+  <text x="535" y="184" text-anchor="middle" font-size="9" fill="#8b5cf6">Planning</text>
+
+  <!-- Sub-item 3: 工具选择 (bottom-left) -->
+  <rect x="335" y="320" width="110" height="60" rx="8" fill="#ffffff" stroke="#8b5cf6" stroke-width="1.5"/>
+  <circle cx="355" cy="350" r="8" fill="none" stroke="#8b5cf6" stroke-width="1.2"/>
+  <path d="M355 342 L355 338 M355 358 L355 362 M347 350 L343 350 M363 350 L367 350 M349 344 L346 341 M361 356 L364 359 M349 356 L346 359 M361 344 L364 341" stroke="#8b5cf6" stroke-width="1"/>
+  <text x="395" y="347" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">工具选择</text>
+  <text x="395" y="364" text-anchor="middle" font-size="9" fill="#8b5cf6">Tool Select</text>
+
+  <!-- Sub-item 4: 结果合成 (bottom-right) -->
+  <rect x="475" y="320" width="110" height="60" rx="8" fill="#ffffff" stroke="#8b5cf6" stroke-width="1.5"/>
+  <path d="M490 350 L498 345 L498 355 Z" fill="#8b5cf6"/>
+  <path d="M500 350 L508 345 L508 355 Z" fill="#8b5cf6"/>
+  <path d="M512 348 L520 348 M512 352 L520 352" stroke="#8b5cf6" stroke-width="1.2"/>
+  <text x="535" y="347" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">结果合成</text>
+  <text x="535" y="364" text-anchor="middle" font-size="9" fill="#8b5cf6">Synthesis</text>
+
+  <!-- Iterative reasoning loop arrow (cyclic, inside hexagon center) -->
+  <path d="M 440 250 A 25 25 0 1 1 480 250" fill="none" stroke="#7c3aed" stroke-width="1.8" marker-end="url(#arrow-purple)"/>
+  <text x="460" y="295" text-anchor="middle" font-size="10" font-weight="bold" fill="#7c3aed">迭代推理</text>
+
+  <!-- ===== Memory Layer (Right Top) ===== -->
+  <rect x="660" y="60" width="520" height="220" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5" stroke-dasharray="5,3" rx="8"/>
+  <text x="680" y="90" font-size="15" font-weight="bold" fill="#10b981">记忆层</text>
+  <text x="680" y="108" font-size="10" fill="#10b981">Memory Layer</text>
+
+  <!-- Cylinder 1: 短期记忆 -->
+  <ellipse cx="760" cy="135" rx="55" ry="10" fill="#a7f3d0" stroke="#10b981" stroke-width="1.5"/>
+  <path d="M705 135 L705 245 Q705 255 760 255 Q815 255 815 245 L815 135" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>
+  <ellipse cx="760" cy="135" rx="55" ry="10" fill="#a7f3d0" stroke="#10b981" stroke-width="1.5"/>
+  <line x1="715" y1="160" x2="805" y2="160" stroke="#10b981" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <line x1="715" y1="200" x2="805" y2="200" stroke="#10b981" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <text x="760" y="180" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">短期记忆</text>
+  <text x="760" y="200" text-anchor="middle" font-size="10" fill="#065f46">上下文窗口</text>
+  <text x="760" y="225" text-anchor="middle" font-size="9" fill="#10b981">Short-term</text>
+
+  <!-- Cylinder 2: 长期记忆 -->
+  <ellipse cx="920" cy="135" rx="55" ry="10" fill="#a7f3d0" stroke="#10b981" stroke-width="1.5"/>
+  <path d="M865 135 L865 245 Q865 255 920 255 Q975 255 975 245 L975 135" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>
+  <ellipse cx="920" cy="135" rx="55" ry="10" fill="#a7f3d0" stroke="#10b981" stroke-width="1.5"/>
+  <line x1="875" y1="160" x2="965" y2="160" stroke="#10b981" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <line x1="875" y1="200" x2="965" y2="200" stroke="#10b981" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <circle cx="900" cy="178" r="2" fill="#10b981"/>
+  <circle cx="920" cy="178" r="2" fill="#10b981"/>
+  <circle cx="940" cy="178" r="2" fill="#10b981"/>
+  <text x="920" y="200" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">长期记忆</text>
+  <text x="920" y="220" text-anchor="middle" font-size="10" fill="#065f46">向量数据库</text>
+  <text x="920" y="240" text-anchor="middle" font-size="9" fill="#10b981">Long-term</text>
+
+  <!-- Cylinder 3: 操作历史 -->
+  <ellipse cx="1080" cy="135" rx="55" ry="10" fill="#a7f3d0" stroke="#10b981" stroke-width="1.5"/>
+  <path d="M1025 135 L1025 245 Q1025 255 1080 255 Q1135 255 1135 245 L1135 135" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>
+  <ellipse cx="1080" cy="135" rx="55" ry="10" fill="#a7f3d0" stroke="#10b981" stroke-width="1.5"/>
+  <line x1="1035" y1="160" x2="1125" y2="160" stroke="#10b981" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <line x1="1035" y1="200" x2="1125" y2="200" stroke="#10b981" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <text x="1080" y="180" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">操作历史</text>
+  <text x="1080" y="200" text-anchor="middle" font-size="10" fill="#065f46">Episodic</text>
+  <text x="1080" y="225" text-anchor="middle" font-size="9" fill="#10b981">History</text>
+
+  <!-- ===== Tool Layer (Right Bottom) ===== -->
+  <rect x="660" y="300" width="520" height="190" fill="#ecfeff" stroke="#06b3d4" stroke-width="1.5" stroke-dasharray="5,3" rx="8"/>
+  <text x="680" y="330" font-size="15" font-weight="bold" fill="#06b3d4">工具层</text>
+  <text x="680" y="348" font-size="10" fill="#06b3d4">Tool Layer</text>
+
+  <!-- Tool 1: 库存查询API -->
+  <rect x="680" y="360" width="140" height="50" rx="6" fill="#cffafe" stroke="#06b3d4" stroke-width="1.5"/>
+  <circle cx="700" cy="385" r="7" fill="none" stroke="#06b3d4" stroke-width="1.2"/>
+  <path d="M700 378 L700 376 M700 392 L700 394 M693 385 L691 385 M707 385 L709 385 M695 380 L693 378 M705 390 L707 392 M695 390 L693 392 M705 380 L707 378" stroke="#06b3d4" stroke-width="0.8"/>
+  <text x="755" y="382" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">库存查询API</text>
+  <text x="755" y="398" text-anchor="middle" font-size="9" fill="#06b3d4">Query</text>
+
+  <!-- Tool 2: 入库操作API -->
+  <rect x="840" y="360" width="140" height="50" rx="6" fill="#cffafe" stroke="#06b3d4" stroke-width="1.5"/>
+  <path d="M855 388 L860 388 L860 382 L868 382 L868 388 L873 388 M864 382 L864 376" stroke="#06b3d4" stroke-width="1.2" fill="none"/>
+  <text x="915" y="382" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">入库操作API</text>
+  <text x="915" y="398" text-anchor="middle" font-size="9" fill="#06b3d4">Inbound</text>
+
+  <!-- Tool 3: 出库操作API -->
+  <rect x="1000" y="360" width="140" height="50" rx="6" fill="#cffafe" stroke="#06b3d4" stroke-width="1.5"/>
+  <path d="M1015 376 L1015 388 L1020 388 L1020 382 L1028 382 L1028 388 L1033 388" stroke="#06b3d4" stroke-width="1.2" fill="none"/>
+  <text x="1075" y="382" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">出库操作API</text>
+  <text x="1075" y="398" text-anchor="middle" font-size="9" fill="#06b3d4">Outbound</text>
+
+  <!-- Tool 4: 报表生成API -->
+  <rect x="760" y="425" width="140" height="50" rx="6" fill="#cffafe" stroke="#06b3d4" stroke-width="1.5"/>
+  <rect x="775" y="442" width="14" height="16" rx="1" fill="#ffffff" stroke="#06b3d4" stroke-width="1"/>
+  <line x1="778" y1="446" x2="786" y2="446" stroke="#06b3d4" stroke-width="0.8"/>
+  <line x1="778" y1="450" x2="786" y2="450" stroke="#06b3d4" stroke-width="0.8"/>
+  <line x1="778" y1="454" x2="783" y2="454" stroke="#06b3d4" stroke-width="0.8"/>
+  <text x="835" y="447" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">报表生成API</text>
+  <text x="835" y="463" text-anchor="middle" font-size="9" fill="#06b3d4">Report</text>
+
+  <!-- Tool 5: 数据导出API -->
+  <rect x="920" y="425" width="140" height="50" rx="6" fill="#cffafe" stroke="#06b3d4" stroke-width="1.5"/>
+  <path d="M935 458 L935 444 L945 444 L945 458 Z M940 444 L940 440 L950 440 L950 444" fill="none" stroke="#06b3d4" stroke-width="1"/>
+  <path d="M945 450 L955 450 M953 447 L955 450 L953 453" stroke="#06b3d4" stroke-width="1" fill="none"/>
+  <text x="995" y="447" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">数据导出API</text>
+  <text x="995" y="463" text-anchor="middle" font-size="9" fill="#06b3d4">Export</text>
+
+  <!-- ===== Output Layer (Bottom) ===== -->
+  <rect x="30" y="510" width="1150" height="160" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5,3" rx="8"/>
+  <text x="50" y="540" font-size="15" font-weight="bold" fill="#f59e0b">输出层</text>
+  <text x="50" y="558" font-size="10" fill="#f59e0b">Output Layer</text>
+
+  <!-- Output 1: 结构化数据 -->
+  <rect x="80" y="565" width="240" height="80" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+  <rect x="100" y="590" width="14" height="3" fill="#f59e0b"/>
+  <rect x="100" y="597" width="14" height="3" fill="#f59e0b"/>
+  <rect x="100" y="604" width="10" height="3" fill="#f59e0b"/>
+  <rect x="100" y="611" width="14" height="3" fill="#f59e0b"/>
+  <text x="210" y="600" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">结构化数据</text>
+  <text x="210" y="620" text-anchor="middle" font-size="10" fill="#f59e0b">JSON / Table</text>
+
+  <!-- Output 2: 自然语言回复 -->
+  <rect x="350" y="565" width="240" height="80" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+  <path d="M370 595 Q370 585 380 585 L400 585 Q410 585 410 595 L410 605 Q410 612 402 612 L388 612 L382 618 L382 612 Q370 612 370 605 Z" fill="#ffffff" stroke="#f59e0b" stroke-width="1"/>
+  <line x1="378" y1="595" x2="402" y2="595" stroke="#f59e0b" stroke-width="0.6"/>
+  <line x1="378" y1="600" x2="402" y2="600" stroke="#f59e0b" stroke-width="0.6"/>
+  <line x1="378" y1="605" x2="398" y2="605" stroke="#f59e0b" stroke-width="0.6"/>
+  <text x="480" y="600" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">自然语言回复</text>
+  <text x="480" y="620" text-anchor="middle" font-size="10" fill="#f59e0b">NL Response</text>
+
+  <!-- Output 3: 操作确认 -->
+  <rect x="620" y="565" width="240" height="80" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+  <circle cx="645" cy="600" r="10" fill="#ffffff" stroke="#f59e0b" stroke-width="1.2"/>
+  <path d="M640 600 L644 604 L650 596" fill="none" stroke="#f59e0b" stroke-width="1.8"/>
+  <text x="750" y="600" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">操作确认</text>
+  <text x="750" y="620" text-anchor="middle" font-size="10" fill="#f59e0b">Confirmation</text>
+
+  <!-- Output 4: 报表文件 -->
+  <rect x="890" y="565" width="240" height="80" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+  <path d="M910 585 L910 620 Q910 624 914 624 L934 624 Q938 624 938 620 L938 593 L930 585 Z" fill="#ffffff" stroke="#f59e0b" stroke-width="1"/>
+  <path d="M930 585 L930 593 L938 593" fill="none" stroke="#f59e0b" stroke-width="1"/>
+  <line x1="915" y1="600" x2="933" y2="600" stroke="#f59e0b" stroke-width="0.6"/>
+  <line x1="915" y1="606" x2="933" y2="606" stroke="#f59e0b" stroke-width="0.6"/>
+  <line x1="915" y1="612" x2="929" y2="612" stroke="#f59e0b" stroke-width="0.6"/>
+  <text x="1020" y="600" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">报表文件</text>
+  <text x="1020" y="620" text-anchor="middle" font-size="10" fill="#f59e0b">Report File</text>
+
+  <!-- ===== Arrows: Input -> Agent Core ===== -->
+  <line x1="240" y1="165" x2="320" y2="165" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <line x1="240" y1="275" x2="300" y2="275" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <line x1="240" y1="385" x2="320" y2="385" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+
+  <!-- ===== Arrows: Agent <-> Memory (read/write) ===== -->
+  <line x1="600" y1="170" x2="700" y2="170" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <text x="650" y="162" text-anchor="middle" font-size="9" fill="#10b981">retrieve</text>
+  <line x1="700" y1="225" x2="600" y2="225" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arrow-green)"/>
+  <text x="650" y="240" text-anchor="middle" font-size="9" fill="#10b981">store</text>
+
+  <!-- ===== Arrows: Agent -> Tools ===== -->
+  <line x1="600" y1="385" x2="675" y2="385" stroke="#06b3d4" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
+  <text x="640" y="378" text-anchor="middle" font-size="9" fill="#06b3d4">call</text>
+
+  <!-- ===== Arrow: Tools -> Agent (return) ===== -->
+  <line x1="675" y1="445" x2="600" y2="445" stroke="#06b3d4" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arrow-cyan)"/>
+  <text x="640" y="438" text-anchor="middle" font-size="9" fill="#06b3d4">result</text>
+
+  <!-- ===== Arrow: Agent -> Output ===== -->
+  <path d="M 460 480 Q 460 510 460 565" fill="none" stroke="#f59e0b" stroke-width="1.8" marker-end="url(#arrow-orange)"/>
+  <text x="475" y="525" font-size="10" font-weight="bold" fill="#f59e0b">输出</text>
+
+  <!-- Legend -->
+  <g transform="translate(960, 670)">
+    <line x1="0" y1="0" x2="20" y2="0" stroke="#10b981" stroke-width="1.5"/>
+    <text x="25" y="3" font-size="9" fill="#64748b">读</text>
+    <line x1="50" y1="0" x2="70" y2="0" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4,2"/>
+    <text x="75" y="3" font-size="9" fill="#64748b">写</text>
+    <path d="M105 0 Q115 -10 125 0" fill="none" stroke="#7c3aed" stroke-width="1.5"/>
+    <text x="130" y="3" font-size="9" fill="#64748b">迭代</text>
+    <line x1="155" y1="0" x2="175" y2="0" stroke="#64748b" stroke-width="1.5"/>
+    <text x="180" y="3" font-size="9" fill="#64748b">数据流</text>
+  </g>
+</svg>
