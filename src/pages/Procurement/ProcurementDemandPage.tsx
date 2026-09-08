@@ -79,9 +79,8 @@ export default function ProcurementDemandPage() {
       title: '采购类型',
       render: (row) => {
         const map: Record<string, { label: string; color: string }> = {
-          framework: { label: '框架采购', color: 'text-[#409eff]' },
-          once: { label: '单次采购', color: 'text-[#e6a23c]' },
-          mixed: { label: '混选采购', color: 'text-[#67c23a]' },
+          within_framework: { label: '框架内采购', color: 'text-[#409eff]' },
+          outside_framework: { label: '框架外采购', color: 'text-[#e6a23c]' },
         };
         const item = map[row.procurementType] || { label: '-', color: '' };
         return <span className={item.color}>{item.label}</span>;
@@ -260,7 +259,7 @@ export default function ProcurementDemandPage() {
       id: 'PD' + Date.now(),
       demandNo: `CGQQ${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(procurementDemands.length + 1).padStart(3, '0')}`,
       demandType: 'material',
-      procurementType: 'mixed',
+      procurementType: 'outside_framework',
       applicant: currentUser.name,
       applicantDept: '采购部门',
       applyDate: now.toISOString().slice(0, 10),
@@ -294,8 +293,8 @@ export default function ProcurementDemandPage() {
       approver: currentUser.name
     });
 
-    // 2. 如果是框架采购类型，检查是否有有效期合同，有则自动生成采购订单
-    if (demand.procurementType === 'framework' && addContractPurchaseOrder) {
+    // 2. 如果是框架内采购类型，检查是否有有效期合同，有则自动生成采购订单
+    if (demand.procurementType === 'within_framework' && addContractPurchaseOrder) {
       const now = new Date();
 
       // 按合同分组需求明细
@@ -458,15 +457,11 @@ export default function ProcurementDemandPage() {
       });
     };
     let filtered: typeof products = products;
-    if (editItem.procurementType === 'framework') {
+    if (editItem.procurementType === 'within_framework') {
       filtered = products.filter((p) => hasContract(p.id));
-    } else if (editItem.procurementType === 'once') {
-      filtered = products.filter((p) => !hasContract(p.id));
-    }
-    // framework 类型提示只能选有合同的，once 类型提示只能选无合同的
-    if (editItem.procurementType === 'framework') {
       setFilteredProducts(filtered as any);
-    } else if (editItem.procurementType === 'once') {
+    } else if (editItem.procurementType === 'outside_framework') {
+      filtered = products.filter((p) => !hasContract(p.id));
       setFilteredProducts(filtered as any);
     } else {
       setFilteredProducts([]);
@@ -694,9 +689,8 @@ export default function ProcurementDemandPage() {
           onChange={setFilterProcurementType}
           options={[
             { value: '', label: '全部' },
-            { value: 'framework', label: '框架采购' },
-            { value: 'once', label: '单次采购' },
-            { value: 'mixed', label: '混选采购' },
+            { value: 'within_framework', label: '框架内采购' },
+            { value: 'outside_framework', label: '框架外采购' },
           ]}
         />
       </SearchBar>
@@ -718,18 +712,10 @@ export default function ProcurementDemandPage() {
       >
         {editItem && (
           <div className="space-y-4" style={{ minHeight: '560px' }}>
-            {/* 上方：基础信息（约 1/3 高度） */}
-            <div className="space-y-2">
-              {/* 第一排：采购编号 | 需求类型 | 采购类型 | 申请人 | 申请部门 | 项目名称 */}
-              <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr 2fr' }}>
-                <div>
-                  <div className="mb-1 text-xs text-[#606266]">采购编号</div>
-                  <input
-                    className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm"
-                    value={editItem.demandNo}
-                    onChange={(e) => setEditItem({ ...editItem, demandNo: e.target.value })}
-                  />
-                </div>
+            {/* 上方：基础信息 */}
+            <div className="space-y-3">
+              {/* 业务三连：需求类型 + 采购方式* + 采购类型*  — 核心业务决策维度放一起 */}
+              <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">需求类型</div>
                   <select
@@ -755,16 +741,27 @@ export default function ProcurementDemandPage() {
                   </select>
                 </div>
                 <div>
-                  <div className="mb-1 text-xs text-[#606266]">采购类型</div>
+                  <div className="mb-1 text-xs text-[#606266]">采购类型<span className="text-[#f56c6c] ml-0.5">*</span></div>
                   <select
                     className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm"
                     value={editItem.procurementType}
                     onChange={(e) => setEditItem({ ...editItem, procurementType: e.target.value as ProcurementType })}
                   >
-                    <option value="framework">框架采购</option>
-                    <option value="once">单次采购</option>
-                    <option value="mixed">混选采购</option>
+                    <option value="within_framework">框架内采购</option>
+                    <option value="outside_framework">框架外采购</option>
                   </select>
+                </div>
+              </div>
+
+              {/* 第二排：采购编号 | 申请人 | 申请部门 | 项目名称* — 4 列等宽，项目名称稍宽 */}
+              <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr 1fr 2fr' }}>
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">采购编号</div>
+                  <input
+                    className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.demandNo}
+                    onChange={(e) => setEditItem({ ...editItem, demandNo: e.target.value })}
+                  />
                 </div>
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">申请人</div>
@@ -793,8 +790,8 @@ export default function ProcurementDemandPage() {
                 </div>
               </div>
 
-              {/* 第二排：申请事由（占 70%） + 附件上传（占 30%） */}
-              <div className="grid grid-cols-10 gap-2" style={{ gridTemplateColumns: '7fr 3fr' }}>
+              {/* 第三排：申请事由（占 70%） + 附件上传（占 30%） */}
+              <div className="grid gap-2" style={{ gridTemplateColumns: '7fr 3fr' }}>
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">申请事由</div>
                   <textarea
@@ -1535,8 +1532,8 @@ export default function ProcurementDemandPage() {
         onClose={() => setProductPickerOpen(false)}
         onConfirm={handleProductsSelected}
         title={(() => {
-          if (editItem?.procurementType === 'framework') return '框架采购 — 只能选择有有效合同的物资';
-          if (editItem?.procurementType === 'once') return '单次采购 — 只能选择无有效合同的物资';
+          if (editItem?.procurementType === 'within_framework') return '框架内采购 — 只能选择有有效合同的物资';
+          if (editItem?.procurementType === 'outside_framework') return '框架外采购 — 只能选择无有效合同的物资';
           return '从物资档案选择（支持多选）';
         })()}
         selectedIds={details.map((d) => (d as any).productId).filter(Boolean)}

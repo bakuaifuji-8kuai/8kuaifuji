@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   Warehouse, Position, ProductCategory, Product, Supplier, SupplierAssessment, Customer,
   Inventory, InboundOrder, InboundApplication, OutboundOrder, CheckOrder, TransferOrder, ReturnOrder, PendingReturn,
   AssetEquipment, ScrappedRecord, DamagedRecord, StockTransaction, Employee, PurchaseOrder,
@@ -2925,7 +2925,7 @@ export const procurementDemands: ProcurementDemand[] = [
     id: 'PD001',
     demandNo: 'CGQQ20240620001',
     demandType: 'material',
-    procurementType: 'framework',
+    procurementType: 'within_framework',
     applicant: '业务经理-王',
     applicantDept: '会展部',
     applyDate: '2024-06-20',
@@ -2976,7 +2976,7 @@ export const procurementDemands: ProcurementDemand[] = [
     id: 'PD002',
     demandNo: 'CGQQ20240625001',
     demandType: 'service_project',
-    procurementType: 'mixed',
+    procurementType: 'outside_framework',
     applicant: '采购主管-赵',
     applicantDept: '采购部',
     applyDate: '2024-06-25',
@@ -2990,7 +2990,7 @@ export const procurementDemands: ProcurementDemand[] = [
     id: 'PD003',
     demandNo: 'CGQQ20240626001',
     demandType: 'material',
-    procurementType: 'once',
+    procurementType: 'outside_framework',
     applicant: '孙七',
     applicantDept: '会展部',
     applyDate: '2024-06-26',
