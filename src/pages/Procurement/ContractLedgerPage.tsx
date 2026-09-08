@@ -272,7 +272,16 @@ export default function ContractLedgerPage() {
       c.performanceStatus || '-',
       c.remark || '',
     ]);
-    const csv = '\uFEFF' + [headers, ...rows].map((row) =>
+    // 汇总行
+    const totalAmount = filteredData.reduce((s, c) => s + (c.amount || 0), 0);
+    const totalPaid = filteredData.reduce((s, c) => s + (c.paidAmount || 0), 0);
+    const totalSettlement = filteredData.reduce((s, c) => s + (c.settlementAmount || 0), 0);
+    const summaryRow = [
+      `合计(${filteredData.length}份)`, '', '', '', '', '', '', '', '', '',
+      totalAmount.toFixed(2), totalPaid.toFixed(2), totalSettlement.toFixed(2),
+      '', '', '', '', '', '',
+    ];
+    const csv = '\uFEFF' + [headers, ...rows, summaryRow].map((row) =>
       row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
     ).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
@@ -295,6 +304,11 @@ export default function ContractLedgerPage() {
       alert('请允许弹出窗口以导出 PDF');
       return;
     }
+    // 计算汇总
+    const totalAmount = filteredData.reduce((s, c) => s + (c.amount || 0), 0);
+    const totalPaid = filteredData.reduce((s, c) => s + (c.paidAmount || 0), 0);
+    const totalSettlement = filteredData.reduce((s, c) => s + (c.settlementAmount || 0), 0);
+
     const rowsHtml = filteredData.map((c, i) => `
       <tr>
         <td>${i + 1}</td>
@@ -306,10 +320,24 @@ export default function ContractLedgerPage() {
         <td>${c.handlingDepartment || '-'}</td>
         <td>${c.amount?.toFixed(2) || '0.00'}</td>
         <td>${c.paidAmount?.toFixed(2) || '0.00'}</td>
+        <td>${c.settlementAmount?.toFixed(2) || '0.00'}</td>
         <td>${c.signingDate || '-'}</td>
         <td>${statusMap[c.status]?.label || c.status}</td>
       </tr>
     `).join('');
+
+    const summaryHtml = `
+      <tfoot>
+        <tr style="background: #f0f2f5; font-weight: bold;">
+          <td colspan="7" style="text-align: center;">合计（${filteredData.length}份合同）</td>
+          <td style="text-align: right;">${totalAmount.toFixed(2)}</td>
+          <td style="text-align: right;">${totalPaid.toFixed(2)}</td>
+          <td style="text-align: right;">${totalSettlement.toFixed(2)}</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    `;
+
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -322,6 +350,7 @@ export default function ContractLedgerPage() {
           table { width: 100%; border-collapse: collapse; }
           th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
           th { background: #f5f7fa; font-weight: 600; }
+          tfoot td { background: #f0f2f5; font-weight: bold; }
           .summary { margin-bottom: 20px; padding: 12px; background: #f5f7fa; border-radius: 4px; }
           .summary-item { display: inline-block; margin-right: 24px; }
           .summary-item strong { color: #409eff; font-size: 16px; }
@@ -330,20 +359,21 @@ export default function ContractLedgerPage() {
       <body>
         <h2>合同台账报表</h2>
         <div class="summary">
-          <div class="summary-item">合同总数：<strong>${stats.total}</strong> 份</div>
-          <div class="summary-item">合同总金额：<strong>${stats.totalAmount.toFixed(2)}</strong> 万元</div>
-          <div class="summary-item">已支付金额：<strong>${stats.totalPaid.toFixed(2)}</strong> 万元</div>
-          <div class="summary-item">执行中：<strong>${stats.activeCount}</strong> 份</div>
+          <div class="summary-item">合同总数：<strong>${filteredData.length}</strong> 份</div>
+          <div class="summary-item">合同总金额：<strong>${totalAmount.toFixed(2)}</strong> 万元</div>
+          <div class="summary-item">已支付金额：<strong>${totalPaid.toFixed(2)}</strong> 万元</div>
+          <div class="summary-item">结算金额：<strong>${totalSettlement.toFixed(2)}</strong> 万元</div>
         </div>
         <table>
           <thead>
             <tr>
               <th>序号</th><th>合同编码</th><th>合同名称</th><th>分类</th><th>类型</th>
               <th>对方单位</th><th>经办部门</th><th>金额(万元)</th><th>已支付(万元)</th>
-              <th>签订日期</th><th>状态</th>
+              <th>结算金额(万元)</th><th>签订日期</th><th>状态</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
+          ${summaryHtml}
         </table>
         <div style="margin-top: 30px; text-align: right; font-size: 12px; color: #909399;">
           导出日期：${new Date().toLocaleString('zh-CN')}
@@ -452,31 +482,56 @@ export default function ContractLedgerPage() {
 
   // ========== 表格列定义 ==========
   const columns: ColumnDef<ContractLedger>[] = [
-    { key: 'contractNo', title: '合同编码', render: (row) => row.contractNo },
-    { key: 'contractName', title: '合同名称', render: (row) => row.contractName },
+    { key: 'contractNo', title: '合同编码', render: (row) => row.contractNo,
+      footer: (data: ContractLedger[]) => `合计 ${data.length} 份` },
+    { key: 'contractName', title: '合同名称', render: (row) => row.contractName, footer: '' },
     {
       key: 'category',
       title: '分类',
       render: (row) => categoryMap[row.category] || row.category,
+      footer: '',
     },
     {
       key: 'contractType',
       title: '合同类型',
       render: (row) => row.contractType === 'engineering' ? '工程类' : '非工程类',
+      footer: '',
     },
-    { key: 'signingEntity', title: '签订主体', render: (row) => (row as any).signingEntity || '-' },
-    { key: 'handlingDepartment', title: '经办部门', render: (row) => row.handlingDepartment || '-' },
-    { key: 'demandDepartment', title: '需求部门', render: (row) => row.demandDepartment || '-' },
-    { key: 'handler', title: '经办人', render: (row) => row.handler || '-' },
-    { key: 'counterpartyName', title: '对方单位', render: (row) => row.counterpartyName || '-' },
-    { key: 'projectName', title: '项目名称', render: (row) => (row as any).projectName || '-' },
-    { key: 'amount', title: '合同金额(万)', align: 'right', render: (row) => row.amount?.toLocaleString() || '-' },
-    { key: 'paidAmount', title: '已支付(万)', align: 'right', render: (row) => row.paidAmount?.toLocaleString() || '-' },
-    { key: 'settlementAmount', title: '结算金额(万)', align: 'right', render: (row) => row.settlementAmount?.toLocaleString() || '-' },
-    { key: 'signingDate', title: '签订日期', render: (row) => row.signingDate || '-' },
+    { key: 'signingEntity', title: '签订主体', render: (row) => (row as any).signingEntity || '-', footer: '' },
+    { key: 'handlingDepartment', title: '经办部门', render: (row) => row.handlingDepartment || '-', footer: '' },
+    { key: 'demandDepartment', title: '需求部门', render: (row) => row.demandDepartment || '-', footer: '' },
+    { key: 'handler', title: '经办人', render: (row) => row.handler || '-', footer: '' },
+    { key: 'counterpartyName', title: '对方单位', render: (row) => row.counterpartyName || '-', footer: '' },
+    { key: 'projectName', title: '项目名称', render: (row) => (row as any).projectName || '-', footer: '' },
+    {
+      key: 'amount', title: '合同金额(万)', align: 'right',
+      render: (row) => row.amount?.toLocaleString() || '-',
+      footer: (data: ContractLedger[]) => {
+        const sum = data.reduce((s, c) => s + (c.amount || 0), 0);
+        return sum > 0 ? sum.toLocaleString() : '-';
+      },
+    },
+    {
+      key: 'paidAmount', title: '已支付(万)', align: 'right',
+      render: (row) => row.paidAmount?.toLocaleString() || '-',
+      footer: (data: ContractLedger[]) => {
+        const sum = data.reduce((s, c) => s + (c.paidAmount || 0), 0);
+        return sum > 0 ? sum.toLocaleString() : '-';
+      },
+    },
+    {
+      key: 'settlementAmount', title: '结算金额(万)', align: 'right',
+      render: (row) => row.settlementAmount?.toLocaleString() || '-',
+      footer: (data: ContractLedger[]) => {
+        const sum = data.reduce((s, c) => s + (c.settlementAmount || 0), 0);
+        return sum > 0 ? sum.toLocaleString() : '-';
+      },
+    },
+    { key: 'signingDate', title: '签订日期', render: (row) => row.signingDate || '-', footer: '' },
     {
       key: 'terminationDate',
       title: '终止日期',
+      footer: '',
       render: (row) => {
         if (!row.terminationDate) return '-';
         const classes = [];
@@ -494,6 +549,7 @@ export default function ContractLedgerPage() {
     {
       key: 'status',
       title: '状态',
+      footer: '',
       render: (row) => {
         // 自动判断：执行中合同已过期 → 逻辑状态提示
         let displayStatus = statusMap[row.status] || statusMap.draft;
@@ -538,6 +594,7 @@ export default function ContractLedgerPage() {
           >删除</TextButton>
         </div>
       ),
+      footer: '',
     },
   ];
 
@@ -855,7 +912,7 @@ export default function ContractLedgerPage() {
       </SearchBar>
 
       {/* 主数据表格 */}
-      <DataTable data={filteredData} columns={columns} rowKey={(row: any) => row.id} />
+      <DataTable data={filteredData} columns={columns} rowKey={(row: any) => row.id} showFooter />
 
       {/* 新增/编辑弹窗 */}
       <Modal

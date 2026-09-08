@@ -980,6 +980,7 @@ export interface ProcurementPlan {
   id: string;
   planNo: string; // 计划编号
   planType: ProcurementPlanType; // 月度/年度
+  planMode?: 'approval' | 'filing'; // 审批制 / 报备制
   year: string; // 年份
   month?: string; // 月份（月度计划）
   department: string; // 需求部门

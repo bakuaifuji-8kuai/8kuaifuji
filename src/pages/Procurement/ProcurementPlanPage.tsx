@@ -29,12 +29,21 @@ export default function ProcurementPlanPage() {
   }, [procurementPlans, applied]);
 
   const columns: ColumnDef<ProcurementPlan>[] = [
-    { key: 'planNo', title: '计划编号' },
-    {
-      key: 'planType',
-      title: '计划类型',
-      render: (row) => (row.planType === 'monthly' ? '月度计划' : '年度计划'),
-    },
+  { key: 'planNo', title: '计划编号' },
+  {
+    key: 'planMode',
+    title: '计划方式',
+    render: (row) => row.planMode === 'filing' ? (
+      <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-xs rounded">报备制</span>
+    ) : (
+      <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-600 text-xs rounded">审批制</span>
+    ),
+  },
+  {
+    key: 'planType',
+    title: '计划类型',
+    render: (row) => (row.planType === 'monthly' ? '月度计划' : '年度计划'),
+  },
     { key: 'year', title: '年份' },
     { key: 'month', title: '月份', render: (row) => row.planType === 'annual' ? '-' : (row.month || '-') },
     { key: 'department', title: '需求部门' },
@@ -111,15 +120,18 @@ export default function ProcurementPlanPage() {
   const [isNew, setIsNew] = useState(false);
   const [details, setDetails] = useState<ProcurementPlanDetail[]>([]);
   const [newPlanType, setNewPlanType] = useState<'annual' | 'monthly'>('monthly');
+  const [newPlanMode, setNewPlanMode] = useState<'approval' | 'filing'>('approval');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const openAdd = () => {
+    setNewPlanMode('approval');
     setNewPlanType('monthly');
     const now = new Date();
     const newPlan: ProcurementPlan = {
       id: 'PP' + Date.now(),
       planNo: `CGJH${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(procurementPlans.length + 1).padStart(3, '0')}`,
       planType: 'monthly',
+      planMode: 'approval',
       year: String(now.getFullYear()),
       month: String(now.getMonth() + 1).padStart(2, '0'),
       department: currentUser.department || '',
@@ -527,7 +539,7 @@ export default function ProcurementPlanPage() {
         width="95vw"
       >
         <div className="space-y-3">
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-5 gap-3">
             <div>
               <div className="mb-1 text-[#606266]">计划编号</div>
               <input
@@ -537,20 +549,57 @@ export default function ProcurementPlanPage() {
               />
             </div>
             <div>
+                <div className="mb-1 text-[#606266]">计划方式</div>
+                {isNew ? (
+                  <select
+                    className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
+                    value={newPlanMode}
+                    onChange={(e) => {
+                      const mode = e.target.value as 'approval' | 'filing';
+                      setNewPlanMode(mode);
+                      if (mode === 'filing') {
+                        // 报备制自动锁为月度
+                        setNewPlanType('monthly');
+                        if (editItem) setEditItem({ ...editItem, planMode: mode, planType: 'monthly' });
+                      } else {
+                        if (editItem) setEditItem({ ...editItem, planMode: mode });
+                      }
+                    }}
+                  >
+                    <option value="approval">审批制</option>
+                    <option value="filing">报备制</option>
+                  </select>
+                ) : (
+                  <input
+                    className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-[#606266] bg-[#f5f7fa]"
+                    value={editItem?.planMode === 'filing' ? '报备制' : '审批制'}
+                    readOnly
+                  />
+                )}
+              </div>
+            <div>
                 <div className="mb-1 text-[#606266]">计划类型</div>
                 {isNew ? (
                   <select
                     className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
                     value={newPlanType}
+                    disabled={newPlanMode === 'filing'}
                     onChange={(e) => {
-                      setNewPlanType(e.target.value as 'annual' | 'monthly');
+                      const val = e.target.value as 'annual' | 'monthly';
+                      setNewPlanType(val);
                       if (editItem) {
-                        setEditItem({ ...editItem, planType: e.target.value as 'annual' | 'monthly' });
+                        setEditItem({ ...editItem, planType: val });
                       }
                     }}
                   >
-                    <option value="annual">年度计划</option>
-                    <option value="monthly">月度计划</option>
+                    {newPlanMode === 'approval' ? (
+                      <>
+                        <option value="annual">年度计划</option>
+                        <option value="monthly">月度计划</option>
+                      </>
+                    ) : (
+                      <option value="monthly">月度计划</option>
+                    )}
                   </select>
                 ) : (
                   <input

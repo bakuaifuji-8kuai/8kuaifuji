@@ -730,25 +730,12 @@ export default function ProcurementDemandPage() {
                 </div>
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">项目名称 <span className="text-[#f56c6c]">*</span></div>
-                  <select
+                  <input
                     className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm"
+                    placeholder="请输入项目名称"
                     value={editItem.projectName}
                     onChange={(e) => setEditItem({ ...editItem, projectName: e.target.value })}
-                  >
-                    <option value="">-- 请选择项目 --</option>
-                    {availableProjects.length === 0 ? (
-                      <option value="" disabled>暂无可用项目（请先在月度采购计划中添加）</option>
-                    ) : (
-                      availableProjects.map((p) => (
-                        <option key={p.projectName} value={p.projectName}>
-                          {p.projectName}（来源：{p.planNo}）
-                        </option>
-                      ))
-                    )}
-                  </select>
-                  {availableProjects.length === 0 && (
-                    <div className="text-xs text-[#e6a23c] mt-1">提示：请先在「月度采购计划」中添加项目并审批通过</div>
-                  )}
+                  />
                 </div>
               </div>
 
