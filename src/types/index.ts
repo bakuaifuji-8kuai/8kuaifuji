@@ -1011,6 +1011,27 @@ export type ProcurementType = 'framework' | 'once' | 'mixed';
 // 混选采购：可选全部物资
 
 // 采购需求申请状态
+export type ProcurementMode = 'meeting' | 'sign_report' | 'application_form';
+// 会议审批 / 签报审批 / 采购项目申请表
+
+// 服务/工程类采购需求：多行项目明细行
+export interface ProjectRow {
+  id: string;
+  dept: string;              // 需求部门
+  projectName: string;      // 项目名称
+  mainContent?: string;     // 主要内容（仅采购项目申请表）
+  budgetAmount: number;      // 预算总金额（会议审批）/ 不含税预算总金额（签报/申请表）
+  budgetControlAmount: number; // 预算控制金额
+  approvalMeetingName?: string; // 立项审批会议名称（仅会议审批）
+  approvalDate: string;     // 立项审批日期
+  remark?: string;          // 备注（采购项目申请表 + 服务类）
+  // 附件占位（后续如需 per-row 附件管理可扩展）
+  meetingMinutes?: string;   // 会议纪要及上会材料
+  userRequirementDoc?: string; // 用户需求书 / 施工方案
+  budgetAuditDoc?: string;   // 预算审核文件
+  signReportDoc?: string;    // 签报审批相关文件
+}
+
 export type ProcurementDemandStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'changed';
 
 // 采购需求明细
@@ -1055,6 +1076,7 @@ export interface ProcurementDemand {
   demandNo: string; // 采购编号
   demandType: ProcurementDemandType;
   procurementType: ProcurementType; // 采购类型：框架采购/单次采购/混选采购
+  procurementMode?: ProcurementMode; // 采购方式：会议审批/签报审批/采购项目申请表
   applicant: string; // 申请人
   applicantDept: string; // 申请部门
   applyDate: string; // 申请日期
@@ -1070,6 +1092,7 @@ export interface ProcurementDemand {
   approver?: string;
   remark?: string;
   details: ProcurementDemandDetail[];
+  projectRows?: ProjectRow[]; // 服务/工程类采购需求的多行项目明细
   attachments?: Attachment[];
   approvalHistory?: ApprovalRecord[];
   changeHistory?: DemandChangeRecord[]; // 变更历史记录
