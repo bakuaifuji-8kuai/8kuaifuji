@@ -1225,9 +1225,7 @@ export default function ProcurementDemandPage() {
                     <th className="px-2 py-2 text-center border border-[#ebeef5] w-10">#</th>
                     <th className="px-2 py-2 text-center border border-[#ebeef5] w-28">需求部门<span className="text-[#f56c6c] ml-0.5">*</span></th>
                     <th className="px-2 py-2 text-center border border-[#ebeef5] w-32">项目名称<span className="text-[#f56c6c] ml-0.5">*</span></th>
-                    {editItem.procurementMode === 'application_form' && (
-                      <th className="px-2 py-2 text-center border border-[#ebeef5] w-40">主要内容<span className="text-[#f56c6c] ml-0.5">*</span></th>
-                    )}
+                    <th className="px-2 py-2 text-center border border-[#ebeef5] w-56">主要内容<span className="text-[#f56c6c] ml-0.5">*</span></th>
                     <th className="px-2 py-2 text-center border border-[#ebeef5] w-24">
                       {editItem.procurementMode === 'meeting' ? '预算总金额' : '不含税预算总金额'}(元)<span className="text-[#f56c6c] ml-0.5">*</span>
                     </th>
@@ -1276,12 +1274,10 @@ export default function ProcurementDemandPage() {
                         <input className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
                           value={row.projectName || ''} onChange={(e) => updateProjectRow(index, 'projectName', e.target.value)} />
                       </td>
-                      {editItem.procurementMode === 'application_form' && (
-                        <td className="px-2 py-1 border border-[#ebeef5]">
-                          <textarea className="w-full h-10 px-1 border border-[#dcdfe6] rounded text-xs resize-none"
-                            value={row.mainContent || ''} onChange={(e) => updateProjectRow(index, 'mainContent', e.target.value)} />
-                        </td>
-                      )}
+                      <td className="px-2 py-1 border border-[#ebeef5]">
+                        <textarea className="w-full h-12 px-1 border border-[#dcdfe6] rounded text-xs resize-none"
+                          value={row.mainContent || ''} onChange={(e) => updateProjectRow(index, 'mainContent', e.target.value)} />
+                      </td>
                       <td className="px-2 py-1 border border-[#ebeef5]">
                         <input type="number" className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs text-right"
                           value={row.budgetAmount ?? ''} onChange={(e) => updateProjectRow(index, 'budgetAmount', e.target.value ? Number(e.target.value) : 0)} />
@@ -1348,7 +1344,7 @@ export default function ProcurementDemandPage() {
                     </tr>
                   ))}
                   {projectRows.length === 0 && (
-                    <tr><td colSpan={editItem.procurementMode === 'meeting' ? 13 : editItem.procurementMode === 'sign_report' ? 12 : editItem.procurementMode === 'application_form' && editItem.demandType === 'service_project' ? 12 : 11} className="px-3 py-6 text-center text-[#909399]">暂无数据，点击"+ 添加行"开始录入</td></tr>
+                    <tr><td colSpan={editItem.procurementMode === 'meeting' ? 14 : editItem.procurementMode === 'sign_report' ? 13 : editItem.procurementMode === 'application_form' && editItem.demandType === 'service_project' ? 13 : 12} className="px-3 py-6 text-center text-[#909399]">暂无数据，点击"+ 添加行"开始录入</td></tr>
                   )}
                 </tbody>
               </table>
