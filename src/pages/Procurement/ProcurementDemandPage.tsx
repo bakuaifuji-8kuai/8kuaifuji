@@ -23,8 +23,36 @@ export default function ProcurementDemandPage() {
   const serviceProjects = useStore((s) => s.serviceProjects);
   // 月度采购计划
   const procurementPlans = useStore((s) => s.procurementPlans);
+  // 下游单据：用于变更时校验是否被引用
+  const biddings = useStore((s) => s.biddings);
+  const procurementOrders = useStore((s) => s.procurementOrders);
+  const contractPurchaseOrders = useStore((s) => s.contractPurchaseOrders);
   // 采购订单管理
   const addContractPurchaseOrder = useStore((s) => s.addContractPurchaseOrder);
+
+  /** 检查某需求是否已被下游单据引用，返回引用单据列表（空数组=未被引用） */
+  const getDownstreamRefs = (demandId: string, demandNo: string) => {
+    const refs: { type: string; no: string; name: string }[] = [];
+    // 招采工单
+    biddings.forEach((b) => {
+      if (b.demandId === demandId || b.demandNo === demandNo) {
+        refs.push({ type: '招采工单', no: b.biddingNo, name: b.biddingName || '-' });
+      }
+    });
+    // 采购订单
+    procurementOrders.forEach((o) => {
+      if (o.demandId === demandId || o.demandNo === demandNo) {
+        refs.push({ type: '采购订单', no: o.orderNo, name: '-' });
+      }
+    });
+    // 合同采购订单
+    contractPurchaseOrders.forEach((o) => {
+      if (o.procurementDemandId === demandId || o.procurementDemandNo === demandNo) {
+        refs.push({ type: '合同采购订单', no: o.orderNo, name: o.productContractNo || '-' });
+      }
+    });
+    return refs;
+  };
 
   // 从已审批的月度采购计划中提取项目列表（去重）
   const availableProjects = useMemo(() => {
@@ -134,9 +162,18 @@ export default function ProcurementDemandPage() {
         <div className="flex flex-wrap items-center gap-2">
           <TextButton onClick={() => { setEditItem(row); setProjectRows(row.projectRows || []); }}>编辑</TextButton>
           <TextButton onClick={() => viewDetail(row)}>查看详情</TextButton>
-          {row.status === 'approved' && (
-            <TextButton onClick={() => openChange(row)}>发起变更</TextButton>
-          )}
+          {row.status === 'approved' && (() => {
+            const downstreamRefs = getDownstreamRefs(row.id, row.demandNo);
+            if (downstreamRefs.length > 0) {
+              return (
+                <span
+                  className="text-slate-300 cursor-not-allowed text-[13px]"
+                  title={`已被下游引用，无法变更：\n${downstreamRefs.map(r => `- ${r.type} ${r.no}`).join('\n')}`}
+                >发起变更</span>
+              );
+            }
+            return <TextButton onClick={() => openChange(row)}>发起变更</TextButton>;
+          })()}
           {row.status === 'draft' && (
             <TextButton onClick={() => handleSubmit(row)}>提交审批</TextButton>
           )}
@@ -409,6 +446,18 @@ export default function ProcurementDemandPage() {
 
   // 发起变更
   const openChange = (demand: ProcurementDemand) => {
+    // 1. 只有审批通过的才可发起变更
+    if (demand.status !== 'approved') {
+      alert('只有审批通过的需求申请才可发起变更');
+      return;
+    }
+    // 2. 校验是否已被下游单据引用
+    const refs = getDownstreamRefs(demand.id, demand.demandNo);
+    if (refs.length > 0) {
+      const refText = refs.map((r) => `- ${r.type} ${r.no}（${r.name}）`).join('\n');
+      alert(`该需求已被下游使用，无法发起变更：\n\n${refText}\n\n请先处理下游单据后再操作。`);
+      return;
+    }
     const change: ProcurementDemandChange = {
       id: 'PDC' + Date.now(),
       demandId: demand.id,
