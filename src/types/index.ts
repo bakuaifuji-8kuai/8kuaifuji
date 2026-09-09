@@ -1108,12 +1108,15 @@ export interface ProcurementDemand {
 export interface ProcurementDemandChange {
   id: string;
   demandId: string;
+  demandType?: ProcurementDemandType;
   changeNo: string;
   changeReason: string;
   changeTime: string;
   changer: string;
   beforeDetails: ProcurementDemandDetail[];
   afterDetails: ProcurementDemandDetail[];
+  beforeProjectRows?: ProjectRow[];
+  afterProjectRows?: ProjectRow[];
   status: 'pending' | 'approved' | 'rejected';
   approveTime?: string;
   approver?: string;
@@ -1128,6 +1131,8 @@ export interface DemandChangeRecord {
   changer: string;
   beforeDetails: ProcurementDemandDetail[];
   afterDetails: ProcurementDemandDetail[];
+  beforeProjectRows?: ProjectRow[];
+  afterProjectRows?: ProjectRow[];
   status: 'pending' | 'approved' | 'rejected';
   approveTime?: string;
   approver?: string;

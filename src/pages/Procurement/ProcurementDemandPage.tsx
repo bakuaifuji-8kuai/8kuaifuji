@@ -458,15 +458,19 @@ export default function ProcurementDemandPage() {
       alert(`该需求已被下游使用，无法发起变更：\n\n${refText}\n\n请先处理下游单据后再操作。`);
       return;
     }
+    const isProjectType = demand.demandType === 'implementation_project' || demand.demandType === 'service_project';
     const change: ProcurementDemandChange = {
       id: 'PDC' + Date.now(),
       demandId: demand.id,
+      demandType: demand.demandType,
       changeNo: `BG${demand.demandNo}`,
       changeReason: '',
       changeTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
       changer: currentUser.name,
-      beforeDetails: [...demand.details],
-      afterDetails: [...demand.details],
+      beforeDetails: isProjectType ? [] : [...demand.details],
+      afterDetails: isProjectType ? [] : [...demand.details],
+      beforeProjectRows: isProjectType ? (demand.projectRows ?? []).map(r => ({ ...r })) : undefined,
+      afterProjectRows: isProjectType ? (demand.projectRows ?? []).map(r => ({ ...r })) : undefined,
       status: 'pending',
     };
     setChangeItem(change);
@@ -674,6 +678,7 @@ export default function ProcurementDemandPage() {
 
   const submitChange = () => {
     if (!changeItem) return;
+    const isProjectType = changeItem.beforeProjectRows !== undefined;
     // 创建变更历史记录
     const changeRecord: DemandChangeRecord = {
       id: changeItem.id,
@@ -683,6 +688,8 @@ export default function ProcurementDemandPage() {
       changer: changeItem.changer,
       beforeDetails: changeItem.beforeDetails,
       afterDetails: changeItem.afterDetails,
+      beforeProjectRows: changeItem.beforeProjectRows,
+      afterProjectRows: changeItem.afterProjectRows,
       status: 'pending',
     };
     // 查找原需求
@@ -690,12 +697,16 @@ export default function ProcurementDemandPage() {
     if (!originalDemand) return;
     // 更新需求状态为待审核，并追加变更历史
     const updatedHistory = [...(originalDemand.changeHistory || []), changeRecord];
-    updateProcurementDemand(changeItem.demandId, {
+    const updateData: Partial<ProcurementDemand> = {
       status: 'pending',
       changeHistory: updatedHistory,
-      // 同步更新明细为变更后的数据
-      details: changeItem.afterDetails,
-    });
+    };
+    if (isProjectType) {
+      updateData.projectRows = changeItem.afterProjectRows;
+    } else {
+      updateData.details = changeItem.afterDetails;
+    }
+    updateProcurementDemand(changeItem.demandId, updateData);
     // 同时记录到变更申请台账
     addProcurementDemandChange(changeItem);
     setChangeItem(null);
@@ -1389,54 +1400,140 @@ export default function ProcurementDemandPage() {
                 placeholder="请输入变更原因（只能调减数量或删减项目，禁止新增）"
               />
             </div>
-            <div className="text-[#e6a23c] text-sm">提示：变更仅允许调减采购数量或删减项目，禁止新增采购项</div>
+            <div className="text-[#e6a23c] text-sm">提示：变更仅允许调减采购数量/预算或删减项目，禁止新增</div>
             <div>
-              <div className="text-[#606266] mb-2">变更后明细（可调整数量或删除）</div>
-              <div className="border border-[#dcdfe6] rounded max-h-64 overflow-auto">
-                <table className="w-full">
-                  <thead className="sticky top-0 bg-[#f5f7fa]">
-                    <tr>
-                      <th className="px-2 py-2 text-xs text-left">商品编码</th>
-                      <th className="px-2 py-2 text-xs text-left">产品名称</th>
-                      <th className="px-2 py-2 text-xs text-left w-20">单位</th>
-                      <th className="px-2 py-2 text-xs text-left w-20">原数量</th>
-                      <th className="px-2 py-2 text-xs text-left w-20">新数量</th>
-                      <th className="px-2 py-2 text-xs text-left w-20">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {changeItem.afterDetails.map((detail, index) => {
-                      const originalDetail = changeItem.beforeDetails.find(d => d.id === detail.id);
-                      return (
-                        <tr key={detail.id} className="border-t border-[#ebeef5]">
-                          <td className="px-2 py-1 text-xs">{detail.productCode}</td>
-                          <td className="px-2 py-1 text-xs">{detail.productName}</td>
-                          <td className="px-2 py-1 text-xs">{detail.unit}</td>
-                          <td className="px-2 py-1 text-xs text-[#909399]">{originalDetail?.quantity}</td>
-                          <td className="px-2 py-1">
-                            <input
-                              type="number"
-                              max={originalDetail?.quantity}
-                              min={0}
-                              className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
-                              value={detail.quantity}
-                              onChange={(e) => {
-                                const newQty = Number(e.target.value);
-                                if (newQty <= (originalDetail?.quantity || 0)) {
-                                  updateChangeDetail(index, 'quantity', newQty);
-                                }
-                              }}
-                            />
-                          </td>
-                          <td className="px-2 py-1">
-                            <TextButton type="danger" size="small" onClick={() => removeChangeDetail(index)}>删除</TextButton>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <div className="text-[#606266] mb-2">变更后明细</div>
+              {changeItem.beforeProjectRows !== undefined ? (
+                // ======== 实施/服务项目：渲染 ProjectRow 表格 ========
+                <div className="border border-[#dcdfe6] rounded max-h-80 overflow-auto">
+                  <table className="w-full">
+                    <thead className="sticky top-0 bg-[#f5f7fa]">
+                      <tr>
+                        <th className="px-2 py-2 text-xs text-left w-20">需求部门</th>
+                        <th className="px-2 py-2 text-xs text-left w-28">项目名称</th>
+                        <th className="px-2 py-2 text-xs text-left">主要内容</th>
+                        <th className="px-2 py-2 text-xs text-left w-24">原预算</th>
+                        <th className="px-2 py-2 text-xs text-left w-28">新预算（不得超原）</th>
+                        <th className="px-2 py-2 text-xs text-left w-24">预算控制金额</th>
+                        <th className="px-2 py-2 text-xs text-left w-16">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(changeItem.afterProjectRows ?? []).map((row, idx) => {
+                        const orig = changeItem.beforeProjectRows?.find(r => r.id === row.id);
+                        return (
+                          <tr key={row.id} className="border-t border-[#ebeef5]">
+                            <td className="px-2 py-1 text-xs">{row.dept}</td>
+                            <td className="px-2 py-1 text-xs">{row.projectName}</td>
+                            <td className="px-2 py-1 text-xs max-w-[220px]">
+                              <textarea
+                                className="w-full h-8 px-1 border border-[#dcdfe6] rounded text-xs resize-none"
+                                value={row.mainContent ?? ''}
+                                onChange={(e) => {
+                                  const list = [...(changeItem.afterProjectRows ?? [])];
+                                  list[idx] = { ...list[idx], mainContent: e.target.value };
+                                  setChangeItem({ ...changeItem, afterProjectRows: list });
+                                }}
+                              />
+                            </td>
+                            <td className="px-2 py-1 text-xs text-[#909399]">¥{(orig?.budgetAmount ?? 0).toLocaleString()}</td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="number"
+                                min={0}
+                                max={orig?.budgetAmount ?? 0}
+                                className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
+                                value={row.budgetAmount}
+                                onChange={(e) => {
+                                  const v = Number(e.target.value);
+                                  if (v <= (orig?.budgetAmount ?? 0)) {
+                                    const list = [...(changeItem.afterProjectRows ?? [])];
+                                    list[idx] = { ...list[idx], budgetAmount: v };
+                                    setChangeItem({ ...changeItem, afterProjectRows: list });
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="number"
+                                min={0}
+                                className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
+                                value={row.budgetControlAmount}
+                                onChange={(e) => {
+                                  const list = [...(changeItem.afterProjectRows ?? [])];
+                                  list[idx] = { ...list[idx], budgetControlAmount: Number(e.target.value) };
+                                  setChangeItem({ ...changeItem, afterProjectRows: list });
+                                }}
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <TextButton
+                                type="danger"
+                                size="small"
+                                onClick={() => {
+                                  const list = (changeItem.afterProjectRows ?? []).filter((_, i) => i !== idx);
+                                  setChangeItem({ ...changeItem, afterProjectRows: list });
+                                }}
+                              >删除</TextButton>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {(!changeItem.afterProjectRows || changeItem.afterProjectRows.length === 0) && (
+                        <tr><td colSpan={7} className="px-2 py-4 text-center text-xs text-[#909399]">暂无明细</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                // ======== 物资采购：渲染 Details 表格 ========
+                <div className="border border-[#dcdfe6] rounded max-h-64 overflow-auto">
+                  <table className="w-full">
+                    <thead className="sticky top-0 bg-[#f5f7fa]">
+                      <tr>
+                        <th className="px-2 py-2 text-xs text-left">商品编码</th>
+                        <th className="px-2 py-2 text-xs text-left">产品名称</th>
+                        <th className="px-2 py-2 text-xs text-left w-20">单位</th>
+                        <th className="px-2 py-2 text-xs text-left w-20">原数量</th>
+                        <th className="px-2 py-2 text-xs text-left w-20">新数量</th>
+                        <th className="px-2 py-2 text-xs text-left w-20">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {changeItem.afterDetails.map((detail, index) => {
+                        const originalDetail = changeItem.beforeDetails.find(d => d.id === detail.id);
+                        return (
+                          <tr key={detail.id} className="border-t border-[#ebeef5]">
+                            <td className="px-2 py-1 text-xs">{detail.productCode}</td>
+                            <td className="px-2 py-1 text-xs">{detail.productName}</td>
+                            <td className="px-2 py-1 text-xs">{detail.unit}</td>
+                            <td className="px-2 py-1 text-xs text-[#909399]">{originalDetail?.quantity}</td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="number"
+                                max={originalDetail?.quantity}
+                                min={0}
+                                className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
+                                value={detail.quantity}
+                                onChange={(e) => {
+                                  const newQty = Number(e.target.value);
+                                  if (newQty <= (originalDetail?.quantity || 0)) {
+                                    updateChangeDetail(index, 'quantity', newQty);
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <TextButton type="danger" size="small" onClick={() => removeChangeDetail(index)}>删除</TextButton>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
