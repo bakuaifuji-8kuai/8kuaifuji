@@ -3313,6 +3313,108 @@ export const procurementDemands: ProcurementDemand[] = [
       },
     ],
   },
+
+  // ======== 演示数据：各状态覆盖 ========
+  // DEMO-001: 已通过 + 无下游引用（演示「发起变更」按钮可点击）
+  {
+    id: 'PD_DEMO_001',
+    demandNo: 'CGQQ20260910001',
+    demandType: 'material',
+    procurementType: 'outside_framework',
+    procurementMode: 'meeting',
+    applicant: '管理员',
+    applicantDept: '采购部',
+    applyDate: '2026-09-10',
+    projectName: '2026秋季展物料采购（演示）',
+    reason: '秋季展会需采购一批展览物料，需求明细已确认',
+    status: 'approved',
+    createTime: '2026-09-10 09:00:00',
+    approveTime: '2026-09-10 10:30:00',
+    approver: '张总',
+    details: [
+      { demandId: 'PD_DEMO_001', id: 'DD_DEMO_001_1', productId: 'P001', productCode: 'WL-001', productName: '标准展板', specification: '2.4m×1.2m', unit: '块', quantity: 50, unitPriceExcludingTax: 200, unitPriceIncludingTax: 226, taxRate: 13, amountExcludingTax: 10000, taxAmount: 1300, amountIncludingTax: 11300, stockQuantity: 0 },
+      { demandId: 'PD_DEMO_001', id: 'DD_DEMO_001_2', productId: 'P002', productCode: 'WL-002', productName: '易拉宝', specification: '80cm×200cm', unit: '个', quantity: 30, unitPriceExcludingTax: 80, unitPriceIncludingTax: 90.4, taxRate: 13, amountExcludingTax: 2400, taxAmount: 312, amountIncludingTax: 2712, stockQuantity: 0 },
+    ],
+  },
+  // DEMO-002: 已变更（带变更历史）
+  {
+    id: 'PD_DEMO_002',
+    demandNo: 'CGQQ20260905001',
+    demandType: 'implementation_project',
+    procurementType: 'within_framework',
+    procurementMode: 'sign_report',
+    applicant: '李工',
+    applicantDept: '工程部',
+    applyDate: '2026-09-05',
+    projectName: '展馆音响系统升级工程',
+    reason: '展馆音响系统使用超过3年，需升级改造',
+    status: 'changed',
+    createTime: '2026-09-05 08:30:00',
+    approveTime: '2026-09-05 14:00:00',
+    approver: '王总',
+    details: [],
+    projectRows: [
+      { id: 'PR_DEMO_002', dept: '工程部', projectName: '音响系统升级一期', mainContent: '主音响阵列升级 + 功放设备更换', budgetAmount: 280000, budgetControlAmount: 300000, approvalDate: '2026-09-05' },
+    ],
+    changeHistory: [],
+  },
+  // DEMO-003: 驳回
+  {
+    id: 'PD_DEMO_003',
+    demandNo: 'CGQQ20260908001',
+    demandType: 'service_project',
+    procurementType: 'outside_framework',
+    procurementMode: 'application_form',
+    applicant: '赵运营',
+    applicantDept: '运营部',
+    applyDate: '2026-09-08',
+    projectName: '开幕式策划执行服务',
+    reason: '展会开幕式需要专业策划执行团队',
+    status: 'rejected',
+    createTime: '2026-09-08 11:00:00',
+    approver: '张总',
+    details: [],
+    projectRows: [
+      { id: 'PR_DEMO_003', dept: '运营部', projectName: '开幕式策划执行', mainContent: '开幕式流程策划 + 场地布置 + 现场执行', budgetAmount: 120000, budgetControlAmount: 150000, approvalDate: '2026-09-08' },
+    ],
+    remark: '预算过高，请重新评估后再提交',
+  },
+  // DEMO-004: 草稿
+  {
+    id: 'PD_DEMO_004',
+    demandNo: 'CGQQ20260912001',
+    demandType: 'material',
+    procurementType: 'outside_framework',
+    procurementMode: 'meeting',
+    applicant: '孙经理',
+    applicantDept: '市场部',
+    applyDate: '2026-09-12',
+    projectName: '展会宣传物料采购',
+    reason: '',
+    status: 'draft',
+    createTime: '2026-09-12 15:00:00',
+    details: [
+      { demandId: 'PD_DEMO_004', id: 'DD_DEMO_004_1', productId: 'P003', productCode: 'WL-003', productName: '宣传画册', specification: 'A4 铜版纸', unit: '册', quantity: 2000, unitPriceExcludingTax: 15, unitPriceIncludingTax: 16.95, taxRate: 13, amountExcludingTax: 30000, taxAmount: 3900, amountIncludingTax: 33900, stockQuantity: 0 },
+    ],
+  },
+  // DEMO-005: 待审批
+  {
+    id: 'PD_DEMO_005',
+    demandNo: 'CGQQ20260911001',
+    demandType: 'material',
+    procurementType: 'within_framework',
+    procurementMode: 'meeting',
+    applicant: '周采购',
+    applicantDept: '采购部',
+    applyDate: '2026-09-11',
+    projectName: '展会办公耗材补充',
+    reason: '展会期间办公耗材消耗大，需补充',
+    status: 'pending',
+    createTime: '2026-09-11 10:00:00',
+    details: [
+      { demandId: 'PD_DEMO_005', id: 'DD_DEMO_005_1', productId: 'P004', productCode: 'HC-001', productName: 'A4打印纸', specification: '70g 500张/包', unit: '包', quantity: 100, unitPriceExcludingTax: 25, unitPriceIncludingTax: 28.25, taxRate: 13, amountExcludingTax: 2500, taxAmount: 325, amountIncludingTax: 2825, stockQuantity: 0 },
+    ],
+  },
 ];
 
 
