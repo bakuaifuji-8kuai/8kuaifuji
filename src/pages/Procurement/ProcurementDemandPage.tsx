@@ -8,6 +8,40 @@ import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import type { ProcurementDemand, ProcurementDemandDetail, ProcurementDemandChange, Contract, ProductContract, ProcurementType, ProcurementMode, ProjectRow, DemandChangeRecord, Project, ContractPurchaseOrder, ContractPurchaseOrderDetail } from '@/types';
 
+// ============ 业务分类 <-> 底层 demandType 映射 ============
+// 业务分类 + 细分 → 底层模板类型
+function subTypeToDemandType(
+  bc: 'engineering' | 'non_engineering',
+  st: 'construction' | 'service' | 'goods'
+): 'implementation_project' | 'service_project' | 'material' {
+  if (st === 'construction') return 'implementation_project';
+  if (st === 'service') return 'service_project';
+  return 'material'; // goods
+}
+
+// 反向：底层 demandType → 业务分类 + 细分（老数据兜底）
+function demandTypeToCategory(dt: string): { bc: 'engineering' | 'non_engineering'; st: 'construction' | 'service' | 'goods' } {
+  if (dt === 'implementation_project') return { bc: 'engineering', st: 'construction' };
+  if (dt === 'service_project') return { bc: 'engineering', st: 'service' };
+  return { bc: 'engineering', st: 'goods' }; // material 兜底为 工程类-货物
+}
+
+// 组合展示标签
+function getCategoryLabel(bc?: string, st?: string, dt?: string): string {
+  if (bc && st) {
+    const bcLabel = bc === 'engineering' ? '工程类' : '非工程类';
+    const stLabel = st === 'construction' ? '施工' : st === 'service' ? '服务' : '货物';
+    return `${bcLabel} / ${stLabel}`;
+  }
+  // 兜底：老数据没有 bc/st，根据 demandType 反推
+  if (dt) {
+    const bc2 = dt === 'implementation_project' ? '工程类' : dt === 'service_project' ? '工程类' : '工程类';
+    const st2 = dt === 'implementation_project' ? '施工' : dt === 'service_project' ? '服务' : '货物';
+    return `${bc2} / ${st2}`;
+  }
+  return '-';
+}
+
 export default function ProcurementDemandPage() {
   const procurementDemands = useStore((s) => s.procurementDemands);
   const addProcurementDemand = useStore((s) => s.addProcurementDemand);
@@ -93,14 +127,9 @@ export default function ProcurementDemandPage() {
     { key: 'demandNo', title: '采购编号' },
     {
       key: 'demandType',
-      title: '需求类型',
+      title: '业务分类',
       render: (row) => {
-        const typeMap: Record<string, string> = {
-          material: '物资采购',
-          implementation_project: '实施项目',
-          service_project: '服务项目',
-        };
-        return typeMap[row.demandType] || row.demandType;
+        return getCategoryLabel(row.businessCategory, row.subType, row.demandType);
       },
     },
     {
@@ -160,7 +189,13 @@ export default function ProcurementDemandPage() {
       title: '操作',
       render: (row) => (
         <div className="flex flex-wrap items-center gap-2">
-          <TextButton onClick={() => { setEditItem(row); setProjectRows(row.projectRows || []); }}>编辑</TextButton>
+          <TextButton onClick={() => {
+            // 老数据兜底：如果没有 businessCategory/subType，从 demandType 反推
+            const r = row.businessCategory && row.subType
+              ? row
+              : { ...row, ...demandTypeToCategory(row.demandType) };
+            setEditItem(r); setProjectRows(row.projectRows || []);
+          }}>编辑</TextButton>
           <TextButton onClick={() => viewDetail(row)}>查看详情</TextButton>
           {row.status === 'approved' && (() => {
             const downstreamRefs = getDownstreamRefs(row.id, row.demandNo);
@@ -297,6 +332,8 @@ export default function ProcurementDemandPage() {
       id: 'PD' + Date.now(),
       demandNo: '',   // 保存时才生成编号
       demandType: 'material',
+      businessCategory: 'engineering',
+      subType: 'goods',
       procurementType: 'outside_framework',
       applicant: currentUser.name,
       applicantDept: '采购部门',
@@ -779,18 +816,52 @@ export default function ProcurementDemandPage() {
           <div className="space-y-4" style={{ minHeight: '560px' }}>
             {/* 上方：基础信息 */}
             <div className="space-y-3">
-              {/* 业务三连：需求类型 + 采购方式* + 采购类型*  — 核心业务决策维度放一起 */}
-              <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+              {/* 业务决策维度：业务分类* + 细分* + 采购方式* + 采购类型*  — 四连 */}
+              <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr' }}>
                 <div>
-                  <div className="mb-1 text-xs text-[#606266]">需求类型</div>
+                  <div className="mb-1 text-xs text-[#606266]">业务分类<span className="text-[#f56c6c] ml-0.5">*</span></div>
                   <select
                     className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm"
-                    value={editItem.demandType}
-                    onChange={(e) => setEditItem({ ...editItem, demandType: e.target.value as any })}
+                    value={editItem.businessCategory || ''}
+                    onChange={(e) => {
+                      const bc = e.target.value as 'engineering' | 'non_engineering';
+                      // 切换业务分类后，如果当前细分在新分类下无效，自动调整
+                      let st = editItem.subType;
+                      if (bc === 'engineering' && !st) st = 'construction';
+                      if (bc === 'non_engineering' && (st === 'construction' || !st)) st = 'service';
+                      // 映射到底层 demandType
+                      const dt = subTypeToDemandType(bc, st!);
+                      setEditItem({ ...editItem, businessCategory: bc, subType: st, demandType: dt });
+                    }}
                   >
-                    <option value="material">物资采购</option>
-                    <option value="implementation_project">实施项目</option>
-                    <option value="service_project">服务项目</option>
+                    <option value="engineering">工程类</option>
+                    <option value="non_engineering">非工程类</option>
+                  </select>
+                </div>
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">细分<span className="text-[#f56c6c] ml-0.5">*</span></div>
+                  <select
+                    className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.subType || ''}
+                    onChange={(e) => {
+                      const st = e.target.value as 'construction' | 'service' | 'goods';
+                      const bc = editItem.businessCategory!;
+                      const dt = subTypeToDemandType(bc, st);
+                      setEditItem({ ...editItem, subType: st, demandType: dt });
+                    }}
+                  >
+                    {editItem.businessCategory === 'engineering' ? (
+                      <>
+                        <option value="construction">施工</option>
+                        <option value="service">服务</option>
+                        <option value="goods">货物（含材料和设备）</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="service">服务</option>
+                        <option value="goods">货物（含材料和设备）</option>
+                      </>
+                    )}
                   </select>
                 </div>
                 <div>
@@ -1550,7 +1621,7 @@ export default function ProcurementDemandPage() {
           <div className="space-y-4 text-sm">
             <div className="grid grid-cols-2 gap-x-8 gap-y-3">
               <div><span className="text-[#909399]">采购编号：</span>{viewItem.demandNo}</div>
-              <div><span className="text-[#909399]">需求类型：</span>{viewItem.demandType}</div>
+              <div><span className="text-[#909399]">业务分类：</span>{getCategoryLabel(viewItem.businessCategory, viewItem.subType, viewItem.demandType)}</div>
               <div><span className="text-[#909399]">项目名称：</span>{viewItem.projectName}</div>
               <div><span className="text-[#909399]">申请人：</span>{viewItem.applicant}</div>
               <div><span className="text-[#909399]">申请部门：</span>{viewItem.applicantDept}</div>

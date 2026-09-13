@@ -1074,6 +1074,8 @@ export interface ProcurementDemand {
   id: string;
   demandNo: string; // 采购编号
   demandType: ProcurementDemandType;
+  businessCategory?: 'engineering' | 'non_engineering'; // 业务分类：工程类 / 非工程类
+  subType?: 'construction' | 'service' | 'goods'; // 细分：施工 / 服务 / 货物
   procurementType: ProcurementType; // 采购类型：框架内采购/框架外采购
   procurementMode?: ProcurementMode; // 采购方式：会议审批/签报审批/采购项目申请表
   applicant: string; // 申请人
