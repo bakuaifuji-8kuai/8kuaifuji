@@ -26,6 +26,22 @@ function demandTypeToCategory(dt: string): { bc: 'engineering' | 'non_engineerin
   return { bc: 'engineering', st: 'goods' }; // material 兜底为 工程类-货物
 }
 
+// bc+st 组合成 select 的 value（用双下划线分隔，避免和值里的斜杠冲突）
+function makeCategoryKey(bc: string, st: string): string {
+  return `${bc}__${st}`;
+}
+
+// 从 select value 解析出 bc + st
+function parseCategoryKey(key: string): { bc: 'engineering' | 'non_engineering'; st: 'construction' | 'service' | 'goods' } | null {
+  const [bc, st] = key.split('__');
+  if (bc === 'engineering' || bc === 'non_engineering') {
+    if (st === 'construction' || st === 'service' || st === 'goods') {
+      return { bc, st };
+    }
+  }
+  return null;
+}
+
 // 组合展示标签
 function getCategoryLabel(bc?: string, st?: string, dt?: string): string {
   if (bc && st) {
@@ -818,52 +834,28 @@ export default function ProcurementDemandPage() {
           <div className="space-y-4" style={{ minHeight: '560px' }}>
             {/* 上方：基础信息 */}
             <div className="space-y-3">
-              {/* 业务决策维度：业务分类* + 细分* + 需求立项方式* + 框架合同清单内/外采购*  — 四连 */}
-              <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr' }}>
+              {/* 业务决策维度：业务类型* + 需求立项方式* + 框架合同清单内/外采购*  — 三连 */}
+              <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
                 <div>
-                  <div className="mb-1 text-xs text-[#606266]">业务分类<span className="text-[#f56c6c] ml-0.5">*</span></div>
+                  <div className="mb-1 text-xs text-[#606266]">业务类型<span className="text-[#f56c6c] ml-0.5">*</span></div>
                   <select
                     className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm"
-                    value={editItem.businessCategory || ''}
+                    value={(editItem.businessCategory && editItem.subType)
+                      ? makeCategoryKey(editItem.businessCategory, editItem.subType)
+                      : ''}
                     onChange={(e) => {
-                      const bc = e.target.value as 'engineering' | 'non_engineering';
-                      // 切换业务分类后，如果当前细分在新分类下无效，自动调整
-                      let st = editItem.subType;
-                      if (bc === 'engineering' && !st) st = 'construction';
-                      if (bc === 'non_engineering' && (st === 'construction' || !st)) st = 'service';
-                      // 映射到底层 demandType
-                      const dt = subTypeToDemandType(bc, st!);
-                      setEditItem({ ...editItem, businessCategory: bc, subType: st, demandType: dt });
+                      const parsed = parseCategoryKey(e.target.value);
+                      if (!parsed) return;
+                      const dt = subTypeToDemandType(parsed.bc, parsed.st);
+                      setEditItem({ ...editItem, businessCategory: parsed.bc, subType: parsed.st, demandType: dt });
                     }}
                   >
-                    <option value="engineering">工程类</option>
-                    <option value="non_engineering">非工程类</option>
-                  </select>
-                </div>
-                <div>
-                  <div className="mb-1 text-xs text-[#606266]">细分<span className="text-[#f56c6c] ml-0.5">*</span></div>
-                  <select
-                    className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm"
-                    value={editItem.subType || ''}
-                    onChange={(e) => {
-                      const st = e.target.value as 'construction' | 'service' | 'goods';
-                      const bc = editItem.businessCategory!;
-                      const dt = subTypeToDemandType(bc, st);
-                      setEditItem({ ...editItem, subType: st, demandType: dt });
-                    }}
-                  >
-                    {editItem.businessCategory === 'engineering' ? (
-                      <>
-                        <option value="construction">施工</option>
-                        <option value="service">服务</option>
-                        <option value="goods">货物（含材料和设备）</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="service">服务</option>
-                        <option value="goods">货物（含材料和设备）</option>
-                      </>
-                    )}
+                    <option value="" disabled>请选择</option>
+                    <option value={makeCategoryKey('engineering', 'construction')}>工程类 / 施工</option>
+                    <option value={makeCategoryKey('engineering', 'service')}>工程类 / 服务</option>
+                    <option value={makeCategoryKey('engineering', 'goods')}>工程类 / 货物（含材料和设备）</option>
+                    <option value={makeCategoryKey('non_engineering', 'service')}>非工程类 / 服务</option>
+                    <option value={makeCategoryKey('non_engineering', 'goods')}>非工程类 / 货物（含材料和设备）</option>
                   </select>
                 </div>
                 <div>
