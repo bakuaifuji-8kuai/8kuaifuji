@@ -1004,10 +1004,11 @@ export interface ProcurementPlan {
 export type ProcurementDemandType = 'material' | 'implementation_project' | 'service_project';
 // 物资采购 / 实施项目 / 服务项目
 
-// 采购类型（按是否在框架合同内）
-export type ProcurementType = 'within_framework' | 'outside_framework';
-// 框架内采购：只能选择有有效合同的物资，审批后自动生成采购订单
-// 框架外采购：选择无有效合同的物资，需走单次采购/公开招标流程
+// 框架合同清单内/外采购
+export type ProcurementType = 'within_framework' | 'outside_framework' | 'new_supplier';
+// within_framework：清单内，只能选有有效框架合同的物资
+// outside_framework：清单外，只能选无有效框架合同的物资
+// new_supplier：新增供应商目录，清单内+清单外物资全部可选
 
 // 采购需求申请状态
 export type ProcurementMode = 'meeting' | 'sign_report' | 'application_form';
@@ -1076,8 +1077,8 @@ export interface ProcurementDemand {
   demandType: ProcurementDemandType;
   businessCategory?: 'engineering' | 'non_engineering'; // 业务分类：工程类 / 非工程类
   subType?: 'construction' | 'service' | 'goods'; // 细分：施工 / 服务 / 货物
-  procurementType: ProcurementType; // 采购类型：框架内采购/框架外采购
-  procurementMode?: ProcurementMode; // 采购方式：会议审批/签报审批/采购项目申请表
+  procurementType: ProcurementType; // 框架合同清单内/外采购：清单内/清单外/新增供应商目录
+  procurementMode?: ProcurementMode; // 需求立项方式：会议审批/签报审批/采购项目申请表
   applicant: string; // 申请人
   applicantDept: string; // 申请部门
   applyDate: string; // 申请日期
