@@ -3,6 +3,9 @@ import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Bu
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
+import SupplierPickerModal from '@/components/common/SupplierPickerModal';
+import DemandPickerModal from '@/components/common/DemandPickerModal';
+import TimePickerModal from '@/components/common/TimePickerModal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import { MOCK_BIDDINGS, MOCK_SUPPLIER_QUOTES } from '@/mock/biddingMockData';
@@ -99,6 +102,22 @@ export default function CompetitiveBiddingPage() {
     { key: 'creator', title: '创建人' },
     { key: 'createTime', title: '创建时间', render: (row) => row.createTime?.split(' ')[0] || '-' },
     {
+      key: 'timeRange',
+      title: '招标时间',
+      render: (row) => {
+        if (!row.startTime && !row.endTime) return <span className="text-[#c0c4cc]">未设置</span>;
+        const now = new Date();
+        const isPast = row.endTime && new Date(row.endTime) < now;
+        const cls = isPast ? 'text-red-500' : 'text-[#606266]';
+        return (
+          <div className={`text-xs ${cls}`}>
+            <div>{row.startTime?.slice(0, 16)?.replace(' ', ' ') || '-'} ~</div>
+            <div>{row.endTime?.slice(0, 16)?.replace(' ', ' ') || '-'}</div>
+          </div>
+        );
+      },
+    },
+    {
       key: 'attachments',
       title: '评定结果',
       render: (row) => {
@@ -119,6 +138,18 @@ export default function CompetitiveBiddingPage() {
         <div className="flex items-center gap-3">
           <TextButton onClick={() => openEdit(row)}>编辑</TextButton>
           <TextButton onClick={() => viewDetail(row)}>查看详情</TextButton>
+          {(() => {
+            const canSet = ['draft', 'published', 'bidding'].includes(row.status);
+            if (!canSet) return null;
+            // bidding 状态且已过截止时间 → 也不允许
+            if (row.status === 'bidding' && row.endTime && new Date(row.endTime) < new Date()) return null;
+            const hasTime = !!(row.startTime && row.endTime);
+            return (
+              <TextButton onClick={() => setTimePickerTarget(row)}>
+                {hasTime ? '修改招标时间' : '设置招标时间'}
+              </TextButton>
+            );
+          })()}
           {row.status === 'draft' && (
             <TextButton onClick={() => handlePublish(row)}>发布</TextButton>
           )}
@@ -154,6 +185,10 @@ export default function CompetitiveBiddingPage() {
   // 竞价文件附件
   const [editBiddingDocs, setEditBiddingDocs] = useState<Attachment[]>([]);
   const [previewAtt, setPreviewAtt] = useState<Attachment | null>(null);
+  // 三个选择弹框的 open 状态
+  const [supplierPickerOpen, setSupplierPickerOpen] = useState(false);
+  const [demandPickerOpen, setDemandPickerOpen] = useState(false);
+  const [timePickerTarget, setTimePickerTarget] = useState<Bidding | null>(null);
 
   // ===== 附件处理函数 =====
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -461,6 +496,31 @@ export default function CompetitiveBiddingPage() {
     }
   };
 
+  // ===== 三个弹框的 Confirm 回调 =====
+
+  // 供应商多选弹框确认
+  const handleConfirmSuppliers = (ids: string[]) => {
+    setSelectedSuppliers(ids);
+    setSupplierPickerOpen(false);
+  };
+
+  // 采购需求单选弹框确认
+  const handleConfirmDemand = (demand: ProcurementDemand | null) => {
+    if (!demand) {
+      setDemandPickerOpen(false);
+      return;
+    }
+    handleSelectDemand(demand.id);
+    setDemandPickerOpen(false);
+  };
+
+  // 招标时间设置弹框确认
+  const handleConfirmTime = (startTime: string, endTime: string) => {
+    if (!timePickerTarget) return;
+    updateBidding?.(timePickerTarget.id, { startTime, endTime });
+    setTimePickerTarget(null);
+  };
+
   // 更新某条物资条目
   const updateItem = (index: number, patch: Partial<BiddingItem>) => {
     if (!editItem || !editItem.items) return;
@@ -565,60 +625,33 @@ export default function CompetitiveBiddingPage() {
               </div>
             </div>
 
-            {/* 招标期时间段 */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="mb-1 text-xs text-[#606266]">
-                  招标开始时间 <span className="text-[#f56c6c]">*</span>
-                </div>
-                <input
-                  type="datetime-local"
-                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-                  value={editItem.startTime ? editItem.startTime.replace(' ', 'T').slice(0, 16) : ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val) {
-                      editItem && setEditItem({ ...editItem, startTime: val.replace('T', ' ') + ':00' });
-                    } else {
-                      editItem && setEditItem({ ...editItem, startTime: undefined });
-                    }
-                  }}
-                />
-              </div>
-              <div>
-                <div className="mb-1 text-xs text-[#606266]">
-                  招标截止时间 <span className="text-[#f56c6c]">*</span>
-                </div>
-                <input
-                  type="datetime-local"
-                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-                  value={editItem.endTime ? editItem.endTime.replace(' ', 'T').slice(0, 16) : ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val) {
-                      editItem && setEditItem({ ...editItem, endTime: val.replace('T', ' ') + ':00' });
-                    } else {
-                      editItem && setEditItem({ ...editItem, endTime: undefined });
-                    }
-                  }}
-                />
-              </div>
-            </div>
+            {/* 招标时间已移至列表操作列"设置招标时间"按钮 */}
 
+            {/* 关联采购需求 — 弹框选择 */}
             <div>
-              <div className="mb-1 text-xs text-[#606266]">
-                关联采购需求 <span className="text-[#f56c6c]">* 选择后将带入需求中的物资</span>
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-xs text-[#606266]">
+                  关联采购需求 <span className="text-[#f56c6c]">*</span>
+                  <span className="text-slate-400 ml-1">（选择后将带入需求中的物资）</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDemandPickerOpen(true)}
+                  className="text-xs text-indigo-500 hover:text-indigo-700 hover:underline"
+                >
+                  {editItem.demandId ? '更换' : '选择'}
+                </button>
               </div>
-              <select
-                className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-                value={editItem.demandId || ''}
-                onChange={(e) => handleSelectDemand(e.target.value)}
-              >
-                <option value="">请选择采购需求</option>
-                {procurementDemands.filter(d => d.status === 'approved' || d.status === 'changed').map(d => (
-                  <option key={d.id} value={d.id}>{d.demandNo} - {d.projectName}</option>
-                ))}
-              </select>
+              {editItem.demandId ? (
+                <div className="border border-indigo-200 bg-indigo-50 rounded px-3 py-2 text-xs">
+                  <span className="font-mono text-indigo-600 mr-2">{selectedDemand?.demandNo || editItem.demandNo}</span>
+                  <span className="text-slate-700">{selectedDemand?.projectName || editItem.projectName}</span>
+                </div>
+              ) : (
+                <div className="border border-dashed border-[#dcdfe6] rounded px-3 py-2 text-xs text-slate-400 text-center">
+                  请点击上方"选择"按钮，从已审核通过的采购需求中选择
+                </div>
+              )}
             </div>
 
             {/* 物资明细表格 */}
@@ -728,19 +761,40 @@ export default function CompetitiveBiddingPage() {
             </div>
 
             <div>
-              <div className="mb-1 text-xs text-[#606266]">选择受邀供应商</div>
-              <div className="border border-[#dcdfe6] rounded max-h-40 overflow-auto p-2">
-                {suppliers.filter(s => s.status === 'enabled').map(s => (
-                  <label key={s.id} className="flex items-center gap-2 py-1">
-                    <input
-                      type="checkbox"
-                      checked={selectedSuppliers.includes(s.id)}
-                      onChange={() => toggleSupplier(s.id)}
-                    />
-                    <span className="text-sm">{s.name}</span>
-                  </label>
-                ))}
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-xs text-[#606266]">受邀供应商</span>
+                <button
+                  type="button"
+                  onClick={() => setSupplierPickerOpen(true)}
+                  className="text-xs text-indigo-500 hover:text-indigo-700 hover:underline"
+                >
+                  {selectedSuppliers.length > 0 ? '重新选择' : '选择'}（已选 {selectedSuppliers.length} 家）
+                </button>
               </div>
+              {selectedSuppliers.length > 0 ? (
+                <div className="border border-[#dcdfe6] rounded p-2 flex flex-wrap gap-1.5 min-h-[40px]">
+                  {selectedSuppliers.map((sid) => {
+                    const sup = suppliers.find((s) => s.id === sid);
+                    return (
+                      <span
+                        key={sid}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs rounded border border-indigo-200"
+                      >
+                        {sup?.name || sid}
+                        <button
+                          type="button"
+                          onClick={() => toggleSupplier(sid)}
+                          className="hover:text-red-500 ml-0.5"
+                        >×</button>
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="border border-dashed border-[#dcdfe6] rounded px-3 py-2 text-xs text-slate-400 text-center min-h-[40px]">
+                  请点击上方"选择"按钮，从启用的供应商中选择受邀对象
+                </div>
+              )}
             </div>
 
             {/* 竞价公告附件 */}
@@ -1321,6 +1375,34 @@ export default function CompetitiveBiddingPage() {
           </div>
         )}
       </Modal>
+
+      {/* 供应商多选弹框 */}
+      <SupplierPickerModal
+        open={supplierPickerOpen}
+        onClose={() => setSupplierPickerOpen(false)}
+        suppliers={suppliers}
+        selectedIds={selectedSuppliers}
+        onConfirm={handleConfirmSuppliers}
+      />
+
+      {/* 采购需求单选弹框 */}
+      <DemandPickerModal
+        open={demandPickerOpen}
+        onClose={() => setDemandPickerOpen(false)}
+        demands={procurementDemands}
+        selectedId={editItem?.demandId}
+        onConfirm={handleConfirmDemand}
+      />
+
+      {/* 招标时间设置弹框 */}
+      <TimePickerModal
+        open={!!timePickerTarget}
+        onClose={() => setTimePickerTarget(null)}
+        biddingLabel={timePickerTarget ? `${timePickerTarget.biddingNo} ${timePickerTarget.biddingName}` : ''}
+        initialStart={timePickerTarget?.startTime}
+        initialEnd={timePickerTarget?.endTime}
+        onConfirm={handleConfirmTime}
+      />
     </div>
   );
 }
