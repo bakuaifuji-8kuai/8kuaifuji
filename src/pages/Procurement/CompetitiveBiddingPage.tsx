@@ -9,7 +9,25 @@ import TimePickerModal from '@/components/common/TimePickerModal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import { MOCK_BIDDINGS, MOCK_SUPPLIER_QUOTES } from '@/mock/biddingMockData';
-import type { Bidding, BiddingQuote, BiddingItem, BiddingQuoteDetail, ProcurementDemand, Attachment } from '@/types';
+import type {
+  Bidding, BiddingQuote, BiddingItem, BiddingQuoteDetail,
+  ProcurementDemand, Attachment, BiddingProcurementMethod,
+} from '@/types';
+import { BIDDING_METHOD_LABEL } from '@/types';
+
+/** 采购方式下拉选项（含框架子模式） */
+const PROCUREMENT_OPTIONS: Array<{ value: BiddingProcurementMethod; label: string }> = [
+  { value: 'inquiry', label: '询比采购' },
+  { value: 'competitive_bidding', label: '竞价采购' },
+  { value: 'negotiation', label: '谈判采购' },
+  { value: 'direct', label: '直接采购' },
+  { value: 'framework', label: '框架协议采购' },
+  { value: 'e_mall', label: '电子商城采购' },
+];
+
+/** 是否目录内比价（线上报价模式） */
+const isCatalogCompare = (m?: BiddingProcurementMethod, fwMode?: string) =>
+  m === 'framework' && fwMode !== 'random_draw';
 
 export default function CompetitiveBiddingPage() {
   const biddings = useStore((s) => s.biddings || []) as Bidding[];
@@ -52,36 +70,81 @@ export default function CompetitiveBiddingPage() {
 
   const columns: ColumnDef<Bidding>[] = [
     { key: 'biddingNo', title: '工单编号' },
-    { key: 'biddingName', title: '工单名称' },
     {
-      key: 'biddingType',
-      title: '工单类型',
-      render: (row) => row.biddingType === 'market' ? '市场采购' : '库内采购',
+      key: 'projectName',
+      title: '项目名称',
+      render: (row) => row.projectName || row.biddingName || '-',
+    },
+    {
+      key: 'procurementMethod',
+      title: '采购方式',
+      render: (row) => {
+        if (row.procurementMethod) {
+          let label = BIDDING_METHOD_LABEL[row.procurementMethod];
+          if (row.procurementMethod === 'framework') {
+            label += row.frameworkMode === 'random_draw' ? '(随机抽取)' : '(目录内比价)';
+          }
+          return (
+            <span className="px-1.5 py-0.5 text-xs rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+              {label}
+            </span>
+          );
+        }
+        // 兼容旧数据
+        return row.biddingType === 'market' ? '市场采购' : '库内采购';
+      },
     },
     { key: 'demandNo', title: '关联需求', render: (row) => row.demandNo || '-' },
     {
       key: 'itemsCount',
-      title: '物资数量',
-      render: (row) => (row.items?.length || 0) + ' 项',
+      title: '明细项数',
+      render: (row) => {
+        const catalog = row.items?.length || 0;
+        const offline = row.offlineDetails?.length || 0;
+        const random = row.randomDraw ? 1 : 0;
+        return (catalog + offline + random) + ' 项';
+      },
     },
     {
       key: 'totalLimit',
-      title: '整单上限',
-      render: (row) => row.totalPriceLimit ? `¥${row.totalPriceLimit.toLocaleString()}` : '-',
+      title: '金额合计',
+      render: (row) => {
+        const amt = row.totalAmountIncludingTax || row.totalPriceLimit;
+        return amt ? `¥${amt.toLocaleString()}` : '-';
+      },
     },
     {
       key: 'status',
-      title: '状态',
+      title: '审批状态',
       render: (row) => {
-        const statusMap: Record<string, { label: string; color: string }> = {
-          draft: { label: '草稿', color: 'text-[#909399]' },
-          published: { label: '已发布', color: 'text-[#409eff]' },
-          bidding: { label: '招标中', color: 'text-[#e6a23c]' },
-          evaluated: { label: '已评审', color: 'text-[#67c23a]' },
-          completed: { label: '已完成', color: 'text-[#67c23a]' },
+        const map: Record<string, { label: string; cls: string }> = {
+          draft: { label: '草稿', cls: 'bg-slate-100 text-slate-600' },
+          submitted: { label: '已提交', cls: 'bg-amber-100 text-amber-700' },
+          approved: { label: '已通过', cls: 'bg-green-100 text-green-700' },
+          rejected: { label: '已驳回', cls: 'bg-red-100 text-red-700' },
         };
-        const status = statusMap[row.status] || statusMap.draft;
-        return <span className={status.color}>{status.label}</span>;
+        const s = row.approvalStatus || row.status;
+        const cfg = map[s as string] || map.draft;
+        return <span className={`px-1.5 py-0.5 text-xs rounded border ${cfg.cls}`}>{cfg.label}</span>;
+      },
+    },
+    {
+      key: 'bizStatus',
+      title: '业务状态',
+      render: (row) => {
+        const map: Record<string, { label: string; cls: string }> = {
+          published: { label: '已发布', cls: 'bg-blue-100 text-blue-700' },
+          bidding: { label: '招标中', cls: 'bg-amber-100 text-amber-700' },
+          evaluated: { label: '已评审', cls: 'bg-green-100 text-green-700' },
+          completed: { label: '已完成', cls: 'bg-green-100 text-green-700' },
+          cancelled: { label: '已取消', cls: 'bg-slate-200 text-slate-600' },
+        };
+        // 如果审批还没过，显示"-"
+        if (row.approvalStatus && row.approvalStatus !== 'approved') {
+          return <span className="text-slate-400 text-xs">-</span>;
+        }
+        const cfg = map[row.status] || map.published;
+        return <span className={`px-1.5 py-0.5 text-xs rounded border ${cfg.cls}`}>{cfg.label}</span>;
       },
     },
     {
@@ -134,42 +197,59 @@ export default function CompetitiveBiddingPage() {
     {
       key: 'op',
       title: '操作',
-      render: (row) => (
-        <div className="flex items-center gap-3">
-          <TextButton onClick={() => openEdit(row)}>编辑</TextButton>
-          <TextButton onClick={() => viewDetail(row)}>查看详情</TextButton>
-          {(() => {
-            const canSet = ['draft', 'published', 'bidding'].includes(row.status);
-            if (!canSet) return null;
-            // bidding 状态且已过截止时间 → 也不允许
-            if (row.status === 'bidding' && row.endTime && new Date(row.endTime) < new Date()) return null;
-            const hasTime = !!(row.startTime && row.endTime);
-            return (
-              <TextButton onClick={() => setTimePickerTarget(row)}>
-                {hasTime ? '修改招标时间' : '设置招标时间'}
+      render: (row) => {
+        const isCatalog = isCatalogCompare(row.procurementMethod, row.frameworkMode);
+        const isApproved = row.approvalStatus === 'approved' || (!row.approvalStatus && row.status !== 'draft');
+        return (
+          <div className="flex items-center gap-3">
+            <TextButton onClick={() => openEdit(row)}>编辑</TextButton>
+            <TextButton onClick={() => viewDetail(row)}>查看详情</TextButton>
+            {(() => {
+              // 招标时间：仅目录内比价 + 审批通过后才允许设置
+              if (!isCatalog) return null;
+              if (!isApproved) return null;
+              const canSetTime = ['published', 'bidding'].includes(row.status) ||
+                (row.status === 'draft' && (row as any).procurementMethod);
+              if (!canSetTime) return null;
+              if (row.status === 'bidding' && row.endTime && new Date(row.endTime) < new Date()) return null;
+              const hasTime = !!(row.startTime && row.endTime);
+              return (
+                <TextButton onClick={() => setTimePickerTarget(row)}>
+                  {hasTime ? '修改招标时间' : '设置招标时间'}
+                </TextButton>
+              );
+            })()}
+            {/* 目录内比价状态流转按钮 */}
+            {isCatalog && row.status === 'draft' && (
+              <TextButton onClick={() => handlePublish(row)}>发布</TextButton>
+            )}
+            {isCatalog && row.status === 'published' && (
+              <TextButton onClick={() => handleStartBidding(row)}>开始采购</TextButton>
+            )}
+            {isCatalog && row.status === 'bidding' && (
+              <TextButton onClick={() => handleEvaluate(row)}>评审</TextButton>
+            )}
+            {isCatalog && row.status === 'evaluated' && (
+              <TextButton onClick={() => handleComplete(row)}>完成</TextButton>
+            )}
+            {/* 线下录入类：提交审批按钮 */}
+            {!isCatalog && row.approvalStatus === 'draft' && (
+              <TextButton onClick={() => updateBidding?.(row.id, { approvalStatus: 'submitted', status: 'submitted' })}>
+                提交审批
               </TextButton>
-            );
-          })()}
-          {row.status === 'draft' && (
-            <TextButton onClick={() => handlePublish(row)}>发布</TextButton>
-          )}
-          {row.status === 'published' && row.biddingType === 'library' && (
-            <TextButton onClick={() => handleStartBidding(row)}>开始采购</TextButton>
-          )}
-          {row.status === 'bidding' && (
-            <TextButton onClick={() => handleEvaluate(row)}>评审</TextButton>
-          )}
-          {row.status === 'evaluated' && (
-            <TextButton onClick={() => handleComplete(row)}>完成</TextButton>
-          )}
-          <TextButton
-            type="danger"
-            onClick={() => {
-              if (confirm(`确认删除工单 ${row.biddingNo}？`)) deleteBidding?.(row.id);
-            }}
-          >删除</TextButton>
-        </div>
-      ),
+            )}
+            {!isCatalog && row.approvalStatus === 'submitted' && (
+              <span className="text-xs text-amber-600">审批中...</span>
+            )}
+            <TextButton
+              type="danger"
+              onClick={() => {
+                if (confirm(`确认删除工单 ${row.biddingNo}？`)) deleteBidding?.(row.id);
+              }}
+            >删除</TextButton>
+          </div>
+        );
+      },
     },
   ];
 
@@ -272,14 +352,19 @@ export default function CompetitiveBiddingPage() {
     const now = new Date();
     const newBidding: Bidding = {
       id: 'BID' + Date.now(),
-      biddingNo: '',   // 保存时才生成编号
+      biddingNo: '',
       biddingName: '',
-      biddingType: 'market',
+      projectName: '',
+      biddingType: 'market',              // 兼容旧数据
+      procurementMethod: 'framework',     // 默认框架协议采购
+      frameworkMode: 'catalog_compare',   // 默认目录内比价
+      approvalStatus: 'draft',
       status: 'draft',
       creator: currentUser.name,
       createTime: now.toISOString().replace('T', ' ').slice(0, 19),
       quotes: [],
       items: [],
+      offlineDetails: [],
     };
     setSelectedSuppliers([]);
     setSelectedDemand(null);
@@ -310,13 +395,13 @@ export default function CompetitiveBiddingPage() {
       alert('请先选择物资并设置单品上限后再发布！');
       return;
     }
-    updateBidding?.(bidding.id, { status: 'published' });
+    updateBidding?.(bidding.id, { status: 'published', approvalStatus: 'approved' });
   };
 
   const handleStartBidding = (bidding: Bidding) => {
-    // 只有库内采购才自动模拟供应商报价
-    if (bidding.biddingType !== 'library') return;
-    updateBidding?.(bidding.id, { status: 'bidding' });
+    // 只有目录内比价才自动模拟供应商报价
+    if (!isCatalogCompare(bidding.procurementMethod, bidding.frameworkMode)) return;
+    updateBidding?.(bidding.id, { status: 'bidding', approvalStatus: 'approved' });
     simulateSupplierQuotes(bidding.id);
   };
 
@@ -417,27 +502,73 @@ export default function CompetitiveBiddingPage() {
 
   const handleSave = () => {
     if (!editItem) return;
-    // 新增时才生成编号，编辑保留原编号
+    // 采购方式默认值
+    const procurementMethod = editItem.procurementMethod || 'framework';
+    const isCatalog = isCatalogCompare(procurementMethod, editItem.frameworkMode);
+    const isRandom = editItem.frameworkMode === 'random_draw';
+
+    // 项目名称必填
+    if (!editItem.projectName && !editItem.biddingName) {
+      alert('请填写项目名称！');
+      return;
+    }
+
+    if (isCatalog) {
+      // === 目录内比价 ===
+      if (!editItem.items || editItem.items.length === 0) {
+        alert('请先选择采购需求，需求中的物资将自动带入！');
+        return;
+      }
+      for (const item of editItem.items) {
+        const limit = item.singlePriceLimit || item.unitPriceLimitIncludingTax;
+        if (!limit || limit <= 0) {
+          alert(`物资「${item.productName}」必须设置单品上限单价！`);
+          return;
+        }
+      }
+      if (!editItem.totalPriceLimit || editItem.totalPriceLimit <= 0) {
+        alert('请输入整单含税上限总价！');
+        return;
+      }
+    } else if (isRandom) {
+      // === 随机抽取 ===
+      // 简化校验，允许保存
+    } else {
+      // === 线下录入类 ===
+      if (!editItem.offlineDetails || editItem.offlineDetails.length === 0) {
+        alert('请先选择采购需求自动带入清单，或手动新增条目！');
+        return;
+      }
+      for (const r of editItem.offlineDetails) {
+        if (!r.itemName) { alert('清单条目名称不能为空！'); return; }
+      }
+    }
+
+    // 新增时才生成编号
     if (isNew && !editItem.biddingNo) {
       editItem.biddingNo = genSerialNo(SERIAL_CONFIG.BIDDING, biddings.map(b => b.biddingNo));
     }
-    if (!editItem.items || editItem.items.length === 0) {
-      alert('请先选择采购需求，并至少选择一条物资设置单品上限！');
-      return;
+
+    // 根据方式计算金额合计（线下录入类）
+    let saveBidding = { ...editItem } as Bidding;
+    if (!isCatalog && !isRandom && editItem.offlineDetails) {
+      saveBidding.totalAmountExcludingTax = offlineTotals.ex;
+      saveBidding.totalAmountIncludingTax = offlineTotals.in;
+      saveBidding.totalTaxAmount = offlineTotals.tax;
     }
-    for (const item of editItem.items) {
-      if (!item.singlePriceLimit || item.singlePriceLimit <= 0) {
-        alert(`物资「${item.productName}」必须设置单品上限单价！`);
-        return;
-      }
-    }
-    const saveBidding = {
-      ...editItem,
-      inviteSupplierIds: selectedSuppliers,
-      attachments: [...editAttachments],
-      biddingAnnouncement: [...editAnnouncement],
-      biddingDocuments: [...editBiddingDocs],
-    };
+
+    // 采购方式 & 项目名称同步
+    saveBidding.procurementMethod = procurementMethod;
+    if (!saveBidding.projectName && saveBidding.biddingName) saveBidding.projectName = saveBidding.biddingName;
+    if (!saveBidding.biddingName && saveBidding.projectName) saveBidding.biddingName = saveBidding.projectName;
+    // 审批状态默认值
+    if (!saveBidding.approvalStatus) saveBidding.approvalStatus = 'draft';
+    // 邀约供应商 + 附件
+    saveBidding.inviteSupplierIds = selectedSuppliers;
+    saveBidding.attachments = [...editAttachments];
+    saveBidding.biddingAnnouncement = [...editAnnouncement];
+    saveBidding.biddingDocuments = [...editBiddingDocs];
+
     if (isNew) {
       addBidding?.(saveBidding);
     } else {
@@ -459,40 +590,53 @@ export default function CompetitiveBiddingPage() {
     }
   };
 
-  // 选择采购需求时，自动带入物资明细，等待用户勾选与设置上限
+  // 选择采购需求时，根据当前采购方式自动带入对应的明细
   const handleSelectDemand = (demandId: string) => {
     const demand = procurementDemands.find(d => d.id === demandId);
     setSelectedDemand(demand || null);
 
-    if (demand && demand.details && demand.details.length > 0) {
-      // 默认把需求中的所有物资都加入条目，以需求的含税单价做上限初始值，用户可改
-      const items: BiddingItem[] = demand.details.map(d => ({
+    if (!demand || !editItem) return;
+
+    const isCatalog = isCatalogCompare(editItem.procurementMethod, editItem.frameworkMode);
+    const isRandom = editItem.frameworkMode === 'random_draw';
+
+    const basePatch: Partial<Bidding> = {
+      demandId: demand.id,
+      demandNo: demand.demandNo,
+      projectName: demand.projectName,
+      biddingName: demand.projectName,
+    };
+
+    if (isCatalog) {
+      // 目录内比价 → items（CatalogCompareItem）
+      const items: any[] = (demand.details || []).map(d => ({
         productCode: d.productCode,
         productName: d.productName,
         unit: d.unit,
         quantity: d.quantity,
         specification: d.specification,
         singlePriceLimit: d.unitPriceIncludingTax || d.unitPriceExcludingTax || 0,
+        unitPriceLimitIncludingTax: d.unitPriceIncludingTax || d.unitPriceExcludingTax || 0,
         demandUnitPriceIncludingTax: d.unitPriceIncludingTax,
         demandUnitPriceExcludingTax: d.unitPriceExcludingTax,
         costAuditUnitPriceIncludingTax: d.costAuditUnitPriceIncludingTax,
         costAuditUnitPriceExcludingTax: d.costAuditUnitPriceExcludingTax,
       }));
-      editItem && setEditItem({
-        ...editItem,
-        demandId: demand.id,
-        demandNo: demand.demandNo,
-        projectName: demand.projectName,
-        items,
-      });
+      setEditItem({ ...editItem, ...basePatch, items, offlineDetails: [], randomDraw: undefined });
+    } else if (isRandom) {
+      // 随机抽取 → 清空其他
+      setEditItem({ ...editItem, ...basePatch, items: [], offlineDetails: [] });
     } else {
-      editItem && setEditItem({
-        ...editItem,
-        demandId: demandId,
-        demandNo: demand?.demandNo,
-        projectName: demand?.projectName,
-        items: [],
-      });
+      // 线下录入类 → offlineDetails
+      const offlineDetails: any[] = (demand.details || []).map((d, idx) => ({
+        rowNo: idx + 1,
+        itemName: d.productName,
+        quantity: d.quantity,
+        unit: d.unit,
+        taxRate: 0.13,
+      }));
+      // 非目录内比价且需求是物资类的，从明细算合计
+      setEditItem({ ...editItem, ...basePatch, offlineDetails, items: [], randomDraw: undefined });
     }
   };
 
@@ -521,10 +665,14 @@ export default function CompetitiveBiddingPage() {
     setTimePickerTarget(null);
   };
 
-  // 更新某条物资条目
-  const updateItem = (index: number, patch: Partial<BiddingItem>) => {
+  // 更新某条目录内比价条目
+  const updateItem = (index: number, patch: Record<string, any>) => {
     if (!editItem || !editItem.items) return;
     const newItems = [...editItem.items];
+    // 如果改了 singlePriceLimit，同步 unitPriceLimitIncludingTax
+    if ('singlePriceLimit' in patch) {
+      patch = { ...patch, unitPriceLimitIncludingTax: patch.singlePriceLimit };
+    }
     newItems[index] = { ...newItems[index], ...patch };
     setEditItem({ ...editItem, items: newItems });
   };
@@ -535,13 +683,61 @@ export default function CompetitiveBiddingPage() {
     setEditItem({ ...editItem, items: newItems });
   };
 
-  // 计算当前条目的上限总价（参考）
+  // 更新某条线下录入明细 — 含税/不含税自动联动
+  const updateOfflineItem = (index: number, patch: any) => {
+    if (!editItem?.offlineDetails) return;
+    const list = [...editItem.offlineDetails];
+    let row = { ...list[index], ...patch };
+    // 自动算含税/不含税/金额/税额
+    if (row.taxRate == null) row.taxRate = 0.13;
+    const hasUnitEx = row.unitPriceExcludingTax != null && row.unitPriceExcludingTax !== '';
+    const hasUnitIn = row.unitPriceIncludingTax != null && row.unitPriceIncludingTax !== '';
+    if (hasUnitEx && !hasUnitIn) {
+      row.unitPriceIncludingTax = Math.round(row.unitPriceExcludingTax * (1 + row.taxRate) * 100) / 100;
+    } else if (!hasUnitEx && hasUnitIn) {
+      row.unitPriceExcludingTax = Math.round(row.unitPriceIncludingTax / (1 + row.taxRate) * 100) / 100;
+    }
+    if (row.quantity && row.unitPriceExcludingTax != null) {
+      row.amountExcludingTax = Math.round(row.unitPriceExcludingTax * row.quantity * 100) / 100;
+      row.amountIncludingTax = Math.round(row.amountExcludingTax * (1 + row.taxRate) * 100) / 100;
+      row.taxAmount = Math.round(row.amountIncludingTax - row.amountExcludingTax * 100) / 100;
+    }
+    list[index] = row;
+    setEditItem({ ...editItem, offlineDetails: list });
+  };
+
+  const addOfflineItem = () => {
+    if (!editItem) return;
+    const list = editItem.offlineDetails || [];
+    const nextNo = list.length + 1;
+    setEditItem({
+      ...editItem,
+      offlineDetails: [...list, { rowNo: nextNo, itemName: '', quantity: 1, unit: '个', taxRate: 0.13 }],
+    });
+  };
+
+  const removeOfflineItem = (index: number) => {
+    if (!editItem?.offlineDetails) return;
+    const list = editItem.offlineDetails.filter((_, i) => i !== index);
+    setEditItem({ ...editItem, offlineDetails: list });
+  };
+
+  // 目录内比价：上限合计
   const itemsTotalLimit = useMemo(() => {
     if (!editItem?.items) return 0;
     return editItem.items.reduce((sum, item) => {
-      return sum + (item.singlePriceLimit || 0) * (item.quantity || 0);
+      return sum + ((item.singlePriceLimit || item.unitPriceLimitIncludingTax || 0) * (item.quantity || 0));
     }, 0);
   }, [editItem?.items]);
+
+  // 线下录入：含税/不含税/税额合计
+  const offlineTotals = useMemo(() => {
+    if (!editItem?.offlineDetails) return { ex: 0, in: 0, tax: 0 };
+    const ex = editItem.offlineDetails.reduce((s, r) => s + (r.amountExcludingTax || 0), 0);
+    const inTax = editItem.offlineDetails.reduce((s, r) => s + (r.amountIncludingTax || 0), 0);
+    const tax = editItem.offlineDetails.reduce((s, r) => s + (r.taxAmount || 0), 0);
+    return { ex: Math.round(ex * 100) / 100, in: Math.round(inTax * 100) / 100, tax: Math.round(tax * 100) / 100 };
+  }, [editItem?.offlineDetails]);
 
   return (
     <div className="p-4">
@@ -605,27 +801,86 @@ export default function CompetitiveBiddingPage() {
                 />
               </div>
               <div>
-                <div className="mb-1 text-xs text-[#606266]">工单类型</div>
+                <div className="mb-1 text-xs text-[#606266]">
+                  采购方式 <span className="text-[#f56c6c]">*</span>
+                </div>
                 <select
                   className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-                  value={editItem.biddingType}
-                  onChange={(e) => editItem && setEditItem({ ...editItem, biddingType: e.target.value as any })}
+                  value={editItem.procurementMethod || 'framework'}
+                  onChange={(e) => {
+                    const v = e.target.value as BiddingProcurementMethod;
+                    const patch: Partial<Bidding> = { procurementMethod: v };
+                    // 切换采购方式时清空旧明细，避免类型不匹配
+                    if (v !== 'framework') {
+                      patch.frameworkMode = undefined;
+                      patch.items = [];
+                      patch.offlineDetails = [];
+                      patch.randomDraw = undefined;
+                    } else {
+                      patch.frameworkMode = 'catalog_compare';
+                    }
+                    setEditItem({ ...editItem, ...patch });
+                  }}
                 >
-                  <option value="market">市场采购</option>
-                  <option value="library">供应商库内采购</option>
+                  {PROCUREMENT_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
                 </select>
+                {/* 框架协议子模式 */}
+                {editItem.procurementMethod === 'framework' && (
+                  <select
+                    className="mt-1 w-full h-8 px-2 border border-[#dcdfe6] rounded text-xs"
+                    value={editItem.frameworkMode || 'catalog_compare'}
+                    onChange={(e) => setEditItem({ ...editItem, frameworkMode: e.target.value as any })}
+                  >
+                    <option value="catalog_compare">目录内比价（线上报价）</option>
+                    <option value="random_draw">随机抽取（线下）</option>
+                  </select>
+                )}
+                {/* 谈判子模式 */}
+                {editItem.procurementMethod === 'negotiation' && (
+                  <select
+                    className="mt-1 w-full h-8 px-2 border border-[#dcdfe6] rounded text-xs"
+                    value={editItem.negotiationMode || 'open'}
+                    onChange={(e) => setEditItem({ ...editItem, negotiationMode: e.target.value as any })}
+                  >
+                    <option value="open">公开谈判</option>
+                    <option value="invited">邀请谈判</option>
+                  </select>
+                )}
               </div>
               <div>
-                <div className="mb-1 text-xs text-[#606266]">工单名称</div>
+                <div className="mb-1 text-xs text-[#606266]">
+                  项目名称 <span className="text-[#f56c6c]">*</span>
+                  <span className="text-slate-400 ml-1">（从需求自动带出，可编辑）</span>
+                </div>
                 <input
                   className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-                  value={editItem.biddingName}
-                  onChange={(e) => editItem && setEditItem({ ...editItem, biddingName: e.target.value })}
+                  value={editItem.projectName || editItem.biddingName || ''}
+                  onChange={(e) => setEditItem({ ...editItem, projectName: e.target.value, biddingName: e.target.value })}
+                  placeholder="请输入项目名称"
                 />
               </div>
             </div>
 
-            {/* 招标时间已移至列表操作列"设置招标时间"按钮 */}
+            {/* 当前采购方式提示条 */}
+            {editItem.procurementMethod && (
+              <div className={`text-xs px-3 py-2 rounded border ${
+                isCatalogCompare(editItem.procurementMethod, editItem.frameworkMode)
+                  ? 'bg-blue-50 border-blue-200 text-blue-700'
+                  : editItem.frameworkMode === 'random_draw'
+                  ? 'bg-amber-50 border-amber-200 text-amber-700'
+                  : 'bg-slate-50 border-slate-200 text-slate-600'
+              }`}>
+                {isCatalogCompare(editItem.procurementMethod, editItem.frameworkMode) ? (
+                  '📋 模式：目录内比价（线上报价）— 供应商在小程序报价，你只需设置单品上限和整单上限。'
+                ) : editItem.frameworkMode === 'random_draw' ? (
+                  '🎲 模式：框架随机抽取（线下）— 填写抽取信息，无报价环节。'
+                ) : (
+                  '📝 模式：线下录入 — 你自己填写清单、单价、税率，走审批流程。'
+                )}
+              </div>
+            )}
 
             {/* 关联采购需求 — 弹框选择 */}
             <div>
@@ -654,111 +909,222 @@ export default function CompetitiveBiddingPage() {
               )}
             </div>
 
-            {/* 物资明细表格 */}
-            <div>
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-xs text-[#606266]">
-                  物资明细（{editItem.items?.length || 0}项）- 对每条物资设置「单品上限单价」
-                </span>
-                {editItem.items && editItem.items.length > 0 && (
-                  <span className="text-xs text-[#909399]">
-                    条目上限合计（仅供参考）：
-                    <span className="text-[#303133] font-semibold"> ¥{itemsTotalLimit.toLocaleString()}</span>
-                  </span>
-                )}
-              </div>
-              {!editItem.items || editItem.items.length === 0 ? (
-                <div className="border border-dashed border-[#dcdfe6] rounded p-6 text-center text-sm text-[#909399]">
-                  请先在上方选择一条已通过的采购需求，需求中的物资将自动带入。
-                </div>
-              ) : (
-                <div className="border border-[#dcdfe6] rounded">
-                  <table className="w-full">
-                    <thead className="bg-[#f5f7fa]">
-                      <tr>
-                        <th className="px-3 py-2 text-xs text-left w-12"></th>
-                        <th className="px-3 py-2 text-xs text-left">物资名称</th>
-                        <th className="px-3 py-2 text-xs text-left">规格</th>
-                        <th className="px-3 py-2 text-xs text-left">单位</th>
-                        <th className="px-3 py-2 text-xs text-left w-20">数量</th>
-                        <th className="px-3 py-2 text-xs text-left w-28 text-[#409eff]">
-                          采购申请单价(含税)
-                        </th>
-                        <th className="px-3 py-2 text-xs text-left w-28 text-[#67c23a]">
-                          成本审核单价(含税)
-                        </th>
-                        <th className="px-3 py-2 text-xs text-left w-32">
-                          单品上限单价 <span className="text-[#f56c6c]">*</span>
-                        </th>
-                        <th className="px-3 py-2 text-xs text-left w-28">小计(上限×数量)</th>
-                        <th className="px-3 py-2 text-xs text-center w-16">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {editItem.items.map((item, idx) => {
-                        const subtotal = (item.singlePriceLimit || 0) * (item.quantity || 0);
-                        return (
-                          <tr key={idx} className="border-t border-[#ebeef5]">
-                            <td className="px-3 py-2 text-xs text-[#909399]">{idx + 1}</td>
-                            <td className="px-3 py-2 text-xs">{item.productName}</td>
-                            <td className="px-3 py-2 text-xs text-[#606266]">{item.specification || '-'}</td>
-                            <td className="px-3 py-2 text-xs">{item.unit}</td>
-                            <td className="px-3 py-2 text-xs">
-                              <input
-                                type="number"
-                                className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm"
-                                value={item.quantity}
-                                min={1}
-                                onChange={(e) => updateItem(idx, { quantity: Number(e.target.value) })}
-                              />
-                            </td>
-                            <td className="px-3 py-2 text-xs text-[#409eff]">
-                              {item.demandUnitPriceIncludingTax ? `¥${item.demandUnitPriceIncludingTax.toLocaleString()}` : '-'}
-                            </td>
-                            <td className="px-3 py-2 text-xs text-[#67c23a]">
-                              {item.costAuditUnitPriceIncludingTax ? `¥${item.costAuditUnitPriceIncludingTax.toLocaleString()}` : '-'}
-                            </td>
-                            <td className="px-3 py-2 text-xs">
-                              <input
-                                type="number"
-                                className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm"
-                                value={item.singlePriceLimit || ''}
-                                onChange={(e) => updateItem(idx, { singlePriceLimit: Number(e.target.value) })}
-                                placeholder="请输入上限"
-                              />
-                            </td>
-                            <td className="px-3 py-2 text-xs text-[#303133] font-semibold">¥{subtotal.toLocaleString()}</td>
-                            <td className="px-3 py-2 text-xs text-center">
-                              <button
-                                onClick={() => removeItem(idx)}
-                                className="text-[#f56c6c] hover:underline"
-                              >移除</button>
-                            </td>
+            {/* ============ 明细区域 - 按采购方式动态切换 ============ */}
+            {isCatalogCompare(editItem.procurementMethod, editItem.frameworkMode) ? (
+              /* ===== 模式1: 目录内比价（线上报价）— 物资明细+单品上限 ===== */
+              <>
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="text-xs text-[#606266]">
+                      物资明细（{editItem.items?.length || 0}项）- 对每条物资设置「单品上限单价(含税)」
+                    </span>
+                    {editItem.items && editItem.items.length > 0 && (
+                      <span className="text-xs text-[#909399]">
+                        条目上限合计（仅供参考）：
+                        <span className="text-[#303133] font-semibold"> ¥{itemsTotalLimit.toLocaleString()}</span>
+                      </span>
+                    )}
+                  </div>
+                  {!editItem.items || editItem.items.length === 0 ? (
+                    <div className="border border-dashed border-[#dcdfe6] rounded p-6 text-center text-sm text-[#909399]">
+                      请先在上方选择一条已通过的采购需求，需求中的物资将自动带入。
+                    </div>
+                  ) : (
+                    <div className="border border-[#dcdfe6] rounded">
+                      <table className="w-full">
+                        <thead className="bg-[#f5f7fa]">
+                          <tr>
+                            <th className="px-3 py-2 text-xs text-left w-10">#</th>
+                            <th className="px-3 py-2 text-xs text-left">物资名称</th>
+                            <th className="px-3 py-2 text-xs text-left">规格</th>
+                            <th className="px-3 py-2 text-xs text-left">单位</th>
+                            <th className="px-3 py-2 text-xs text-left w-16">数量</th>
+                            <th className="px-3 py-2 text-xs text-left w-24 text-[#409eff]">申请单价(含税)</th>
+                            <th className="px-3 py-2 text-xs text-left w-24 text-[#67c23a]">成本审核(含税)</th>
+                            <th className="px-3 py-2 text-xs text-left w-28">单品上限(含税) *</th>
+                            <th className="px-3 py-2 text-xs text-left w-24">小计(含税)</th>
+                            <th className="px-3 py-2 text-xs text-center w-14">操作</th>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                        </thead>
+                        <tbody>
+                          {editItem.items.map((item, idx) => {
+                            const limit = item.singlePriceLimit || item.unitPriceLimitIncludingTax || 0;
+                            return (
+                              <tr key={idx} className="border-t border-[#ebeef5]">
+                                <td className="px-3 py-2 text-xs text-[#909399]">{idx + 1}</td>
+                                <td className="px-3 py-2 text-xs">{item.productName}</td>
+                                <td className="px-3 py-2 text-xs text-[#606266]">{item.specification || '-'}</td>
+                                <td className="px-3 py-2 text-xs">{item.unit}</td>
+                                <td className="px-3 py-2 text-xs">
+                                  <input type="number" className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm"
+                                    value={item.quantity} min={1}
+                                    onChange={(e) => updateItem(idx, { quantity: Number(e.target.value) })} />
+                                </td>
+                                <td className="px-3 py-2 text-xs text-[#409eff]">
+                                  {item.demandUnitPriceIncludingTax ? `¥${item.demandUnitPriceIncludingTax.toLocaleString()}` : '-'}
+                                </td>
+                                <td className="px-3 py-2 text-xs text-[#67c23a]">
+                                  {item.costAuditUnitPriceIncludingTax ? `¥${item.costAuditUnitPriceIncludingTax.toLocaleString()}` : '-'}
+                                </td>
+                                <td className="px-3 py-2 text-xs">
+                                  <input type="number" className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm"
+                                    value={limit || ''}
+                                    onChange={(e) => updateItem(idx, { singlePriceLimit: Number(e.target.value) })}
+                                    placeholder="含税上限" />
+                                </td>
+                                <td className="px-3 py-2 text-xs text-[#303133] font-semibold">¥{(limit * (item.quantity || 0)).toLocaleString()}</td>
+                                <td className="px-3 py-2 text-xs text-center">
+                                  <button onClick={() => removeItem(idx)} className="text-[#f56c6c] hover:underline">移除</button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* 整单上限总价 */}
-            <div>
-              <div className="mb-1 text-xs text-[#606266]">
-                整单上限总价 <span className="text-[#f56c6c]">*</span>
-                <span className="text-[#909399] ml-2">
-                  （参考：所有条目的上限×数量之和 ≈ ¥{itemsTotalLimit.toLocaleString()}）
-                </span>
+                {/* 整单上限总价 */}
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">
+                    整单上限总价(含税) <span className="text-[#f56c6c]">*</span>
+                    <span className="text-[#909399] ml-2">
+                      （参考：所有条目的上限×数量之和 ≈ ¥{itemsTotalLimit.toLocaleString()}）
+                    </span>
+                  </div>
+                  <input type="number" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.totalPriceLimit || ''}
+                    onChange={(e) => editItem && setEditItem({ ...editItem, totalPriceLimit: Number(e.target.value) })}
+                    placeholder="请输入整单含税上限" />
+                </div>
+              </>
+
+            ) : editItem.frameworkMode === 'random_draw' ? (
+              /* ===== 模式2: 框架随机抽取 — 最简表单 ===== */
+              <div>
+                <div className="mb-1 text-xs text-[#606266]">框架协议随机抽取信息</div>
+                <div className="border border-[#dcdfe6] rounded p-4 grid grid-cols-2 gap-3 text-xs">
+                  {[
+                    { label: '需求部门', key: 'demandDept' },
+                    { label: '申请人', key: 'applicant' },
+                    { label: '抽取时间', key: 'drawTime', type: 'datetime-local' },
+                    { label: '抽取供应商名称', key: 'supplierName' },
+                    { label: '联系人', key: 'supplierContact' },
+                    { label: '联系电话', key: 'supplierPhone' },
+                    { label: '关联框架合同编号', key: 'contractNo' },
+                  ].map((f) => (
+                    <div key={f.key}>
+                      <div className="mb-1 text-[#606266]">{f.label}</div>
+                      <input type={f.type || 'text'} className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
+                        value={(editItem as any).randomDraw?.[f.key] || ''}
+                        onChange={(e) => setEditItem({
+                          ...editItem,
+                          randomDraw: { ...((editItem as any).randomDraw || { projectName: editItem.projectName }), [f.key]: e.target.value }
+                        })} />
+                    </div>
+                  ))}
+                </div>
               </div>
-              <input
-                type="number"
-                className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-                value={editItem.totalPriceLimit || ''}
-                onChange={(e) => editItem && setEditItem({ ...editItem, totalPriceLimit: Number(e.target.value) })}
-                placeholder="请输入整单上限总价（超过此价格的报价将被判定为不符合）"
-              />
-            </div>
+
+            ) : (
+              /* ===== 模式3: 线下录入类（询比/竞价/谈判/直接/电子商城）===== */
+              <>
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="text-xs text-[#606266]">
+                      清单明细（{editItem.offlineDetails?.length || 0}项）- 请填写单价和税率
+                    </span>
+                    <button type="button" onClick={addOfflineItem}
+                      className="text-xs px-2 py-0.5 border border-indigo-400 text-indigo-600 rounded hover:bg-indigo-50">
+                      + 新增条目
+                    </button>
+                  </div>
+                  {!editItem.offlineDetails || editItem.offlineDetails.length === 0 ? (
+                    <div className="border border-dashed border-[#dcdfe6] rounded p-6 text-center text-sm text-[#909399]">
+                      请先在上方选择采购需求自动带入，或点击「+ 新增条目」手动录入。
+                    </div>
+                  ) : (
+                    <div className="border border-[#dcdfe6] rounded">
+                      <table className="w-full text-xs">
+                        <thead className="bg-[#f5f7fa]">
+                          <tr>
+                            <th className="px-2 py-2 text-left w-10">#</th>
+                            <th className="px-2 py-2 text-left">项目/物料名称 *</th>
+                            <th className="px-2 py-2 text-left w-16">数量</th>
+                            <th className="px-2 py-2 text-left w-14">单位</th>
+                            <th className="px-2 py-2 text-left w-14">税率</th>
+                            <th className="px-2 py-2 text-left w-28">不含税单价</th>
+                            <th className="px-2 py-2 text-left w-28">含税单价(自动)</th>
+                            <th className="px-2 py-2 text-left w-24">不含税金额</th>
+                            <th className="px-2 py-2 text-left w-24">含税金额</th>
+                            <th className="px-2 py-2 text-center w-14">操作</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {editItem.offlineDetails.map((row, idx) => (
+                            <tr key={idx} className="border-t border-[#ebeef5]">
+                              <td className="px-2 py-2 text-[#909399]">{idx + 1}</td>
+                              <td className="px-2 py-2">
+                                <input className="w-full h-7 px-2 border border-[#dcdfe6] rounded"
+                                  value={row.itemName}
+                                  onChange={(e) => updateOfflineItem(idx, { itemName: e.target.value })} />
+                              </td>
+                              <td className="px-2 py-2">
+                                <input type="number" min={0} className="w-full h-7 px-2 border border-[#dcdfe6] rounded"
+                                  value={row.quantity}
+                                  onChange={(e) => updateOfflineItem(idx, { quantity: Number(e.target.value) })} />
+                              </td>
+                              <td className="px-2 py-2">
+                                <input className="w-full h-7 px-2 border border-[#dcdfe6] rounded"
+                                  value={row.unit}
+                                  onChange={(e) => updateOfflineItem(idx, { unit: e.target.value })} />
+                              </td>
+                              <td className="px-2 py-2">
+                                <select className="w-full h-7 px-2 border border-[#dcdfe6] rounded"
+                                  value={row.taxRate ?? 0.13}
+                                  onChange={(e) => updateOfflineItem(idx, { taxRate: Number(e.target.value) })}>
+                                  <option value={0.13}>13%</option>
+                                  <option value={0.09}>9%</option>
+                                  <option value={0.06}>6%</option>
+                                  <option value={0.03}>3%</option>
+                                  <option value={0}>0%</option>
+                                </select>
+                              </td>
+                              <td className="px-2 py-2">
+                                <input type="number" step="0.01" className="w-full h-7 px-2 border border-[#dcdfe6] rounded"
+                                  value={row.unitPriceExcludingTax ?? ''}
+                                  onChange={(e) => updateOfflineItem(idx, { unitPriceExcludingTax: Number(e.target.value) })} />
+                              </td>
+                              <td className="px-2 py-2 text-[#409eff] font-semibold">
+                                ¥{(row.unitPriceIncludingTax ?? 0).toLocaleString()}
+                              </td>
+                              <td className="px-2 py-2">¥{(row.amountExcludingTax ?? 0).toLocaleString()}</td>
+                              <td className="px-2 py-2 text-[#303133] font-semibold">¥{(row.amountIncludingTax ?? 0).toLocaleString()}</td>
+                              <td className="px-2 py-2 text-center">
+                                <button onClick={() => removeOfflineItem(idx)} className="text-[#f56c6c] hover:underline">移除</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="bg-[#f5f7fa]">
+                          <tr>
+                            <td colSpan={7} className="px-2 py-2 text-right text-[#606266] font-semibold">合计：</td>
+                            <td className="px-2 py-2 text-[#409eff] font-semibold">¥{offlineTotals.ex.toLocaleString()}</td>
+                            <td className="px-2 py-2 text-[#303133] font-bold">¥{offlineTotals.in.toLocaleString()}</td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                      <div className="px-2 py-1 text-[11px] text-[#909399]">
+                        税额合计 ¥{offlineTotals.tax.toLocaleString()} · 填写不含税单价后，含税单价/金额/税额自动计算
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
 
             <div>
               <div className="mb-1 flex items-center justify-between">
@@ -976,15 +1342,28 @@ export default function CompetitiveBiddingPage() {
             {/* 基础信息 */}
             <div className="grid grid-cols-4 gap-3">
               <div><span className="text-[#909399] text-xs">工单编号：</span>{viewItem.biddingNo}</div>
-              <div><span className="text-[#909399] text-xs">工单名称：</span>{viewItem.biddingName}</div>
-              <div><span className="text-[#909399] text-xs">工单类型：</span>{viewItem.biddingType === 'market' ? '市场采购' : '库内采购'}</div>
-              <div><span className="text-[#909399] text-xs">状态：</span>{viewItem.status}</div>
+              <div><span className="text-[#909399] text-xs">项目名称：</span>{viewItem.projectName || viewItem.biddingName}</div>
+              <div><span className="text-[#909399] text-xs">采购方式：</span>
+                {viewItem.procurementMethod
+                  ? (BIDDING_METHOD_LABEL as any)[viewItem.procurementMethod] +
+                    (viewItem.frameworkMode === 'random_draw' ? '(随机抽取)' :
+                     viewItem.frameworkMode === 'catalog_compare' ? '(目录内比价)' : '')
+                  : (viewItem.biddingType === 'market' ? '市场采购' : '库内采购')
+                }
+              </div>
+              <div><span className="text-[#909399] text-xs">审批状态：</span>
+                {viewItem.approvalStatus || viewItem.status}
+              </div>
+              <div><span className="text-[#909399] text-xs">业务状态：</span>{viewItem.status}</div>
               <div><span className="text-[#909399] text-xs">关联需求：</span>{viewItem.demandNo || '-'}</div>
-              <div><span className="text-[#909399] text-xs">整单上限：</span>{viewItem.totalPriceLimit ? `¥${viewItem.totalPriceLimit.toLocaleString()}` : '-'}</div>
+              <div><span className="text-[#909399] text-xs">上限/合计：</span>
+                {viewItem.totalPriceLimit ? `¥${viewItem.totalPriceLimit.toLocaleString()}` :
+                 viewItem.totalAmountIncludingTax ? `¥${viewItem.totalAmountIncludingTax.toLocaleString()}` : '-'}
+              </div>
               <div><span className="text-[#909399] text-xs">创建人：</span>{viewItem.creator}</div>
               <div><span className="text-[#909399] text-xs">创建时间：</span>{viewItem.createTime}</div>
-              <div><span className="text-[#909399] text-xs">招标开始时间：</span>{viewItem.startTime || '-'}</div>
-              <div><span className="text-[#909399] text-xs">招标截止时间：</span>{viewItem.endTime || '-'}</div>
+              {viewItem.startTime && <div><span className="text-[#909399] text-xs">招标开始：</span>{viewItem.startTime}</div>}
+              {viewItem.endTime && <div><span className="text-[#909399] text-xs">招标截止：</span>{viewItem.endTime}</div>}
             </div>
 
             {/* ====== 确认成交供应商（核心信息）====== */}

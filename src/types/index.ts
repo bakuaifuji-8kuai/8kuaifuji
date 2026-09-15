@@ -1141,94 +1141,274 @@ export interface DemandChangeRecord {
   approver?: string;
 }
 
-// ==================== 竞价采购类型 ====================
+// ==================== 采购实施过程类型 ====================
 
-// 竞价类型
-export type BiddingType = 'market' | 'library'; // 市场竞价 / 供应商库内竞价
+/** 招采执行-采购方式（国企采购 6 种） */
+export type BiddingProcurementMethod =
+  | 'inquiry'             // 询比采购（线下录入）
+  | 'competitive_bidding' // 竞价采购（线下录入）
+  | 'negotiation'         // 谈判采购（线下录入，公开/邀请两种）
+  | 'direct'              // 直接采购（线下录入，最简单）
+  | 'framework'           // 框架协议采购（含目录内比价+随机抽取）
+  | 'e_mall';             // 电子商城采购（线下录入）
 
-// 竞价状态
-export type BiddingStatus = 'draft' | 'published' | 'bidding' | 'evaluated' | 'completed' | 'cancelled';
+/** 采购方式中文名 */
+export const BIDDING_METHOD_LABEL: Record<BiddingProcurementMethod, string> = {
+  inquiry: '询比采购',
+  competitive_bidding: '竞价采购',
+  negotiation: '谈判采购',
+  direct: '直接采购',
+  framework: '框架协议采购',
+  e_mall: '电子商城采购',
+};
 
-// 竞价供应商报价明细（按物资）
+/** 谈判采购子模式 */
+export type NegotiationMode = 'open' | 'invited';
+
+/** 框架协议子模式 */
+export type FrameworkMode = 'catalog_compare' | 'random_draw';
+
+/**
+ * 旧竞价类型（已废弃，兼容历史数据）
+ * @deprecated 请使用 procurementMethod
+ */
+export type BiddingType = 'market' | 'library';
+
+/**
+ * 工单审批状态
+ * draft → submitted → approved/rejected → 后续业务状态
+ */
+export type BiddingApprovalStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
+
+/**
+ * 工单完整状态 = 审批状态 + 业务推进状态
+ * 线下录入类（询比/竞价/谈判/直接/电子商城）走审批状态
+ * 目录内比价（线上报价）走完整业务状态
+ */
+export type BiddingStatus =
+  | BiddingApprovalStatus
+  | 'published'   // 审核通过后发布（仅目录内比价）
+  | 'bidding'     // 招标进行中
+  | 'evaluated'   // 已评审
+  | 'completed'   // 已完成
+  | 'cancelled';  // 已取消
+
+// ============== 明细结构 ==============
+
+/**
+ * 明细类型枚举
+ * 一个工单只会填其中一种明细
+ */
+export type BiddingDetailKind =
+  | 'catalog_compare'  // 目录内比价-线上报价（旧 BiddingItem 扩展版）
+  | 'offline'           // 线下录入明细（询比/竞价/谈判/直接/电子商城）
+  | 'framework_random'; // 框架随机抽取
+
+/**
+ * 目录内比价-线上报价明细
+ * 字段同旧 BiddingItem，加含税/不含税双线
+ */
+export interface CatalogCompareItem {
+  productCode: string;
+  productName: string;
+  unit: string;
+  quantity: number;
+  specification?: string;
+  contractScope?: 'in' | 'out';       // 合同清单内/外
+  priceDesc?: string;                 // 单价说明（固定单价/上限单价）
+  // 上限（不含税/含税双线）
+  unitPriceLimitExcludingTax?: number;
+  unitPriceLimitIncludingTax?: number;
+  taxRate?: number;                   // 税率（如 0.13）
+  demandUnitPriceIncludingTax?: number;
+  demandUnitPriceExcludingTax?: number;
+  costAuditUnitPriceIncludingTax?: number;
+  costAuditUnitPriceExcludingTax?: number;
+  /** @deprecated 旧字段，等同 unitPriceLimitIncludingTax，兼容历史数据 */
+  singlePriceLimit?: number;
+}
+
+/**
+ * 线下录入明细（询比/竞价/谈判/直接/电子商城）
+ * 采购方自己填单价，含税/不含税双线
+ */
+export interface OfflineDetailItem {
+  rowNo: number;
+  itemName: string;                   // 项目名称/物料名称
+  description?: string;               // 项目概况
+  quantity: number;
+  unit: string;
+  taxRate?: number;                   // 税率
+  unitPriceExcludingTax?: number;     // 不含税单价
+  unitPriceIncludingTax?: number;     // 含税单价（自动算或手填）
+  amountExcludingTax?: number;        // 不含税金额
+  amountIncludingTax?: number;         // 含税金额
+  taxAmount?: number;                 // 税额
+  supplierName?: string;              // 供应商（直接采购/电子商城必填）
+}
+
+/**
+ * 框架随机抽取信息（最简）
+ */
+export interface FrameworkRandomInfo {
+  projectName: string;
+  demandDept?: string;
+  applicant?: string;
+  drawTime?: string;
+  supplierName?: string;
+  supplierContact?: string;
+  supplierPhone?: string;
+  contractNo?: string;
+  drawResultAttachment?: Attachment;
+}
+
+// ============== 旧报价结构（兼容） ==============
+
+/** 目录内比价-供应商报价明细（按物资） */
 export interface BiddingQuoteDetail {
   productCode: string;
   productName: string;
   specification?: string;
   unit: string;
   quantity: number;
-  unitPrice: number; // 供应商报的含税单价
-  taxRate?: number; // 税率
-  amount: number; // 含税金额 = 数量 * 含税单价
-  taxAmount?: number; // 税额 = 含税金额 / (1+税率) × 税率
-  isOverSingleLimit: boolean; // 是否超出单品上限
+  unitPrice: number;              // 供应商报的含税单价
+  unitPriceExcludingTax?: number;
+  taxRate?: number;
+  amount: number;                 // 含税金额
+  taxAmount?: number;
+  amountExcludingTax?: number;
+  isOverSingleLimit: boolean;
 }
 
-// 竞价供应商报价
+/** 目录内比价-供应商报价单 */
 export interface BiddingQuote {
   id: string;
   biddingId: string;
   supplierId: string;
   supplierName: string;
-  contactPerson?: string; // 联系人
-  contactPhone?: string; // 联系电话
-  taxRate?: number; // 税率
-  taxAmount?: number; // 税额合计
-  details: BiddingQuoteDetail[]; // 按物资明细报价
-  totalAmount: number; // 含税总报价
-  isOverSingleLimit: boolean; // 是否超出单品上限
-  isOverTotalLimit: boolean; // 是否超出整单上限
-  submittedAt: string; // 报价时间
-  isQualified: boolean; // 是否符合条件
+  contactPerson?: string;
+  contactPhone?: string;
+  taxRate?: number;
+  taxAmount?: number;
+  details: BiddingQuoteDetail[];
+  totalAmount: number;
+  totalAmountExcludingTax?: number;
+  isOverSingleLimit: boolean;
+  isOverTotalLimit: boolean;
+  submittedAt: string;
+  isQualified: boolean;
   remark?: string;
   attachments?: Attachment[];
-  // 市场采购：回写后确认的成交供应商
   confirmedSupplierId?: string;
   confirmedSupplierName?: string;
-  confirmedAt?: string; // 确认时间
+  confirmedAt?: string;
 }
 
-// 采购工物资明细条目
+/**
+ * 旧 BiddingItem（@deprecated，用 CatalogCompareItem 替代）
+ */
 export interface BiddingItem {
   productCode: string;
   productName: string;
   unit: string;
   quantity: number;
   specification?: string;
-  singlePriceLimit: number; // 单品上限单价（用户填写）
-  demandUnitPriceIncludingTax?: number; // 采购申请单价（含税，来自需求）
-  demandUnitPriceExcludingTax?: number; // 采购申请单价（不含税）
-  costAuditUnitPriceIncludingTax?: number; // 成本审核单价（含税）
-  costAuditUnitPriceExcludingTax?: number; // 成本审核单价（不含税）
+  singlePriceLimit: number;
+  demandUnitPriceIncludingTax?: number;
+  demandUnitPriceExcludingTax?: number;
+  costAuditUnitPriceIncludingTax?: number;
+  costAuditUnitPriceExcludingTax?: number;
 }
 
-// 竞价采购
+// ============== 主工单接口 ==============
+
+/** 采购实施工单（招采执行） */
 export interface Bidding {
   id: string;
-  biddingNo: string; // 竞价编号
-  biddingName: string; // 竞价名称
-  biddingType: BiddingType;
-  demandId?: string; // 关联需求
+  biddingNo: string;                 // 工单编号（保存时生成）
+  projectName?: string;               // 项目名称（从需求带出，可编辑）
+  biddingName?: string;              // @deprecated 同 projectName，兼容旧数据
+  /** 采购方式（6 种国企采购） */
+  procurementMethod?: BiddingProcurementMethod;
+  /** 谈判采购子模式（公开/邀请） */
+  negotiationMode?: NegotiationMode;
+  /** 框架协议子模式（目录内比价/随机抽取） */
+  frameworkMode?: FrameworkMode;
+  /** @deprecated 旧的 market/library，兼容历史数据 */
+  biddingType?: BiddingType;
+
+  // ====== 关联采购需求 ======
+  demandId?: string;
   demandNo?: string;
-  projectName?: string;
-  procurementMethod?: string; // 采购方式
-  bidEvaluationMethod?: string; // 评标办法
-  items?: BiddingItem[]; // 物资明细（含单品上限）
-  totalPriceLimit?: number; // 整单上限总价
-  startTime?: string; // 招标开始时间
-  endTime?: string; // 招标截止时间
-  status: BiddingStatus;
+
+  // ====== 三种明细（根据采购方式只填一种）======
+  /** 目录内比价-线上报价明细（原 BiddingItem 扩展） */
+  items?: CatalogCompareItem[];
+  /** 线下录入明细（询比/竞价/谈判/直接/电子商城） */
+  offlineDetails?: OfflineDetailItem[];
+  /** 框架随机抽取信息 */
+  randomDraw?: FrameworkRandomInfo;
+
+  // ====== 金额汇总（不含税/含税双线） ======
+  totalAmountExcludingTax?: number;  // 不含税金额合计
+  totalAmountIncludingTax?: number;   // 含税金额合计
+  totalTaxAmount?: number;            // 税额合计
+  /** @deprecated 旧字段，含税上限 */
+  totalPriceLimit?: number;
+
+  // ====== 目录内比价特有 ======
+  startTime?: string;
+  endTime?: string;
+  inviteSupplierIds?: string[];       // 受邀供应商（目录内比价才需要）
+  quotes?: BiddingQuote[];            // 供应商线上报价
+
+  // ====== 审批状态 & 业务状态 ======
+  approvalStatus?: BiddingApprovalStatus; // 审批状态（draft/submitted/approved/rejected）
+  status: BiddingStatus;                 // 展示用完整状态
+
+  // ====== 非目录内比价-审批材料（Excel Row 13/25/38/42 附加字段）======
+  procurementApprovalMethod?: string;   // 采购方式审批方式
+  procurementApprovalDate?: string;    // 采购方式审批日期
+  meetingMinutes?: Attachment[];        // 会议纪要（询比必须）
+  onMeetingMaterials?: Attachment[];   // 上会材料（询比必须）
+  demandMaterial?: Attachment[];       // 需求立项材料（竞价/谈判/直接）
+  preContractReview?: Attachment[];    // 前置审核合同文本
+  jointMeetingMinutes?: Attachment[];  // 合资公司会议纪要（可选）
+  jointOnMeetingMaterials?: Attachment[]; // 合资公司上会材料（可选）
+  tenderer?: string;                    // 招标人
+  implementationUnit?: string;         // 招采实施单位
+  projectImplementationUnit?: string;  // 项目实施单位
+  procurementHandler?: string;          // 招采经办人
+  agentName?: string;                   // 招标代理机构名称（询比/竞价/谈判）
+  agentDrawResult?: Attachment[];      // 招标代理抽取结果表（询比/竞价/谈判）
+  ownerRepresentative?: string;        // 业主代表（询比）
+  hasDispute?: '是' | '否';            // 是否存在答疑/质疑/投诉
+  hasOwnerJudge?: boolean;             // 是否委派业主评委（询比）
+  judgeMethod?: string;                 // 评标办法
+  winningSupplierId?: string;           // 中标供应商
+  winningSupplierName?: string;
+  winningSupplierLegalPerson?: string; // 中标单位法人名字
+  winningSupplierScore?: number;        // 中标单位得分
+  losingSupplier1Name?: string;         // 未中标单位1
+  losingSupplier1LegalPerson?: string;
+  losingSupplier1Score?: number;
+  losingSupplier2Name?: string;         // 未中标单位2
+  losingSupplier2LegalPerson?: string;
+  losingSupplier2Score?: number;
+  announcementPublishTime?: string;     // 招采公告发布时间
+  bidOpeningTime?: string;              // 开标时间
+  awardTime?: string;                   // 中标时间
+  contractAmount?: number;              // 中标/合同金额（元）
+  processArchive?: Attachment[];        // 招采过程备案/资料
+  awardNotice?: Attachment[];            // 成交通知书文件
+  remark?: string;
+
+  // ====== 其他 ======
   creator: string;
   createTime: string;
-  inviteSupplierIds?: string[]; // 受邀供应商ID列表
-  quotes: BiddingQuote[]; // 供应商报价
-  winningSupplierId?: string; // 成交供应商
-  winningSupplierName?: string;
-  resultRemark?: string; // 评审结果说明
-  attachments?: Attachment[]; // 竞价小组评定结果附件
-  biddingAnnouncement?: Attachment[]; // 竞价公告附件
-  biddingDocuments?: Attachment[]; // 竞价文件附件
-  // 兼容性保留字段（已废弃，以 items 为准）
-  singlePriceLimit?: number; // 单品上限单价（已废弃，以 items 为准）
+  attachments?: Attachment[];           // 评定结果附件
+  biddingAnnouncement?: Attachment[];   // 竞价公告附件（目录内比价）
+  biddingDocuments?: Attachment[];      // 竞价文件附件（目录内比价）
 }
 
 // ==================== 供应商报价单类型 ====================

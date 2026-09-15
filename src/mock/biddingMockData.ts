@@ -20,6 +20,7 @@ const mkItems = (
     demandUnitPriceIncludingTax: r[5],
     costAuditUnitPriceIncludingTax: r[6],
     singlePriceLimit: r[7],
+    unitPriceLimitIncludingTax: r[7],
   }));
 
 // 工具函数：创建报价单明细
@@ -334,6 +335,9 @@ export const MOCK_BIDDINGS: Bidding[] = (() => {
       biddingNo: row[0],
       biddingName: row[1],
       biddingType: 'market' as const,
+      procurementMethod: 'framework',
+      frameworkMode: 'catalog_compare',
+      approvalStatus: 'approved',
       demandId: '',
       demandNo: row[2],
       projectName: row[3],
