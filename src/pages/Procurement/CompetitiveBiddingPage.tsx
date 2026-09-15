@@ -486,8 +486,8 @@ export default function CompetitiveBiddingPage() {
   return (
     <div className="p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-[#303133]">采购工单</h2>
-        <PrimaryButton onClick={openAdd}>+ 新增采购工单</PrimaryButton>
+        <h2 className="text-sm font-semibold text-[#303133]">招采执行</h2>
+        <PrimaryButton onClick={openAdd}>+ 新增招采执行</PrimaryButton>
       </div>
 
       <SearchBar
@@ -522,7 +522,7 @@ export default function CompetitiveBiddingPage() {
       {/* 编辑弹窗 */}
       <Modal
         open={!!editItem}
-        title={isNew ? '新增采购工单' : '编辑采购工单'}
+        title={isNew ? '新增招采执行' : '编辑招采执行'}
         onClose={() => { setEditItem(null); setSelectedSuppliers([]); setSelectedDemand(null); setEditAttachments([]); setEditAnnouncement([]); setEditBiddingDocs([]); }}
         footer={
           <>
@@ -902,7 +902,7 @@ export default function CompetitiveBiddingPage() {
       {/* 详情弹窗 */}
       <Modal
         open={!!viewItem}
-        title="工单详情"
+        title="招采执行详情"
         onClose={() => setViewItem(null)}
         footer={<DefaultButton onClick={() => setViewItem(null)}>关闭</DefaultButton>}
         width="1100px"

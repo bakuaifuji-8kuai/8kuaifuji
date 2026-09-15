@@ -613,8 +613,8 @@ export default function SupplierQuotePage() {
     <div className="p-4">
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-[#303133]">报价单管理</h2>
-          <span className="text-xs text-[#909399] ml-3">供应商通过 APP 上传报价单</span>
+          <h2 className="text-sm font-semibold text-[#303133]">目录内供应商报价管理</h2>
+          <span className="text-xs text-[#909399] ml-3">供应商通过 APP 上传报价</span>
         </div>
         <div>
           <PrimaryButton

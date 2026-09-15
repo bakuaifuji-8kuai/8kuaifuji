@@ -36,8 +36,8 @@ const menuItems: MenuItem[] = [
       ]},
       { title: '招采需求申请管理', path: '/procurement/demand' },
       { title: '招采实施过程管理', path: '/procurement/process-group', children: [
-        { title: '招采工单', path: '/procurement/bidding' },
-        { title: '报价单', path: '/procurement/supplier-quote' },
+        { title: '招采执行', path: '/procurement/bidding' },
+        { title: '目录内供应商报价', path: '/procurement/supplier-quote' },
       ]},
       { title: '合约管理', path: '/procurement/contract-group', children: [
         { title: '合同文本管理', path: '/procurement/contract-template' },

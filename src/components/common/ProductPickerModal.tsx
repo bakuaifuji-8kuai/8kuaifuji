@@ -28,6 +28,8 @@ interface ProductPickerModalProps {
   defaultAttributeFilter?: string;
   /** 仅显示库存数量 > 0 的产品（适用：出库/报废/报损/调拨等扣减场景） */
   onlyStocked?: boolean;
+  /** 显示合同编码筛选条件（仅清单内采购场景） */
+  showContractNoFilter?: boolean;
 }
 
 export default function ProductPickerModal({
@@ -41,12 +43,14 @@ export default function ProductPickerModal({
   warehouseId,
   defaultAttributeFilter,
   onlyStocked = false,
+  showContractNoFilter = false,
 }: ProductPickerModalProps) {
   const { products: storeProducts, categories, batchInventories } = useStore();
   const products = externalProducts || storeProducts;
   const [codeFilter, setCodeFilter] = useState('');
   const [nameFilter, setNameFilter] = useState('');
   const [specFilter, setSpecFilter] = useState('');
+  const [contractNoFilter, setContractNoFilter] = useState('');
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>(externalSelectedIds || []);
@@ -77,6 +81,7 @@ export default function ProductPickerModal({
       setCodeFilter('');
       setNameFilter('');
       setSpecFilter('');
+      setContractNoFilter('');
       setSelectedCategoryIds([]);
       setSelectedIds(externalSelectedIds || []);
     }
@@ -96,6 +101,7 @@ export default function ProductPickerModal({
         if (codeFilter && !(p.code || '').toLowerCase().includes(codeFilter.toLowerCase())) return false;
         if (nameFilter && !(p.name || '').toLowerCase().includes(nameFilter.toLowerCase())) return false;
         if (specFilter && !(p.specification || '').toLowerCase().includes(specFilter.toLowerCase())) return false;
+        if (showContractNoFilter && contractNoFilter && !(p.contractNo || '').toLowerCase().includes(contractNoFilter.toLowerCase())) return false;
         if (onlyStocked && getStockQty(p.id) <= 0) return false;
         if (effectiveCategoryIds.length > 0) {
           const pCategoryId = p.categoryId || p.productCategoryId;
@@ -109,7 +115,7 @@ export default function ProductPickerModal({
         }
         return true;
       });
-  }, [products, codeFilter, nameFilter, specFilter, onlyStocked, batchInventories, selectedCategoryIds, categories]);
+  }, [products, codeFilter, nameFilter, specFilter, contractNoFilter, showContractNoFilter, onlyStocked, batchInventories, selectedCategoryIds, categories]);
 
   const columns: ColumnDef<any>[] = [
     { key: 'code', title: '物资编码' },
@@ -168,7 +174,7 @@ export default function ProductPickerModal({
       onClose={onClose}
       width="max-w-[1000px]"
     >
-      <div className="mb-3 grid grid-cols-4 gap-3">
+      <div className={`mb-3 grid gap-3 ${showContractNoFilter ? 'grid-cols-5' : 'grid-cols-4'}`}>
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
           <input
@@ -199,6 +205,18 @@ export default function ProductPickerModal({
             className="w-full h-8 pl-8 pr-2 border border-[#dcdfe6] text-xs text-[#303133] rounded focus:outline-none focus:border-[#2f54eb]"
           />
         </div>
+        {showContractNoFilter && (
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+            <input
+              type="text"
+              value={contractNoFilter}
+              onChange={(e) => setContractNoFilter(e.target.value)}
+              placeholder="搜索合同编码"
+              className="w-full h-8 pl-8 pr-2 border border-[#dcdfe6] text-xs text-[#303133] rounded focus:outline-none focus:border-[#2f54eb]"
+            />
+          </div>
+        )}
         {/* 物资分类多选筛选 */}
         <div className="relative">
           <button

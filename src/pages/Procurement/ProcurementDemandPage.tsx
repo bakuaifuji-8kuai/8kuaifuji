@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import ProductPickerModal, { ProductPickerItem } from '@/components/common/ProductPickerModal';
+import ImportPreviewModal from '@/components/common/ImportPreviewModal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
+import { exportDemandTemplate, parseAndValidateExcel, type RowResult } from '@/utils/excelImport';
 import type { ProcurementDemand, ProcurementDemandDetail, ProcurementDemandChange, Contract, ProductContract, ProcurementType, ProcurementMode, ProjectRow, DemandChangeRecord, Project, ContractPurchaseOrder, ContractPurchaseOrderDetail } from '@/types';
 
 // ============ 业务分类 <-> 底层 demandType 映射 ============
@@ -130,13 +132,16 @@ export default function ProcurementDemandPage() {
   const [applied, setApplied] = useState({ no: '', department: '', status: '', procurementType: '' });
 
   const filteredData = useMemo(() => {
-    return procurementDemands.filter((d) => {
-      if (applied.no && !d.demandNo.includes(applied.no)) return false;
-      if (applied.department && !d.applicantDept.includes(applied.department)) return false;
-      if (applied.status && d.status !== applied.status) return false;
-      if (applied.procurementType && d.procurementType !== applied.procurementType) return false;
-      return true;
-    });
+    return procurementDemands
+      .filter((d) => {
+        if (applied.no && !d.demandNo.includes(applied.no)) return false;
+        if (applied.department && !d.applicantDept.includes(applied.department)) return false;
+        if (applied.status && d.status !== applied.status) return false;
+        if (applied.procurementType && d.procurementType !== applied.procurementType) return false;
+        return true;
+      })
+      // 按创建时间倒序：最新的在最前面，确保新增后在第 1 页可见
+      .sort((a, b) => (b.createTime || '').localeCompare(a.createTime || ''));
   }, [procurementDemands, applied]);
 
   const columns: ColumnDef<ProcurementDemand>[] = [
@@ -259,6 +264,13 @@ export default function ProcurementDemandPage() {
   const [filteredProducts, setFilteredProducts] = useState<ProductPickerItem[]>([]);
   const [projectPickerOpen, setProjectPickerOpen] = useState(false); // 项目选择弹窗
   const [selectedProject, setSelectedProject] = useState<Project | null>(null); // 选中的项目
+  // 导入相关
+  const [importPreviewOpen, setImportPreviewOpen] = useState(false);
+  const [importResults, setImportResults] = useState<RowResult[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // 提交审批弹框
+  const [submitDemand, setSubmitDemand] = useState<ProcurementDemand | null>(null);
+  const [submitMode, setSubmitMode] = useState<ProcurementMode>('meeting');
 
   // 查询某物资是否有有效合同
   const findActiveContractForProduct = (productId: string): { contract: Contract; productContract: ProductContract } | null => {
@@ -373,7 +385,18 @@ export default function ProcurementDemandPage() {
   };
 
   const handleSubmit = (demand: ProcurementDemand) => {
-    updateProcurementDemand(demand.id, { status: 'pending' });
+    // 打开弹框让用户选择立项方式
+    setSubmitDemand(demand);
+    setSubmitMode('meeting');
+  };
+
+  const handleSubmitConfirm = () => {
+    if (!submitDemand) return;
+    updateProcurementDemand(submitDemand.id, {
+      status: 'pending',
+      procurementMode: submitMode,
+    });
+    setSubmitDemand(null);
   };
 
   // 审批通过后，如果有有效期合同，自动生成采购订单
@@ -531,20 +554,83 @@ export default function ProcurementDemandPage() {
   };
 
   const handleSave = () => {
+    console.log('[handleSave] START isNew=', isNew, 'editItem=', JSON.stringify(editItem).substring(0, 300));
     if (!editItem) return;
     // 新增时才生成编号，编辑保留原编号
     if (isNew && !editItem.demandNo) {
       editItem.demandNo = genSerialNo(SERIAL_CONFIG.DEMAND, procurementDemands.map(d => d.demandNo));
+      console.log('[handleSave] generated demandNo=', editItem.demandNo);
     }
     const saveDemand = { ...editItem, details, projectRows };
+    console.log('[handleSave] saveDemand=', JSON.stringify(saveDemand).substring(0, 400));
+    console.log('[handleSave] BEFORE store has', procurementDemands.length, 'items');
     if (isNew) {
       addProcurementDemand(saveDemand);
     } else {
       updateProcurementDemand(saveDemand.id, saveDemand);
     }
+    // 用 setTimeout 确保 state 已更新后再读
+    setTimeout(() => {
+      const cur = useStore.getState();
+      console.log('[handleSave] AFTER store has', cur.procurementDemands.length, 'items');
+    }, 50);
     setEditItem(null);
     setDetails([]); setProjectRows([]);
   };
+
+  // ========== 导出模板 ==========
+  const handleExportTemplate = () => {
+    if (!editItem) return;
+    exportDemandTemplate(editItem.procurementType);
+  };
+
+  // ========== 导入清单 ==========
+  const handleImportClick = () => {
+    if (!editItem) return;
+    if (editItem.demandType !== 'material') {
+      alert('仅物资采购类型支持导入清单');
+      return;
+    }
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!editItem) return;
+
+    try {
+      const results = await parseAndValidateExcel(
+        file,
+        editItem.procurementType,
+        {
+          products,
+          productContracts,
+          contracts,
+          existingDetailProductCodes: details.map((d) => d.productCode).filter(Boolean),
+        },
+      );
+      setImportResults(results);
+      setImportPreviewOpen(true);
+    } catch (err: any) {
+      alert(err?.message || '文件解析失败');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleImportConfirm = (rows: RowResult[]) => {
+    const newDetails: ProcurementDemandDetail[] = rows
+      .filter((r) => r.detail)
+      .map((r, i) => ({
+        id: `IMPORT_${Date.now()}_${i}`,
+        ...r.detail,
+      } as ProcurementDemandDetail));
+    setDetails([...details, ...newDetails]);
+    setImportPreviewOpen(false);
+    setImportResults([]);
+  };
+
   // 优先从物资档案选择（按采购类型过滤）
   const addDetail = () => {
     if (!editItem) return;
@@ -568,9 +654,16 @@ export default function ProcurementDemandPage() {
         return true;
       });
     };
-    let filtered: typeof products = products;
+    let filtered: any[] = products;
     if (editItem.procurementType === 'within_framework') {
-      filtered = products.filter((p) => hasContract(p.id));
+      // 清单内：有有效合同的物资 + 注入 contractNo 供弹窗筛选
+      filtered = products
+        .filter((p) => hasContract(p.id))
+        .map((p) => {
+          const pc = productContracts.find((x) => x.productId === p.id);
+          const c = pc ? contracts.find((ct) => ct.id === pc.contractId) : null;
+          return { ...p, contractNo: c?.contractNo || pc?.contractNo || '' };
+        });
     } else if (editItem.procurementType === 'outside_framework') {
       filtered = products.filter((p) => !hasContract(p.id));
     } else {
@@ -633,13 +726,16 @@ export default function ProcurementDemandPage() {
     const newDetails = [...details];
     const detail = { ...newDetails[index] } as any;
 
-    // 合同物资：不允许修改单价、税率、含税单价、不含税单价
-    const priceLockedFields: (keyof ProcurementDemandDetail)[] = [
-      'unitPriceExcludingTax',
-      'unitPriceIncludingTax',
-      'taxRate',
+    // 锁定规则：清单内场景 + 有合同物资 → 物料信息字段全部只读
+    const isLocked = editItem?.procurementType === 'within_framework' && (detail.isContractItem || detail.productId);
+
+    // 合同物资 / 清单内锁定的字段：物料信息 + 价格 + 合同信息
+    const lockedFields: (keyof ProcurementDemandDetail)[] = [
+      'productCode', 'productType', 'productName', 'specification', 'unit',
+      'unitPriceExcludingTax', 'unitPriceIncludingTax', 'taxRate',
+      'contractNo', 'contractExpiryDate',
     ];
-    if (detail.isContractItem && priceLockedFields.includes(field)) {
+    if (isLocked && lockedFields.includes(field)) {
       return;
     }
 
@@ -834,8 +930,8 @@ export default function ProcurementDemandPage() {
           <div className="space-y-4" style={{ minHeight: '560px' }}>
             {/* 上方：基础信息 */}
             <div className="space-y-3">
-              {/* 业务决策维度：业务类型* + 需求立项方式* + 框架合同清单内/外采购*  — 三连 */}
-              <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+              {/* 业务决策维度：业务类型* + 框架合同清单内/外采购*  — 两连（需求立项方式在"提交审批"时弹框选择） */}
+              <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr' }}>
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">业务类型<span className="text-[#f56c6c] ml-0.5">*</span></div>
                   <select
@@ -856,18 +952,6 @@ export default function ProcurementDemandPage() {
                     <option value={makeCategoryKey('engineering', 'goods')}>工程类 / 货物（含材料和设备）</option>
                     <option value={makeCategoryKey('non_engineering', 'service')}>非工程类 / 服务</option>
                     <option value={makeCategoryKey('non_engineering', 'goods')}>非工程类 / 货物（含材料和设备）</option>
-                  </select>
-                </div>
-                <div>
-                  <div className="mb-1 text-xs text-[#606266]">需求立项方式<span className="text-[#f56c6c] ml-0.5">*</span></div>
-                  <select
-                    className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm"
-                    value={editItem.procurementMode || 'meeting'}
-                    onChange={(e) => setEditItem({ ...editItem, procurementMode: e.target.value as ProcurementMode })}
-                  >
-                    <option value="meeting">会议审批</option>
-                    <option value="sign_report">签报审批</option>
-                    <option value="application_form">采购项目申请表</option>
                   </select>
                 </div>
                 <div>
@@ -1006,6 +1090,8 @@ export default function ProcurementDemandPage() {
                   </span>
                 </div>
                 <div className="flex gap-2">
+                  <DefaultButton size="small" onClick={handleExportTemplate}>导出模板</DefaultButton>
+                  <DefaultButton size="small" onClick={handleImportClick}>导入清单</DefaultButton>
                   <PrimaryButton size="small" onClick={addDetail}>+ 选择物资</PrimaryButton>
                 </div>
               </div>
@@ -1055,7 +1141,11 @@ export default function ProcurementDemandPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {details.map((detail, index) => (
+                    {details.map((detail, index) => {
+                      // 清单内 + 有物资 → 物料信息只读
+                      const rowLocked: boolean = editItem?.procurementType === 'within_framework' && !!(detail.isContractItem || detail.productId);
+                      const lockedCls = rowLocked ? 'bg-[#f0f0f0] text-[#909399] cursor-not-allowed' : '';
+                      return (
                       <tr
                         key={detail.id}
                         className={`border-t border-[#dcdfe6] ${detail.isContractItem ? 'bg-[#fffbeb]' : ''}`}
@@ -1087,40 +1177,45 @@ export default function ProcurementDemandPage() {
                         {/* 商品编码 */}
                         <td className="px-2 py-1 border border-[#ebeef5]">
                           <input
-                            className="w-full h-6 px-1 border border-[#dcdfe6] rounded"
+                            className={`w-full h-6 px-1 border border-[#dcdfe6] rounded ${lockedCls}`}
                             value={detail.productCode}
+                            readOnly={rowLocked}
                             onChange={(e) => updateDetail(index, 'productCode', e.target.value)}
                           />
                         </td>
                         {/* 产品类型 */}
                         <td className="px-2 py-1 border border-[#ebeef5]">
                           <input
-                            className="w-full h-6 px-1 border border-[#dcdfe6] rounded"
+                            className={`w-full h-6 px-1 border border-[#dcdfe6] rounded ${lockedCls}`}
                             value={detail.productType || ''}
+                            readOnly={rowLocked}
                             onChange={(e) => updateDetail(index, 'productType', e.target.value)}
                           />
                         </td>
                         {/* 产品名称 */}
                         <td className="px-2 py-1 border border-[#ebeef5]">
                           <input
-                            className="w-full h-6 px-1 border border-[#dcdfe6] rounded"
+                            className={`w-full h-6 px-1 border border-[#dcdfe6] rounded ${lockedCls}`}
                             value={detail.productName}
+                            readOnly={rowLocked}
                             onChange={(e) => updateDetail(index, 'productName', e.target.value)}
                           />
                         </td>
                         {/* 规格型号 */}
                         <td className="px-2 py-1 border border-[#ebeef5]">
                           <input
-                            className="w-full h-6 px-1 border border-[#dcdfe6] rounded"
+                            className={`w-full h-6 px-1 border border-[#dcdfe6] rounded ${lockedCls}`}
                             value={detail.specification || ''}
+                            readOnly={rowLocked}
                             onChange={(e) => updateDetail(index, 'specification', e.target.value)}
                           />
                         </td>
                         {/* 单位 */}
                         <td className="px-2 py-1 border border-[#ebeef5]">
                           <input
-                            className="w-full h-6 px-1 border border-[#dcdfe6] rounded"
+                            className={`w-full h-6 px-1 border border-[#dcdfe6] rounded ${lockedCls}`}
                             value={detail.unit}
+                            readOnly={rowLocked}
                             onChange={(e) => updateDetail(index, 'unit', e.target.value)}
                           />
                         </td>
@@ -1134,9 +1229,9 @@ export default function ProcurementDemandPage() {
                         <td className="px-2 py-1 border border-[#ebeef5]">
                           <input
                             type="number" step="0.0001"
-                            className={`w-full h-6 px-1 border border-[#dcdfe6] rounded ${detail.isContractItem ? 'bg-[#f0f0f0] text-[#909399] cursor-not-allowed' : ''}`}
+                            className={`w-full h-6 px-1 border border-[#dcdfe6] rounded ${lockedCls}`}
                             value={detail.unitPriceExcludingTax ?? 0}
-                            readOnly={detail.isContractItem}
+                            readOnly={rowLocked}
                             onChange={(e) => updateDetail(index, 'unitPriceExcludingTax', Number(e.target.value))}
                           />
                         </td>
@@ -1148,9 +1243,9 @@ export default function ProcurementDemandPage() {
                         <td className="px-2 py-1 border border-[#ebeef5]">
                           <input
                             type="number" step="0.01"
-                            className={`w-full h-6 px-1 border border-[#dcdfe6] rounded ${detail.isContractItem ? 'bg-[#f0f0f0] text-[#909399] cursor-not-allowed' : ''}`}
+                            className={`w-full h-6 px-1 border border-[#dcdfe6] rounded ${lockedCls}`}
                             value={detail.taxRate ?? 0}
-                            readOnly={detail.isContractItem}
+                            readOnly={rowLocked}
                             onChange={(e) => updateDetail(index, 'taxRate', Number(e.target.value))}
                           />
                         </td>
@@ -1216,16 +1311,18 @@ export default function ProcurementDemandPage() {
                         {/* 合同编号 */}
                         <td className="px-2 py-1 border border-[#ebeef5]">
                           <input
-                            className="w-full h-6 px-1 border border-[#dcdfe6] rounded"
+                            className={`w-full h-6 px-1 border border-[#dcdfe6] rounded ${lockedCls}`}
                             value={detail.contractNo || ''}
+                            readOnly={rowLocked}
                             onChange={(e) => updateDetail(index, 'contractNo', e.target.value)}
                           />
                         </td>
                         {/* 合同有效期 */}
                         <td className="px-2 py-1 border border-[#ebeef5]">
                           <input
-                            className="w-full h-6 px-1 border border-[#dcdfe6] rounded"
+                            className={`w-full h-6 px-1 border border-[#dcdfe6] rounded ${lockedCls}`}
                             value={detail.contractExpiryDate || ''}
+                            readOnly={rowLocked}
                             onChange={(e) => updateDetail(index, 'contractExpiryDate', e.target.value)}
                             placeholder="YYYY-MM-DD"
                           />
@@ -1243,7 +1340,8 @@ export default function ProcurementDemandPage() {
                           <TextButton type="danger" size="small" onClick={() => removeDetail(index)}>删除</TextButton>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                     {details.length === 0 && (
                       <tr>
                         <td colSpan={24} className="px-3 py-6 text-center text-[#909399]">暂无明细，请点击"+ 选择物资"</td>
@@ -1761,12 +1859,83 @@ export default function ProcurementDemandPage() {
         })()}
         selectedIds={details.map((d) => (d as any).productId).filter(Boolean)}
         products={filteredProducts.length > 0 ? filteredProducts : undefined}
+        showContractNoFilter={editItem?.procurementType === 'within_framework'}
         defaultAttributeFilter={(() => {
           // 根据需求类型自动设置属性筛选
           if (editItem?.demandType === 'implementation_project') return '实施项目类';
           if (editItem?.demandType === 'service_project') return '服务项目类';
           return ''; // 物资采购默认不筛选
         })()}
+      />
+
+      {/* 提交审批 - 选择立项方式弹框 */}
+      <Modal
+        open={!!submitDemand}
+        onClose={() => setSubmitDemand(null)}
+        title="提交审批"
+        width="480px"
+        footer={
+          <>
+            <DefaultButton onClick={() => setSubmitDemand(null)}>取消</DefaultButton>
+            <PrimaryButton onClick={handleSubmitConfirm}>确认提交</PrimaryButton>
+          </>
+        }
+      >
+        <div className="py-2 space-y-4">
+          <div className="text-sm text-[#606266]">
+            请为需求 <span className="font-semibold text-[#303133]">{submitDemand?.projectName || submitDemand?.demandNo || '（未命名）'}</span> 选择需求立项方式：
+          </div>
+          <div className="space-y-2">
+            {([
+              { value: 'meeting', label: '会议审批', desc: '适用于需要召开立项审批会议的重大项目', color: 'text-[#409eff]', bg: 'bg-[#ecf5ff]' },
+              { value: 'sign_report', label: '签报审批', desc: '适用于以签报形式流转的中小型采购', color: 'text-[#e6a23c]', bg: 'bg-[#fdf6ec]' },
+              { value: 'application_form', label: '采购项目申请表', desc: '适用于标准化采购项目申请', color: 'text-[#67c23a]', bg: 'bg-[#f0f9eb]' },
+            ] as { value: ProcurementMode; label: string; desc: string; color: string; bg: string }[]).map((opt) => {
+              const selected = submitMode === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setSubmitMode(opt.value)}
+                  className={`w-full text-left px-3 py-2.5 rounded border transition-all ${
+                    selected
+                      ? 'border-indigo-500 bg-indigo-50/60 shadow-sm'
+                      : 'border-[#dcdfe6] hover:border-[#409eff] hover:bg-[#f5f7fa]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="submitMode"
+                      checked={selected}
+                      onChange={() => setSubmitMode(opt.value)}
+                      className="accent-indigo-500"
+                    />
+                    <span className={`text-sm font-semibold ${opt.color}`}>{opt.label}</span>
+                  </div>
+                  <div className="text-xs text-[#909399] mt-1 ml-6">{opt.desc}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </Modal>
+
+      {/* 导入预览弹窗 */}
+      <ImportPreviewModal
+        open={importPreviewOpen}
+        onClose={() => setImportPreviewOpen(false)}
+        results={importResults}
+        onConfirm={handleImportConfirm}
+      />
+
+      {/* 隐藏的 Excel 文件选择 */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls"
+        className="hidden"
+        onChange={handleFileChange}
       />
 
       {/* 项目选择弹窗 */}
