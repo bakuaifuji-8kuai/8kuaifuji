@@ -7,7 +7,7 @@ import ProductPickerModal, { ProductPickerItem } from '@/components/common/Produ
 import ImportPreviewModal from '@/components/common/ImportPreviewModal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
-import { exportDemandTemplate, parseAndValidateExcel, type RowResult } from '@/utils/excelImport';
+import { exportDetailList, parseAndValidateExcel, type RowResult } from '@/utils/excelImport';
 import type { ProcurementDemand, ProcurementDemandDetail, ProcurementDemandChange, Contract, ProductContract, ProcurementType, ProcurementMode, ProjectRow, DemandChangeRecord, Project, ContractPurchaseOrder, ContractPurchaseOrderDetail } from '@/types';
 
 // ============ 业务分类 <-> 底层 demandType 映射 ============
@@ -578,10 +578,14 @@ export default function ProcurementDemandPage() {
     setDetails([]); setProjectRows([]);
   };
 
-  // ========== 导出模板 ==========
-  const handleExportTemplate = () => {
+  // ========== 导出清单（当前明细完整数据） ==========
+  const handleExportList = () => {
     if (!editItem) return;
-    exportDemandTemplate(editItem.procurementType);
+    if (details.length === 0) {
+      alert('当前明细为空，无数据可导出');
+      return;
+    }
+    exportDetailList(details, editItem.procurementType);
   };
 
   // ========== 导入清单 ==========
@@ -607,7 +611,6 @@ export default function ProcurementDemandPage() {
           products,
           productContracts,
           contracts,
-          existingDetailProductCodes: details.map((d) => d.productCode).filter(Boolean),
         },
       );
       setImportResults(results);
@@ -620,13 +623,14 @@ export default function ProcurementDemandPage() {
   };
 
   const handleImportConfirm = (rows: RowResult[]) => {
+    // 整体替换：以 Excel 为准
     const newDetails: ProcurementDemandDetail[] = rows
       .filter((r) => r.detail)
       .map((r, i) => ({
         id: `IMPORT_${Date.now()}_${i}`,
         ...r.detail,
       } as ProcurementDemandDetail));
-    setDetails([...details, ...newDetails]);
+    setDetails(newDetails);
     setImportPreviewOpen(false);
     setImportResults([]);
   };
@@ -1090,7 +1094,7 @@ export default function ProcurementDemandPage() {
                   </span>
                 </div>
                 <div className="flex gap-2">
-                  <DefaultButton size="small" onClick={handleExportTemplate}>导出模板</DefaultButton>
+                  <DefaultButton size="small" onClick={handleExportList}>导出清单</DefaultButton>
                   <DefaultButton size="small" onClick={handleImportClick}>导入清单</DefaultButton>
                   <PrimaryButton size="small" onClick={addDetail}>+ 选择物资</PrimaryButton>
                 </div>

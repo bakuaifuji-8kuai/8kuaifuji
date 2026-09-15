@@ -1,25 +1,46 @@
 import * as XLSX from 'xlsx';
 import type { Product, ProductContract, Contract, ProcurementDemandDetail } from '@/types';
 
-type TemplateType = 'within_framework' | 'outside_framework' | 'new_supplier';
+// ============ 导出列定义 ============
 
-// ============ 模板定义 ============
-
-/** 清单内采购模板列（用户只填商品编码 + 采购数量，其余系统自动回填） */
-export const IN_TEMPLATE_COLUMNS = [
+/** 清单内采购导出列（单价/税率/合同号锁定，Excel 里灰色标注，导入时被改了会被系统自动覆盖） */
+export const IN_COLUMNS = [
+  '项目编号',
+  '项目名称',
+  '产品属性',
   '商品编码',
+  '产品类型',
+  '产品名称',
+  '规格型号',
+  '单位',
+  '是否在合同清单内',
+  '单价(不含税)',
+  '单价(含税)',
+  '税率(%)',
+  '单价备注',
   '采购数量',
 ];
 
-/** 清单外采购模板列（用户填商品编码 + 数量 + 单价 + 税率） */
-export const OUT_TEMPLATE_COLUMNS = [
+/** 清单外/新增供应商导出列（所有列用户可改） */
+export const OUT_COLUMNS = [
+  '项目编号',
+  '项目名称',
+  '产品属性',
   '商品编码',
-  '采购数量',
+  '产品类型',
+  '产品名称',
+  '规格型号',
+  '单位',
+  '单价(不含税)',
   '单价(含税)',
   '税率(%)',
+  '单价备注',
+  '采购数量',
 ];
 
 // ============ 类型 ============
+
+export type TemplateType = 'within_framework' | 'outside_framework' | 'new_supplier';
 
 export type RowStatus = 'success' | 'warning' | 'error';
 
@@ -35,91 +56,146 @@ export interface RowResult {
   detail?: Partial<ProcurementDemandDetail>;
 }
 
-// ============ 导出模板 ============
+// ============ 字段映射（双向） ============
+
+/** JS detail 对象 → Excel 行对象 */
+function detailToRow(d: ProcurementDemandDetail, isWithin: boolean): Record<string, any> {
+  const base: Record<string, any> = {
+    '项目编号': d.projectNo || '',
+    '项目名称': d.projectName || '',
+    '产品属性': d.productAttribute || '',
+    '商品编码': d.productCode || '',
+    '产品类型': d.productType || '',
+    '产品名称': d.productName || '',
+    '规格型号': d.specification || '',
+    '单位': d.unit || '',
+  };
+  if (isWithin) {
+    base['是否在合同清单内'] = d.isInContractList ? '是' : '否';
+  }
+  base['单价(不含税)'] = d.unitPriceExcludingTax ?? 0;
+  base['单价(含税)'] = d.unitPriceIncludingTax ?? 0;
+  base['税率(%)'] = d.taxRate ?? 0;
+  base['单价备注'] = d.unitPriceRemark || '';
+  base['采购数量'] = d.quantity ?? 0;
+  return base;
+}
+
+/** Excel 行 → 字段值提取（兼容不同空格/大小写） */
+function val(row: any, ...keys: string[]): any {
+  for (const k of keys) {
+    if (row[k] !== undefined && row[k] !== '') return row[k];
+    // 尝试 trim 后的 key
+    const found = Object.keys(row).find((rk) => rk.trim() === k);
+    if (found && row[found] !== undefined && row[found] !== '') return row[found];
+  }
+  return undefined;
+}
+
+// ============ 导出清单 ============
 
 /**
- * 导出采购需求明细 Excel 模板
+ * 导出需求明细清单（用户已选好的完整数据）
  */
-export function exportDemandTemplate(procurementType: TemplateType) {
-  // new_supplier 等同于清单外：用户自己填单价
+export function exportDetailList(
+  details: ProcurementDemandDetail[],
+  procurementType: TemplateType,
+) {
   const isWithin = procurementType === 'within_framework';
-  const columns = isWithin ? IN_TEMPLATE_COLUMNS : OUT_TEMPLATE_COLUMNS;
+  const columns = isWithin ? IN_COLUMNS : OUT_COLUMNS;
 
-  // 1 行示例数据
-  const exampleRow: Record<string, any> = isWithin
-    ? { '商品编码': 'PRD001', '采购数量': 5 }
-    : { '商品编码': 'PRD001', '采购数量': 5, '单价(含税)': 100, '税率(%)': 13 };
+  const rows = details.map((d) => detailToRow(d, isWithin));
+  const ws = XLSX.utils.json_to_sheet(rows, { header: columns });
 
-  // 数据 sheet
-  const dataRows: Record<string, any>[] = [exampleRow];
-  const wsData = XLSX.utils.json_to_sheet(dataRows, { header: columns });
+  // 列宽
+  ws['!cols'] = columns.map((c) => ({
+    wch: c.includes('单价') ? 14 : c.includes('项目') ? 14 : c.includes('名称') ? 18 : c.includes('备注') ? 18 : 12,
+  }));
+
+  // 清单内：锁定列加灰色背景（用户改了会被系统覆盖）
+  if (isWithin && rows.length > 0) {
+    // 锁定列索引：H=单价(不含税) I=单价(含税) J=税率(%)
+    // Excel 字母映射：0=A, 7=H, 8=I, 9=J
+    const lockedColIdx = [7, 8, 9];
+    for (let r = 1; r <= rows.length; r++) {
+      lockedColIdx.forEach((ci) => {
+        const addr = XLSX.utils.encode_cell({ r, c: ci });
+        const cell = ws[addr];
+        if (cell) {
+          cell.s = {
+            fill: { patternType: 'solid', fgColor: { rgb: 'F0F0F0' } },
+            font: { color: { rgb: '999999' } },
+          };
+        }
+      });
+    }
+    ws['!cols'][7].wch = 14;
+    ws['!cols'][8].wch = 14;
+    ws['!cols'][9].wch = 12;
+  }
 
   // 说明 sheet
   const notes = isWithin
     ? [
-        ['采购需求明细导入说明（清单内采购）'],
+        ['采购需求明细清单 - 清单内采购'],
         [''],
-        ['字段说明：'],
-        ['商品编码（必填）：物资档案中的商品编码，精确匹配'],
-        ['采购数量（必填）：必须大于 0'],
-        [''],
-        ['自动回填：产品名称、规格型号、单位、合同编码、单价(不含税)、单价(含税)、税率均由系统根据合同自动回填，以系统最新数据为准'],
+        ['使用说明：'],
+        ['1. 本表为系统导出的已选物资清单，修改后可通过"导入清单"回填'],
+        ['2. ✅ 可修改字段：项目编号、项目名称、产品属性、单价备注、采购数量'],
+        ['3. 🔒 锁定列（灰色）：单价(不含税)、单价(含税)、税率  — 由系统合同价自动回填，Excel 里改了也会被覆盖'],
+        ['4. ✏️ 可新增行：在末尾追加新行，商品编码填系统存在的编码 + 填采购数量'],
+        ['5. 🗑️ 可删除行：Excel 里删掉的行，导入后明细也去掉'],
         [''],
         ['校验规则：'],
-        ['1. 商品编码必须在物资档案中存在'],
-        ['2. 商品必须有有效框架合同（清单内采购要求）'],
-        ['3. 同一批次 Excel 中不允许重复商品编码'],
-        ['4. 与当前表单已选商品不能重复'],
+        ['- 商品编码必须在物资档案中存在'],
+        ['- 采购数量必须大于 0'],
+        ['- 清单内采购商品必须有有效框架合同'],
+        ['- 同一批次 Excel 中不允许重复商品编码'],
       ]
     : [
-        ['采购需求明细导入说明（清单外采购）'],
+        ['采购需求明细清单 - 清单外/新增供应商采购'],
         [''],
-        ['字段说明：'],
-        ['商品编码（必填）：物资档案中的商品编码，精确匹配'],
-        ['采购数量（必填）：必须大于 0'],
-        ['单价(含税)（必填）：清单外采购需手动填写含税单价'],
-        ['税率(%)(必填)：如 13、6、9'],
-        [''],
-        ['自动回填：产品名称、规格型号、单位由物资档案自动回填'],
+        ['使用说明：'],
+        ['1. 本表为系统导出的已选物资清单，修改后可通过"导入清单"回填'],
+        ['2. ✅ 可修改字段：项目编号、项目名称、产品属性、单价(不含税)、单价(含税)、税率、单价备注、采购数量（全部可改）'],
+        ['3. ✏️ 可新增行：在末尾追加新行，商品编码填系统存在的编码 + 填数量/单价/税率'],
+        ['4. 🗑️ 可删除行：Excel 里删掉的行，导入后明细也去掉'],
         [''],
         ['校验规则：'],
-        ['1. 商品编码必须在物资档案中存在'],
-        ['2. 同一批次 Excel 中不允许重复商品编码'],
-        ['3. 与当前表单已选商品不能重复'],
+        ['- 商品编码必须在物资档案中存在'],
+        ['- 采购数量必须大于 0'],
+        ['- 清单外/新增供应商场景单价和税率必填'],
+        ['- 同一批次 Excel 中不允许重复商品编码'],
       ];
 
   const wsNotes = XLSX.utils.aoa_to_sheet(notes);
-  wsNotes['!cols'] = [{ wch: 60 }];
+  wsNotes['!cols'] = [{ wch: 70 }];
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, wsData, '采购明细');
+  XLSX.utils.book_append_sheet(wb, ws, '采购明细');
   XLSX.utils.book_append_sheet(wb, wsNotes, '填写说明');
 
-  // 列宽
-  wsData['!cols'] = isWithin
-    ? [{ wch: 18 }, { wch: 12 }]
-    : [{ wch: 18 }, { wch: 12 }, { wch: 14 }, { wch: 12 }];
-
-  const fileName = isWithin
-    ? '采购需求明细模板_清单内.xlsx'
+  const typeLabel = isWithin
+    ? '清单内'
     : procurementType === 'new_supplier'
-    ? '采购需求明细模板_新增供应商.xlsx'
-    : '采购需求明细模板_清单外.xlsx';
+    ? '新增供应商'
+    : '清单外';
+  const time = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
+  const fileName = `需求明细清单_${typeLabel}_${time}.xlsx`;
   XLSX.writeFile(wb, fileName);
 }
 
-// ============ 解析 + 校验 ============
+// ============ 解析 + 校验（导入） ============
 
 export interface ImportContext {
   products: Product[];
   productContracts: ProductContract[];
   contracts: Contract[];
-  /** 当前表单已有明细的商品编码，检查重复 */
-  existingDetailProductCodes: string[];
 }
 
 /**
  * 解析 Excel 文件并逐行校验
+ * （整体替换模式：不需要与当前表单已有明细对比重复）
  */
 export async function parseAndValidateExcel(
   file: File,
@@ -127,22 +203,22 @@ export async function parseAndValidateExcel(
   ctx: ImportContext,
 ): Promise<RowResult[]> {
   const isWithin = procurementType === 'within_framework';
-  const requiredCols = isWithin ? IN_TEMPLATE_COLUMNS : OUT_TEMPLATE_COLUMNS;
+  const requiredCols = isWithin ? IN_COLUMNS : OUT_COLUMNS;
 
   // 读取文件
   const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: 'array' });
+  const workbook = XLSX.read(buffer, { type: 'array', cellStyles: true });
   const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
   const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: '' }) as any[];
 
-  // 表头校验
+  // L1 文件级校验
   if (jsonData.length === 0) {
-    throw new Error('Excel 中无有效数据行');
+    throw new Error('Excel 中无有效数据行（只有表头或全空白）');
   }
   const headers = Object.keys(jsonData[0]);
-  const missingCols = requiredCols.filter((c) => !headers.includes(c));
+  const missingCols = requiredCols.filter((c) => !headers.includes(c) && !headers.find((h) => h.trim() === c));
   if (missingCols.length > 0) {
-    throw new Error(`模板缺少必要列：${missingCols.join('、')}，请使用最新模板`);
+    throw new Error(`Excel 缺少必要列：${missingCols.join('、')}，请使用从本系统导出的清单文件`);
   }
 
   // 逐行校验
@@ -165,45 +241,58 @@ export async function parseAndValidateExcel(
   };
 
   jsonData.forEach((row, idx) => {
-    const rowNum = idx + 2; // Excel 行号（1-based，第 1 行表头）
+    const rowNum = idx + 2;
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    const productCode = String(row['商品编码'] ?? '').trim();
-    const qtyRaw = row['采购数量'];
+    const productCodeRaw = val(row, '商品编码');
+    const productCode = productCodeRaw ? String(productCodeRaw).trim() : '';
+    const qtyRaw = val(row, '采购数量');
     const quantity = Number(qtyRaw);
 
     // L2 行级必填校验
     if (!productCode) {
       errors.push('商品编码不能为空');
     }
-    if (!qtyRaw && qtyRaw !== 0) {
+    if (qtyRaw === '' || qtyRaw === undefined || qtyRaw === null) {
       errors.push('采购数量不能为空');
     } else if (quantity <= 0) {
       errors.push('采购数量必须大于 0');
     }
 
     // 清单外：单价(含税) + 税率 必填
+    let unitPriceExcludingTax = 0;
     let unitPriceIncludingTax = 0;
     let taxRate = 13;
     if (!isWithin) {
-      const priceRaw = row['单价(含税)'];
-      const rateRaw = row['税率(%)'];
-      if (!priceRaw && priceRaw !== 0) {
-        errors.push('单价(含税)不能为空');
+      const priceRaw = val(row, '单价(含税)');
+      const rateRaw = val(row, '税率(%)');
+      const exclRaw = val(row, '单价(不含税)');
+
+      if ((priceRaw === '' || priceRaw === undefined) && (exclRaw === '' || exclRaw === undefined)) {
+        errors.push('单价(不含税)和单价(含税)至少填一个');
       } else {
-        unitPriceIncludingTax = Number(priceRaw);
-        if (unitPriceIncludingTax < 0) errors.push('单价(含税)不能为负数');
+        // 有含税单价 → 倒推不含税
+        if (priceRaw !== '' && priceRaw !== undefined) {
+          unitPriceIncludingTax = Number(priceRaw);
+          if (unitPriceIncludingTax < 0) errors.push('单价(含税)不能为负数');
+        }
       }
-      if (!rateRaw && rateRaw !== 0) {
+      if (rateRaw === '' || rateRaw === undefined) {
         errors.push('税率(%)不能为空');
       } else {
         taxRate = Number(rateRaw);
         if (taxRate < 0 || taxRate > 100) errors.push('税率(%)必须在 0-100 之间');
       }
+      // 不含税单价：如果 Excel 里给了，用给的；否则从含税倒推
+      if (exclRaw !== '' && exclRaw !== undefined) {
+        unitPriceExcludingTax = Number(exclRaw);
+      } else if (unitPriceIncludingTax > 0) {
+        unitPriceExcludingTax = +(unitPriceIncludingTax / (1 + taxRate / 100)).toFixed(4);
+      }
     }
 
-    // L3 业务匹配校验（如果必填项都 OK 了）
+    // L3 业务匹配校验
     let product: Product | undefined;
     if (productCode) {
       product = ctx.products.find((p) => p.code === productCode);
@@ -216,11 +305,6 @@ export async function parseAndValidateExcel(
         } else {
           seenCodesInBatch.add(productCode);
         }
-        // 与当前表单已有明细重复
-        if (ctx.existingDetailProductCodes.includes(productCode)) {
-          errors.push(`商品 ${productCode} 已存在于当前明细中，请删除后再导入`);
-        }
-
         // 清单内：必须有有效合同
         if (isWithin) {
           const validContract = getValidContractForProduct(product.id);
@@ -237,20 +321,60 @@ export async function parseAndValidateExcel(
     // 构建 detail（只有非 error 才构建）
     let detail: Partial<ProcurementDemandDetail> | undefined;
     if (status !== 'error' && product) {
+      // 先解析 Excel 里用户填的单价（可能被改了）
       if (isWithin) {
+        // ============ 清单内：锁定列处理 ============
         const valid = getValidContractForProduct(product.id);
         const pc = valid?.pc;
         const c = valid?.contract;
-        const unitPriceExcludingTax = pc?.unitPrice
-          ? +(pc.unitPrice / (1 + (pc.taxRate ?? 13) / 100)).toFixed(4)
-          : 0;
-        const rate = pc?.taxRate ?? 13;
-        const amountExcludingTax = +(unitPriceExcludingTax * quantity).toFixed(2);
-        const taxAmt = +(amountExcludingTax * (rate / 100)).toFixed(2);
+        const systemRate = pc?.taxRate ?? 13;
+        const systemIncPrice = pc?.unitPrice ?? 0;
+        const systemExclPrice = systemIncPrice > 0 ? +(systemIncPrice / (1 + systemRate / 100)).toFixed(4) : 0;
+
+        // 读取 Excel 里用户可能改了的值
+        const userExclRaw = val(row, '单价(不含税)');
+        const userIncRaw = val(row, '单价(含税)');
+        const userRateRaw = val(row, '税率(%)');
+
+        // 对比：如果用户改了（且系统有合同价）→ 警告 + 自动覆盖
+        if (systemIncPrice > 0) {
+          if (userExclRaw !== '' && userExclRaw !== undefined && Number(userExclRaw) !== systemExclPrice) {
+            warnings.push(`单价(不含税)已被系统合同价覆盖（Excel 填 ${Number(userExclRaw).toFixed(2)} → 系统合同价 ${systemExclPrice.toFixed(2)}）`);
+          }
+          if (userIncRaw !== '' && userIncRaw !== undefined && Number(userIncRaw) !== systemIncPrice) {
+            warnings.push(`单价(含税)已被系统合同价覆盖（Excel 填 ${Number(userIncRaw).toFixed(2)} → 系统合同价 ${systemIncPrice.toFixed(2)}）`);
+          }
+          if (userRateRaw !== '' && userRateRaw !== undefined && Number(userRateRaw) !== systemRate) {
+            warnings.push(`税率已被系统合同价覆盖（Excel 填 ${userRateRaw}% → 系统合同价 ${systemRate}%）`);
+          }
+        }
+
+        // 自动回填物资档案字段（加新行场景 / 用户删了字段）
+        const autoFilled: string[] = [];
+        if (!val(row, '产品名称')) autoFilled.push('产品名称');
+        if (!val(row, '规格型号')) autoFilled.push('规格型号');
+        if (!val(row, '单位')) autoFilled.push('单位');
+        if (!val(row, '产品类型')) autoFilled.push('产品类型');
+        if (autoFilled.length > 0) {
+          warnings.push(`已自动从物资档案回填：${autoFilled.join('、')}`);
+        }
+
+        // 项目信息：用户改了就用用户的，没改就空着让用户继续填
+        const projectNo = String(val(row, '项目编号') || '');
+        const projectName = String(val(row, '项目名称') || '');
+        const productAttribute = String(val(row, '产品属性') || '');
+        const unitPriceRemark = String(val(row, '单价备注') || '合同固定单价');
+
+        const amountExcludingTax = +(systemExclPrice * quantity).toFixed(2);
+        const taxAmt = +(amountExcludingTax * (systemRate / 100)).toFixed(2);
         const amountInc = +(amountExcludingTax + taxAmt).toFixed(2);
+
         detail = {
           productId: product.id,
           productCode: product.code,
+          projectNo,
+          projectName,
+          productAttribute: productAttribute || undefined,
           productName: product.name,
           productType: (product as any).categoryName || '',
           specification: (product as any).specification || '',
@@ -260,33 +384,65 @@ export async function parseAndValidateExcel(
           contractId: c?.id,
           contractNo: c?.contractNo,
           contractExpiryDate: c ? `${c.startDate} ~ ${c.endDate}` : '',
-          unitPriceExcludingTax,
-          unitPriceIncludingTax: pc?.unitPrice ?? 0,
-          taxRate: rate,
-          unitPriceRemark: '合同固定单价',
+          unitPriceExcludingTax: systemExclPrice,
+          unitPriceIncludingTax: systemIncPrice,
+          taxRate: systemRate,
+          unitPriceRemark,
           quantity,
           amountExcludingTax,
           taxAmount: taxAmt,
           amountIncludingTax: amountInc,
         };
       } else {
-        // 清单外
-        const unitPriceExcludingTax = +(unitPriceIncludingTax / (1 + taxRate / 100)).toFixed(4);
-        const amountExcludingTax = +(unitPriceExcludingTax * quantity).toFixed(2);
+        // ============ 清单外 / 新增供应商 ============
+        // 自动回填物资档案字段（加新行场景 / 用户删了字段）
+        const autoFilled: string[] = [];
+        if (!val(row, '产品名称')) autoFilled.push('产品名称');
+        if (!val(row, '规格型号')) autoFilled.push('规格型号');
+        if (!val(row, '单位')) autoFilled.push('单位');
+        if (!val(row, '产品类型')) autoFilled.push('产品类型');
+        if (autoFilled.length > 0) {
+          warnings.push(`已自动从物资档案回填：${autoFilled.join('、')}`);
+        }
+
+        const projectNo = String(val(row, '项目编号') || '');
+        const projectName = String(val(row, '项目名称') || '');
+        const productAttribute = String(val(row, '产品属性') || '');
+        const unitPriceRemark = String(val(row, '单价备注') || '');
+
+        // 如果只给了含税单价，倒推不含税；如果都给了，优先不含税
+        const exclRaw = val(row, '单价(不含税)');
+        const incRaw = val(row, '单价(含税)');
+        let finalExcl: number;
+        let finalInc: number;
+        if (exclRaw !== '' && exclRaw !== undefined) {
+          finalExcl = Number(exclRaw);
+          finalInc = +(finalExcl * (1 + taxRate / 100)).toFixed(4);
+        } else {
+          finalInc = Number(incRaw);
+          finalExcl = +(finalInc / (1 + taxRate / 100)).toFixed(4);
+        }
+
+        const amountExcludingTax = +(finalExcl * quantity).toFixed(2);
         const taxAmt = +(amountExcludingTax * (taxRate / 100)).toFixed(2);
         const amountInc = +(amountExcludingTax + taxAmt).toFixed(2);
+
         detail = {
           productId: product.id,
           productCode: product.code,
+          projectNo,
+          projectName,
+          productAttribute: productAttribute || undefined,
           productName: product.name,
           productType: (product as any).categoryName || '',
           specification: (product as any).specification || '',
           unit: product.unit,
           isContractItem: false,
           isInContractList: false,
-          unitPriceExcludingTax,
-          unitPriceIncludingTax,
+          unitPriceExcludingTax: finalExcl,
+          unitPriceIncludingTax: finalInc,
           taxRate,
+          unitPriceRemark,
           quantity,
           amountExcludingTax,
           taxAmount: taxAmt,
