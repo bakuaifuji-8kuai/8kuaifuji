@@ -1162,12 +1162,6 @@ export const BIDDING_METHOD_LABEL: Record<BiddingProcurementMethod, string> = {
   e_mall: '电子商城采购',
 };
 
-/** 谈判采购子模式 */
-export type NegotiationMode = 'open' | 'invited';
-
-/** 框架协议子模式 */
-export type FrameworkMode = 'catalog_compare' | 'random_draw';
-
 /**
  * 旧竞价类型（已废弃，兼容历史数据）
  * @deprecated 请使用 procurementMethod
@@ -1247,21 +1241,6 @@ export interface OfflineDetailItem {
   supplierName?: string;              // 供应商（直接采购/电子商城必填）
 }
 
-/**
- * 框架随机抽取信息（最简）
- */
-export interface FrameworkRandomInfo {
-  projectName: string;
-  demandDept?: string;
-  applicant?: string;
-  drawTime?: string;
-  supplierName?: string;
-  supplierContact?: string;
-  supplierPhone?: string;
-  contractNo?: string;
-  drawResultAttachment?: Attachment;
-}
-
 // ============== 旧报价结构（兼容） ==============
 
 /** 目录内比价-供应商报价明细（按物资） */
@@ -1330,10 +1309,6 @@ export interface Bidding {
   biddingName?: string;              // @deprecated 同 projectName，兼容旧数据
   /** 采购方式（6 种国企采购） */
   procurementMethod?: BiddingProcurementMethod;
-  /** 谈判采购子模式（公开/邀请） */
-  negotiationMode?: NegotiationMode;
-  /** 框架协议子模式（目录内比价/随机抽取） */
-  frameworkMode?: FrameworkMode;
   /** @deprecated 旧的 market/library，兼容历史数据 */
   biddingType?: BiddingType;
 
@@ -1341,13 +1316,11 @@ export interface Bidding {
   demandId?: string;
   demandNo?: string;
 
-  // ====== 三种明细（根据采购方式只填一种）======
+  // ====== 两种明细（根据采购方式只填一种）======
   /** 目录内比价-线上报价明细（原 BiddingItem 扩展） */
   items?: CatalogCompareItem[];
   /** 线下录入明细（询比/竞价/谈判/直接/电子商城） */
   offlineDetails?: OfflineDetailItem[];
-  /** 框架随机抽取信息 */
-  randomDraw?: FrameworkRandomInfo;
 
   // ====== 金额汇总（不含税/含税双线） ======
   totalAmountExcludingTax?: number;  // 不含税金额合计

@@ -26,8 +26,7 @@ const PROCUREMENT_OPTIONS: Array<{ value: BiddingProcurementMethod; label: strin
 ];
 
 /** 是否目录内比价（线上报价模式） */
-const isCatalogCompare = (m?: BiddingProcurementMethod, fwMode?: string) =>
-  m === 'framework' && fwMode !== 'random_draw';
+const isCatalogCompare = (m?: BiddingProcurementMethod) => m === 'framework';
 
 export default function CompetitiveBiddingPage() {
   const biddings = useStore((s) => s.biddings || []) as Bidding[];
@@ -82,7 +81,7 @@ export default function CompetitiveBiddingPage() {
         if (row.procurementMethod) {
           let label = BIDDING_METHOD_LABEL[row.procurementMethod];
           if (row.procurementMethod === 'framework') {
-            label += row.frameworkMode === 'random_draw' ? '(随机抽取)' : '(目录内比价)';
+            label += '(目录内比价)';
           }
           return (
             <span className="px-1.5 py-0.5 text-xs rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
@@ -101,8 +100,8 @@ export default function CompetitiveBiddingPage() {
       render: (row) => {
         const catalog = row.items?.length || 0;
         const offline = row.offlineDetails?.length || 0;
-        const random = row.randomDraw ? 1 : 0;
-        return (catalog + offline + random) + ' 项';
+        const random = 0;
+        return (catalog + offline) + ' 项';
       },
     },
     {
@@ -198,7 +197,7 @@ export default function CompetitiveBiddingPage() {
       key: 'op',
       title: '操作',
       render: (row) => {
-        const isCatalog = isCatalogCompare(row.procurementMethod, row.frameworkMode);
+        const isCatalog = isCatalogCompare();
         const isApproved = row.approvalStatus === 'approved' || (!row.approvalStatus && row.status !== 'draft');
         return (
           <div className="flex items-center gap-3">
@@ -357,7 +356,6 @@ export default function CompetitiveBiddingPage() {
       projectName: '',
       biddingType: 'market',              // 兼容旧数据
       procurementMethod: 'framework',     // 默认框架协议采购
-      frameworkMode: 'catalog_compare',   // 默认目录内比价
       approvalStatus: 'draft',
       status: 'draft',
       creator: currentUser.name,
@@ -400,7 +398,7 @@ export default function CompetitiveBiddingPage() {
 
   const handleStartBidding = (bidding: Bidding) => {
     // 只有目录内比价才自动模拟供应商报价
-    if (!isCatalogCompare(bidding.procurementMethod, bidding.frameworkMode)) return;
+    if (!isCatalogCompare()) return;
     updateBidding?.(bidding.id, { status: 'bidding', approvalStatus: 'approved' });
     simulateSupplierQuotes(bidding.id);
   };
@@ -504,8 +502,8 @@ export default function CompetitiveBiddingPage() {
     if (!editItem) return;
     // 采购方式默认值
     const procurementMethod = editItem.procurementMethod || 'framework';
-    const isCatalog = isCatalogCompare(procurementMethod, editItem.frameworkMode);
-    const isRandom = editItem.frameworkMode === 'random_draw';
+    const isCatalog = isCatalogCompare();
+    const isRandom = false;
 
     // 项目名称必填
     if (!editItem.projectName && !editItem.biddingName) {
@@ -597,8 +595,7 @@ export default function CompetitiveBiddingPage() {
 
     if (!demand || !editItem) return;
 
-    const isCatalog = isCatalogCompare(editItem.procurementMethod, editItem.frameworkMode);
-    const isRandom = editItem.frameworkMode === 'random_draw';
+    const isCatalog = isCatalogCompare(editItem.procurementMethod);
 
     const basePatch: Partial<Bidding> = {
       demandId: demand.id,
@@ -622,10 +619,7 @@ export default function CompetitiveBiddingPage() {
         costAuditUnitPriceIncludingTax: d.costAuditUnitPriceIncludingTax,
         costAuditUnitPriceExcludingTax: d.costAuditUnitPriceExcludingTax,
       }));
-      setEditItem({ ...editItem, ...basePatch, items, offlineDetails: [], randomDraw: undefined });
-    } else if (isRandom) {
-      // 随机抽取 → 清空其他
-      setEditItem({ ...editItem, ...basePatch, items: [], offlineDetails: [] });
+      setEditItem({ ...editItem, ...basePatch, items, offlineDetails: [] });
     } else {
       // 线下录入类 → offlineDetails
       const offlineDetails: any[] = (demand.details || []).map((d, idx) => ({
@@ -635,8 +629,7 @@ export default function CompetitiveBiddingPage() {
         unit: d.unit,
         taxRate: 0.13,
       }));
-      // 非目录内比价且需求是物资类的，从明细算合计
-      setEditItem({ ...editItem, ...basePatch, offlineDetails, items: [], randomDraw: undefined });
+      setEditItem({ ...editItem, ...basePatch, offlineDetails, items: [] });
     }
   };
 
@@ -812,12 +805,8 @@ export default function CompetitiveBiddingPage() {
                     const patch: Partial<Bidding> = { procurementMethod: v };
                     // 切换采购方式时清空旧明细，避免类型不匹配
                     if (v !== 'framework') {
-                      patch.frameworkMode = undefined;
                       patch.items = [];
                       patch.offlineDetails = [];
-                      patch.randomDraw = undefined;
-                    } else {
-                      patch.frameworkMode = 'catalog_compare';
                     }
                     setEditItem({ ...editItem, ...patch });
                   }}
@@ -826,28 +815,6 @@ export default function CompetitiveBiddingPage() {
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
-                {/* 框架协议子模式 */}
-                {editItem.procurementMethod === 'framework' && (
-                  <select
-                    className="mt-1 w-full h-8 px-2 border border-[#dcdfe6] rounded text-xs"
-                    value={editItem.frameworkMode || 'catalog_compare'}
-                    onChange={(e) => setEditItem({ ...editItem, frameworkMode: e.target.value as any })}
-                  >
-                    <option value="catalog_compare">目录内比价（线上报价）</option>
-                    <option value="random_draw">随机抽取（线下）</option>
-                  </select>
-                )}
-                {/* 谈判子模式 */}
-                {editItem.procurementMethod === 'negotiation' && (
-                  <select
-                    className="mt-1 w-full h-8 px-2 border border-[#dcdfe6] rounded text-xs"
-                    value={editItem.negotiationMode || 'open'}
-                    onChange={(e) => setEditItem({ ...editItem, negotiationMode: e.target.value as any })}
-                  >
-                    <option value="open">公开谈判</option>
-                    <option value="invited">邀请谈判</option>
-                  </select>
-                )}
               </div>
               <div>
                 <div className="mb-1 text-xs text-[#606266]">
@@ -866,16 +833,12 @@ export default function CompetitiveBiddingPage() {
             {/* 当前采购方式提示条 */}
             {editItem.procurementMethod && (
               <div className={`text-xs px-3 py-2 rounded border ${
-                isCatalogCompare(editItem.procurementMethod, editItem.frameworkMode)
+                isCatalogCompare(editItem.procurementMethod)
                   ? 'bg-blue-50 border-blue-200 text-blue-700'
-                  : editItem.frameworkMode === 'random_draw'
-                  ? 'bg-amber-50 border-amber-200 text-amber-700'
                   : 'bg-slate-50 border-slate-200 text-slate-600'
               }`}>
-                {isCatalogCompare(editItem.procurementMethod, editItem.frameworkMode) ? (
+                {isCatalogCompare(editItem.procurementMethod) ? (
                   '📋 模式：目录内比价（线上报价）— 供应商在小程序报价，你只需设置单品上限和整单上限。'
-                ) : editItem.frameworkMode === 'random_draw' ? (
-                  '🎲 模式：框架随机抽取（线下）— 填写抽取信息，无报价环节。'
                 ) : (
                   '📝 模式：线下录入 — 你自己填写清单、单价、税率，走审批流程。'
                 )}
@@ -910,7 +873,7 @@ export default function CompetitiveBiddingPage() {
             </div>
 
             {/* ============ 明细区域 - 按采购方式动态切换 ============ */}
-            {isCatalogCompare(editItem.procurementMethod, editItem.frameworkMode) ? (
+            {isCatalogCompare() ? (
               /* ===== 模式1: 目录内比价（线上报价）— 物资明细+单品上限 ===== */
               <>
                 <div>
@@ -999,33 +962,6 @@ export default function CompetitiveBiddingPage() {
                     placeholder="请输入整单含税上限" />
                 </div>
               </>
-
-            ) : editItem.frameworkMode === 'random_draw' ? (
-              /* ===== 模式2: 框架随机抽取 — 最简表单 ===== */
-              <div>
-                <div className="mb-1 text-xs text-[#606266]">框架协议随机抽取信息</div>
-                <div className="border border-[#dcdfe6] rounded p-4 grid grid-cols-2 gap-3 text-xs">
-                  {[
-                    { label: '需求部门', key: 'demandDept' },
-                    { label: '申请人', key: 'applicant' },
-                    { label: '抽取时间', key: 'drawTime', type: 'datetime-local' },
-                    { label: '抽取供应商名称', key: 'supplierName' },
-                    { label: '联系人', key: 'supplierContact' },
-                    { label: '联系电话', key: 'supplierPhone' },
-                    { label: '关联框架合同编号', key: 'contractNo' },
-                  ].map((f) => (
-                    <div key={f.key}>
-                      <div className="mb-1 text-[#606266]">{f.label}</div>
-                      <input type={f.type || 'text'} className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
-                        value={(editItem as any).randomDraw?.[f.key] || ''}
-                        onChange={(e) => setEditItem({
-                          ...editItem,
-                          randomDraw: { ...((editItem as any).randomDraw || { projectName: editItem.projectName }), [f.key]: e.target.value }
-                        })} />
-                    </div>
-                  ))}
-                </div>
-              </div>
 
             ) : (
               /* ===== 模式3: 线下录入类（询比/竞价/谈判/直接/电子商城）===== */
@@ -1346,8 +1282,7 @@ export default function CompetitiveBiddingPage() {
               <div><span className="text-[#909399] text-xs">采购方式：</span>
                 {viewItem.procurementMethod
                   ? (BIDDING_METHOD_LABEL as any)[viewItem.procurementMethod] +
-                    (viewItem.frameworkMode === 'random_draw' ? '(随机抽取)' :
-                     viewItem.frameworkMode === 'catalog_compare' ? '(目录内比价)' : '')
+                    (viewItem.procurementMethod === 'framework' ? '(目录内比价)' : '')
                   : (viewItem.biddingType === 'market' ? '市场采购' : '库内采购')
                 }
               </div>

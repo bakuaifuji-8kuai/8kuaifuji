@@ -336,7 +336,6 @@ export const MOCK_BIDDINGS: Bidding[] = (() => {
       biddingName: row[1],
       biddingType: 'market' as const,
       procurementMethod: 'framework',
-      frameworkMode: 'catalog_compare',
       approvalStatus: 'approved',
       demandId: '',
       demandNo: row[2],
