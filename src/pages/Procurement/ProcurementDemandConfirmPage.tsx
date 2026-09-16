@@ -549,6 +549,30 @@ function ConfirmFormFields({
   const labelCls = "text-xs text-slate-600 mb-1 font-medium";
   const requiredCls = "text-rose-500 ml-0.5";
 
+  // 双层锁：
+  // listLocked  — 需求申请已审批，清单行不可增删、清单字段（dept/projectName/mainContent/budget*）永远只读
+  // confirmLocked — 立项审批中/已通过时，立项专属字段也 disabled
+  const listLocked = true;
+  const confirmLocked = !!readOnly;
+
+  // 服务/工程类确认阶段：若无项目行，自动注入一行空白行供立项字段填写
+  // （listLocked=true 表示不能新增删除，但需求申请阶段可能没填过 projectRows）
+  let effectiveRows = projectRows;
+  if (formType !== 'material' && projectRows.length === 0) {
+    effectiveRows = [{
+      id: 'PR_AUTO',
+      dept: '',
+      projectName: '',
+      mainContent: '',
+      budgetAmount: 0,
+      budgetControlAmount: 0,
+      approvalMeetingName: '',
+      approvalDate: '',
+      remark: '',
+    }];
+  }
+
+
   // 根据表单类型和立项方式决定每行列数和显示字段
   const rowCols = formType === 'material'
     ? 'grid grid-cols-2 gap-4'  // 物资类用表单形式
@@ -571,21 +595,21 @@ function ConfirmFormFields({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className={labelCls}>预算总金额（元）<span className={requiredCls}>*</span></div>
-                <input type="number" className={inputCls} disabled={readOnly} placeholder="自动关联申请阶段的物资清单" />
+                <input type="number" className={inputCls} disabled={confirmLocked} placeholder="自动关联申请阶段的物资清单" />
               </div>
               <div>
                 <div className={labelCls}>预算控制金额（元）<span className={requiredCls}>*</span></div>
-                <input type="number" className={inputCls} disabled={readOnly} placeholder="请输入预算控制金额" />
+                <input type="number" className={inputCls} disabled={confirmLocked} placeholder="请输入预算控制金额" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className={labelCls}>立项审批会议名称<span className={requiredCls}>*</span></div>
-                <input className={inputCls} disabled={readOnly} placeholder="请输入会议名称" />
+                <input className={inputCls} disabled={confirmLocked} placeholder="请输入会议名称" />
               </div>
               <div>
                 <div className={labelCls}>立项审批日期<span className={requiredCls}>*</span></div>
-                <input type="date" className={inputCls} disabled={readOnly} />
+                <input type="date" className={inputCls} disabled={confirmLocked} />
               </div>
             </div>
             <div className="pt-3 border-t border-slate-100">
@@ -593,15 +617,15 @@ function ConfirmFormFields({
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <div className={labelCls}>合资公司立项审批会议名称</div>
-                  <input className={inputCls} disabled={readOnly} placeholder="选填" />
+                  <input className={inputCls} disabled={confirmLocked} placeholder="选填" />
                 </div>
                 <div>
                   <div className={labelCls}>合资公司立项审批日期</div>
-                  <input type="date" className={inputCls} disabled={readOnly} />
+                  <input type="date" className={inputCls} disabled={confirmLocked} />
                 </div>
                 <div>
                   <div className={labelCls}>合资公司会议纪要</div>
-                  <input className={inputCls} disabled={readOnly} placeholder="选填" />
+                  <input className={inputCls} disabled={confirmLocked} placeholder="选填" />
                 </div>
               </div>
             </div>
@@ -613,15 +637,15 @@ function ConfirmFormFields({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className={labelCls}>不含税预算总金额（元）<span className={requiredCls}>*</span></div>
-              <input type="number" className={inputCls} disabled={readOnly} placeholder="自动关联申请阶段" />
+              <input type="number" className={inputCls} disabled={confirmLocked} placeholder="自动关联申请阶段" />
             </div>
             <div>
               <div className={labelCls}>预算控制金额（元）<span className={requiredCls}>*</span></div>
-              <input type="number" className={inputCls} disabled={readOnly} placeholder="请输入预算控制金额" />
+              <input type="number" className={inputCls} disabled={confirmLocked} placeholder="请输入预算控制金额" />
             </div>
             <div>
               <div className={labelCls}>立项审批日期<span className={requiredCls}>*</span></div>
-              <input type="date" className={inputCls} disabled={readOnly} />
+              <input type="date" className={inputCls} disabled={confirmLocked} />
             </div>
           </div>
         )}
@@ -631,15 +655,15 @@ function ConfirmFormFields({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className={labelCls}>不含税预算总金额（元）<span className={requiredCls}>*</span></div>
-              <input type="number" className={inputCls} disabled={readOnly} placeholder="自动关联申请阶段" />
+              <input type="number" className={inputCls} disabled={confirmLocked} placeholder="自动关联申请阶段" />
             </div>
             <div>
               <div className={labelCls}>预算控制金额（元）<span className={requiredCls}>*</span></div>
-              <input type="number" className={inputCls} disabled={readOnly} placeholder="请输入预算控制金额" />
+              <input type="number" className={inputCls} disabled={confirmLocked} placeholder="请输入预算控制金额" />
             </div>
             <div>
               <div className={labelCls}>立项审批日期<span className={requiredCls}>*</span></div>
-              <input type="date" className={inputCls} disabled={readOnly} />
+              <input type="date" className={inputCls} disabled={confirmLocked} />
             </div>
           </div>
         )}
@@ -677,15 +701,8 @@ function ConfirmFormFields({
       {/* 项目多行表单 */}
       <div className="border border-slate-200 rounded-xl overflow-hidden">
         <div className="bg-slate-50 px-4 py-2.5 flex items-center justify-between border-b border-slate-200">
-          <div className="text-xs text-slate-600">共 {projectRows.length} 条 · 合计 ¥{projectRows.reduce((s, r) => s + (r.budgetAmount || 0), 0).toFixed(2)}</div>
-          {!readOnly && (
-            <button
-              onClick={addProjectRow}
-              className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
-            >
-              + 添加行
-            </button>
-          )}
+          <div className="text-xs text-slate-600">共 {effectiveRows.length} 条 · 合计 ¥{effectiveRows.reduce((s, r) => s + (r.budgetAmount || 0), 0).toFixed(2)}</div>
+          
         </div>
 
         <div className="overflow-x-auto">
@@ -698,50 +715,48 @@ function ConfirmFormFields({
               </tr>
             </thead>
             <tbody>
-              {projectRows.map((row, idx) => (
+              {effectiveRows.map((row, idx) => (
                 <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50/50">
                   <td className="px-2 py-2 text-center text-slate-500">{idx + 1}</td>
                   <td className="px-2 py-2">
-                    <input className={inputCls} disabled={readOnly} value={row.dept} onChange={(e) => updateProjectRow(idx, 'dept', e.target.value)} />
+                    <input className={inputCls} disabled={listLocked} value={row.dept} onChange={(e) => updateProjectRow(idx, 'dept', e.target.value)} />
                   </td>
                   <td className="px-2 py-2">
-                    <input className={inputCls} disabled={readOnly} value={row.projectName} onChange={(e) => updateProjectRow(idx, 'projectName', e.target.value)} />
+                    <input className={inputCls} disabled={listLocked} value={row.projectName} onChange={(e) => updateProjectRow(idx, 'projectName', e.target.value)} />
                   </td>
                   {(() => (
                     <td className="px-2 py-2">
-                      <textarea className={textareaCls} rows={2} disabled={readOnly} value={row.mainContent || ''} onChange={(e) => updateProjectRow(idx, 'mainContent', e.target.value)} />
+                      <textarea className={textareaCls} rows={2} disabled={listLocked} value={row.mainContent || ''} onChange={(e) => updateProjectRow(idx, 'mainContent', e.target.value)} />
                     </td>
                   ))()}
                   <td className="px-2 py-2">
-                    <input type="number" className={inputCls} disabled={readOnly} value={row.budgetAmount || ''} onChange={(e) => updateProjectRow(idx, 'budgetAmount', Number(e.target.value) || 0)} />
+                    <input type="number" className={inputCls} disabled={listLocked} value={row.budgetAmount || ''} onChange={(e) => updateProjectRow(idx, 'budgetAmount', Number(e.target.value) || 0)} />
                   </td>
                   <td className="px-2 py-2">
-                    <input type="number" className={inputCls} disabled={readOnly} value={row.budgetControlAmount || ''} onChange={(e) => updateProjectRow(idx, 'budgetControlAmount', Number(e.target.value) || 0)} />
+                    <input type="number" className={inputCls} disabled={listLocked} value={row.budgetControlAmount || ''} onChange={(e) => updateProjectRow(idx, 'budgetControlAmount', Number(e.target.value) || 0)} />
                   </td>
                   {mode === 'meeting' && (
                     <td className="px-2 py-2">
-                      <input className={inputCls} disabled={readOnly} value={row.approvalMeetingName || ''} onChange={(e) => updateProjectRow(idx, 'approvalMeetingName', e.target.value)} />
+                      <input className={inputCls} disabled={confirmLocked} value={row.approvalMeetingName || ''} onChange={(e) => updateProjectRow(idx, 'approvalMeetingName', e.target.value)} />
                     </td>
                   )}
                   {(mode === 'meeting' || mode === 'sign_report' || mode === 'application_form') && (
                     <td className="px-2 py-2">
-                      <input type="date" className={inputCls} disabled={readOnly} value={row.approvalDate || ''} onChange={(e) => updateProjectRow(idx, 'approvalDate', e.target.value)} />
+                      <input type="date" className={inputCls} disabled={confirmLocked} value={row.approvalDate || ''} onChange={(e) => updateProjectRow(idx, 'approvalDate', e.target.value)} />
                     </td>
                   )}
                   <td className="px-2 py-2">
-                    <input className={inputCls} disabled={readOnly} value={row.remark || ''} onChange={(e) => updateProjectRow(idx, 'remark', e.target.value)} />
+                    <input className={inputCls} disabled={confirmLocked} value={row.remark || ''} onChange={(e) => updateProjectRow(idx, 'remark', e.target.value)} />
                   </td>
                   <td className="px-2 py-2 text-center">
-                    {!readOnly && (
-                      <button className="text-rose-500 hover:text-rose-600" onClick={() => removeProjectRow(idx)}>删除</button>
-                    )}
+                    
                   </td>
                 </tr>
               ))}
-              {projectRows.length === 0 && (
+              {effectiveRows.length === 0 && (
                 <tr>
                   <td colSpan={getTableHeaders().length} className="text-center py-8 text-slate-400">
-                    暂无数据，点击"+ 添加行"开始录入
+                    需求申请阶段未填写项目清单
                   </td>
                 </tr>
               )}

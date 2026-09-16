@@ -198,18 +198,22 @@ export default function ProcurementDemandPage() {
     {
       key: 'op',
       title: '操作',
-      render: (row) => (
+      render: (row) => {
+        const inConfirmFlow = ['confirm_pending', 'confirm_approved', 'confirm_rejected'].includes(row.status);
+        return (
         <div className="flex flex-wrap items-center gap-2">
-          <TextButton onClick={() => {
-            // 老数据兜底：如果没有 businessCategory/subType，从 demandType 反推
-            const r = row.businessCategory && row.subType
-              ? row
-              : { ...row, ...demandTypeToCategory(row.demandType) };
-            setEditItem(r); setProjectRows(row.projectRows || []); setDetails(row.details || []);
-            setIsNew(false);
-          }}>编辑</TextButton>
+          {row.status === 'draft' && (
+            <TextButton onClick={() => {
+              // 老数据兜底：如果没有 businessCategory/subType，从 demandType 反推
+              const r = row.businessCategory && row.subType
+                ? row
+                : { ...row, ...demandTypeToCategory(row.demandType) };
+              setEditItem(r); setProjectRows(row.projectRows || []); setDetails(row.details || []);
+              setIsNew(false);
+            }}>编辑</TextButton>
+          )}
           <TextButton onClick={() => viewDetail(row)}>查看详情</TextButton>
-          {row.status === 'approved' && (() => {
+          {row.status === 'approved' && !inConfirmFlow && (() => {
             const downstreamRefs = getDownstreamRefs(row.id, row.demandNo);
             if (downstreamRefs.length > 0) {
               return (
@@ -221,6 +225,12 @@ export default function ProcurementDemandPage() {
             }
             return <TextButton onClick={() => openChange(row)}>发起变更</TextButton>;
           })()}
+          {inConfirmFlow && (
+            <span
+              className="text-slate-300 cursor-not-allowed text-[13px]"
+              title="已进入立项确认流程，不能发起变更"
+            >发起变更</span>
+          )}
           {row.status === 'draft' && (
             <TextButton onClick={() => handleSubmit(row)}>提交审批</TextButton>
           )}
@@ -230,16 +240,19 @@ export default function ProcurementDemandPage() {
               <TextButton type="danger" onClick={() => handleReject(row)}>驳回</TextButton>
             </>
           )}
-          <TextButton
-            type="danger"
-            onClick={() => {
-              if (confirm(`确认删除需求申请 ${row.demandNo}？`)) deleteProcurementDemand(row.id);
-            }}
-          >
-            删除
-          </TextButton>
+          {row.status === 'draft' && (
+            <TextButton
+              type="danger"
+              onClick={() => {
+                if (confirm(`确认删除需求申请 ${row.demandNo}？`)) deleteProcurementDemand(row.id);
+              }}
+            >
+              删除
+            </TextButton>
+          )}
         </div>
-      ),
+        );
+      },
     },
   ];
 
