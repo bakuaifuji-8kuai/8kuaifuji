@@ -80,13 +80,30 @@ export default function ProcurementDemandConfirmPage() {
   const [projectRows, setProjectRows] = useState<ProjectRow[]>([]);
   // 附件（简化为文件名列表，演示用）
   const [attachments, setAttachments] = useState<string[]>([]);
+  // 筛选条件
+  const [keyword, setKeyword] = useState('');
+  const [bizFilter, setBizFilter] = useState<string>('all');
 
   // ============ 左侧列表过滤 ============
   const filteredDemands = useMemo(() => {
+    const kw = keyword.trim().toLowerCase();
     return procurementDemands
       .filter((d) => d.status === activeTab)
+      .filter((d) => {
+        if (!kw) return true;
+        return (
+          (d.projectName || '').toLowerCase().includes(kw) ||
+          (d.demandNo || '').toLowerCase().includes(kw) ||
+          (d.applicant || '').toLowerCase().includes(kw)
+        );
+      })
+      .filter((d) => {
+        if (bizFilter === 'all') return true;
+        const key = `${d.businessCategory || ''}/${d.subType || ''}`;
+        return key === bizFilter;
+      })
       .sort((a, b) => (b.createTime || '').localeCompare(a.createTime || ''));
-  }, [procurementDemands, activeTab]);
+  }, [procurementDemands, activeTab, keyword, bizFilter]);
 
   // ============ 选中的需求 ============
   const selected = useMemo(() => {
@@ -251,6 +268,53 @@ export default function ProcurementDemandConfirmPage() {
               </button>
             );
           })}
+        </div>
+
+        {/* 筛选栏 */}
+        <div className="px-4 py-3 border-b border-slate-100 space-y-2">
+          <div className="relative">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+            <input
+              type="text"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="搜项目名 / 需求编号 / 申请人"
+              className="w-full h-8 pl-7 pr-6 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+            />
+            {keyword && (
+              <button
+                type="button"
+                onClick={() => setKeyword('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 text-xs w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center leading-none"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <select
+            value={bizFilter}
+            onChange={(e) => setBizFilter(e.target.value)}
+            className="w-full h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+          >
+            <option value="all">全部业务类型</option>
+            <option value="engineering/construction">工程类 / 施工</option>
+            <option value="engineering/service">工程类 / 服务</option>
+            <option value="engineering/goods">工程类 / 货物</option>
+            <option value="non_engineering/service">非工程类 / 服务</option>
+            <option value="non_engineering/goods">非工程类 / 货物</option>
+          </select>
+          {(keyword || bizFilter !== 'all') && (
+            <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+              <span>找到 {filteredDemands.length} 条</span>
+              <button
+                type="button"
+                onClick={() => { setKeyword(''); setBizFilter('all'); }}
+                className="text-indigo-500 hover:text-indigo-600 font-medium"
+              >
+                清除筛选
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 列表 */}
