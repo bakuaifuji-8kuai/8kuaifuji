@@ -47,7 +47,7 @@ export default function DemandPickerModal({
   const approvedDemands = useMemo(() => {
     const kw = keyword.trim().toLowerCase();
     return demands
-      .filter((d) => d.status === 'approved' || d.status === 'changed')
+      .filter((d) => d.status === 'confirm_approved')
       .filter((d) => {
         if (!kw) return true;
         return (

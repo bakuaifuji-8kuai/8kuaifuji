@@ -348,7 +348,54 @@ export const MOCK_BIDDINGS: Bidding[] = (() => {
       quotes: [] as any[],
     };
     return bid;
-  });
+  }).concat([
+    // ======== 线下录入类：谈判采购 ========
+    {
+      id: 'BID016',
+      biddingNo: 'BID016',
+      biddingName: '展厅装修材料谈判采购（公开）',
+      biddingType: 'market' as const,
+      procurementMethod: 'negotiation_open',
+      approvalStatus: 'submitted',
+      demandId: '',
+      demandNo: 'XQ20260619001',
+      projectName: '2026秋季国际会展展厅装修',
+      offlineDetails: [
+        { rowNo: 1, itemName: '墙面乳胶漆', quantity: 800, unit: '㎡', taxRate: 0.13, unitPriceExcludingTax: 35, unitPriceIncludingTax: 39.5, amountExcludingTax: 28000, amountIncludingTax: 31600, taxAmount: 3600 },
+        { rowNo: 2, itemName: '吊顶石膏板', quantity: 450, unit: '㎡', taxRate: 0.13, unitPriceExcludingTax: 58, unitPriceIncludingTax: 65.54, amountExcludingTax: 26100, amountIncludingTax: 29493, taxAmount: 3393 },
+        { rowNo: 3, itemName: '地面地毯', quantity: 600, unit: '㎡', taxRate: 0.09, unitPriceExcludingTax: 120, unitPriceIncludingTax: 130.8, amountExcludingTax: 72000, amountIncludingTax: 78480, taxAmount: 6480 },
+      ],
+      totalAmountExcludingTax: 126100,
+      totalAmountIncludingTax: 139573,
+      totalTaxAmount: 13473,
+      status: 'submitted' as const,
+      creator: '采购部',
+      createTime: '2026-06-19 09:30:00',
+      quotes: [] as any[],
+    },
+    {
+      id: 'BID017',
+      biddingNo: 'BID017',
+      biddingName: '展架搭建服务谈判采购（邀请）',
+      biddingType: 'market' as const,
+      procurementMethod: 'negotiation_invited',
+      approvalStatus: 'approved',
+      demandId: '',
+      demandNo: 'XQ20260619002',
+      projectName: '2026秋季国际会展展架搭建',
+      offlineDetails: [
+        { rowNo: 1, itemName: '标准展架搭建（3m高）', quantity: 120, unit: '套', taxRate: 0.09, unitPriceExcludingTax: 680, unitPriceIncludingTax: 741.2, amountExcludingTax: 81600, amountIncludingTax: 88944, taxAmount: 7344 },
+        { rowNo: 2, itemName: '特装展位搭建（5×5m）', quantity: 15, unit: '个', taxRate: 0.09, unitPriceExcludingTax: 8500, unitPriceIncludingTax: 9265, amountExcludingTax: 127500, amountIncludingTax: 138975, taxAmount: 11475 },
+      ],
+      totalAmountExcludingTax: 209100,
+      totalAmountIncludingTax: 227919,
+      totalTaxAmount: 18819,
+      status: 'approved' as const,
+      creator: '采购部',
+      createTime: '2026-06-19 14:20:00',
+      quotes: [] as any[],
+    },
+  ]);
 })();
 
 // 报价单测试数据

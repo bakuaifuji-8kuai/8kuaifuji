@@ -437,9 +437,9 @@ export default function ContractLedgerPage() {
 
   const handleSave = () => {
     if (!editItem) return;
-    // 新增时才生成编号，编辑保留原编号
-    if (isNew && !editItem.contractNo) {
-      editItem.contractNo = genSerialNo(SERIAL_CONFIG.CONTRACT, contractLedgers.map(c => c.contractNo));
+    if (!editItem.contractNo) {
+      alert('请填写合同编码');
+      return;
     }
     if (!editItem.contractName) {
       alert('请填写合同名称');
@@ -937,17 +937,12 @@ export default function ContractLedgerPage() {
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <div className="mb-1 text-[#606266]">合同编码 *</div>
-                {isNew ? (
-                  <input disabled placeholder="保存后自动生成"
-                    className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa] text-[#c0c4cc]"
-                    value={editItem.contractNo || ''}
-                  />
-                ) : (
-                  <input disabled
-                    className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa]"
-                    value={editItem.contractNo}
-                  />
-                )}
+                <input
+                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
+                  placeholder="请输入合同编码"
+                  value={editItem.contractNo || ''}
+                  onChange={(e) => setEditItem({ ...editItem, contractNo: e.target.value })}
+                />
               </div>
               <div>
                 <div className="mb-1 text-[#606266]">合同形成方式</div>
@@ -1127,29 +1122,7 @@ export default function ContractLedgerPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <div className="mb-1 text-[#606266]">签订日期</div>
-                <input type="date" className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
-                  value={editItem.signingDate || ''}
-                  onChange={(e) => setEditItem({ ...editItem, signingDate: e.target.value })}
-                />
-              </div>
-              <div>
-                <div className="mb-1 text-[#606266]">生效日期</div>
-                <input type="date" className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
-                  value={editItem.effectiveDate || ''}
-                  onChange={(e) => setEditItem({ ...editItem, effectiveDate: e.target.value })}
-                />
-              </div>
-              <div>
-                <div className="mb-1 text-[#606266]">终止日期</div>
-                <input type="date" className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
-                  value={editItem.terminationDate || ''}
-                  onChange={(e) => setEditItem({ ...editItem, terminationDate: e.target.value })}
-                />
-              </div>
-            </div>
+            {/* 三个日期字段（签订/生效/终止）移至合同归档环节填写 */}
 
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -1157,13 +1130,6 @@ export default function ContractLedgerPage() {
                 <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
                   value={editItem.approvalMethod || ''}
                   onChange={(e) => setEditItem({ ...editItem, approvalMethod: e.target.value })}
-                />
-              </div>
-              <div>
-                <div className="mb-1 text-[#606266]">付款情况说明</div>
-                <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
-                  value={editItem.paymentDescription || ''}
-                  onChange={(e) => setEditItem({ ...editItem, paymentDescription: e.target.value })}
                 />
               </div>
             </div>
@@ -1220,7 +1186,6 @@ export default function ContractLedgerPage() {
               <div><span className="text-[#909399]">对方负责人：</span>{viewItem.counterpartyContact || '-'}</div>
               <div><span className="text-[#909399]">项目名称：</span>{(viewItem as any).projectName || '-'}</div>
               <div><span className="text-[#909399]">立项方式：</span>{viewItem.approvalMethod || '-'}</div>
-              <div className="col-span-2"><span className="text-[#909399]">付款情况：</span>{viewItem.paymentDescription || '-'}</div>
               <div><span className="text-[#909399]">合同金额：</span><span className="text-[#409eff] font-medium">{viewItem.amount?.toFixed(2)} 万元</span></div>
               <div><span className="text-[#909399]">已支付：</span><span className="text-[#67c23a] font-medium">{viewItem.paidAmount?.toFixed(2)} 万元</span></div>
               <div><span className="text-[#909399]">结算金额：</span>{viewItem.settlementAmount?.toFixed(2) || '-'} 万元</div>

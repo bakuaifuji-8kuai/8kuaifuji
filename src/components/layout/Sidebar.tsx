@@ -35,6 +35,7 @@ const menuItems: MenuItem[] = [
         { title: '招采计划汇总', path: '/procurement/plan-summary' },
       ]},
       { title: '招采需求申请管理', path: '/procurement/demand' },
+      { title: '招采需求确认管理', path: '/procurement/demand-confirm' },
       { title: '招采实施过程管理', path: '/procurement/process-group', children: [
         { title: '招采执行', path: '/procurement/bidding' },
         { title: '目录内供应商报价', path: '/procurement/supplier-quote' },

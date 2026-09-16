@@ -931,7 +931,7 @@ export type ProjectNature = '服务' | '工程' | '物资';
 export type ProcurementMethod = '公开招标' | '邀请招标' | '竞争性谈判' | '单一来源采购' | '询价采购' | '框架协议采购';
 
 // 评标办法
-export type BidEvaluationMethod = '综合评分法' | '最低价法' | '性价比法' | '随机抽取法';
+export type BidEvaluationMethod = '综合评分法' | '最低价法' | '性价比法';
 
 // 采购计划明细
 export interface ProcurementPlanDetail {
@@ -1030,9 +1030,21 @@ export interface ProjectRow {
   userRequirementDoc?: string; // 用户需求书 / 施工方案
   budgetAuditDoc?: string;   // 预算审核文件
   signReportDoc?: string;    // 签报审批相关文件
+  // 合资公司字段（仅 物资类 material + 会议审批 meeting 组合才显示）
+  jointMeetingMinutes?: string;   // 合资公司会议纪要及上会材料
+  jointMeetingName?: string;      // 合资公司立项审批会议名称
+  jointApprovalDate?: string;     // 合资公司立项审批日期
 }
 
-export type ProcurementDemandStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'changed';
+export type ProcurementDemandStatus =
+  | 'draft'               // 申请草稿
+  | 'pending'             // 申请审批中
+  | 'approved'            // 申请审批通过（等待立项确认）
+  | 'rejected'            // 申请审批驳回
+  | 'changed'             // 变更发起后状态
+  | 'confirm_pending'     // 立项审批中
+  | 'confirm_approved'    // 立项审批通过（下游可见，可生成订单）
+  | 'confirm_rejected';   // 立项审批驳回（可重提）
 
 // 采购需求明细
 export interface ProcurementDemandDetail {
@@ -1105,6 +1117,15 @@ export interface ProcurementDemand {
     auditDepartment?: string;
     auditTime?: string;
   };
+  // 立项确认阶段字段（两阶段拆分后，procurementMode/projectRows 移至此阶段填写）
+  confirmSubmitter?: string;    // 立项提交人
+  confirmSubmitTime?: string;   // 立项提交时间
+  confirmApprover?: string;     // 立项审批人
+  confirmApproveTime?: string;  // 立项审批通过时间
+  confirmRejectReason?: string; // 立项驳回原因
+  confirmRejectTime?: string;   // 立项驳回时间
+  // 立项阶段全局字段
+  isThreeImportant?: boolean;   // 是否属于"三重一大"（三种立项方式都需勾选）
 }
 
 // 采购需求变更记录
@@ -1145,18 +1166,20 @@ export interface DemandChangeRecord {
 
 /** 招采执行-采购方式（国企采购 6 种） */
 export type BiddingProcurementMethod =
-  | 'inquiry'             // 询比采购（线下录入）
-  | 'competitive_bidding' // 竞价采购（线下录入）
-  | 'negotiation'         // 谈判采购（线下录入，公开/邀请两种）
-  | 'direct'              // 直接采购（线下录入，最简单）
-  | 'framework'           // 框架协议采购（含目录内比价+随机抽取）
-  | 'e_mall';             // 电子商城采购（线下录入）
+  | 'inquiry'               // 询比采购（线下录入）
+  | 'competitive_bidding'   // 竞价采购（线下录入）
+  | 'negotiation_open'      // 谈判采购-公开（线下录入）
+  | 'negotiation_invited'   // 谈判采购-邀请（线下录入）
+  | 'direct'                // 直接采购（线下录入，最简单）
+  | 'framework'             // 框架协议采购（目录内比价，唯一一种）
+  | 'e_mall';               // 电子商城采购（线下录入）
 
 /** 采购方式中文名 */
 export const BIDDING_METHOD_LABEL: Record<BiddingProcurementMethod, string> = {
   inquiry: '询比采购',
   competitive_bidding: '竞价采购',
-  negotiation: '谈判采购',
+  negotiation_open: '谈判采购-公开',
+  negotiation_invited: '谈判采购-邀请',
   direct: '直接采购',
   framework: '框架协议采购',
   e_mall: '电子商城采购',
@@ -1195,8 +1218,7 @@ export type BiddingStatus =
  */
 export type BiddingDetailKind =
   | 'catalog_compare'  // 目录内比价-线上报价（旧 BiddingItem 扩展版）
-  | 'offline'           // 线下录入明细（询比/竞价/谈判/直接/电子商城）
-  | 'framework_random'; // 框架随机抽取
+  | 'offline';         // 线下录入明细（询比/竞价/谈判/直接/电子商城）
 
 /**
  * 目录内比价-线上报价明细

@@ -22,10 +22,11 @@ function subTypeToDemandType(
 }
 
 // 反向：底层 demandType → 业务分类 + 细分（老数据兜底）
-function demandTypeToCategory(dt: string): { bc: 'engineering' | 'non_engineering'; st: 'construction' | 'service' | 'goods' } {
-  if (dt === 'implementation_project') return { bc: 'engineering', st: 'construction' };
-  if (dt === 'service_project') return { bc: 'engineering', st: 'service' };
-  return { bc: 'engineering', st: 'goods' }; // material 兜底为 工程类-货物
+// 返回字段名必须是 businessCategory / subType，才能直接 spread 进 ProcurementDemand 对象
+function demandTypeToCategory(dt: string): { businessCategory: 'engineering' | 'non_engineering'; subType: 'construction' | 'service' | 'goods' } {
+  if (dt === 'implementation_project') return { businessCategory: 'engineering', subType: 'construction' };
+  if (dt === 'service_project') return { businessCategory: 'engineering', subType: 'service' };
+  return { businessCategory: 'engineering', subType: 'goods' }; // material 兜底为 工程类-货物
 }
 
 // bc+st 组合成 select 的 value（用双下划线分隔，避免和值里的斜杠冲突）
@@ -79,8 +80,6 @@ export default function ProcurementDemandPage() {
   const biddings = useStore((s) => s.biddings);
   const procurementOrders = useStore((s) => s.procurementOrders);
   const contractPurchaseOrders = useStore((s) => s.contractPurchaseOrders);
-  // 采购订单管理
-  const addContractPurchaseOrder = useStore((s) => s.addContractPurchaseOrder);
 
   /** 检查某需求是否已被下游单据引用，返回引用单据列表（空数组=未被引用） */
   const getDownstreamRefs = (demandId: string, demandNo: string) => {
@@ -166,19 +165,6 @@ export default function ProcurementDemandPage() {
         return <span className={item.color}>{item.label}</span>;
       },
     },
-    {
-      key: 'procurementMode',
-      title: '需求立项方式',
-      render: (row) => {
-        const map: Record<string, { label: string; bg: string; text: string }> = {
-          meeting: { label: '会议审批', bg: 'bg-[#ecf5ff]', text: 'text-[#409eff]' },
-          sign_report: { label: '签报审批', bg: 'bg-[#fdf6ec]', text: 'text-[#e6a23c]' },
-          application_form: { label: '采购项目申请表', bg: 'bg-[#f0f9eb]', text: 'text-[#67c23a]' },
-        };
-        const item = map[row.procurementMode] || { label: '-', bg: '', text: 'text-[#909399]' };
-        return <span className={`px-2 py-0.5 rounded text-xs ${item.bg} ${item.text}`}>{item.label}</span>;
-      },
-    },
     { key: 'projectName', title: '项目名称' },
     { key: 'applicant', title: '申请人' },
     { key: 'applicantDept', title: '申请部门' },
@@ -189,9 +175,12 @@ export default function ProcurementDemandPage() {
         const statusMap: Record<string, { label: string; color: string }> = {
           draft: { label: '草稿', color: 'text-[#909399]' },
           pending: { label: '待审批', color: 'text-[#e6a23c]' },
-          approved: { label: '已通过', color: 'text-[#67c23a]' },
+          approved: { label: '已通过（待立项）', color: 'text-[#409eff]' },
           rejected: { label: '已驳回', color: 'text-[#f56c6c]' },
           changed: { label: '已变更', color: 'text-[#409eff]' },
+          confirm_pending: { label: '立项审批中', color: 'text-[#e6a23c]' },
+          confirm_approved: { label: '立项已通过', color: 'text-[#67c23a]' },
+          confirm_rejected: { label: '立项已驳回', color: 'text-[#f56c6c]' },
         };
         const status = statusMap[row.status] || statusMap.draft;
         return <span className={status.color}>{status.label}</span>;
@@ -216,7 +205,8 @@ export default function ProcurementDemandPage() {
             const r = row.businessCategory && row.subType
               ? row
               : { ...row, ...demandTypeToCategory(row.demandType) };
-            setEditItem(r); setProjectRows(row.projectRows || []);
+            setEditItem(r); setProjectRows(row.projectRows || []); setDetails(row.details || []);
+            setIsNew(false);
           }}>编辑</TextButton>
           <TextButton onClick={() => viewDetail(row)}>查看详情</TextButton>
           {row.status === 'approved' && (() => {
@@ -268,9 +258,6 @@ export default function ProcurementDemandPage() {
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
   const [importResults, setImportResults] = useState<RowResult[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // 提交审批弹框
-  const [submitDemand, setSubmitDemand] = useState<ProcurementDemand | null>(null);
-  const [submitMode, setSubmitMode] = useState<ProcurementMode>('meeting');
 
   // 查询某物资是否有有效合同
   const findActiveContractForProduct = (productId: string): { contract: Contract; productContract: ProductContract } | null => {
@@ -384,129 +371,18 @@ export default function ProcurementDemandPage() {
     setViewItem(demand);
   };
 
+  // 提交审批：draft → pending（立项方式在"招采需求确认管理"环节选择）
   const handleSubmit = (demand: ProcurementDemand) => {
-    // 打开弹框让用户选择立项方式
-    setSubmitDemand(demand);
-    setSubmitMode('meeting');
+    updateProcurementDemand(demand.id, { status: 'pending' });
   };
 
-  const handleSubmitConfirm = () => {
-    if (!submitDemand) return;
-    updateProcurementDemand(submitDemand.id, {
-      status: 'pending',
-      procurementMode: submitMode,
-    });
-    setSubmitDemand(null);
-  };
-
-  // 审批通过后，如果有有效期合同，自动生成采购订单
+  // 审批通过：pending → approved（不再自动生成下游订单，立项确认通过后才生成）
   const handleApprove = (demand: ProcurementDemand) => {
-    // 1. 更新需求状态为已审批
     updateProcurementDemand(demand.id, {
       status: 'approved',
       approveTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
-      approver: currentUser.name
+      approver: currentUser.name,
     });
-
-    // 2. 如果是框架内采购类型，检查是否有有效期合同，有则自动生成采购订单
-    if (demand.procurementType === 'within_framework' && addContractPurchaseOrder) {
-      const now = new Date();
-
-      // 按合同分组需求明细
-      const contractDetailsMap = new Map<string, { contract: Contract; details: Array<{ detail: ProcurementDemandDetail; productContract: ProductContract }> }>();
-
-      for (const detail of demand.details) {
-        // 跳过明细中没有合同的产品
-        if (!detail.contractId) continue;
-
-        // 查找该产品的有效合同
-        const pc = productContracts.find(p => p.productId === products.find(pr => pr.code === detail.productCode)?.id);
-        if (!pc) continue;
-
-        const contract = contracts.find(c => c.id === pc.contractId);
-        if (!contract) continue;
-
-        // 检查合同是否有效（执行中）
-        if (contract.status !== 'active') continue;
-        if (contract.startDate && new Date(contract.startDate) > now) continue;
-        if (contract.endDate && new Date(contract.endDate) < now) continue;
-
-        if (!contractDetailsMap.has(contract.id)) {
-          contractDetailsMap.set(contract.id, { contract, details: [] });
-        }
-        contractDetailsMap.get(contract.id)!.details.push({ detail, productContract: pc });
-      }
-
-      // 获取项目信息
-      const projectName = demand.projectName || '';
-      const projectType: 'implementation_project' | 'service_project' | undefined =
-        demand.demandType === 'implementation_project' ? 'implementation_project'
-          : demand.demandType === 'service_project' ? 'service_project' : undefined;
-
-      // 为每个合同生成采购订单
-      contractDetailsMap.forEach(({ contract, details }, contractId) => {
-        const orderId = 'CPO_' + Date.now() + Math.random().toString(36).substr(2, 5);
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const d = String(now.getDate()).padStart(2, '0');
-        const seq = String(Date.now() % 1000).padStart(3, '0');
-
-        // 生成订单明细
-        const orderDetails: ContractPurchaseOrderDetail[] = details.map(({ detail, productContract }) => {
-          const product = products.find(p => p.code === detail.productCode);
-          const unitPrice = productContract.unitPrice || detail.unitPriceIncludingTax || detail.unitPriceExcludingTax || 0;
-          return {
-            id: 'D_' + Date.now() + Math.random().toString(36).substr(2, 3),
-            orderId,
-            productId: product?.id || '',
-            productCode: detail.productCode,
-            productName: detail.productName,
-            specification: detail.specification || product?.specification || '',
-            unit: detail.unit || product?.unit || '',
-            contractQuantity: productContract.quantity || 0,
-            deliveredQuantity: 0,
-            orderQuantity: detail.quantity,
-            unitPrice: unitPrice,
-            amount: unitPrice * detail.quantity,
-            deliveryDate: detail.procurementDescription || '',
-            remark: detail.remark || '',
-          };
-        });
-
-        const newOrder: ContractPurchaseOrder = {
-          id: orderId,
-          orderNo: `CPO${y}${m}${d}${seq}`,
-          contractId: contract.id,
-          contractNo: contract.contractNo,
-          contractName: contract.contractName,
-          supplierId: contract.supplierId || '',
-          supplierName: contract.supplierName || '',
-          totalDuration: '',
-          acceptanceStandard: '',
-          paymentTerms: '',
-          // 采购需求关联
-          procurementDemandId: demand.id,
-          procurementDemandNo: demand.demandNo,
-          // 项目关联
-          projectName,
-          projectType,
-          // 订单信息
-          status: 'submitted', // 自动提交
-          createTime: now.toISOString().slice(0, 19).replace('T', ' '),
-          creator: currentUser.name,
-          submitTime: now.toISOString().slice(0, 19).replace('T', ' '),
-          remark: `由采购需求【${demand.demandNo}】审批通过后自动生成`,
-          details: orderDetails,
-        };
-
-        addContractPurchaseOrder(newOrder);
-      });
-
-      // 提示用户
-      if (contractDetailsMap.size > 0) {
-        alert(`审批通过！已根据有效期合同自动生成 ${contractDetailsMap.size} 个采购订单。\n请到「招采及合约管理 → 招采订单管理」查看。`);
-      }
-    }
   };
 
   const handleReject = (demand: ProcurementDemand) => {
@@ -921,10 +797,10 @@ export default function ProcurementDemandPage() {
       <Modal
         open={!!editItem}
         title={isNew ? '新增采购需求申请' : '编辑采购需求申请'}
-        onClose={() => { setEditItem(null); setDetails([]); setProjectRows([]); setAttachments([]); }}
+        onClose={() => { setEditItem(null); setDetails([]); setProjectRows([]); setAttachments([]); setIsNew(false); }}
         footer={
           <>
-            <DefaultButton onClick={() => { setEditItem(null); setDetails([]); setProjectRows([]); setAttachments([]); }}>取消</DefaultButton>
+            <DefaultButton onClick={() => { setEditItem(null); setDetails([]); setProjectRows([]); setAttachments([]); setIsNew(false); }}>取消</DefaultButton>
             <PrimaryButton onClick={handleSave}>保存</PrimaryButton>
           </>
         }
@@ -1383,10 +1259,7 @@ export default function ProcurementDemandPage() {
               <div className="px-3 py-2 flex items-center justify-between bg-[#fafafa] border-b border-[#dcdfe6]">
                 <div className="flex items-center gap-3">
                   <span className="text-[#606266] font-semibold text-sm">
-                    {editItem.procurementMode === 'meeting' ? '会议审批' :
-                     editItem.procurementMode === 'sign_report' ? '签报审批' : '采购项目申请表'}
-                    {' · '}
-                    {editItem.demandType === 'implementation_project' ? '工程类' : '服务类'}采购需求申请
+                    {editItem.demandType === 'implementation_project' ? '工程类' : '服务类'}采购需求清单
                   </span>
                   <span className="text-xs text-[#606266]">共 {projectRows.length} 条</span>
                 </div>
@@ -1398,132 +1271,66 @@ export default function ProcurementDemandPage() {
                 </div>
               </div>
               <div className="overflow-x-auto">
-              <table className="w-full text-xs" style={{ minWidth: '1100px' }}>
+              <table className="w-full text-xs" style={{ minWidth: '800px' }}>
                 <thead>
                   <tr className="bg-[#f5f7fa]">
                     <th className="px-2 py-2 text-center border border-[#ebeef5] w-10">#</th>
-                    <th className="px-2 py-2 text-center border border-[#ebeef5] w-28">需求部门<span className="text-[#f56c6c] ml-0.5">*</span></th>
-                    <th className="px-2 py-2 text-center border border-[#ebeef5] w-32">项目名称<span className="text-[#f56c6c] ml-0.5">*</span></th>
-                    <th className="px-2 py-2 text-center border border-[#ebeef5] w-56">主要内容<span className="text-[#f56c6c] ml-0.5">*</span></th>
-                    <th className="px-2 py-2 text-center border border-[#ebeef5] w-24">
-                      {editItem.procurementMode === 'meeting' ? '预算总金额' : '不含税预算总金额'}(元)<span className="text-[#f56c6c] ml-0.5">*</span>
-                    </th>
-                    <th className="px-2 py-2 text-center border border-[#ebeef5] w-24">预算控制金额(元)<span className="text-[#f56c6c] ml-0.5">*</span></th>
-                    {editItem.procurementMode === 'meeting' && (
-                      <th className="px-2 py-2 text-center border border-[#ebeef5] w-32">立项审批会议名称<span className="text-[#f56c6c] ml-0.5">*</span></th>
-                    )}
-                    <th className="px-2 py-2 text-center border border-[#ebeef5] w-28">立项审批日期<span className="text-[#f56c6c] ml-0.5">*</span></th>
-                    {editItem.procurementMode === 'meeting' && (
-                      <>
-                        <th className="px-2 py-2 text-center border border-[#ebeef5] w-24">会议纪要及上会材料<span className="text-[#f56c6c] ml-0.5">*</span></th>
-                        <th className="px-2 py-2 text-center border border-[#ebeef5] w-20">用户需求书<span className="text-[#f56c6c] ml-0.5">*</span></th>
-                        <th className="px-2 py-2 text-center border border-[#ebeef5] w-20">预算审核文件<span className="text-[#f56c6c] ml-0.5">*</span></th>
-                      </>
-                    )}
-                    {editItem.procurementMode === 'sign_report' && (
-                      <>
-                        <th className="px-2 py-2 text-center border border-[#ebeef5] w-24">签报审批相关文件<span className="text-[#f56c6c] ml-0.5">*</span></th>
-                        <th className="px-2 py-2 text-center border border-[#ebeef5] w-20">预算审核文件<span className="text-[#f56c6c] ml-0.5">*</span></th>
-                        <th className="px-2 py-2 text-center border border-[#ebeef5] w-20">用户需求书<span className="text-[#f56c6c] ml-0.5">*</span></th>
-                      </>
-                    )}
-                    {editItem.procurementMode === 'application_form' && (
-                      <>
-                        <th className="px-2 py-2 text-center border border-[#ebeef5] w-20">预算审核文件<span className="text-[#f56c6c] ml-0.5">*</span></th>
-                        <th className="px-2 py-2 text-center border border-[#ebeef5] w-24">
-                          {editItem.demandType === 'implementation_project' ? '用户需求书/施工方案' : '用户需求书'}<span className="text-[#f56c6c] ml-0.5">*</span>
-                        </th>
-                      </>
-                    )}
-                    {editItem.procurementMode === 'application_form' && editItem.demandType === 'service_project' && (
-                      <th className="px-2 py-2 text-center border border-[#ebeef5] w-24">备注</th>
-                    )}
+                    <th className="px-2 py-2 text-center border border-[#ebeef5] w-32">需求部门<span className="text-[#f56c6c] ml-0.5">*</span></th>
+                    <th className="px-2 py-2 text-center border border-[#ebeef5] w-40">项目名称<span className="text-[#f56c6c] ml-0.5">*</span></th>
+                    <th className="px-2 py-2 text-center border border-[#ebeef5] w-56">主要内容</th>
+                    <th className="px-2 py-2 text-center border border-[#ebeef5] w-32">预算总金额(元)<span className="text-[#f56c6c] ml-0.5">*</span></th>
+                    <th className="px-2 py-2 text-center border border-[#ebeef5] w-36">备注</th>
                     <th className="px-2 py-2 text-center border border-[#ebeef5] w-16">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {projectRows.map((row, index) => (
-                    <tr key={row.id} className="border-t border-[#ebeef5] hover:bg-[#fafbfc]">
-                      <td className="px-2 py-1 text-center border border-[#ebeef5] text-[#909399]">{index + 1}</td>
+                    <tr key={row.id} className="border-t border-[#ebeef5]">
+                      <td className="px-2 py-1 text-center border border-[#ebeef5]">{index + 1}</td>
                       <td className="px-2 py-1 border border-[#ebeef5]">
-                        <input className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
-                          value={row.dept || ''} onChange={(e) => updateProjectRow(index, 'dept', e.target.value)} />
+                        <input
+                          className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-xs"
+                          value={row.dept}
+                          onChange={(e) => updateProjectRow(index, 'dept', e.target.value)}
+                        />
                       </td>
                       <td className="px-2 py-1 border border-[#ebeef5]">
-                        <input className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
-                          value={row.projectName || ''} onChange={(e) => updateProjectRow(index, 'projectName', e.target.value)} />
+                        <input
+                          className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-xs"
+                          value={row.projectName}
+                          onChange={(e) => updateProjectRow(index, 'projectName', e.target.value)}
+                        />
                       </td>
                       <td className="px-2 py-1 border border-[#ebeef5]">
-                        <textarea className="w-full h-12 px-1 border border-[#dcdfe6] rounded text-xs resize-none"
-                          value={row.mainContent || ''} onChange={(e) => updateProjectRow(index, 'mainContent', e.target.value)} />
+                        <textarea
+                          className="w-full px-2 py-1 border border-[#dcdfe6] rounded text-xs"
+                          rows={2}
+                          value={row.mainContent || ''}
+                          onChange={(e) => updateProjectRow(index, 'mainContent', e.target.value)}
+                        />
                       </td>
                       <td className="px-2 py-1 border border-[#ebeef5]">
-                        <input type="number" className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs text-right"
-                          value={row.budgetAmount ?? ''} onChange={(e) => updateProjectRow(index, 'budgetAmount', e.target.value ? Number(e.target.value) : 0)} />
+                        <input
+                          type="number"
+                          className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-xs"
+                          value={row.budgetAmount || ''}
+                          onChange={(e) => updateProjectRow(index, 'budgetAmount', Number(e.target.value) || 0)}
+                        />
                       </td>
                       <td className="px-2 py-1 border border-[#ebeef5]">
-                        <input type="number" className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs text-right"
-                          value={row.budgetControlAmount ?? ''} onChange={(e) => updateProjectRow(index, 'budgetControlAmount', e.target.value ? Number(e.target.value) : 0)} />
+                        <input
+                          className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-xs"
+                          value={row.remark || ''}
+                          onChange={(e) => updateProjectRow(index, 'remark', e.target.value)}
+                        />
                       </td>
-                      {editItem.procurementMode === 'meeting' && (
-                        <td className="px-2 py-1 border border-[#ebeef5]">
-                          <input className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
-                            value={row.approvalMeetingName || ''} onChange={(e) => updateProjectRow(index, 'approvalMeetingName', e.target.value)} />
-                        </td>
-                      )}
-                      <td className="px-2 py-1 border border-[#ebeef5]">
-                        <input type="date" className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
-                          value={row.approvalDate || ''} onChange={(e) => updateProjectRow(index, 'approvalDate', e.target.value)} />
-                      </td>
-                      {editItem.procurementMode === 'meeting' && (
-                        <>
-                          <td className="px-2 py-1 border border-[#ebeef5] text-center">
-                            <label className="text-[#409eff] cursor-pointer hover:underline text-xs">+ 上传<input type="file" className="hidden" multiple /></label>
-                          </td>
-                          <td className="px-2 py-1 border border-[#ebeef5] text-center">
-                            <label className="text-[#409eff] cursor-pointer hover:underline text-xs">+ 上传<input type="file" className="hidden" multiple /></label>
-                          </td>
-                          <td className="px-2 py-1 border border-[#ebeef5] text-center">
-                            <label className="text-[#409eff] cursor-pointer hover:underline text-xs">+ 上传<input type="file" className="hidden" multiple /></label>
-                          </td>
-                        </>
-                      )}
-                      {editItem.procurementMode === 'sign_report' && (
-                        <>
-                          <td className="px-2 py-1 border border-[#ebeef5] text-center">
-                            <label className="text-[#409eff] cursor-pointer hover:underline text-xs">+ 上传<input type="file" className="hidden" multiple /></label>
-                          </td>
-                          <td className="px-2 py-1 border border-[#ebeef5] text-center">
-                            <label className="text-[#409eff] cursor-pointer hover:underline text-xs">+ 上传<input type="file" className="hidden" multiple /></label>
-                          </td>
-                          <td className="px-2 py-1 border border-[#ebeef5] text-center">
-                            <label className="text-[#409eff] cursor-pointer hover:underline text-xs">+ 上传<input type="file" className="hidden" multiple /></label>
-                          </td>
-                        </>
-                      )}
-                      {editItem.procurementMode === 'application_form' && (
-                        <>
-                          <td className="px-2 py-1 border border-[#ebeef5] text-center">
-                            <label className="text-[#409eff] cursor-pointer hover:underline text-xs">+ 上传<input type="file" className="hidden" multiple /></label>
-                          </td>
-                          <td className="px-2 py-1 border border-[#ebeef5] text-center">
-                            <label className="text-[#409eff] cursor-pointer hover:underline text-xs">+ 上传<input type="file" className="hidden" multiple /></label>
-                          </td>
-                        </>
-                      )}
-                      {editItem.procurementMode === 'application_form' && editItem.demandType === 'service_project' && (
-                        <td className="px-2 py-1 border border-[#ebeef5]">
-                          <input className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
-                            value={row.remark || ''} onChange={(e) => updateProjectRow(index, 'remark', e.target.value)} />
-                        </td>
-                      )}
-                      <td className="px-2 py-1 border border-[#ebeef5] text-center">
-                        <button className="text-[#f56c6c] text-xs hover:underline" onClick={() => removeProjectRow(index)}>删除</button>
+                      <td className="px-2 py-1 text-center border border-[#ebeef5]">
+                        <button className="text-[#f56c6c] hover:underline text-xs" onClick={() => removeProjectRow(index)}>删除</button>
                       </td>
                     </tr>
                   ))}
                   {projectRows.length === 0 && (
-                    <tr><td colSpan={editItem.procurementMode === 'meeting' ? 14 : editItem.procurementMode === 'sign_report' ? 13 : editItem.procurementMode === 'application_form' && editItem.demandType === 'service_project' ? 13 : 12} className="px-3 py-6 text-center text-[#909399]">暂无数据，点击"+ 添加行"开始录入</td></tr>
+                    <tr><td colSpan={7} className="px-3 py-6 text-center text-[#909399]">暂无数据，点击"+ 添加行"开始录入</td></tr>
                   )}
                 </tbody>
               </table>
@@ -1871,59 +1678,6 @@ export default function ProcurementDemandPage() {
           return ''; // 物资采购默认不筛选
         })()}
       />
-
-      {/* 提交审批 - 选择立项方式弹框 */}
-      <Modal
-        open={!!submitDemand}
-        onClose={() => setSubmitDemand(null)}
-        title="提交审批"
-        width="480px"
-        footer={
-          <>
-            <DefaultButton onClick={() => setSubmitDemand(null)}>取消</DefaultButton>
-            <PrimaryButton onClick={handleSubmitConfirm}>确认提交</PrimaryButton>
-          </>
-        }
-      >
-        <div className="py-2 space-y-4">
-          <div className="text-sm text-[#606266]">
-            请为需求 <span className="font-semibold text-[#303133]">{submitDemand?.projectName || submitDemand?.demandNo || '（未命名）'}</span> 选择需求立项方式：
-          </div>
-          <div className="space-y-2">
-            {([
-              { value: 'meeting', label: '会议审批', desc: '适用于需要召开立项审批会议的重大项目', color: 'text-[#409eff]', bg: 'bg-[#ecf5ff]' },
-              { value: 'sign_report', label: '签报审批', desc: '适用于以签报形式流转的中小型采购', color: 'text-[#e6a23c]', bg: 'bg-[#fdf6ec]' },
-              { value: 'application_form', label: '采购项目申请表', desc: '适用于标准化采购项目申请', color: 'text-[#67c23a]', bg: 'bg-[#f0f9eb]' },
-            ] as { value: ProcurementMode; label: string; desc: string; color: string; bg: string }[]).map((opt) => {
-              const selected = submitMode === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setSubmitMode(opt.value)}
-                  className={`w-full text-left px-3 py-2.5 rounded border transition-all ${
-                    selected
-                      ? 'border-indigo-500 bg-indigo-50/60 shadow-sm'
-                      : 'border-[#dcdfe6] hover:border-[#409eff] hover:bg-[#f5f7fa]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="submitMode"
-                      checked={selected}
-                      onChange={() => setSubmitMode(opt.value)}
-                      className="accent-indigo-500"
-                    />
-                    <span className={`text-sm font-semibold ${opt.color}`}>{opt.label}</span>
-                  </div>
-                  <div className="text-xs text-[#909399] mt-1 ml-6">{opt.desc}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </Modal>
 
       {/* 导入预览弹窗 */}
       <ImportPreviewModal

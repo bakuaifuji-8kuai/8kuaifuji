@@ -15,11 +15,12 @@ import type {
 } from '@/types';
 import { BIDDING_METHOD_LABEL } from '@/types';
 
-/** 采购方式下拉选项（含框架子模式） */
+/** 采购方式下拉选项 */
 const PROCUREMENT_OPTIONS: Array<{ value: BiddingProcurementMethod; label: string }> = [
   { value: 'inquiry', label: '询比采购' },
   { value: 'competitive_bidding', label: '竞价采购' },
-  { value: 'negotiation', label: '谈判采购' },
+  { value: 'negotiation_open', label: '谈判采购-公开' },
+  { value: 'negotiation_invited', label: '谈判采购-邀请' },
   { value: 'direct', label: '直接采购' },
   { value: 'framework', label: '框架协议采购' },
   { value: 'e_mall', label: '电子商城采购' },
@@ -503,7 +504,6 @@ export default function CompetitiveBiddingPage() {
     // 采购方式默认值
     const procurementMethod = editItem.procurementMethod || 'framework';
     const isCatalog = isCatalogCompare();
-    const isRandom = false;
 
     // 项目名称必填
     if (!editItem.projectName && !editItem.biddingName) {
@@ -528,9 +528,6 @@ export default function CompetitiveBiddingPage() {
         alert('请输入整单含税上限总价！');
         return;
       }
-    } else if (isRandom) {
-      // === 随机抽取 ===
-      // 简化校验，允许保存
     } else {
       // === 线下录入类 ===
       if (!editItem.offlineDetails || editItem.offlineDetails.length === 0) {
@@ -549,7 +546,7 @@ export default function CompetitiveBiddingPage() {
 
     // 根据方式计算金额合计（线下录入类）
     let saveBidding = { ...editItem } as Bidding;
-    if (!isCatalog && !isRandom && editItem.offlineDetails) {
+    if (!isCatalog && editItem.offlineDetails) {
       saveBidding.totalAmountExcludingTax = offlineTotals.ex;
       saveBidding.totalAmountIncludingTax = offlineTotals.in;
       saveBidding.totalTaxAmount = offlineTotals.tax;
@@ -967,57 +964,62 @@ export default function CompetitiveBiddingPage() {
               /* ===== 模式3: 线下录入类（询比/竞价/谈判/直接/电子商城）===== */
               <>
                 <div>
-                  <div className="mb-1 flex items-center justify-between">
-                    <span className="text-xs text-[#606266]">
-                      清单明细（{editItem.offlineDetails?.length || 0}项）- 请填写单价和税率
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-700">
+                      清单明细
+                      <span className="ml-1.5 text-xs text-slate-400 font-normal">
+                        （{editItem.offlineDetails?.length || 0} 项）· 填写不含税单价和税率，含税自动计算
+                      </span>
                     </span>
                     <button type="button" onClick={addOfflineItem}
-                      className="text-xs px-2 py-0.5 border border-indigo-400 text-indigo-600 rounded hover:bg-indigo-50">
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg hover:from-indigo-600 hover:to-purple-700 active:scale-[0.97] transition-all duration-200">
                       + 新增条目
                     </button>
                   </div>
                   {!editItem.offlineDetails || editItem.offlineDetails.length === 0 ? (
-                    <div className="border border-dashed border-[#dcdfe6] rounded p-6 text-center text-sm text-[#909399]">
-                      请先在上方选择采购需求自动带入，或点击「+ 新增条目」手动录入。
+                    <div className="border border-dashed border-slate-300 bg-slate-50/50 rounded-xl p-8 text-center">
+                      <div className="text-slate-400 text-sm">
+                        请先在上方选择采购需求自动带入，或点击右侧「+ 新增条目」手动录入
+                      </div>
                     </div>
                   ) : (
-                    <div className="border border-[#dcdfe6] rounded">
-                      <table className="w-full text-xs">
-                        <thead className="bg-[#f5f7fa]">
-                          <tr>
-                            <th className="px-2 py-2 text-left w-10">#</th>
-                            <th className="px-2 py-2 text-left">项目/物料名称 *</th>
-                            <th className="px-2 py-2 text-left w-16">数量</th>
-                            <th className="px-2 py-2 text-left w-14">单位</th>
-                            <th className="px-2 py-2 text-left w-14">税率</th>
-                            <th className="px-2 py-2 text-left w-28">不含税单价</th>
-                            <th className="px-2 py-2 text-left w-28">含税单价(自动)</th>
-                            <th className="px-2 py-2 text-left w-24">不含税金额</th>
-                            <th className="px-2 py-2 text-left w-24">含税金额</th>
-                            <th className="px-2 py-2 text-center w-14">操作</th>
+                    <div className="border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-gradient-to-r from-slate-50 to-indigo-50/30">
+                            <th className="px-3 py-2.5 text-left w-10 text-[13px] text-slate-600 font-semibold">#</th>
+                            <th className="px-3 py-2.5 text-left text-[13px] text-slate-600 font-semibold">项目/物料名称 <span className="text-rose-500">*</span></th>
+                            <th className="px-3 py-2.5 text-left w-20 text-[13px] text-slate-600 font-semibold">数量</th>
+                            <th className="px-3 py-2.5 text-left w-16 text-[13px] text-slate-600 font-semibold">单位</th>
+                            <th className="px-3 py-2.5 text-left w-20 text-[13px] text-slate-600 font-semibold">税率</th>
+                            <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">不含税单价</th>
+                            <th className="px-3 py-2.5 text-left w-28 text-[13px] text-indigo-600 font-semibold">含税单价 (自动)</th>
+                            <th className="px-3 py-2.5 text-left w-24 text-[13px] text-slate-600 font-semibold">不含税金额</th>
+                            <th className="px-3 py-2.5 text-left w-24 text-[13px] text-purple-600 font-semibold">含税金额</th>
+                            <th className="px-3 py-2.5 text-center w-16 text-[13px] text-slate-600 font-semibold">操作</th>
                           </tr>
                         </thead>
                         <tbody>
                           {editItem.offlineDetails.map((row, idx) => (
-                            <tr key={idx} className="border-t border-[#ebeef5]">
-                              <td className="px-2 py-2 text-[#909399]">{idx + 1}</td>
-                              <td className="px-2 py-2">
-                                <input className="w-full h-7 px-2 border border-[#dcdfe6] rounded"
+                            <tr key={idx} className="border-t border-slate-100 transition-colors hover:bg-indigo-50/20">
+                              <td className="px-3 py-2.5 text-slate-400 text-[13px]">{idx + 1}</td>
+                              <td className="px-3 py-2.5">
+                                <input className="w-full h-8 px-2.5 border border-slate-200 rounded-md text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-400 transition-all"
                                   value={row.itemName}
                                   onChange={(e) => updateOfflineItem(idx, { itemName: e.target.value })} />
                               </td>
-                              <td className="px-2 py-2">
-                                <input type="number" min={0} className="w-full h-7 px-2 border border-[#dcdfe6] rounded"
+                              <td className="px-3 py-2.5">
+                                <input type="number" min={0} className="w-full h-8 px-2.5 border border-slate-200 rounded-md text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-400 transition-all"
                                   value={row.quantity}
                                   onChange={(e) => updateOfflineItem(idx, { quantity: Number(e.target.value) })} />
                               </td>
-                              <td className="px-2 py-2">
-                                <input className="w-full h-7 px-2 border border-[#dcdfe6] rounded"
+                              <td className="px-3 py-2.5">
+                                <input className="w-full h-8 px-2.5 border border-slate-200 rounded-md text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-400 transition-all"
                                   value={row.unit}
                                   onChange={(e) => updateOfflineItem(idx, { unit: e.target.value })} />
                               </td>
-                              <td className="px-2 py-2">
-                                <select className="w-full h-7 px-2 border border-[#dcdfe6] rounded"
+                              <td className="px-3 py-2.5">
+                                <select className="w-full h-8 px-2.5 border border-slate-200 rounded-md text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-400 transition-all cursor-pointer"
                                   value={row.taxRate ?? 0.13}
                                   onChange={(e) => updateOfflineItem(idx, { taxRate: Number(e.target.value) })}>
                                   <option value={0.13}>13%</option>
@@ -1027,33 +1029,41 @@ export default function CompetitiveBiddingPage() {
                                   <option value={0}>0%</option>
                                 </select>
                               </td>
-                              <td className="px-2 py-2">
-                                <input type="number" step="0.01" className="w-full h-7 px-2 border border-[#dcdfe6] rounded"
+                              <td className="px-3 py-2.5">
+                                <input type="number" step="0.01" className="w-full h-8 px-2.5 border border-slate-200 rounded-md text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-400 transition-all"
                                   value={row.unitPriceExcludingTax ?? ''}
                                   onChange={(e) => updateOfflineItem(idx, { unitPriceExcludingTax: Number(e.target.value) })} />
                               </td>
-                              <td className="px-2 py-2 text-[#409eff] font-semibold">
+                              <td className="px-3 py-2.5 text-indigo-600 font-semibold text-[13px]">
                                 ¥{(row.unitPriceIncludingTax ?? 0).toLocaleString()}
                               </td>
-                              <td className="px-2 py-2">¥{(row.amountExcludingTax ?? 0).toLocaleString()}</td>
-                              <td className="px-2 py-2 text-[#303133] font-semibold">¥{(row.amountIncludingTax ?? 0).toLocaleString()}</td>
-                              <td className="px-2 py-2 text-center">
-                                <button onClick={() => removeOfflineItem(idx)} className="text-[#f56c6c] hover:underline">移除</button>
+                              <td className="px-3 py-2.5 text-slate-700 text-[13px]">¥{(row.amountExcludingTax ?? 0).toLocaleString()}</td>
+                              <td className="px-3 py-2.5 text-purple-600 font-semibold text-[13px]">¥{(row.amountIncludingTax ?? 0).toLocaleString()}</td>
+                              <td className="px-3 py-2.5 text-center">
+                                <button onClick={() => removeOfflineItem(idx)}
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-[12px] text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors">
+                                  移除
+                                </button>
                               </td>
                             </tr>
                           ))}
                         </tbody>
-                        <tfoot className="bg-[#f5f7fa]">
-                          <tr>
-                            <td colSpan={7} className="px-2 py-2 text-right text-[#606266] font-semibold">合计：</td>
-                            <td className="px-2 py-2 text-[#409eff] font-semibold">¥{offlineTotals.ex.toLocaleString()}</td>
-                            <td className="px-2 py-2 text-[#303133] font-bold">¥{offlineTotals.in.toLocaleString()}</td>
+                        <tfoot>
+                          <tr className="bg-gradient-to-r from-slate-100 to-indigo-50/40 border-t border-slate-200">
+                            <td colSpan={7} className="px-3 py-2.5 text-right text-slate-600 font-semibold text-[13px]">合计：</td>
+                            <td className="px-3 py-2.5 text-slate-700 font-semibold text-[13px]">¥{offlineTotals.ex.toLocaleString()}</td>
+                            <td className="px-3 py-2.5 text-purple-700 font-bold text-[13px]">¥{offlineTotals.in.toLocaleString()}</td>
                             <td></td>
                           </tr>
                         </tfoot>
                       </table>
-                      <div className="px-2 py-1 text-[11px] text-[#909399]">
-                        税额合计 ¥{offlineTotals.tax.toLocaleString()} · 填写不含税单价后，含税单价/金额/税额自动计算
+                      <div className="px-3 py-2 bg-slate-50/60 border-t border-slate-100 text-xs text-slate-500 flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1">
+                          <span className="text-indigo-500">💡</span>
+                          税额合计 <span className="font-semibold text-slate-700">¥{offlineTotals.tax.toLocaleString()}</span>
+                        </span>
+                        <span className="text-slate-300">|</span>
+                        <span>填写不含税单价后，含税单价 / 含税金额 / 税额自动计算</span>
                       </div>
                     </div>
                   )}

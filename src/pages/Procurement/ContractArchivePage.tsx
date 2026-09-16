@@ -13,7 +13,9 @@ interface ContractArchive {
   contractNos: string[];
   applicant: string;
   applyTime: string;
-  reason: string;
+  signingDate?: string;   // 合同签订日期（归档环节补填，批量写入合同台账）
+  effectiveDate?: string;  // 合同生效日期
+  terminationDate?: string;// 合同终止日期
   attachments: Attachment[];
   status: 'draft' | 'pending' | 'approved' | 'rejected';
   approver?: string;
@@ -36,7 +38,9 @@ export default function ContractArchivePage() {
   // 新增归档弹窗
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedContractIds, setSelectedContractIds] = useState<string[]>([]);
-  const [archiveReason, setArchiveReason] = useState('');
+  const [signingDate, setSigningDate] = useState('');
+  const [effectiveDate, setEffectiveDate] = useState('');
+  const [terminationDate, setTerminationDate] = useState('');
   const [archiveFiles, setArchiveFiles] = useState<Attachment[]>([]);
   const [editArchiveData, setEditArchiveData] = useState<ContractArchive | null>(null);
 
@@ -90,10 +94,6 @@ export default function ContractArchivePage() {
       alert('请至少选择一份合同');
       return;
     }
-    if (!archiveReason.trim()) {
-      alert('请填写归档原因');
-      return;
-    }
 
     const selectedContracts = contractLedgers.filter((c) => selectedContractIds.includes(c.id));
     if (editArchiveData) {
@@ -104,7 +104,9 @@ export default function ContractArchivePage() {
                 ...a,
                 contractIds: selectedContractIds,
                 contractNos: selectedContracts.map((c) => c.contractNo),
-                reason: archiveReason,
+                signingDate,
+                effectiveDate,
+                terminationDate,
                 attachments: archiveFiles,
               }
             : a
@@ -119,7 +121,9 @@ export default function ContractArchivePage() {
         contractNos: selectedContracts.map((c) => c.contractNo),
         applicant: currentUser.name,
         applyTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
-        reason: archiveReason,
+        signingDate,
+        effectiveDate,
+        terminationDate,
         attachments: archiveFiles,
         status: 'pending',
       };
@@ -129,7 +133,7 @@ export default function ContractArchivePage() {
     setCreateModalOpen(false);
     setEditArchiveData(null);
     setSelectedContractIds([]);
-    setArchiveReason('');
+    setSigningDate(''); setEffectiveDate(''); setTerminationDate('');
     setArchiveFiles([]);
   };
 
@@ -148,7 +152,9 @@ export default function ContractArchivePage() {
   const setEditArchive = (archive: ContractArchive) => {
     setEditArchiveData(archive);
     setSelectedContractIds(archive.contractIds);
-    setArchiveReason(archive.reason);
+    setSigningDate(archive.signingDate || '');
+    setEffectiveDate(archive.effectiveDate || '');
+    setTerminationDate(archive.terminationDate || '');
     setArchiveFiles(archive.attachments || []);
     setCreateModalOpen(true);
   };
@@ -223,7 +229,7 @@ export default function ContractArchivePage() {
               <th className="px-3 py-2 text-left text-[#606266] font-medium">关联合同</th>
               <th className="px-3 py-2 text-left text-[#606266] font-medium">申请人</th>
               <th className="px-3 py-2 text-left text-[#606266] font-medium">申请时间</th>
-              <th className="px-3 py-2 text-left text-[#606266] font-medium">归档原因</th>
+              <th className="px-3 py-2 text-left text-[#606266] font-medium">签订/生效/终止日期</th>
               <th className="px-3 py-2 text-center text-[#606266] font-medium">附件</th>
               <th className="px-3 py-2 text-center text-[#606266] font-medium">状态</th>
               <th className="px-3 py-2 text-center text-[#606266] font-medium">操作</th>
@@ -253,8 +259,10 @@ export default function ContractArchivePage() {
                   </td>
                   <td className="px-3 py-2">{archive.applicant}</td>
                   <td className="px-3 py-2 text-[#606266]">{archive.applyTime}</td>
-                  <td className="px-3 py-2 text-[#606266] max-w-[200px] truncate" title={archive.reason}>
-                    {archive.reason}
+                  <td className="px-3 py-2 text-[#606266]">
+                    <div>签订：{archive.signingDate || '-'}</div>
+                    <div>生效：{archive.effectiveDate || '-'}</div>
+                    <div>终止：{archive.terminationDate || '-'}</div>
                   </td>
                   <td className="px-3 py-2 text-center">
                     {archive.attachments.length > 0 ? (
@@ -294,7 +302,7 @@ export default function ContractArchivePage() {
       <Modal
         open={createModalOpen}
         title="合同归档申请"
-        onClose={() => { setCreateModalOpen(false); setEditArchiveData(null); }}
+        onClose={() => { setCreateModalOpen(false); setEditArchiveData(null); setSigningDate(''); setEffectiveDate(''); setTerminationDate(''); setArchiveFiles([]); setSelectedContractIds([]); }}
         footer={
           <>
             <DefaultButton onClick={() => setCreateModalOpen(false)}>取消</DefaultButton>
@@ -304,15 +312,26 @@ export default function ContractArchivePage() {
         width="900px"
       >
         <div className="space-y-4">
-          {/* 归档原因 */}
+          {/* 合同日期（签订/生效/终止）— 在此节点补填 */}
           <div>
-            <div className="mb-1 text-[#606266] text-xs font-semibold">归档原因 <span className="text-[#f56c6c]">*</span></div>
-            <textarea
-              className="w-full h-16 px-2 border border-[#dcdfe6] rounded text-xs"
-              placeholder="请填写归档原因（如：合同执行完毕、项目验收完成等）"
-              value={archiveReason}
-              onChange={(e) => setArchiveReason(e.target.value)}
-            />
+            <div className="mb-1 text-[#606266] text-xs font-semibold">合同日期（归档环节补填）</div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <div className="mb-1 text-[#909399] text-xs">签订日期</div>
+                <input type="date" className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
+                  value={signingDate} onChange={(e) => setSigningDate(e.target.value)} />
+              </div>
+              <div>
+                <div className="mb-1 text-[#909399] text-xs">生效日期</div>
+                <input type="date" className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
+                  value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} />
+              </div>
+              <div>
+                <div className="mb-1 text-[#909399] text-xs">终止日期</div>
+                <input type="date" className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
+                  value={terminationDate} onChange={(e) => setTerminationDate(e.target.value)} />
+              </div>
+            </div>
           </div>
 
           {/* 选择合同 */}

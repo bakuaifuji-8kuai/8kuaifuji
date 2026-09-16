@@ -43,6 +43,7 @@ import BusinessFlowChart from "@/pages/Report/BusinessFlowChart";
 // 采购管理模块
 import ProcurementPlanPage from "@/pages/Procurement/ProcurementPlanPage";
 import ProcurementDemandPage from "@/pages/Procurement/ProcurementDemandPage";
+import ProcurementDemandConfirmPage from "@/pages/Procurement/ProcurementDemandConfirmPage";
 import ContractLedgerPage from "@/pages/Procurement/ContractLedgerPage";
 import ContractArchivePage from "@/pages/Procurement/ContractArchivePage";
 import ProcurementOrderPage from "@/pages/Procurement/ProcurementOrderPage";
@@ -112,6 +113,7 @@ export default function App() {
           <Route path="procurement/plan" element={<ProcurementPlanPage />} />
           <Route path="procurement/plan-summary" element={<ProcurementPlanSummaryPage />} />
           <Route path="procurement/demand" element={<ProcurementDemandPage />} />
+          <Route path="procurement/demand-confirm" element={<ProcurementDemandConfirmPage />} />
           <Route path="procurement/contract" element={<ContractLedgerPage />} />
           <Route path="procurement/contract-archive" element={<ContractArchivePage />} />
           <Route path="procurement/contract-purchase-order" element={<ContractPurchaseOrderPage />} />
