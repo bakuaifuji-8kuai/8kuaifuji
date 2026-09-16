@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" font-family="Microsoft YaHei, 微软雅黑, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="900" fill="#f8fafc"/>
+
+  <!-- 标题 -->
+  <text x="600" y="40" text-anchor="middle" font-size="24" font-weight="bold" fill="#0f172a">固定资产管理流程图</text>
+
+  <!-- ============ 一、资产档案管理 ============ -->
+  <text x="600" y="72" text-anchor="middle" font-size="16" font-weight="bold" fill="#1e40af">一、资产档案管理</text>
+
+  <circle cx="80" cy="105" r="20" fill="#10b981" stroke="#059669" stroke-width="2"/>
+  <text x="80" y="105" text-anchor="middle" dominant-baseline="central" fill="white" font-size="13" font-weight="bold">开始</text>
+
+  <rect x="120" y="87" width="160" height="36" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="200" y="105" text-anchor="middle" dominant-baseline="central" font-size="13">新增资产档案</text>
+
+  <polygon points="295,87 595,87 575,123 275,123" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="435" y="105" text-anchor="middle" dominant-baseline="central" font-size="13">填写资产信息（编码、名称、规格、单位）</text>
+
+  <rect x="620" y="87" width="160" height="36" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="700" y="105" text-anchor="middle" dominant-baseline="central" font-size="13">保存</text>
+
+  <circle cx="820" cy="105" r="20" fill="#10b981" stroke="#059669" stroke-width="2"/>
+  <text x="820" y="105" text-anchor="middle" dominant-baseline="central" fill="white" font-size="13" font-weight="bold">结束</text>
+
+  <line x1="100" y1="105" x2="118" y2="105" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="280" y1="105" x2="293" y2="105" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="595" y1="105" x2="618" y2="105" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="780" y1="105" x2="800" y2="105" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ============ 二、资产生命周期管理 ============ -->
+  <text x="600" y="158" text-anchor="middle" font-size="16" font-weight="bold" fill="#1e40af">二、资产生命周期管理</text>
+
+  <!-- 行1 子流程面板 -->
+  <rect x="95" y="172" width="210" height="280" rx="8" ry="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="495" y="172" width="210" height="315" rx="8" ry="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="895" y="172" width="210" height="280" rx="8" ry="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- 子流程标题 行1 -->
+  <text x="200" y="192" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">资产入库</text>
+  <text x="600" y="192" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">资产领用</text>
+  <text x="1000" y="192" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">资产归还</text>
+
+  <!-- 资产入库 连接线 -->
+  <line x1="200" y1="223" x2="200" y2="232" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="200" y1="258" x2="200" y2="267" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="200" y1="293" x2="200" y2="302" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="200" y1="328" x2="200" y2="337" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="200" y1="363" x2="200" y2="372" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="200" y1="398" x2="200" y2="407" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 资产入库 节点 -->
+  <rect x="110" y="207" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="200" y="220" text-anchor="middle" dominant-baseline="central" font-size="13">创建资产入库单</text>
+  <rect x="110" y="242" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="200" y="255" text-anchor="middle" dominant-baseline="central" font-size="13">选择资产</text>
+  <polygon points="125,277 275,277 265,303 115,303" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="195" y="290" text-anchor="middle" dominant-baseline="central" font-size="13">填写数量</text>
+  <rect x="110" y="312" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="200" y="325" text-anchor="middle" dominant-baseline="central" font-size="13">保存</text>
+  <rect x="110" y="347" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="200" y="360" text-anchor="middle" dominant-baseline="central" font-size="13">提交</text>
+  <rect x="110" y="382" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="200" y="395" text-anchor="middle" dominant-baseline="central" font-size="13">确认入库</text>
+  <rect x="110" y="417" width="180" height="26" rx="4" ry="4" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>
+  <text x="200" y="430" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#065f46" font-weight="bold">资产库存增加</text>
+
+  <!-- 资产领用 连接线 -->
+  <line x1="600" y1="223" x2="600" y2="232" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="600" y1="258" x2="600" y2="267" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="600" y1="293" x2="600" y2="302" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="600" y1="328" x2="600" y2="337" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="600" y1="363" x2="600" y2="372" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="600" y1="398" x2="600" y2="407" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="600" y1="433" x2="600" y2="442" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 资产领用 节点 -->
+  <rect x="510" y="207" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="600" y="220" text-anchor="middle" dominant-baseline="central" font-size="13">创建领用单</text>
+  <rect x="510" y="242" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="600" y="255" text-anchor="middle" dominant-baseline="central" font-size="13">选择资产</text>
+  <polygon points="525,277 675,277 665,303 515,303" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="595" y="290" text-anchor="middle" dominant-baseline="central" font-size="13">填写领用数量</text>
+  <polygon points="525,312 675,312 665,338 515,338" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="595" y="325" text-anchor="middle" dominant-baseline="central" font-size="13">选择领用人/部门</text>
+  <rect x="510" y="347" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="600" y="360" text-anchor="middle" dominant-baseline="central" font-size="13">保存</text>
+  <rect x="510" y="382" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="600" y="395" text-anchor="middle" dominant-baseline="central" font-size="13">提交</text>
+  <rect x="510" y="417" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="600" y="430" text-anchor="middle" dominant-baseline="central" font-size="13">确认领用</text>
+  <rect x="510" y="452" width="180" height="26" rx="4" ry="4" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="600" y="465" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#991b1b" font-weight="bold">资产状态变为“在用”</text>
+
+  <!-- 资产归还 连接线 -->
+  <line x1="1000" y1="223" x2="1000" y2="232" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="258" x2="1000" y2="267" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="293" x2="1000" y2="302" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="328" x2="1000" y2="337" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="363" x2="1000" y2="372" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="398" x2="1000" y2="407" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 资产归还 节点 -->
+  <rect x="910" y="207" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="1000" y="220" text-anchor="middle" dominant-baseline="central" font-size="13">创建归还单</text>
+  <rect x="910" y="242" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="1000" y="255" text-anchor="middle" dominant-baseline="central" font-size="13">选择领用记录</text>
+  <polygon points="925,277 1075,277 1065,303 915,303" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="995" y="290" text-anchor="middle" dominant-baseline="central" font-size="13">填写归还数量</text>
+  <rect x="910" y="312" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="1000" y="325" text-anchor="middle" dominant-baseline="central" font-size="13">保存</text>
+  <rect x="910" y="347" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="1000" y="360" text-anchor="middle" dominant-baseline="central" font-size="13">提交</text>
+  <rect x="910" y="382" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="1000" y="395" text-anchor="middle" dominant-baseline="central" font-size="13">确认归还</text>
+  <rect x="910" y="417" width="180" height="26" rx="4" ry="4" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="1000" y="430" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#991b1b" font-weight="bold">资产状态变为“在库”</text>
+
+  <!-- 行2 子流程面板 -->
+  <rect x="95" y="470" width="210" height="280" rx="8" ry="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="495" y="470" width="210" height="280" rx="8" ry="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="895" y="470" width="210" height="280" rx="8" ry="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- 子流程标题 行2 -->
+  <text x="200" y="490" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">资产调拨</text>
+  <text x="600" y="490" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">资产报废</text>
+  <text x="1000" y="490" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">资产报损</text>
+
+  <!-- 资产调拨 连接线 -->
+  <line x1="200" y1="521" x2="200" y2="530" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="200" y1="556" x2="200" y2="565" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="200" y1="591" x2="200" y2="600" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="200" y1="626" x2="200" y2="635" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="200" y1="661" x2="200" y2="670" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="200" y1="696" x2="200" y2="705" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 资产调拨 节点 -->
+  <rect x="110" y="505" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="200" y="518" text-anchor="middle" dominant-baseline="central" font-size="13">部门间调拨</text>
+  <rect x="110" y="540" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="200" y="553" text-anchor="middle" dominant-baseline="central" font-size="13">选择资产</text>
+  <polygon points="125,575 275,575 265,601 115,601" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="195" y="588" text-anchor="middle" dominant-baseline="central" font-size="13">选择目标部门</text>
+  <rect x="110" y="610" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="200" y="623" text-anchor="middle" dominant-baseline="central" font-size="13">保存</text>
+  <rect x="110" y="645" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="200" y="658" text-anchor="middle" dominant-baseline="central" font-size="13">提交</text>
+  <rect x="110" y="680" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="200" y="693" text-anchor="middle" dominant-baseline="central" font-size="13">确认调拨</text>
+  <rect x="110" y="715" width="180" height="26" rx="4" ry="4" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>
+  <text x="200" y="728" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#065f46" font-weight="bold">资产归属变更</text>
+
+  <!-- 资产报废 连接线 -->
+  <line x1="600" y1="521" x2="600" y2="530" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="600" y1="556" x2="600" y2="565" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="600" y1="591" x2="600" y2="600" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="600" y1="626" x2="600" y2="635" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="600" y1="661" x2="600" y2="670" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="600" y1="696" x2="600" y2="705" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 资产报废 节点 -->
+  <rect x="510" y="505" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="600" y="518" text-anchor="middle" dominant-baseline="central" font-size="13">创建报废单</text>
+  <rect x="510" y="540" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="600" y="553" text-anchor="middle" dominant-baseline="central" font-size="13">选择资产</text>
+  <polygon points="525,575 675,575 665,601 515,601" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="595" y="588" text-anchor="middle" dominant-baseline="central" font-size="13">填写报废原因</text>
+  <rect x="510" y="610" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="600" y="623" text-anchor="middle" dominant-baseline="central" font-size="13">保存</text>
+  <rect x="510" y="645" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="600" y="658" text-anchor="middle" dominant-baseline="central" font-size="13">提交</text>
+  <rect x="510" y="680" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="600" y="693" text-anchor="middle" dominant-baseline="central" font-size="13">确认报废</text>
+  <rect x="510" y="715" width="180" height="26" rx="4" ry="4" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="600" y="728" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#991b1b" font-weight="bold">资产状态变为“已报废”</text>
+
+  <!-- 资产报损 连接线 -->
+  <line x1="1000" y1="521" x2="1000" y2="530" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="556" x2="1000" y2="565" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="591" x2="1000" y2="600" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="626" x2="1000" y2="635" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="661" x2="1000" y2="670" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="696" x2="1000" y2="705" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 资产报损 节点 -->
+  <rect x="910" y="505" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="1000" y="518" text-anchor="middle" dominant-baseline="central" font-size="13">创建报损单</text>
+  <rect x="910" y="540" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="1000" y="553" text-anchor="middle" dominant-baseline="central" font-size="13">选择资产</text>
+  <polygon points="925,575 1075,575 1065,601 915,601" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="995" y="588" text-anchor="middle" dominant-baseline="central" font-size="13">填写报损原因</text>
+  <rect x="910" y="610" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="1000" y="623" text-anchor="middle" dominant-baseline="central" font-size="13">保存</text>
+  <rect x="910" y="645" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="1000" y="658" text-anchor="middle" dominant-baseline="central" font-size="13">提交</text>
+  <rect x="910" y="680" width="180" height="26" rx="4" ry="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="1000" y="693" text-anchor="middle" dominant-baseline="central" font-size="13">确认报损</text>
+  <rect x="910" y="715" width="180" height="26" rx="4" ry="4" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="1000" y="728" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#991b1b" font-weight="bold">资产状态变为“已报损”</text>
+
+  <!-- ============ 三、资产报表 ============ -->
+  <text x="600" y="780" text-anchor="middle" font-size="16" font-weight="bold" fill="#1e40af">三、资产报表</text>
+
+  <polygon points="430,805 770,805 750,845 410,845" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="590" y="825" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="bold">资产数据汇总</text>
+
+  <line x1="510" y1="845" x2="300" y2="868" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="590" y1="845" x2="600" y2="868" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="670" y1="845" x2="880" y2="868" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="190" y="868" width="220" height="28" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="300" y="882" text-anchor="middle" dominant-baseline="central" font-size="13">汇总资产状态</text>
+
+  <rect x="490" y="868" width="220" height="28" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="600" y="882" text-anchor="middle" dominant-baseline="central" font-size="13">领用情况</text>
+
+  <rect x="790" y="868" width="220" height="28" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="900" y="882" text-anchor="middle" dominant-baseline="central" font-size="13">报废报损统计</text>
+</svg>
