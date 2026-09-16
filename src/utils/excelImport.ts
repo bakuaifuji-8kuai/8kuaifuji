@@ -456,3 +456,127 @@ export async function parseAndValidateExcel(
 
   return results;
 }
+
+// ============ 线下录入类清单（offlineDetails）导入/导出 ============
+
+/** offline 清单导出列 */
+export const OFFLINE_COLUMNS = [
+  '项目/物料名称',
+  '数量',
+  '单位',
+  '税率(%)',
+  '不含税单价',
+];
+
+/** Offline 清单导出 */
+export function exportOfflineList(items: {
+  itemName: string;
+  quantity: number;
+  unit: string;
+  taxRate?: number;
+  unitPriceExcludingTax?: number;
+}[]) {
+  if (items.length === 0) {
+    throw new Error('当前明细为空，无数据可导出');
+  }
+  const rows = items.map((d, i) => ({
+    '项目/物料名称': d.itemName || '',
+    '数量': d.quantity ?? 0,
+    '单位': d.unit || '',
+    '税率(%)': d.taxRate != null ? Math.round(d.taxRate * 100) : 13,
+    '不含税单价': d.unitPriceExcludingTax ?? 0,
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows, { header: OFFLINE_COLUMNS });
+  ws['!cols'] = [
+    { wch: 24 }, { wch: 8 }, { wch: 8 }, { wch: 10 }, { wch: 14 },
+  ];
+
+  const notes = [
+    ['线下录入清单 - 招采执行'],
+    [''],
+    ['使用说明：'],
+    ['1. ✅ 全部字段可修改，修改后通过"导入清单"回填'],
+    ['2. 税率(%)填 13/9/6/3/0 等整数（百分比形式）'],
+    ['3. 不含税单价 × 数量 = 不含税金额；含税自动计算'],
+    ['4. ✏️ 可新增行、🗑️ 可删除行'],
+  ];
+  const wsNotes = XLSX.utils.aoa_to_sheet(notes);
+  wsNotes['!cols'] = [{ wch: 60 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '清单明细');
+  XLSX.utils.book_append_sheet(wb, wsNotes, '填写说明');
+
+  const time = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
+  XLSX.writeFile(wb, `线下录入清单_${time}.xlsx`);
+}
+
+/** 简化版解析 offline 清单 — 返回数组（整体替换模式） */
+export async function parseOfflineList(
+  file: File,
+): Promise<Array<{
+  rowNo: number;
+  itemName: string;
+  quantity: number;
+  unit: string;
+  taxRate: number;
+  unitPriceExcludingTax: number;
+}>> {
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: 'array' });
+  const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+  const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: '' }) as any[];
+
+  if (jsonData.length === 0) {
+    throw new Error('Excel 中无有效数据行');
+  }
+
+  // 兼容不同表头写法
+  const headerKeys: Record<string, string[]> = {
+    itemName: ['项目/物料名称', '项目名称', '物料名称', '名称'],
+    quantity: ['数量'],
+    unit: ['单位'],
+    taxRate: ['税率(%)', '税率%', '税率'],
+    unitPriceExcludingTax: ['不含税单价', '单价(不含税)', '不含税价格'],
+  };
+  const get = (row: any, key: string): any => {
+    const aliases = headerKeys[key];
+    for (const a of aliases) {
+      if (row[a] !== undefined && row[a] !== '' && row[a] !== null) return row[a];
+      const found = Object.keys(row).find((rk) => rk.trim() === a);
+      if (found && row[found] !== undefined && row[found] !== '' && row[found] !== null) return row[found];
+    }
+    return undefined;
+  };
+
+  const results = jsonData.map((row, idx) => {
+    const rowNo = idx + 1;
+    let itemName = String(get(row, 'itemName') || '').trim();
+    let quantity = Number(get(row, 'quantity') || 0);
+    let unit = String(get(row, 'unit') || '').trim();
+    let taxRateRaw = get(row, 'taxRate');
+    let unitPriceExcludingTax = Number(get(row, 'unitPriceExcludingTax') || 0);
+
+    if (!itemName) {
+      throw new Error(`第 ${rowNo} 行：项目/物料名称不能为空`);
+    }
+    if (!quantity || quantity <= 0) {
+      throw new Error(`第 ${rowNo} 行：数量必须大于 0`);
+    }
+    if (!unit) unit = '个';
+    // 税率：Excel 里填的是百分比整数（13 代表 13%），转小数
+    let taxRate = 0.13;
+    if (taxRateRaw !== undefined && taxRateRaw !== '') {
+      const n = Number(taxRateRaw);
+      if (!isNaN(n)) {
+        // 如果是 0.13 形式直接用；如果是 13 形式除以 100
+        taxRate = n <= 1 ? n : n / 100;
+      }
+    }
+    if (unitPriceExcludingTax < 0) unitPriceExcludingTax = 0;
+
+    return { rowNo, itemName, quantity, unit, taxRate, unitPriceExcludingTax };
+  });
+
+  return results;
+}

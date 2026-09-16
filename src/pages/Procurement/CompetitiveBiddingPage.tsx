@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
@@ -8,6 +8,7 @@ import DemandPickerModal from '@/components/common/DemandPickerModal';
 import TimePickerModal from '@/components/common/TimePickerModal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
+import { exportOfflineList, parseOfflineList } from '@/utils/excelImport';
 import { MOCK_BIDDINGS, MOCK_SUPPLIER_QUOTES } from '@/mock/biddingMockData';
 import type {
   Bidding, BiddingQuote, BiddingItem, BiddingQuoteDetail,
@@ -265,6 +266,8 @@ export default function CompetitiveBiddingPage() {
   // 竞价文件附件
   const [editBiddingDocs, setEditBiddingDocs] = useState<Attachment[]>([]);
   const [previewAtt, setPreviewAtt] = useState<Attachment | null>(null);
+  // offline 清单导入
+  const offlineFileInputRef = useRef<HTMLInputElement>(null);
   // 三个选择弹框的 open 状态
   const [supplierPickerOpen, setSupplierPickerOpen] = useState(false);
   const [demandPickerOpen, setDemandPickerOpen] = useState(false);
@@ -712,6 +715,61 @@ export default function CompetitiveBiddingPage() {
     setEditItem({ ...editItem, offlineDetails: list });
   };
 
+  // ========== offline 清单导出 ==========
+  const handleOfflineExport = () => {
+    if (!editItem) return;
+    if (!editItem.offlineDetails || editItem.offlineDetails.length === 0) {
+      alert('当前清单为空，无数据可导出');
+      return;
+    }
+    try {
+      exportOfflineList(editItem.offlineDetails);
+    } catch (err: any) {
+      alert(err?.message || '导出失败');
+    }
+  };
+
+  // ========== offline 清单导入 ==========
+  const handleOfflineImportClick = () => {
+    if (!editItem) return;
+    offlineFileInputRef.current?.click();
+  };
+
+  const handleOfflineFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editItem) return;
+    try {
+      const rows = await parseOfflineList(file);
+      // 计算不含税/含税/税额等自动字段
+      const computed = rows.map((r) => {
+        const taxRate = r.taxRate ?? 0.13;
+        const unitPriceExcludingTax = r.unitPriceExcludingTax ?? 0;
+        const unitPriceIncludingTax = +(unitPriceExcludingTax * (1 + taxRate)).toFixed(4);
+        const amountExcludingTax = +(unitPriceExcludingTax * r.quantity).toFixed(2);
+        const taxAmount = +(amountExcludingTax * taxRate).toFixed(2);
+        const amountIncludingTax = +(amountExcludingTax + taxAmount).toFixed(2);
+        return {
+          rowNo: r.rowNo,
+          itemName: r.itemName,
+          quantity: r.quantity,
+          unit: r.unit,
+          taxRate,
+          unitPriceExcludingTax,
+          unitPriceIncludingTax,
+          amountExcludingTax,
+          taxAmount,
+          amountIncludingTax,
+        };
+      });
+      setEditItem({ ...editItem, offlineDetails: computed });
+      alert(`✅ 导入成功，共 ${computed.length} 条`);
+    } catch (err: any) {
+      alert(err?.message || '文件解析失败');
+    } finally {
+      if (offlineFileInputRef.current) offlineFileInputRef.current.value = '';
+    }
+  };
+
   // 目录内比价：上限合计
   const itemsTotalLimit = useMemo(() => {
     if (!editItem?.items) return 0;
@@ -971,10 +1029,20 @@ export default function CompetitiveBiddingPage() {
                         （{editItem.offlineDetails?.length || 0} 项）· 填写不含税单价和税率，含税自动计算
                       </span>
                     </span>
-                    <button type="button" onClick={addOfflineItem}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg hover:from-indigo-600 hover:to-purple-700 active:scale-[0.97] transition-all duration-200">
-                      + 新增条目
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={handleOfflineImportClick}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-300 text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all duration-200">
+                        📥 导入清单
+                      </button>
+                      <button type="button" onClick={handleOfflineExport}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-300 text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all duration-200">
+                        📤 导出清单
+                      </button>
+                      <button type="button" onClick={addOfflineItem}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg hover:from-indigo-600 hover:to-purple-700 active:scale-[0.97] transition-all duration-200">
+                        + 新增条目
+                      </button>
+                    </div>
                   </div>
                   {!editItem.offlineDetails || editItem.offlineDetails.length === 0 ? (
                     <div className="border border-dashed border-slate-300 bg-slate-50/50 rounded-xl p-8 text-center">
@@ -1072,6 +1140,8 @@ export default function CompetitiveBiddingPage() {
             )}
 
 
+            {/* 受邀供应商（仅框架协议采购） */}
+            {editItem?.procurementMethod === 'framework' && (
             <div>
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-xs text-[#606266]">受邀供应商</span>
@@ -1108,8 +1178,10 @@ export default function CompetitiveBiddingPage() {
                 </div>
               )}
             </div>
+            )}
 
-            {/* 竞价公告附件 */}
+            {/* 竞价公告附件（仅框架协议采购） */}
+            {editItem?.procurementMethod === 'framework' && (
             <div className="border border-[#409eff] rounded p-3 bg-[#ecf5ff]">
               <div className="flex items-center justify-between mb-2">
                 <div>
@@ -1159,8 +1231,10 @@ export default function CompetitiveBiddingPage() {
                 </div>
               )}
             </div>
+            )}
 
-            {/* 竞价文件附件 */}
+            {/* 竞价文件附件（仅框架协议采购） */}
+            {editItem?.procurementMethod === 'framework' && (
             <div className="border border-[#e6a23c] rounded p-3 bg-[#fdf6ec]">
               <div className="flex items-center justify-between mb-2">
                 <div>
@@ -1210,6 +1284,7 @@ export default function CompetitiveBiddingPage() {
                 </div>
               )}
             </div>
+            )}
 
             {/* 竞价小组评定结果附件 */}
             <div className="border border-[#67c23a] rounded p-3 bg-[#f0f9eb]">
@@ -1547,77 +1622,81 @@ export default function CompetitiveBiddingPage() {
               </div>
             </div>
 
-            {/* 竞价公告附件 */}
-            <div className="border border-[#409eff] rounded p-3 bg-[#ecf5ff]">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-xs font-bold text-[#303133]">📎 竞价公告附件</div>
-                <div className="text-xs text-[#909399]">共 {viewItem.biddingAnnouncement?.length || 0} 个文件</div>
-              </div>
-              {!viewItem.biddingAnnouncement || viewItem.biddingAnnouncement.length === 0 ? (
-                <div className="text-xs text-[#909399] text-center py-3 border border-dashed border-[#b3d8ff] rounded bg-white">暂无附件</div>
-              ) : (
-                <div className="space-y-1">
-                  {viewItem.biddingAnnouncement.map((att, idx) => (
-                    <div key={att.id} className="flex items-center justify-between text-xs bg-white border border-[#dcdfe6] rounded px-3 py-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="text-[#409eff] text-sm">📎</span>
-                        <span className="truncate font-medium text-[#303133]" title={att.fileName}>
-                          {idx + 1}. {att.fileName}
-                        </span>
-                        <span className="text-[#909399] flex-shrink-0">({formatFileSize(att.fileSize)})</span>
-                        <span className="text-[#909399] flex-shrink-0">上传：{att.uploadTime}</span>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                        <button
-                          className="text-[#409eff] hover:underline"
-                          onClick={() => setPreviewAtt(att)}
-                        >预览</button>
-                        <button
-                          className="text-[#409eff] hover:underline"
-                          onClick={() => downloadAttachment(att)}
-                        >下载</button>
-                      </div>
-                    </div>
-                  ))}
+            {/* 竞价公告附件（仅框架协议采购） */}
+            {viewItem.procurementMethod === 'framework' && (
+              <div className="border border-[#409eff] rounded p-3 bg-[#ecf5ff]">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-bold text-[#303133]">📎 竞价公告附件</div>
+                  <div className="text-xs text-[#909399]">共 {viewItem.biddingAnnouncement?.length || 0} 个文件</div>
                 </div>
-              )}
-            </div>
+                {!viewItem.biddingAnnouncement || viewItem.biddingAnnouncement.length === 0 ? (
+                  <div className="text-xs text-[#909399] text-center py-3 border border-dashed border-[#b3d8ff] rounded bg-white">暂无附件</div>
+                ) : (
+                  <div className="space-y-1">
+                    {viewItem.biddingAnnouncement.map((att, idx) => (
+                      <div key={att.id} className="flex items-center justify-between text-xs bg-white border border-[#dcdfe6] rounded px-3 py-2">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className="text-[#409eff] text-sm">📎</span>
+                          <span className="truncate font-medium text-[#303133]" title={att.fileName}>
+                            {idx + 1}. {att.fileName}
+                          </span>
+                          <span className="text-[#909399] flex-shrink-0">({formatFileSize(att.fileSize)})</span>
+                          <span className="text-[#909399] flex-shrink-0">上传：{att.uploadTime}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                          <button
+                            className="text-[#409eff] hover:underline"
+                            onClick={() => setPreviewAtt(att)}
+                          >预览</button>
+                          <button
+                            className="text-[#409eff] hover:underline"
+                            onClick={() => downloadAttachment(att)}
+                          >下载</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
-            {/* 竞价文件附件 */}
-            <div className="border border-[#e6a23c] rounded p-3 bg-[#fdf6ec]">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-xs font-bold text-[#303133]">📎 竞价文件附件</div>
-                <div className="text-xs text-[#909399]">共 {viewItem.biddingDocuments?.length || 0} 个文件</div>
-              </div>
-              {!viewItem.biddingDocuments || viewItem.biddingDocuments.length === 0 ? (
-                <div className="text-xs text-[#909399] text-center py-3 border border-dashed border-[#f5dab1] rounded bg-white">暂无附件</div>
-              ) : (
-                <div className="space-y-1">
-                  {viewItem.biddingDocuments.map((att, idx) => (
-                    <div key={att.id} className="flex items-center justify-between text-xs bg-white border border-[#dcdfe6] rounded px-3 py-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="text-[#e6a23c] text-sm">📎</span>
-                        <span className="truncate font-medium text-[#303133]" title={att.fileName}>
-                          {idx + 1}. {att.fileName}
-                        </span>
-                        <span className="text-[#909399] flex-shrink-0">({formatFileSize(att.fileSize)})</span>
-                        <span className="text-[#909399] flex-shrink-0">上传：{att.uploadTime}</span>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                        <button
-                          className="text-[#409eff] hover:underline"
-                          onClick={() => setPreviewAtt(att)}
-                        >预览</button>
-                        <button
-                          className="text-[#409eff] hover:underline"
-                          onClick={() => downloadAttachment(att)}
-                        >下载</button>
-                      </div>
-                    </div>
-                  ))}
+            {/* 竞价文件附件（仅框架协议采购） */}
+            {viewItem.procurementMethod === 'framework' && (
+              <div className="border border-[#e6a23c] rounded p-3 bg-[#fdf6ec]">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-bold text-[#303133]">📎 竞价文件附件</div>
+                  <div className="text-xs text-[#909399]">共 {viewItem.biddingDocuments?.length || 0} 个文件</div>
                 </div>
-              )}
-            </div>
+                {!viewItem.biddingDocuments || viewItem.biddingDocuments.length === 0 ? (
+                  <div className="text-xs text-[#909399] text-center py-3 border border-dashed border-[#f5dab1] rounded bg-white">暂无附件</div>
+                ) : (
+                  <div className="space-y-1">
+                    {viewItem.biddingDocuments.map((att, idx) => (
+                      <div key={att.id} className="flex items-center justify-between text-xs bg-white border border-[#dcdfe6] rounded px-3 py-2">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className="text-[#e6a23c] text-sm">📎</span>
+                          <span className="truncate font-medium text-[#303133]" title={att.fileName}>
+                            {idx + 1}. {att.fileName}
+                          </span>
+                          <span className="text-[#909399] flex-shrink-0">({formatFileSize(att.fileSize)})</span>
+                          <span className="text-[#909399] flex-shrink-0">上传：{att.uploadTime}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                          <button
+                            className="text-[#409eff] hover:underline"
+                            onClick={() => setPreviewAtt(att)}
+                          >预览</button>
+                          <button
+                            className="text-[#409eff] hover:underline"
+                            onClick={() => downloadAttachment(att)}
+                          >下载</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* 竞价小组评定结果附件 */}
             <div className="border border-[#67c23a] rounded p-3 bg-[#f0f9eb]">
@@ -1726,6 +1805,15 @@ export default function CompetitiveBiddingPage() {
         initialStart={timePickerTarget?.startTime}
         initialEnd={timePickerTarget?.endTime}
         onConfirm={handleConfirmTime}
+      />
+
+      {/* offline 清单导入隐藏 file input */}
+      <input
+        ref={offlineFileInputRef}
+        type="file"
+        accept=".xlsx,.xls"
+        className="hidden"
+        onChange={handleOfflineFileChange}
       />
     </div>
   );
