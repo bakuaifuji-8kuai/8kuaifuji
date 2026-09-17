@@ -380,53 +380,53 @@ function ContractProcurementForm({ form, update, biddings, isEdit }: FormProps) 
   ];
 
   return (
-    <div className="max-h-[70vh] overflow-y-auto px-6 py-4 space-y-6">
-      {/* === 自动带入区 === */}
-      <Section title="🔗 自动带入区（来自招采执行 mock）" tone="blue">
+    <div className="max-h-[72vh] overflow-y-auto px-6 py-4 space-y-5">
+      {/* ========== 916文档 一、基本信息 ========== */}
+      <Section title="📋 基本信息（按916文档L14字段顺序）">
         <div className="grid grid-cols-2 gap-4">
-          <Select
-            label="关联采购工单"
-            options={biddingOptions}
-            value={form.biddingId || ''}
-            onChange={(e) => handleBiddingChange(e.target.value)}
-          />
+          {/* 合同名称* */}
           <Input
-            label="合同编号"
+            label="合同名称 *"
+            required
+            value={form.contractName || ''}
+            onChange={(e) => update({ contractName: e.target.value })}
+            placeholder="招采类合同名称"
+          />
+          {/* 合同编号* */}
+          <Input
+            label="合同编号 *"
+            required
             value={form.contractNo || ''}
             onChange={(e) => update({ contractNo: e.target.value })}
             placeholder="手工输入，如：HT-202609001"
           />
-          <Input
-            label="合同名称"
-            value={form.contractName || ''}
-            onChange={(e) => update({ contractName: e.target.value })}
-            placeholder="招采类根据前期流程自动带入"
+          {/* 合同类型* */}
+          <Select
+            label="合同类型 *"
+            required
+            options={contractTypeOptions}
+            value={form.contractType as string || ''}
+            onChange={(e) => update({ contractType: e.target.value as ProcurementContractType })}
+            placeholder="选择合同类型"
           />
+          {/* 合同形成方式* */}
+          <Select
+            label="合同形成方式 *"
+            required
+            options={formationOptions}
+            value={form.formation as string || ''}
+            onChange={(e) => update({ formation: e.target.value as ProcurementFormation })}
+            placeholder="选择合同形成方式"
+          />
+          {/* 中标时间 */}
           <Input
             label="中标时间"
             type="date"
             value={form.winningDate || ''}
             onChange={(e) => update({ winningDate: e.target.value })}
           />
-        </div>
-      </Section>
-
-      {/* === 合同核心字段 === */}
-      <Section title="📋 合同核心字段">
-        <div className="grid grid-cols-2 gap-4">
-          <Select
-            label="合同形成方式"
-            options={formationOptions}
-            value={form.formation as string || ''}
-            onChange={(e) => update({ formation: e.target.value as ProcurementFormation })}
-          />
-          <Select
-            label="合同类型"
-            options={contractTypeOptions}
-            value={form.contractType as string || ''}
-            onChange={(e) => update({ contractType: e.target.value as ProcurementContractType })}
-          />
-          <div className="flex items-end">
+          {/* 示范文本* */}
+          <div className="flex items-end gap-6">
             <label className="flex items-center gap-2 cursor-pointer pb-2">
               <input
                 type="checkbox"
@@ -434,50 +434,51 @@ function ContractProcurementForm({ form, update, biddings, isEdit }: FormProps) 
                 onChange={(e) => update({ isModelText: e.target.checked })}
                 className="w-4 h-4 rounded"
               />
-              <span className="text-sm text-slate-700">示范文本</span>
+              <span className="text-sm text-slate-700">示范文本（是/否）*</span>
             </label>
           </div>
         </div>
       </Section>
 
-      {/* === 合同当事人 === */}
-      <Section title="👥 合同当事人">
-        <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="经办部门"
-            value={form.handlingDepartment || ''}
-            onChange={(e) => update({ handlingDepartment: e.target.value })}
-            placeholder="如：市场部"
-          />
-          <Input
-            label="经办人"
-            value={form.handler || ''}
-            onChange={(e) => update({ handler: e.target.value })}
-          />
-          <Input
-            label="联系方式"
-            value={form.handlerContact || ''}
-            onChange={(e) => update({ handlerContact: e.target.value })}
-          />
-          <Input
-            label="对方单位"
-            value={form.counterpartyName || ''}
-            onChange={(e) => update({ counterpartyName: e.target.value })}
-            placeholder="招采执行会带出中标供应商，可改"
-          />
-          <Input
-            label="对方负责人"
-            value={form.counterpartyContact || ''}
-            onChange={(e) => update({ counterpartyContact: e.target.value })}
-          />
+      {/* ========== 916文档 二、合同当事人 ========== */}
+      <Section title="👥 合同当事人（916文档L15-16）">
+        <div className="grid grid-cols-2 gap-6">
+          {/* 我方单位 */}
+          <div>
+            <div className="text-xs text-slate-500 mb-2 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>我方单位
+            </div>
+            <div className="space-y-3">
+              <Input label="经办部门 *" required value={form.handlingDepartment || ''}
+                onChange={(e) => update({ handlingDepartment: e.target.value })} placeholder="如：采购部" />
+              <Input label="经办人 *" required value={form.handler || ''}
+                onChange={(e) => update({ handler: e.target.value })} />
+              <Input label="联系方式 *" required value={form.handlerContact || ''}
+                onChange={(e) => update({ handlerContact: e.target.value })} placeholder="电话/邮箱" />
+            </div>
+          </div>
+          {/* 对方单位 */}
+          <div>
+            <div className="text-xs text-slate-500 mb-2 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>对方单位
+            </div>
+            <div className="space-y-3">
+              <Input label="单位名称 *" required value={form.counterpartyName || ''}
+                onChange={(e) => update({ counterpartyName: e.target.value })} placeholder="中标供应商全称" />
+              <Input label="负责人" value={form.counterpartyContact || ''}
+                onChange={(e) => update({ counterpartyContact: e.target.value })} placeholder="对方项目负责人" />
+            </div>
+          </div>
         </div>
       </Section>
 
-      {/* === 合同内容 === */}
-      <Section title="📝 合同内容">
+      {/* ========== 916文档 三、合同内容与金额 ========== */}
+      <Section title="📝 合同内容与金额（916文档L14）">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">合同主要内容</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              合同主要内容 <span className="text-red-500">*</span>
+            </label>
             <textarea
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={form.mainContent || ''}
@@ -485,21 +486,52 @@ function ContractProcurementForm({ form, update, biddings, isEdit }: FormProps) 
               placeholder="简要描述合同主要内容、范围、标准等"
             />
           </div>
-          <div className="max-w-xs">
+          <div className="grid grid-cols-3 gap-4">
             <Input
-              label="合同金额(万)"
+              label="合同状态 *"
+              required
+              value={form.status || 'draft'}
+              onChange={(e) => update({ status: e.target.value as ContractLedger['status'] })}
+              placeholder="draft/pending/active/..."
+            />
+            <Input
+              label="合同金额（万元）*"
+              required
               type="number"
               step="0.01"
               value={form.amount ?? ''}
               onChange={(e) => update({ amount: e.target.value ? Number(e.target.value) : undefined })}
               placeholder="0.00"
             />
+            <Input
+              label="资金流向分类 *"
+              required
+              value={form.businessCategory || 'expense'}
+              onChange={(e) => update({ businessCategory: e.target.value as 'expense' | 'income' | 'other' })}
+              placeholder="expense支出 / income收入 / other其他"
+            />
           </div>
         </div>
       </Section>
 
-      {/* === 招采类独有 === */}
-      <Section title="⭐ 招采类独有设置" tone="amber">
+      {/* ========== 916文档 四、附件 ========== */}
+      <Section title="📎 附件（916文档L14-合同审批表/合同盖章附件）">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-3 border-2 border-dashed border-slate-300 rounded-lg text-center hover:border-indigo-400 cursor-pointer transition-colors">
+            <div className="text-slate-400 text-2xl mb-1">📄</div>
+            <div className="text-sm text-slate-600">合同审批表 *</div>
+            <div className="text-xs text-slate-400 mt-1">点击上传（占位）</div>
+          </div>
+          <div className="p-3 border-2 border-dashed border-slate-300 rounded-lg text-center hover:border-indigo-400 cursor-pointer transition-colors">
+            <div className="text-slate-400 text-2xl mb-1">📑</div>
+            <div className="text-sm text-slate-600">合同盖章附件 *</div>
+            <div className="text-xs text-slate-400 mt-1">点击上传（占位）</div>
+          </div>
+        </div>
+      </Section>
+
+      {/* ========== 916文档 五、招采类独有设置 ========== */}
+      <Section title="⭐ 招采类独有设置（916文档L17-18）" tone="amber">
         <div className="grid grid-cols-3 gap-4">
           {/* 履约评价 */}
           <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-lg">
@@ -537,7 +569,6 @@ function ContractProcurementForm({ form, update, biddings, isEdit }: FormProps) 
               </div>
             )}
           </div>
-
           {/* 考核管理 */}
           <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-lg">
             <Select
@@ -553,7 +584,6 @@ function ContractProcurementForm({ form, update, biddings, isEdit }: FormProps) 
               }
             />
           </div>
-
           {/* 年度评价 */}
           <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-lg">
             <label className="flex items-center gap-2 cursor-pointer pt-6">
@@ -568,34 +598,20 @@ function ContractProcurementForm({ form, update, biddings, isEdit }: FormProps) 
           </div>
         </div>
         <p className="text-xs text-amber-600 mt-2">
-          💡 以上设置后将自动关联供应商履约评价/考核/年度评价流程，具体执行在合同台账中操作。
+          💡 勾选后自动关联后续履约评价/考核/年度评价流程。
         </p>
       </Section>
 
-      {/* === 资金流向 === */}
-      <Section title="💰 资金流向与备注">
-        <div className="grid grid-cols-2 gap-4">
-          <Select
-            label="资金流向分类"
-            options={BUSINESS_CATEGORY_OPTIONS}
-            value={form.businessCategory || 'expense'}
-            onChange={(e) =>
-              update({ businessCategory: e.target.value as 'expense' | 'income' | 'other' })
-            }
+      {/* ========== 916文档 六、备注 ========== */}
+      <Section title="📝 备注">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">备注</label>
+          <textarea
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm min-h-[70px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            value={form.remark || ''}
+            onChange={(e) => update({ remark: e.target.value })}
+            placeholder="补充说明"
           />
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-500 flex items-center">
-            <span className="mr-1">📁</span>
-            归档状态：{ARCHIVE_STATUS_LABELS[form.archiveStatus as 'not_started' | 'in_progress' | 'archived'] || '未开始'}
-          </div>
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">备注</label>
-            <textarea
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm min-h-[70px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={form.remark || ''}
-              onChange={(e) => update({ remark: e.target.value })}
-              placeholder="补充说明"
-            />
-          </div>
         </div>
       </Section>
     </div>
