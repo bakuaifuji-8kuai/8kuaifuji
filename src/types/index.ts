@@ -64,8 +64,8 @@ export interface Product {
   status: 'enabled' | 'disabled';
 }
 
-// 采购合同类型
-export type ContractType = 'purchase' | 'service' | 'lease';
+// 采购合同类型（采购订单模块用：买/服务/租）
+export type PurchaseContractType = 'purchase' | 'service' | 'lease';
 
 // 采购合同
 export interface Contract {
@@ -74,7 +74,7 @@ export interface Contract {
   contractName: string;
   supplierId?: string;
   supplierName?: string;
-  type: ContractType;
+  type: PurchaseContractType;
   amount: number;
   startDate: string;
   endDate: string;
@@ -1783,8 +1783,42 @@ export type ContractCategory =
   | 'investment' 
   | 'other';
 
-// 合同形成方式
-export type ContractFormation = 'online' | 'offline';
+// 招采类合同形成方式（Excel 合约管理备注3）
+export type ProcurementFormation =
+  | 'legal_bidding'          // 法定招标
+  | 'voluntary_bidding'      // 自愿招标
+  | 'state_owned_xunbi'      // 国企采购-询比采购
+  | 'state_owned_jingjia'    // 国企采购-竞价采购
+  | 'state_owned_tanpan'     // 国企采购-谈判采购
+  | 'state_owned_direct'     // 国企采购-直接采购
+  | 'state_owned_framework'  // 国企采购-框架协议采购
+  | 'state_owned_mall';      // 国企采购-电子商城采购
+
+// 非招采类合同形成方式（Excel 非招采类备注2）
+export type NonProcurementFormation =
+  | 'exhibition_service'     // 展览服务
+  | 'exhibition_display'     // 展览展示服务
+  | 'investment_contract'    // 招商合同
+  | 'other';                 // 其他
+
+// 合同形成方式（联合类型，根据 contractNature 动态取对应枚举）
+export type ContractFormation = ProcurementFormation | NonProcurementFormation;
+
+// 招采类合同类型（Excel 招采类备注2：从前期需求自动带入）
+export type ProcurementContractType =
+  | 'engineering'            // 工程类
+  | 'non_engineering';       // 非工程类
+
+// 非招采类合同类型（Excel 非招采类备注1）
+export type NonProcurementContractType =
+  | 'engineering_construction'   // 工程类-施工
+  | 'engineering_service'        // 工程类-服务
+  | 'engineering_goods'          // 工程类-货物（含材料设备）
+  | 'non_engineering_service'    // 非工程类-服务
+  | 'non_engineering_goods';     // 非工程类-货物（含材料设备）
+
+// 合同类型（联合类型）
+export type ContractType = ProcurementContractType | NonProcurementContractType;
 
 // 合同性质（顶层区分：招采类 vs 非招采类）
 export type ContractNature = 'procurement' | 'non_procurement';
@@ -1801,38 +1835,45 @@ export interface ContractLedger {
   /** 合同性质（顶层区分：招采类 vs 非招采类） */
   contractNature: ContractNature;
   category: ContractCategory; // 分类
-  contractType: 'engineering' | 'non_engineering'; // 工程类/非工程类
-  formation: ContractFormation; // 合同形成方式
-  demandDepartment?: string; // 我方-需求部门
-  handlingDepartment?: string; // 我方-经办部门
-  handler?: string; // 我方-经办人
-  counterpartyName?: string; // 对方单位-单位名称
-  counterpartyContact?: string; // 对方单位-负责人
-  mainContent?: string; // 合同主要内容
-  signingDate?: string; // 合同签订日期
-  effectiveDate?: string; // 合同约定生效日期
-  terminationDate?: string; // 合同约定终止日期
-  endDate?: string; // 合同结束日期
-  expireDate?: string; // 合同到期日期
-  amount?: number; // 合同金额（万元）
-  paidAmount?: number; // 合同已支付金额（万元）
-  settlementAmount?: number; // 合同结算金额（万元）
-  performanceStatus?: string; // 合同履行情况
-  paymentDescription?: string; // 付款情况说明
-  approvalMethod?: string; // 立项方式
-  approvalRemark?: string; // 立项方式备注
+  /** 合同类型（根据 contractNature 动态取对应枚举） */
+  contractType: ProcurementContractType | NonProcurementContractType;
+  /** 合同形成方式（根据 contractNature 动态取对应枚举） */
+  formation: ContractFormation;
+  winningDate?: string;          // 中标时间（招采类有效）
+  isModelText?: boolean;         // 示范文本（是/否）
+  demandDepartment?: string;     // 我方-需求部门
+  handlingDepartment?: string;   // 我方-经办部门
+  handler?: string;              // 我方-经办人
+  handlerContact?: string;       // 我方单位-联系方式 🆕
+  counterpartyName?: string;     // 对方单位-单位名称
+  counterpartyContact?: string;  // 对方单位-负责人
+  mainContent?: string;          // 合同主要内容
+  signingDate?: string;          // 合同签订日期
+  effectiveDate?: string;        // 合同约定生效日期
+  terminationDate?: string;      // 合同约定终止日期
+  endDate?: string;              // 合同结束日期
+  expireDate?: string;           // 合同到期日期
+  amount?: number;               // 合同金额（万元）
+  paidAmount?: number;           // 合同已支付金额（万元）
+  settlementAmount?: number;     // 合同结算金额（万元）
+  performanceStatus?: string;    // 合同履行情况
+  requisitionAmount?: number;    // 采购申请金额（元）🆕 预留，无采购申请模块时为空
+  paymentDescription?: string;   // 付款情况说明
+  approvalMethod?: string;       // 立项方式
+  approvalRemark?: string;       // 立项方式备注
   isSettlementAudited?: boolean; // 结算审核（是/否）
-  businessCategory?: 'expense' | 'income' | 'other'; // 业务大类
+  businessCategory?: 'expense' | 'income' | 'other'; // 资金流向分类
   subType?: 'exhibition_display' | 'procurement' | 'investment'; // 细分类型
-  subRemark?: string; // 细分备注
-  isOriginalSigned?: boolean; // 原件是否签收
-  archivedAttachments?: string; // 存档附件资料
+  subRemark?: string;            // 细分备注
+  isOriginalSigned?: boolean;    // 原件是否签收
+  archivedAttachments?: string;  // 存档附件资料
+  archiveStatus?: 'not_started' | 'in_progress' | 'archived'; // 合同归档情况 🆕
   remark?: string;
   status: ContractStatus;
   // 关联采购工单（招采类合同常用）
-  biddingId?: string; // 关联采购工单ID
-  biddingNo?: string; // 关联采购工单编号
-  projectName?: string; // 项目名称（从工单带入）
+  biddingId?: string;            // 关联采购工单ID
+  biddingNo?: string;            // 关联采购工单编号
+  projectName?: string;          // 项目名称（从工单带入）
   /** 合同考核绑定（一个合同可加多种考核，招采类合同常用） */
   contractEvaluations?: ContractEvaluationBinding[];
   // ===== 招采类合同独有字段（contractNature='procurement' 时有效） =====
@@ -1843,9 +1884,60 @@ export interface ContractLedger {
   /** 年度评价：是则自动关联供应商年度评价流程 */
   yearlyEvaluation?: boolean;
   // ===== 非招采类合同独有字段（contractNature='non_procurement' 时有效） =====
-  /** 履约保证金：如选择展览服务合同需增加此字段 */
-  performanceBond?: { isOpen: boolean; amount?: number; receiveDate?: string };
+  /** 履约保证金（Excel 非招采类备注3：只有合同形成方式='exhibition_service' 时此门控才生效） */
+  performanceBond?: {
+    /** 门控：合同形成方式是否为展览服务（由非招采类表单自动控制） */
+    gateByFormation: boolean;
+    /** 开关：是否收取履约保证金 */
+    isEnabled: boolean;
+    amount?: number;       // 保证金金额（万元）
+    receiveDate?: string;  // 收款时间
+  };
 }
+
+// ===== 合约管理 label 常量（Excel 原始选项）=====
+export const PROCUREMENT_FORMATION_LABELS: Record<ProcurementFormation, string> = {
+  legal_bidding: '法定招标',
+  voluntary_bidding: '自愿招标',
+  state_owned_xunbi: '国企采购-询比采购',
+  state_owned_jingjia: '国企采购-竞价采购',
+  state_owned_tanpan: '国企采购-谈判采购',
+  state_owned_direct: '国企采购-直接采购',
+  state_owned_framework: '国企采购-框架协议采购',
+  state_owned_mall: '国企采购-电子商城采购',
+};
+
+export const NON_PROCUREMENT_FORMATION_LABELS: Record<NonProcurementFormation, string> = {
+  exhibition_service: '展览服务',
+  exhibition_display: '展览展示服务',
+  investment_contract: '招商合同',
+  other: '其他',
+};
+
+export const PROCUREMENT_CONTRACT_TYPE_LABELS: Record<ProcurementContractType, string> = {
+  engineering: '工程类',
+  non_engineering: '非工程类',
+};
+
+export const NON_PROCUREMENT_CONTRACT_TYPE_LABELS: Record<NonProcurementContractType, string> = {
+  engineering_construction: '工程类-施工',
+  engineering_service: '工程类-服务',
+  engineering_goods: '工程类-货物（含材料设备）',
+  non_engineering_service: '非工程类-服务',
+  non_engineering_goods: '非工程类-货物（含材料设备）',
+};
+
+export const ARCHIVE_STATUS_LABELS: Record<'not_started' | 'in_progress' | 'archived', string> = {
+  not_started: '未开始',
+  in_progress: '进行中',
+  archived: '已归档',
+};
+
+export const BUSINESS_CATEGORY_LABELS: Record<'expense' | 'income' | 'other', string> = {
+  expense: '支出合同',
+  income: '收入合同',
+  other: '其他合同',
+};
 
 // ==================== 合同考核绑定 ====================
 

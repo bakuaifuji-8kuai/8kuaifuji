@@ -5,7 +5,8 @@ import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
-import type { ContractLedger, Bidding, ContractEvaluationBinding, EvaluationType } from '@/types';
+import type { ContractLedger, Bidding, ContractEvaluationBinding, EvaluationType, ProcurementFormation, NonProcurementFormation, ProcurementContractType, NonProcurementContractType } from '@/types';
+import { PROCUREMENT_FORMATION_LABELS, NON_PROCUREMENT_FORMATION_LABELS, PROCUREMENT_CONTRACT_TYPE_LABELS, NON_PROCUREMENT_CONTRACT_TYPE_LABELS, ARCHIVE_STATUS_LABELS, BUSINESS_CATEGORY_LABELS } from '@/types';
 import { Printer, FileSpreadsheet, FileDown, Bell } from 'lucide-react';
 
 const categoryMap: Record<string, string> = {
@@ -80,20 +81,23 @@ export default function ContractLedgerPage() {
   const [filterNo, setFilterNo] = useState('');
   const [filterName, setFilterName] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [filterCategory, setFilterCategory] = useState('');
-  const [filterContractType, setFilterContractType] = useState('');
+  const [filterNature, setFilterNature] = useState('');
+  const [filterFormation, setFilterFormation] = useState('');
+  const [filterArchiveStatus, setFilterArchiveStatus] = useState('');
+  const [filterIsModelText, setFilterIsModelText] = useState('');
   const [filterCounterparty, setFilterCounterparty] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('');
-  const [filterProject, setFilterProject] = useState('');
-  const [filterYear, setFilterYear] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
-  const [filterNature, setFilterNature] = useState('');
+  const [filterWinningDateFrom, setFilterWinningDateFrom] = useState('');
+  const [filterWinningDateTo, setFilterWinningDateTo] = useState('');
 
   const [applied, setApplied] = useState({
-    no: '', name: '', status: '', category: '', contractType: '',
-    counterparty: '', department: '', project: '', year: '',
-    dateFrom: '', dateTo: '', nature: '',
+    no: '', name: '', status: '', nature: '', formation: '',
+    archiveStatus: '', isModelText: '',
+    counterparty: '', department: '',
+    dateFrom: '', dateTo: '',
+    winningDateFrom: '', winningDateTo: '',
   });
 
   // 弹窗状态
@@ -129,18 +133,19 @@ export default function ContractLedgerPage() {
       if (applied.no && !c.contractNo.includes(applied.no)) return false;
       if (applied.name && !c.contractName.includes(applied.name)) return false;
       if (applied.status && c.status !== applied.status) return false;
-      if (applied.category && c.category !== applied.category) return false;
-      if (applied.contractType && c.contractType !== applied.contractType) return false;
+      if (applied.nature && c.contractNature !== applied.nature) return false;
+      if (applied.formation && c.formation !== applied.formation) return false;
+      if (applied.archiveStatus && c.archiveStatus !== applied.archiveStatus) return false;
+      if (applied.isModelText !== '' && applied.isModelText !== undefined) {
+        const wantTrue = applied.isModelText === 'true';
+        if (!!c.isModelText !== wantTrue) return false;
+      }
       if (applied.counterparty && !c.counterpartyName?.includes(applied.counterparty)) return false;
       if (applied.department && !c.handlingDepartment?.includes(applied.department) && !c.demandDepartment?.includes(applied.department)) return false;
-      if (applied.project && !(c as any).projectName?.includes(applied.project)) return false;
-      if (applied.year) {
-        const yr = c.signingDate?.slice(0, 4);
-        if (yr !== applied.year) return false;
-      }
       if (applied.dateFrom && (!c.signingDate || c.signingDate < applied.dateFrom)) return false;
       if (applied.dateTo && (!c.signingDate || c.signingDate > applied.dateTo)) return false;
-      if (applied.nature && c.contractNature !== applied.nature) return false;
+      if (applied.winningDateFrom && (!c.winningDate || c.winningDate < applied.winningDateFrom)) return false;
+      if (applied.winningDateTo && (!c.winningDate || c.winningDate > applied.winningDateTo)) return false;
       return true;
     });
   }, [contractLedgers, applied]);
@@ -466,7 +471,10 @@ export default function ContractLedgerPage() {
       contractName: '',
       category: 'procurement',
       contractType: 'non_engineering',
-      formation: 'online',
+      formation: 'state_owned_xunbi',
+      isModelText: true,
+      archiveStatus: 'not_started',
+      handlerContact: '',
       status: 'draft',
     };
     setIsNew(true);
@@ -604,10 +612,29 @@ export default function ContractLedgerPage() {
     setIsNewEval(false);
   };
 
+  // ========== 动态 label 映射辅助函数 ==========
+  const getFormationLabel = (row: ContractLedger) => {
+    return row.contractNature === 'procurement'
+      ? PROCUREMENT_FORMATION_LABELS[row.formation as ProcurementFormation] || row.formation
+      : NON_PROCUREMENT_FORMATION_LABELS[row.formation as NonProcurementFormation] || row.formation;
+  };
+
+  const getContractTypeLabel = (row: ContractLedger) => {
+    if (row.contractNature === 'procurement') {
+      return PROCUREMENT_CONTRACT_TYPE_LABELS[row.contractType as ProcurementContractType] || row.contractType;
+    }
+    return NON_PROCUREMENT_CONTRACT_TYPE_LABELS[row.contractType as NonProcurementContractType] || row.contractType;
+  };
+
+  const getRequisitionRatio = (row: ContractLedger) => {
+    if (!row.requisitionAmount || row.requisitionAmount <= 0 || !row.amount) return null;
+    // requisitionAmount 是元，amount 是万元，amount*10000 转为元后对比
+    return ((row.amount * 10000) / row.requisitionAmount * 100).toFixed(1);
+  };
+
   // ========== 表格列定义 ==========
   const columns: ColumnDef<ContractLedger>[] = [
-    { key: 'contractNo', title: '合同编码', render: (row) => row.contractNo,
-      footer: (data: ContractLedger[]) => `合计 ${data.length} 份` },
+    // 1. 合同性质
     {
       key: 'contractNature',
       title: '合同性质',
@@ -622,50 +649,41 @@ export default function ContractLedgerPage() {
       ),
       footer: '',
     },
+    // 2. 合同名称
     { key: 'contractName', title: '合同名称', render: (row) => row.contractName, footer: '' },
-    {
-      key: 'category',
-      title: '分类',
-      render: (row) => categoryMap[row.category] || row.category,
-      footer: '',
-    },
-    {
-      key: 'contractType',
-      title: '合同类型',
-      render: (row) => row.contractType === 'engineering' ? '工程类' : '非工程类',
-      footer: '',
-    },
-    { key: 'signingEntity', title: '签订主体', render: (row) => (row as any).signingEntity || '-', footer: '' },
+    // 3. 合同编号
+    { key: 'contractNo', title: '合同编号', render: (row) => row.contractNo,
+      footer: (data: ContractLedger[]) => `合计 ${data.length} 份` },
+    // 4. 合同类型
+    { key: 'contractType', title: '合同类型', render: (row) => getContractTypeLabel(row), footer: '' },
+    // 5. 合同形成方式
+    { key: 'formation', title: '合同形成方式', render: (row) => getFormationLabel(row), footer: '' },
+    // 6. 中标时间
+    { key: 'winningDate', title: '中标时间', render: (row) => {
+      if (row.contractNature !== 'procurement') return <span className="text-[#c0c4cc]">-</span>;
+      return row.winningDate || '-';
+    }, footer: '' },
+    // 7. 示范文本
+    { key: 'isModelText', title: '示范文本', render: (row) => (
+      row.isModelText
+        ? <span className="inline-block px-2 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200">是</span>
+        : <span className="inline-block px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-500 border border-slate-200">否</span>
+    ), footer: '' },
+    // 8. 经办部门
     { key: 'handlingDepartment', title: '经办部门', render: (row) => row.handlingDepartment || '-', footer: '' },
-    { key: 'demandDepartment', title: '需求部门', render: (row) => row.demandDepartment || '-', footer: '' },
+    // 9. 经办人
     { key: 'handler', title: '经办人', render: (row) => row.handler || '-', footer: '' },
+    // 10. 联系方式
+    { key: 'handlerContact', title: '联系方式', render: (row) => row.handlerContact || '-', footer: '' },
+    // 11. 对方单位
     { key: 'counterpartyName', title: '对方单位', render: (row) => row.counterpartyName || '-', footer: '' },
-    { key: 'projectName', title: '项目名称', render: (row) => (row as any).projectName || '-', footer: '' },
-    {
-      key: 'amount', title: '合同金额(万)', align: 'right',
-      render: (row) => row.amount?.toLocaleString() || '-',
-      footer: (data: ContractLedger[]) => {
-        const sum = data.reduce((s, c) => s + (c.amount || 0), 0);
-        return sum > 0 ? sum.toLocaleString() : '-';
-      },
-    },
-    {
-      key: 'paidAmount', title: '已支付(万)', align: 'right',
-      render: (row) => row.paidAmount?.toLocaleString() || '-',
-      footer: (data: ContractLedger[]) => {
-        const sum = data.reduce((s, c) => s + (c.paidAmount || 0), 0);
-        return sum > 0 ? sum.toLocaleString() : '-';
-      },
-    },
-    {
-      key: 'settlementAmount', title: '结算金额(万)', align: 'right',
-      render: (row) => row.settlementAmount?.toLocaleString() || '-',
-      footer: (data: ContractLedger[]) => {
-        const sum = data.reduce((s, c) => s + (c.settlementAmount || 0), 0);
-        return sum > 0 ? sum.toLocaleString() : '-';
-      },
-    },
+    // 12. 对方负责人
+    { key: 'counterpartyContact', title: '对方负责人', render: (row) => row.counterpartyContact || '-', footer: '' },
+    // 13. 签订日期
     { key: 'signingDate', title: '签订日期', render: (row) => row.signingDate || '-', footer: '' },
+    // 14. 生效日期
+    { key: 'effectiveDate', title: '生效日期', render: (row) => row.effectiveDate || '-', footer: '' },
+    // 15. 终止日期（保留到期高亮）
     {
       key: 'terminationDate',
       title: '终止日期',
@@ -684,12 +702,72 @@ export default function ContractLedgerPage() {
         );
       },
     },
+    // 16. 合同金额(万) — footer 合计
+    {
+      key: 'amount', title: '合同金额(万)', align: 'right',
+      render: (row) => row.amount?.toLocaleString() || '-',
+      footer: (data: ContractLedger[]) => {
+        const sum = data.reduce((s, c) => s + (c.amount || 0), 0);
+        return sum > 0 ? sum.toLocaleString() : '-';
+      },
+    },
+    // 17. 采购申请金额(万)
+    { key: 'requisitionAmount', title: '采购申请金额(万)', align: 'right', render: (row) => {
+      if (!row.requisitionAmount) return '-';
+      // requisitionAmount 是元，转成万元显示
+      return (row.requisitionAmount / 10000).toLocaleString(undefined, { maximumFractionDigits: 2 });
+    }, footer: '' },
+    // 18. 采购申请比(%) — 计算字段
+    { key: 'requisitionRatio', title: '采购申请比(%)', align: 'right', render: (row) => {
+      const ratio = getRequisitionRatio(row);
+      return ratio !== null ? `${ratio}%` : '-';
+    }, footer: '' },
+    // 19. 已支付金额(万) — footer 合计
+    {
+      key: 'paidAmount', title: '已支付金额(万)', align: 'right',
+      render: (row) => row.paidAmount?.toLocaleString() || '-',
+      footer: (data: ContractLedger[]) => {
+        const sum = data.reduce((s, c) => s + (c.paidAmount || 0), 0);
+        return sum > 0 ? sum.toLocaleString() : '-';
+      },
+    },
+    // 20. 结算金额(万) — footer 合计
+    {
+      key: 'settlementAmount', title: '结算金额(万)', align: 'right',
+      render: (row) => row.settlementAmount?.toLocaleString() || '-',
+      footer: (data: ContractLedger[]) => {
+        const sum = data.reduce((s, c) => s + (c.settlementAmount || 0), 0);
+        return sum > 0 ? sum.toLocaleString() : '-';
+      },
+    },
+    // 21. 合同履行情况
+    { key: 'performanceStatus', title: '合同履行情况', render: (row) => row.performanceStatus || '-', footer: '' },
+    // 22. 资金流向
+    { key: 'businessCategory', title: '资金流向', render: (row) => {
+      if (!row.businessCategory) return '-';
+      return BUSINESS_CATEGORY_LABELS[row.businessCategory] || row.businessCategory;
+    }, footer: '' },
+    // 23. 归档情况
+    { key: 'archiveStatus', title: '归档情况', render: (row) => {
+      if (!row.archiveStatus) return '-';
+      const config = {
+        not_started: { cls: 'bg-slate-100 text-slate-500 border-slate-200' },
+        in_progress: { cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+        archived: { cls: 'bg-green-50 text-green-700 border-green-200' },
+      };
+      const cls = config[row.archiveStatus]?.cls || 'bg-slate-100 text-slate-500 border-slate-200';
+      return (
+        <span className={`inline-block px-2 py-0.5 rounded text-xs border ${cls}`}>
+          {ARCHIVE_STATUS_LABELS[row.archiveStatus]}
+        </span>
+      );
+    }, footer: '' },
+    // 24. 状态（保留到期高亮逻辑）
     {
       key: 'status',
       title: '状态',
       footer: '',
       render: (row) => {
-        // 自动判断：执行中合同已过期 → 逻辑状态提示
         let displayStatus = statusMap[row.status] || statusMap.draft;
         let extraLabel = '';
         if (row.status === 'active' && isExpired(row.terminationDate)) {
@@ -702,43 +780,25 @@ export default function ContractLedgerPage() {
         );
       },
     },
-    {
-      key: 'evalStatus',
-      title: '考核状态',
-      footer: '',
-      render: (row) => {
-        const bindings = row.contractEvaluations || [];
-        if (bindings.length === 0) {
-          return <span className="text-xs text-[#c0c4cc]">未绑定</span>;
-        }
-        const earliestRemind = bindings.map((b) => b.nextRemindDate).filter((d) => d).sort()[0];
-        const isUrgent = earliestRemind && new Date(earliestRemind) < new Date();
-        return (
-          <div className="text-xs">
-            <div className={`font-medium ${isUrgent ? 'text-[#f56c6c]' : 'text-[#606266]'}`}>
-              已绑定 {bindings.length} 项
-            </div>
-            <div className="text-[#909399]">下次提醒：{earliestRemind || '-'}</div>
-          </div>
-        );
-      },
-    },
+    // 25. 备注
+    { key: 'remark', title: '备注', render: (row) => row.remark || '-', footer: '' },
+    // 26. 操作
     {
       key: 'op',
       title: '操作',
       render: (row) => (
         <div className="flex items-center gap-2 flex-wrap">
-          <TextButton onClick={() => setViewItem(row)}>查看</TextButton>
-          <TextButton onClick={() => { setIsNew(false); setEditItem(row); }}>编辑</TextButton>
-          <TextButton onClick={() => openEvalModal(row)}>考核管理</TextButton>
+          <TextButton onClick={() => setViewItem(row)}>查看详情</TextButton>
+          <TextButton onClick={() => openEvalModal(row)}>考核绑定</TextButton>
+          <TextButton
+            onClick={() => {
+              const nextStatus = row.archiveStatus === 'archived' ? 'not_started' : 'archived';
+              updateContractLedger(row.id, { ...row, archiveStatus: nextStatus as any });
+            }}
+          >{row.archiveStatus === 'archived' ? '取消归档' : '归档'}</TextButton>
           {(row.status === 'active' || row.status === 'approved') && (
             <>
-              <TextButton
-                onClick={() => { setSuspendItem(row); setSuspendReason(''); }}
-              >中止</TextButton>
-              <TextButton type="danger" onClick={() => { setTerminateItem(row); setTerminateReason(''); }}>
-                终止
-              </TextButton>
+              <TextButton type="danger" onClick={() => { setTerminateItem(row); setTerminateReason(''); }}>终止</TextButton>
             </>
           )}
           {(row.status === 'terminated' || row.status === 'expired' || row.status === 'invalid') && (
@@ -998,26 +1058,77 @@ export default function ContractLedgerPage() {
       <SearchBar
         onSearch={() => setApplied({
           no: filterNo, name: filterName, status: filterStatus,
-          category: filterCategory, contractType: filterContractType,
+          nature: filterNature, formation: filterFormation,
+          archiveStatus: filterArchiveStatus, isModelText: filterIsModelText,
           counterparty: filterCounterparty, department: filterDepartment,
-          project: filterProject, year: filterYear,
           dateFrom: filterDateFrom, dateTo: filterDateTo,
-          nature: filterNature,
+          winningDateFrom: filterWinningDateFrom, winningDateTo: filterWinningDateTo,
         })}
         onReset={() => {
           setFilterNo(''); setFilterName(''); setFilterStatus('');
-          setFilterCategory(''); setFilterContractType(''); setFilterCounterparty('');
-          setFilterDepartment(''); setFilterProject(''); setFilterYear('');
-          setFilterDateFrom(''); setFilterDateTo(''); setFilterNature('');
+          setFilterNature(''); setFilterFormation('');
+          setFilterArchiveStatus(''); setFilterIsModelText('');
+          setFilterCounterparty(''); setFilterDepartment('');
+          setFilterDateFrom(''); setFilterDateTo('');
+          setFilterWinningDateFrom(''); setFilterWinningDateTo('');
           setApplied({
-            no: '', name: '', status: '', category: '', contractType: '',
-            counterparty: '', department: '', project: '', year: '',
-            dateFrom: '', dateTo: '', nature: '',
+            no: '', name: '', status: '', nature: '', formation: '',
+            archiveStatus: '', isModelText: '',
+            counterparty: '', department: '',
+            dateFrom: '', dateTo: '',
+            winningDateFrom: '', winningDateTo: '',
           });
         }}
       >
-        <SearchField label="合同编码" placeholder="请输入" value={filterNo} onChange={setFilterNo} />
+        <SearchField label="合同编号" placeholder="请输入" value={filterNo} onChange={setFilterNo} />
         <SearchField label="合同名称" placeholder="请输入" value={filterName} onChange={setFilterName} />
+        <SearchField
+          label="合同性质"
+          type="select"
+          value={filterNature}
+          onChange={setFilterNature}
+          options={[
+            { value: '', label: '全部' },
+            { value: 'procurement', label: '招采类合同' },
+            { value: 'non_procurement', label: '非招采类合同' },
+          ]}
+        />
+        <SearchField
+          label="合同形成方式"
+          type="select"
+          value={filterFormation}
+          onChange={setFilterFormation}
+          options={[
+            { value: '', label: '全部' },
+            ...(filterNature === 'non_procurement'
+              ? Object.entries(NON_PROCUREMENT_FORMATION_LABELS).map(([v, label]) => ({ value: v, label }))
+              : Object.entries(PROCUREMENT_FORMATION_LABELS).map(([v, label]) => ({ value: v, label }))
+            ),
+          ]}
+        />
+        <SearchField
+          label="示范文本"
+          type="select"
+          value={filterIsModelText}
+          onChange={setFilterIsModelText}
+          options={[
+            { value: '', label: '全部' },
+            { value: 'true', label: '是' },
+            { value: 'false', label: '否' },
+          ]}
+        />
+        <SearchField
+          label="归档情况"
+          type="select"
+          value={filterArchiveStatus}
+          onChange={setFilterArchiveStatus}
+          options={[
+            { value: '', label: '全部' },
+            { value: 'not_started', label: '未开始' },
+            { value: 'in_progress', label: '进行中' },
+            { value: 'archived', label: '已归档' },
+          ]}
+        />
         <SearchField
           label="状态"
           type="select"
@@ -1033,57 +1144,12 @@ export default function ContractLedgerPage() {
             { value: 'terminated', label: '已终止' },
           ]}
         />
-        <SearchField
-          label="分类"
-          type="select"
-          value={filterCategory}
-          onChange={setFilterCategory}
-          options={[
-            { value: '', label: '全部' },
-            { value: 'exhibition_service', label: '展览服务' },
-            { value: 'exhibition_display', label: '展览展示' },
-            { value: 'procurement', label: '采购类' },
-            { value: 'investment', label: '招商类' },
-            { value: 'other', label: '其他' },
-          ]}
-        />
-        <SearchField
-          label="合同类型"
-          type="select"
-          value={filterContractType}
-          onChange={setFilterContractType}
-          options={[
-            { value: '', label: '全部' },
-            { value: 'engineering', label: '工程类' },
-            { value: 'non_engineering', label: '非工程类' },
-          ]}
-        />
-        <SearchField label="供应商" placeholder="对方单位名称" value={filterCounterparty} onChange={setFilterCounterparty} />
-        <SearchField label="部门" placeholder="经办/需求部门" value={filterDepartment} onChange={setFilterDepartment} />
-        <SearchField label="项目名称" placeholder="项目关键字" value={filterProject} onChange={setFilterProject} />
-        <SearchField
-          label="年度"
-          type="select"
-          value={filterYear}
-          onChange={setFilterYear}
-          options={[
-            { value: '', label: '全部' },
-            ...yearOptions.map((y) => ({ value: y, label: `${y}年` })),
-          ]}
-        />
+        <SearchField label="对方单位" placeholder="对方单位名称" value={filterCounterparty} onChange={setFilterCounterparty} />
+        <SearchField label="经办部门" placeholder="部门关键字" value={filterDepartment} onChange={setFilterDepartment} />
         <SearchField label="签订日期起" type="date" value={filterDateFrom} onChange={setFilterDateFrom} />
         <SearchField label="签订日期止" type="date" value={filterDateTo} onChange={setFilterDateTo} />
-        <SearchField
-          label="合同性质"
-          type="select"
-          value={filterNature}
-          onChange={setFilterNature}
-          options={[
-            { value: '', label: '全部' },
-            { value: 'procurement', label: '招采类合同' },
-            { value: 'non_procurement', label: '非招采类合同' },
-          ]}
-        />
+        <SearchField label="中标时间起" type="date" value={filterWinningDateFrom} onChange={setFilterWinningDateFrom} />
+        <SearchField label="中标时间止" type="date" value={filterWinningDateTo} onChange={setFilterWinningDateTo} />
       </SearchBar>
 
       {/* 主数据表格 */}
@@ -1120,8 +1186,12 @@ export default function ContractLedgerPage() {
                   value={editItem.formation}
                   onChange={(e) => setEditItem({ ...editItem, formation: e.target.value as any })}
                 >
-                  <option value="online">敞口/非在线</option>
-                  <option value="offline">非在线</option>
+                  {(editItem.contractNature === 'procurement'
+                    ? Object.entries(PROCUREMENT_FORMATION_LABELS)
+                    : Object.entries(NON_PROCUREMENT_FORMATION_LABELS)
+                  ).map(([v, label]) => (
+                    <option key={v} value={v}>{label}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -1344,7 +1414,11 @@ export default function ContractLedgerPage() {
                   {statusMap[viewItem.status]?.label || viewItem.status}
                 </span>
               </div>
-              <div><span className="text-[#909399]">形成方式：</span>{viewItem.formation === 'online' ? '敞口/非在线' : '非在线'}</div>
+              <div><span className="text-[#909399]">形成方式：</span>{
+                viewItem.contractNature === 'procurement'
+                  ? PROCUREMENT_FORMATION_LABELS[viewItem.formation as keyof typeof PROCUREMENT_FORMATION_LABELS]
+                  : NON_PROCUREMENT_FORMATION_LABELS[viewItem.formation as keyof typeof NON_PROCUREMENT_FORMATION_LABELS]
+              }</div>
               <div className="col-span-3"><span className="text-[#909399]">合同名称：</span>{viewItem.contractName}</div>
               <div><span className="text-[#909399]">分类：</span>{categoryMap[viewItem.category] || viewItem.category}</div>
               <div><span className="text-[#909399]">类型：</span>{viewItem.contractType === 'engineering' ? '工程类' : '非工程类'}</div>
