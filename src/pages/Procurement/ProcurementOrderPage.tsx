@@ -17,6 +17,7 @@ const statusMap: Record<string, { label: string; color: string; bg: string }> = 
 
 const sourceTypeMap: Record<string, string> = {
   framework: '框架合同',
+  framework_bidding: '框架协议采购',
   one_time: '单次采购',
   public_recruit: '公开招聘',
 };
@@ -493,6 +494,7 @@ export default function ProcurementOrderPage() {
             options={[
               { value: '', label: '全部' },
               { value: 'framework', label: '框架合同' },
+              { value: 'framework_bidding', label: '框架协议采购' },
               { value: 'one_time', label: '单次采购' },
             ]}
           />

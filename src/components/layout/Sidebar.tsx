@@ -48,10 +48,10 @@ const menuItems: MenuItem[] = [
       { title: '招采订单管理', path: '/procurement/contract-purchase-order' },
       { title: '供应商管理', path: '/procurement/supplier-group', children: [
         { title: '供应商列表', path: '/procurement/supplier' },
-        { title: '履约评估管理', path: '/procurement/evaluation', icon: Award, children: [
-          { title: '评估模板管理', path: '/procurement/evaluation-template' },
-          { title: '评估执行', path: '/procurement/evaluation-execute' },
-          { title: '评估记录', path: '/procurement/evaluation-record' },
+        { title: '考核评价管理', path: '/procurement/evaluation', icon: Award, children: [
+          { title: '考核评价模版管理', path: '/procurement/evaluation-template' },
+          { title: '考核评价执行', path: '/procurement/evaluation-execute' },
+          { title: '考核评价记录', path: '/procurement/evaluation-record' },
         ]},
       ]},
       { title: '招采项目验收', path: '/procurement/inspection' },

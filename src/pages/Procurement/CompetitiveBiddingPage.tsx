@@ -12,7 +12,7 @@ import { exportOfflineList, parseOfflineList } from '@/utils/excelImport';
 import { MOCK_BIDDINGS, MOCK_SUPPLIER_QUOTES } from '@/mock/biddingMockData';
 import type {
   Bidding, BiddingQuote, BiddingItem, BiddingQuoteDetail,
-  ProcurementDemand, Attachment, BiddingProcurementMethod,
+  ProcurementDemand, Attachment, BiddingProcurementMethod, ProcurementOrder,
 } from '@/types';
 import { BIDDING_METHOD_LABEL } from '@/types';
 
@@ -43,6 +43,7 @@ export default function CompetitiveBiddingPage() {
   // 同步从 store 中读取报价单数据
   const supplierQuotes = useStore((s) => s.supplierQuotes || []) as any[];
   const setSupplierQuotes = useStore((s) => s.setSupplierQuotes) as ((data: any[]) => void) | undefined;
+  const addProcurementOrder = useStore((s) => s.addProcurementOrder) as ((order: ProcurementOrder) => void) | undefined;
 
   // 初始化测试数据：加载工单和报价单
   useEffect(() => {
@@ -199,7 +200,7 @@ export default function CompetitiveBiddingPage() {
       key: 'op',
       title: '操作',
       render: (row) => {
-        const isCatalog = isCatalogCompare();
+        const isCatalog = isCatalogCompare(row.procurementMethod);
         const isApproved = row.approvalStatus === 'approved' || (!row.approvalStatus && row.status !== 'draft');
         return (
           <div className="flex items-center gap-3">
@@ -232,6 +233,14 @@ export default function CompetitiveBiddingPage() {
             )}
             {isCatalog && row.status === 'evaluated' && (
               <TextButton onClick={() => handleComplete(row)}>完成</TextButton>
+            )}
+            {isCatalog && row.status === 'completed' && (
+              <TextButton
+                onClick={() => handleGenerateOrder(row)}
+                className="text-indigo-600"
+              >
+                生成采购订单
+              </TextButton>
             )}
             {/* 线下录入类：提交审批按钮 */}
             {!isCatalog && row.approvalStatus === 'draft' && (
@@ -500,6 +509,64 @@ export default function CompetitiveBiddingPage() {
       winningSupplierId: lowestQuote.supplierId,
       winningSupplierName: lowestQuote.supplierName,
     });
+  };
+
+  /** framework 完成后一键生成采购订单 */
+  const handleGenerateOrder = (bidding: Bidding) => {
+    if (bidding.status !== 'completed') {
+      alert('只有已完成的框架协议采购才能生成订单');
+      return;
+    }
+    if ((bidding as any).generatedOrderId) {
+      if (!confirm('该框架已生成过订单，确认重新生成？（将新增一条）')) return;
+    }
+    if (!bidding.winningSupplierId) {
+      alert('成交供应商缺失，无法生成订单');
+      return;
+    }
+    const orderId = `PO_${Date.now()}`;
+    const items = (bidding.items || []).map((it: any, idx: number) => {
+      const qty = it.quantity ?? 1;
+      const unitPrice = it.unitPriceLimitIncludingTax ?? it.unitPriceLimitExcludingTax ?? 0;
+      return {
+        id: `ITEM_${orderId}_${idx}`,
+        orderId,
+        productId: it.productCode || it.code || '',
+        productCode: it.productCode || it.code || '',
+        productName: it.productName || it.materialName || it.name || '未命名物料',
+        specification: it.specification || it.spec || '',
+        unit: it.unit || '',
+        quantity: qty,
+        unitPrice,
+        amount: +(unitPrice * qty).toFixed(2),
+        taxRate: it.taxRate ?? 0.13,
+      };
+    });
+    const orderNo = genSerialNo(
+      SERIAL_CONFIG.CPO,
+      (useStore.getState().procurementOrders as ProcurementOrder[]).map((o) => o.orderNo),
+    );
+    const now = new Date().toISOString();
+    const order: ProcurementOrder = {
+      id: orderId,
+      orderNo,
+      sourceType: 'framework_bidding',
+      demandNo: bidding.demandNo || '',
+      contractId: '',
+      contractNo: '',
+      supplierId: bidding.winningSupplierId,
+      supplierName: bidding.winningSupplierName || '',
+      status: 'pending',
+      createTime: now,
+      creator: currentUser?.name || '当前用户',
+      deliveryDate: now.slice(0, 10),
+      remark: `由框架协议采购 ${bidding.biddingNo} 自动生成，共 ${items.length} 项`,
+      details: items,
+    };
+    addProcurementOrder?.(order);
+    updateBidding?.(bidding.id, { ...bidding, ...({ generatedOrderId: order.id } as any) });
+    const total = items.reduce((s, i) => s + (i.amount || 0), 0).toFixed(2);
+    alert(`✅ 采购订单已生成：${orderNo}\n共 ${items.length} 项，总金额 ¥${total}`);
   };
 
   const handleSave = () => {

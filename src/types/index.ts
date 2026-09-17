@@ -113,8 +113,7 @@ export interface Supplier {
   qualificationExpiryDate?: string; // 资质到期日期
   createTime?: string;
   creator?: string;
-  // 新增：供应商归口管理部门与资质管理
-  managementDepartment?: string; // 归口管理部门
+  // 新增：供应商资质管理
   qualifications?: SupplierQualification[]; // 资质证书列表
 }
 
@@ -176,7 +175,7 @@ export interface SupplierQualification {
 export type ChangeFieldKey =
   | 'name' | 'code' | 'contact' | 'phone' | 'address'
   | 'unifiedSocialCreditCode' | 'registeredAddress' | 'bankAccount'
-  | 'businessScope' | 'managementDepartment' | 'qualification';
+  | 'businessScope' | 'qualification';
 
 export interface SupplierChangeRequest {
   id: string;
@@ -1829,6 +1828,39 @@ export interface ContractLedger {
   biddingId?: string; // 关联采购工单ID
   biddingNo?: string; // 关联采购工单编号
   projectName?: string; // 项目名称（从工单带入）
+  /** 合同考核绑定（一个合同可加多种考核） */
+  contractEvaluations?: ContractEvaluationBinding[];
+}
+
+// ==================== 合同考核绑定 ====================
+
+export type ContractEvaluationFrequency =
+  | 'once'         // 单次（如项目结束后考核）
+  | 'monthly'      // 月度
+  | 'quarterly'    // 季度
+  | 'yearly'       // 年度
+  | 'contract_end'; // 合同到期前 N 天
+
+/** 合同-考核绑定（一个合同可绑定多种考核） */
+export interface ContractEvaluationBinding {
+  id: string;
+  /** 考核类型 */
+  kind: EvaluationType;
+  /** 绑定的模板 ID */
+  templateId: string;
+  templateName?: string;
+  /** 提醒频率 */
+  frequency: ContractEvaluationFrequency;
+  /** 下次提醒时间 */
+  nextRemindDate?: string;
+  /** 最后一次考核日期 */
+  lastEvaluatedDate?: string;
+  /** 下次提醒前提前天数（默认 7） */
+  advanceDays?: number;
+  /** 备注 */
+  remark?: string;
+  createTime: string;
+  creator?: string;
 }
 
 // 采购订单状态
@@ -1860,7 +1892,7 @@ export interface ProcurementOrderDetail {
 export interface ProcurementOrder {
   id: string;
   orderNo: string;
-  sourceType?: 'framework' | 'one_time' | 'public_recruit'; // 订单来源：framework=框架合同（含需求申请/清单外同类），one_time=无框架合同（单次采购），public_recruit=公开招聘
+  sourceType?: 'framework' | 'one_time' | 'public_recruit' | 'framework_bidding'; // 订单来源
   demandId?: string; // 关联采购需求
   demandNo?: string;
   contractId?: string; // 关联合同
@@ -2028,9 +2060,18 @@ export interface ContractTextVersion {
   creator: string;
 }
 
-// ==================== 履约评估类型 ====================
+// ==================== 考核评价类型 ====================
 
-export type EvaluationType = 'quarterly' | 'single' | 'warranty';
+/** 考核/评价类型（按评价表模版文件夹结构组织） */
+export type EvaluationType =
+  | 'project_single'      // 单个项目考核（考核管理）
+  | 'monthly'             // 月度考核（考核管理）
+  | 'quarterly'           // 季度考核（考核管理）
+  | 'yearly'              // 年度评价
+  | 'contract_performance' // 合同履约评价
+  | 'warranty'            // 质保履约（兼容旧数据）
+  | 'single';             // 兼容旧数据（同 project_single）
+
 export type EvaluationStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'completed';
 
 export interface EvaluationIndicator {
@@ -2053,6 +2094,10 @@ export interface EvaluationTemplate {
   createTime: string;
   updateTime?: string;
   isDefault?: boolean;
+  /** 是否系统内置（不可删除、不可直接编辑指标） */
+  isBuiltin?: boolean;
+  /** 从哪个内置模板克隆而来（可追溯） */
+  clonedFrom?: string;
 }
 
 export interface EvaluationScoreItem {
@@ -2090,9 +2135,33 @@ export interface EvaluationRecord {
 }
 
 export const EVALUATION_TYPE_LABELS: Record<EvaluationType, string> = {
+  project_single: '单个项目考核',
+  single: '单个项目考核',        // 兼容旧数据
+  monthly: '月度考核',
   quarterly: '季度考核',
-  single: '项目单次考核',
+  yearly: '年度评价',
+  contract_performance: '合同履约评价',
   warranty: '质保履约考核',
+};
+
+/** 考核大类分组（用于模板管理 tab） */
+export const EVALUATION_TYPE_GROUPS: Record<string, { label: string; types: EvaluationType[] }> = {
+  assessment: {
+    label: '考核管理',
+    types: ['project_single', 'single', 'monthly', 'quarterly'],
+  },
+  yearly: {
+    label: '年度评价',
+    types: ['yearly'],
+  },
+  contract: {
+    label: '合同履约评价',
+    types: ['contract_performance'],
+  },
+  other: {
+    label: '其他',
+    types: ['warranty'],
+  },
 };
 
 export const EVALUATION_STATUS_LABELS: Record<EvaluationStatus, string> = {

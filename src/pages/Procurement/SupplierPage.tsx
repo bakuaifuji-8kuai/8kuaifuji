@@ -30,11 +30,8 @@ const FIELD_NAME_MAP: Record<ChangeFieldKey, string> = {
   registeredAddress: '注册地址',
   bankAccount: '银行账户',
   businessScope: '经营范围',
-  managementDepartment: '归口管理部门',
   qualification: '资质证书',
 };
-
-const DEPARTMENT_OPTIONS = ['采购部', '工程部', '财务部', '综合管理部', '会展部', '招标部'];
 
 // 计算资质预警状态
 function getQualificationWarning(expiryDate?: string, isPermanent?: boolean) {
@@ -64,9 +61,8 @@ export default function SupplierPage() {
 
   const [filterName, setFilterName] = useState('');
   const [filterCode, setFilterCode] = useState('');
-  const [filterDept, setFilterDept] = useState('');
   const [filterWarning, setFilterWarning] = useState('');
-  const [applied, setApplied] = useState({ name: '', code: '', dept: '', warning: '' });
+  const [applied, setApplied] = useState({ name: '', code: '', warning: '' });
 
   // 重复检测
   const [dupError, setDupError] = useState<string>('');
@@ -75,7 +71,6 @@ export default function SupplierPage() {
     return suppliers.filter((s) => {
       if (applied.name && !s.name.includes(applied.name)) return false;
       if (applied.code && !(s.code || '').includes(applied.code)) return false;
-      if (applied.dept && s.managementDepartment !== applied.dept) return false;
       if (applied.warning) {
         const quals = supplierQualifications.filter(q => q.supplierId === s.id);
         if (applied.warning === 'has_warning') {
@@ -110,11 +105,6 @@ export default function SupplierPage() {
   const columns: ColumnDef<Supplier>[] = [
     { key: 'code', title: '供应商编码' },
     { key: 'name', title: '供应商名称' },
-    {
-      key: 'managementDepartment',
-      title: '归口管理部门',
-      render: (row) => <span className="text-[#606266]">{row.managementDepartment || '-'}</span>,
-    },
     {
       key: 'unifiedSocialCreditCode',
       title: '统一社会信用代码',
@@ -441,30 +431,22 @@ export default function SupplierPage() {
             {warningSummary.expiredCount > 0 && <span className="text-[#f56c6c]">已过期 {warningSummary.expiredCount} 份</span>}
             {warningSummary.dangerCount > 0 && <span className="text-[#f56c6c]">30天内到期 {warningSummary.dangerCount} 份</span>}
             {warningSummary.warningCount > 0 && <span className="text-[#e6a23c]">60天内到期 {warningSummary.warningCount} 份</span>}
-            <span className="text-[#909399]">（系统已自动向供应商归口管理部门发送预警通知，请及时处理）</span>
+            <span className="text-[#909399]">（请及时跟进续期）</span>
           </div>
         </div>
       )}
 
       <SearchBar
-        onSearch={() => setApplied({ name: filterName, code: filterCode, dept: filterDept, warning: filterWarning })}
+        onSearch={() => setApplied({ name: filterName, code: filterCode, warning: filterWarning })}
         onReset={() => {
           setFilterName('');
           setFilterCode('');
-          setFilterDept('');
           setFilterWarning('');
-          setApplied({ name: '', code: '', dept: '', warning: '' });
+          setApplied({ name: '', code: '', warning: '' });
         }}
       >
         <SearchField label="供应商名称" placeholder="请输入" value={filterName} onChange={setFilterName} />
         <SearchField label="供应商编码" placeholder="请输入" value={filterCode} onChange={setFilterCode} />
-        <SearchField
-          label="归口管理部门"
-          value={filterDept}
-          onChange={setFilterDept}
-          type="select"
-          options={[{ value: '', label: '全部' }, ...DEPARTMENT_OPTIONS.map(d => ({ value: d, label: d }))]}
-        />
         <SearchField
           label="资质状态"
           value={filterWarning}
@@ -536,16 +518,6 @@ export default function SupplierPage() {
                   onChange={(e) => setEditItem({ ...editItem, unifiedSocialCreditCode: e.target.value })}
                 />
               </div>
-              <div className="col-span-2">
-                <div className="mb-1 text-[#606266]">归口管理部门</div>
-                <select className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
-                  value={editItem.managementDepartment || ''}
-                  onChange={(e) => setEditItem({ ...editItem, managementDepartment: e.target.value })}
-                >
-                  <option value="">请选择</option>
-                  {DEPARTMENT_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
               <div>
                 <div className="mb-1 text-[#606266]">状态</div>
                 <select className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
@@ -605,7 +577,6 @@ export default function SupplierPage() {
               <div><span className="text-[#909399]">联系人：</span>{viewItem.contact || '-'}</div>
               <div><span className="text-[#909399]">电话：</span>{viewItem.phone || '-'}</div>
               <div><span className="text-[#909399]">统一社会信用代码：</span>{viewItem.unifiedSocialCreditCode || '-'}</div>
-              <div><span className="text-[#909399]">归口管理部门：</span>{viewItem.managementDepartment || '-'}</div>
               <div><span className="text-[#909399]">状态：</span>{viewItem.status === 'enabled' ? '启用' : '停用'}</div>
               <div><span className="text-[#909399]">创建时间：</span>{viewItem.createTime || '-'}</div>
             </div>

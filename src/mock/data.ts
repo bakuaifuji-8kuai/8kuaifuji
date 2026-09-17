@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   Warehouse, Position, ProductCategory, Product, Supplier, SupplierAssessment, Customer,
   Inventory, InboundOrder, InboundApplication, OutboundOrder, CheckOrder, TransferOrder, ReturnOrder, PendingReturn,
   AssetEquipment, ScrappedRecord, DamagedRecord, StockTransaction, Employee, PurchaseOrder,
@@ -3744,6 +3744,26 @@ export const contractLedgers: ContractLedger[] = [
     businessCategory: 'expense',
     subType: 'procurement',
     status: 'active',
+    contractEvaluations: [
+      {
+        id: 'EVAL_BIND_DEMO_01',
+        kind: 'monthly',
+        templateId: 'BUILTIN_002',
+        templateName: '月度考核模板',
+        frequency: 'monthly',
+        nextRemindDate: new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+        createTime: '2026-01-15T09:00:00Z',
+      },
+      {
+        id: 'EVAL_BIND_DEMO_02',
+        kind: 'yearly',
+        templateId: 'BUILTIN_004',
+        templateName: '年度评价模板',
+        frequency: 'yearly',
+        nextRemindDate: new Date(Date.now() + 45 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+        createTime: '2026-01-15T09:00:00Z',
+      },
+    ],
   },
   {
     id: 'CL002',
@@ -4109,14 +4129,104 @@ export const procurementInspections: ProcurementInspection[] = [
 // ==================== 履约评估Mock数据 ====================
 
 export const evaluationTemplates: EvaluationTemplate[] = [
+  // ==================== 系统内置模板（按评价表模版文件夹建模，不可直接编辑） ====================
+  {
+    id: 'BUILTIN_001',
+    name: '单个项目考核模板（舞台舞美配套服务）',
+    type: 'project_single',
+    description: '适用于舞台舞美配套服务类供应商的单个项目考核（参考：单个项目考核参考模版.doc）',
+    creator: '系统内置',
+    createTime: '2026-01-01 00:00:00',
+    isBuiltin: true,
+    isDefault: true,
+    totalWeight: 100,
+    indicators: [
+      { id: 'B1_I1', name: '项目方案与创意', category: '创意', weight: 25, maxScore: 100, description: '方案创意独特性、艺术表现力、主题契合度' },
+      { id: 'B1_I2', name: '技术实现质量', category: '技术', weight: 25, maxScore: 100, description: '舞美搭建的技术水准、结构安全性、工艺精细度' },
+      { id: 'B1_I3', name: '进度与交付', category: '管理', weight: 20, maxScore: 100, description: '按计划完成各节点、按时交付使用' },
+      { id: 'B1_I4', name: '现场配合与应急', category: '服务', weight: 15, maxScore: 100, description: '现场工作人员配合度、突发情况应急处理能力' },
+      { id: 'B1_I5', name: '安全与合规', category: '安全', weight: 15, maxScore: 100, description: '安全规范执行、临时设施拆除、现场清理' },
+    ],
+  },
+  {
+    id: 'BUILTIN_002',
+    name: '月度考核模板（物业服务）',
+    type: 'monthly',
+    description: '适用于物业服务类供应商的月度考核（参考：月度考核表参考模版.doc）',
+    creator: '系统内置',
+    createTime: '2026-01-01 00:00:00',
+    isBuiltin: true,
+    totalWeight: 100,
+    indicators: [
+      { id: 'B2_I1', name: '保洁服务质量', category: '服务', weight: 30, maxScore: 100, description: '公共区域清洁度、垃圾清运、消毒杀菌' },
+      { id: 'B2_I2', name: '安保服务', category: '服务', weight: 25, maxScore: 100, description: '门禁管理、巡逻、应急预案执行' },
+      { id: 'B2_I3', name: '绿化养护', category: '环境', weight: 15, maxScore: 100, description: '绿植修剪、病虫害防治、景观维护' },
+      { id: 'B2_I4', name: '设施维护响应', category: '维修', weight: 15, maxScore: 100, description: '报修响应时效、维修质量、返修率' },
+      { id: 'B2_I5', name: '投诉处理与满意率', category: '客户', weight: 15, maxScore: 100, description: '业主投诉响应、解决率、回访满意率' },
+    ],
+  },
+  {
+    id: 'BUILTIN_003',
+    name: '季度考核模板（会务服务）',
+    type: 'quarterly',
+    description: '适用于会务服务类供应商的季度综合考核（参考：季度考核参考模版.doc）',
+    creator: '系统内置',
+    createTime: '2026-01-01 00:00:00',
+    isBuiltin: true,
+    totalWeight: 100,
+    indicators: [
+      { id: 'B3_I1', name: '会场布置与搭建', category: '执行', weight: 25, maxScore: 100, description: '会场主题呈现、布局合理性、搭建效率与质量' },
+      { id: 'B3_I2', name: '会议流程保障', category: '执行', weight: 25, maxScore: 100, description: '流程环节衔接、设备正常运行、会议准时准点' },
+      { id: 'B3_I3', name: '餐饮与茶歇服务', category: '服务', weight: 20, maxScore: 100, description: '餐饮质量、供餐时效、现场服务礼仪' },
+      { id: 'B3_I4', name: '人员专业素质', category: '团队', weight: 15, maxScore: 100, description: '服务人员着装规范、专业技能、沟通协调能力' },
+      { id: 'B3_I5', name: '客户满意度', category: '客户', weight: 15, maxScore: 100, description: '主办方整体评价、反馈建议采纳情况' },
+    ],
+  },
+  {
+    id: 'BUILTIN_004',
+    name: '年度评价模板（驻场服务类专业供应商）',
+    type: 'yearly',
+    description: '适用于驻场服务类专业供应商的年度综合评价（参考：年度评价参考模版.doc）',
+    creator: '系统内置',
+    createTime: '2026-01-01 00:00:00',
+    isBuiltin: true,
+    totalWeight: 100,
+    indicators: [
+      { id: 'B4_I1', name: '全年目标完成率', category: '业绩', weight: 25, maxScore: 100, description: '年度各项服务KPI完成情况' },
+      { id: 'B4_I2', name: '服务质量稳定性', category: '质量', weight: 20, maxScore: 100, description: '全年各月服务质量波动情况、平均水平' },
+      { id: 'B4_I3', name: '团队管理与能力提升', category: '管理', weight: 15, maxScore: 100, description: '驻场团队稳定性、培训覆盖、人员成长' },
+      { id: 'B4_I4', name: '创新与优化贡献', category: '创新', weight: 15, maxScore: 100, description: '主动提出的流程优化、成本节约、技术改进建议' },
+      { id: 'B4_I5', name: '客户与跨部门协作', category: '协作', weight: 15, maxScore: 100, description: '与甲方各部门配合度、内部协同效率' },
+      { id: 'B4_I6', name: '安全合规与应急', category: '安全', weight: 10, maxScore: 100, description: '全年安全事故情况、应急演练参与度' },
+    ],
+  },
+  {
+    id: 'BUILTIN_005',
+    name: '合同履约评价模板',
+    type: 'contract_performance',
+    description: '适用于合同执行过程中的履约情况评价（参考：合同履约评价表.docx）',
+    creator: '系统内置',
+    createTime: '2026-01-01 00:00:00',
+    isBuiltin: true,
+    totalWeight: 100,
+    indicators: [
+      { id: 'B5_I1', name: '合同条款履约率', category: '履约', weight: 25, maxScore: 100, description: '合同约定条款的实际执行情况' },
+      { id: 'B5_I2', name: '交付时间达成率', category: '交付', weight: 20, maxScore: 100, description: '按合同约定交付时间完成的比率' },
+      { id: 'B5_I3', name: '交付质量达标率', category: '质量', weight: 20, maxScore: 100, description: '交付物/服务通过验收的比率' },
+      { id: 'B5_I4', name: '配合沟通效率', category: '协作', weight: 15, maxScore: 100, description: '问题响应时效、沟通顺畅度' },
+      { id: 'B5_I5', name: '变更与索赔管理', category: '管理', weight: 10, maxScore: 100, description: '变更/索赔处理的规范性与及时性' },
+      { id: 'B5_I6', name: '安全与合规记录', category: '合规', weight: 10, maxScore: 100, description: '合同执行过程中安全合规事件记录' },
+    ],
+  },
+
+  // ==================== 历史模板（自定义，兼容旧数据） ====================
   {
     id: 'ET001',
-    name: '工程类供应商季度考核模板',
+    name: '工程类供应商季度考核模板（历史）',
     type: 'quarterly',
     description: '适用于工程类供应商的季度综合考核评估',
     creator: '管理员',
     createTime: '2026-01-01 09:00:00',
-    isDefault: true,
     totalWeight: 100,
     indicators: [
       { id: 'IND001', name: '质量合格率', category: '质量', weight: 30, maxScore: 100, description: '交付产品/服务的质量达标率' },
@@ -4128,7 +4238,7 @@ export const evaluationTemplates: EvaluationTemplate[] = [
   },
   {
     id: 'ET002',
-    name: '展览类项目单次考核模板',
+    name: '展览类项目单次考核模板（历史）',
     type: 'single',
     description: '适用于展览项目的单次供应商考核',
     creator: '管理员',
@@ -4143,7 +4253,7 @@ export const evaluationTemplates: EvaluationTemplate[] = [
   },
   {
     id: 'ET003',
-    name: '质保履约考核模板',
+    name: '质保履约考核模板（历史）',
     type: 'warranty',
     description: '适用于质保期内供应商履约情况的考核',
     creator: '管理员',

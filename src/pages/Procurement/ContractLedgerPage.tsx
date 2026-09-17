@@ -5,7 +5,7 @@ import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
-import type { ContractLedger, Bidding } from '@/types';
+import type { ContractLedger, Bidding, ContractEvaluationBinding, EvaluationType } from '@/types';
 import { Printer, FileSpreadsheet, FileDown, Bell } from 'lucide-react';
 
 const categoryMap: Record<string, string> = {
@@ -24,6 +24,26 @@ const statusMap: Record<string, { label: string; color: string; bg: string }> = 
   expired: { label: '已到期', color: 'text-[#909399]', bg: 'bg-[#f4f4f5]' },
   terminated: { label: '已终止', color: 'text-[#f56c6c]', bg: 'bg-[#fef0f0]' },
   invalid: { label: '已失效', color: 'text-[#f56c6c]', bg: 'bg-[#fef0f0]' },
+};
+
+/** 考核类型枚举 */
+const EVAL_KIND_LABEL: Record<EvaluationType, string> = {
+  project_single: '单个项目考核',
+  monthly: '月度考核',
+  quarterly: '季度考核',
+  yearly: '年度评价',
+  contract_performance: '合同履约评价',
+  warranty: '质保期评估',
+  single: '单个项目考核（兼容）',
+};
+
+/** 考核频率枚举 */
+const EVAL_FREQ_LABEL: Record<string, string> = {
+  once: '单次',
+  monthly: '每月',
+  quarterly: '每季度',
+  yearly: '每年',
+  contract_end: '合同到期时',
 };
 
 const isExpiringSoon = (date?: string) => {
@@ -46,6 +66,15 @@ export default function ContractLedgerPage() {
   const deleteContractLedger = useStore((s) => s.deleteContractLedger);
   const currentUser = useStore((s) => s.currentUser);
   const biddings = (useStore((s) => s.biddings) || []) as Bidding[];
+  const evaluationTemplates = useStore((s) => s.evaluationTemplates) || [];
+
+  // 从 store 动态派生模板选项（内置 + 用户自定义克隆）
+  const templateOptions = useMemo(() =>
+    evaluationTemplates.map((t) => ({
+      id: t.id,
+      name: t.name,
+      kind: t.type,
+    })), [evaluationTemplates]);
 
   // 筛选条件
   const [filterNo, setFilterNo] = useState('');
@@ -77,6 +106,12 @@ export default function ContractLedgerPage() {
   // 采购工单选择弹窗
   const [biddingPickerOpen, setBiddingPickerOpen] = useState(false);
   const [selectedBidding, setSelectedBidding] = useState<Bidding | null>(null);
+
+  // 考核绑定管理弹窗
+  const [evalModalOpen, setEvalModalOpen] = useState(false);
+  const [evalTarget, setEvalTarget] = useState<ContractLedger | null>(null);
+  const [evalEditItem, setEvalEditItem] = useState<ContractEvaluationBinding | null>(null);
+  const [isNewEval, setIsNewEval] = useState(false);
 
   // 统计面板是否展开
   const [statsExpanded, setStatsExpanded] = useState(true);
@@ -485,6 +520,60 @@ export default function ContractLedgerPage() {
     updateContractLedger(row.id, { ...row, status: 'active' });
   };
 
+  // ========== 考核绑定管理 ==========
+  const openEvalModal = (row: ContractLedger) => {
+    setEvalTarget(row);
+    setEvalEditItem(null);
+    setIsNewEval(false);
+    setEvalModalOpen(true);
+  };
+
+  const openNewEvalBinding = () => {
+    if (!evalTarget) return;
+    const defaultKind: EvaluationType = 'monthly';
+    const defaultTemplate = templateOptions.find((t) => t.kind === defaultKind);
+    const newItem: ContractEvaluationBinding = {
+      id: `EVAL_BIND_${Date.now()}`,
+      kind: defaultKind,
+      templateId: defaultTemplate?.id || '',
+      templateName: defaultTemplate?.name || '',
+      frequency: 'monthly',
+      nextRemindDate: evalTarget.effectiveDate || new Date().toISOString().slice(0, 10),
+      createTime: new Date().toISOString(),
+    };
+    setEvalEditItem(newItem);
+    setIsNewEval(true);
+  };
+
+  const saveEvalBinding = () => {
+    if (!evalTarget || !evalEditItem) return;
+    if (!evalEditItem.kind) { alert('请选择考核类型'); return; }
+    if (!evalEditItem.templateId) { alert('请选择考核模板'); return; }
+
+    const bindings = [...(evalTarget.contractEvaluations || [])];
+    if (isNewEval) {
+      bindings.push(evalEditItem);
+    } else {
+      const idx = bindings.findIndex((b) => b.id === evalEditItem.id);
+      if (idx >= 0) bindings[idx] = evalEditItem;
+      else bindings.push(evalEditItem);
+    }
+    updateContractLedger(evalTarget.id, { contractEvaluations: bindings });
+    setEvalEditItem(null);
+    setIsNewEval(false);
+    setEvalTarget({ ...evalTarget, contractEvaluations: bindings });
+  };
+
+  const deleteEvalBinding = (bindId: string) => {
+    if (!evalTarget) return;
+    if (!confirm('确认删除此考核绑定？')) return;
+    const bindings = (evalTarget.contractEvaluations || []).filter((b) => b.id !== bindId);
+    updateContractLedger(evalTarget.id, { contractEvaluations: bindings });
+    setEvalTarget({ ...evalTarget, contractEvaluations: bindings });
+    setEvalEditItem(null);
+    setIsNewEval(false);
+  };
+
   // ========== 表格列定义 ==========
   const columns: ColumnDef<ContractLedger>[] = [
     { key: 'contractNo', title: '合同编码', render: (row) => row.contractNo,
@@ -570,12 +659,34 @@ export default function ContractLedgerPage() {
       },
     },
     {
+      key: 'evalStatus',
+      title: '考核状态',
+      footer: '',
+      render: (row) => {
+        const bindings = row.contractEvaluations || [];
+        if (bindings.length === 0) {
+          return <span className="text-xs text-[#c0c4cc]">未绑定</span>;
+        }
+        const earliestRemind = bindings.map((b) => b.nextRemindDate).filter((d) => d).sort()[0];
+        const isUrgent = earliestRemind && new Date(earliestRemind) < new Date();
+        return (
+          <div className="text-xs">
+            <div className={`font-medium ${isUrgent ? 'text-[#f56c6c]' : 'text-[#606266]'}`}>
+              已绑定 {bindings.length} 项
+            </div>
+            <div className="text-[#909399]">下次提醒：{earliestRemind || '-'}</div>
+          </div>
+        );
+      },
+    },
+    {
       key: 'op',
       title: '操作',
       render: (row) => (
         <div className="flex items-center gap-2 flex-wrap">
           <TextButton onClick={() => setViewItem(row)}>查看</TextButton>
           <TextButton onClick={() => { setIsNew(false); setEditItem(row); }}>编辑</TextButton>
+          <TextButton onClick={() => openEvalModal(row)}>考核管理</TextButton>
           {(row.status === 'active' || row.status === 'approved') && (
             <>
               <TextButton
@@ -1430,6 +1541,143 @@ export default function ContractLedgerPage() {
             </div>
           </div>
         </div>
+      </Modal>
+
+      {/* ========== 考核绑定管理弹窗 ========== */}
+      <Modal
+        open={evalModalOpen}
+        title={`考核绑定管理 - ${evalTarget?.contractNo || ''}`}
+        size="lg"
+        onClose={() => setEvalModalOpen(false)}
+        footer={<DefaultButton onClick={() => setEvalModalOpen(false)}>关闭</DefaultButton>}
+      >
+        {evalTarget && (
+          <div>
+            {/* 绑定列表 */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-[#303133]">考核绑定清单</span>
+                <PrimaryButton size="small" onClick={openNewEvalBinding}>+ 新增考核绑定</PrimaryButton>
+              </div>
+              <table className="w-full text-sm border border-[#ebeef5] rounded">
+                <thead className="bg-[#fafafa]">
+                  <tr className="text-[#606266]">
+                    <th className="text-left py-2 px-3 border-b">考核类型</th>
+                    <th className="text-left py-2 px-3 border-b">考核模板</th>
+                    <th className="text-left py-2 px-3 border-b">提醒频率</th>
+                    <th className="text-left py-2 px-3 border-b">下次提醒</th>
+                    <th className="text-left py-2 px-3 border-b">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(evalTarget.contractEvaluations || []).length === 0 && (
+                    <tr><td colSpan={5} className="text-center py-6 text-[#c0c4cc]">暂无考核绑定，点击右上角新增</td></tr>
+                  )}
+                  {(evalTarget.contractEvaluations || []).map((b) => (
+                    <tr key={b.id} className="border-b border-[#ebeef5] hover:bg-[#f5f7fa]">
+                      <td className="py-2 px-3">{EVAL_KIND_LABEL[b.kind] || b.kind}</td>
+                      <td className="py-2 px-3">{b.templateName || '-'}</td>
+                      <td className="py-2 px-3">{EVAL_FREQ_LABEL[b.frequency] || b.frequency}</td>
+                      <td className="py-2 px-3">
+                        {b.nextRemindDate ? (
+                          <span className={new Date(b.nextRemindDate) < new Date() ? 'text-[#f56c6c]' : 'text-[#606266]'}>
+                            {b.nextRemindDate}
+                          </span>
+                        ) : '-'}
+                      </td>
+                      <td className="py-2 px-3">
+                        <div className="flex items-center gap-2">
+                          <TextButton onClick={() => { setEvalEditItem(b); setIsNewEval(false); }}>编辑</TextButton>
+                          <TextButton type="danger" onClick={() => deleteEvalBinding(b.id)}>删除</TextButton>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 新增/编辑表单 */}
+            {evalEditItem && (
+              <div className="border border-[#dcdfe6] rounded-lg p-4 bg-[#fafafa]">
+                <div className="text-sm font-medium text-[#303133] mb-3">
+                  {isNewEval ? '新增考核绑定' : '编辑考核绑定'}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-[#606266] mb-1">考核类型 <span className="text-red-500">*</span></label>
+                    <select
+                      className="w-full border border-[#dcdfe6] rounded px-2 py-1.5 text-sm bg-white"
+                      value={evalEditItem.kind}
+                      onChange={(e) => {
+                        const kind = e.target.value as EvaluationType;
+                        const tpl = templateOptions.find((t) => t.kind === kind);
+                        setEvalEditItem({ ...evalEditItem, kind, templateId: tpl?.id || '', templateName: tpl?.name || '' });
+                      }}
+                    >
+                      {Object.entries(EVAL_KIND_LABEL).map(([v, l]) => (
+                        <option key={v} value={v}>{l}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-[#606266] mb-1">考核模板 <span className="text-red-500">*</span></label>
+                    <select
+                      className="w-full border border-[#dcdfe6] rounded px-2 py-1.5 text-sm bg-white"
+                      value={evalEditItem.templateId}
+                      onChange={(e) => {
+                        const tpl = templateOptions.find((t) => t.id === e.target.value);
+                        setEvalEditItem({ ...evalEditItem, templateId: e.target.value, templateName: tpl?.name || '' });
+                      }}
+                    >
+                      <option value="">请选择模板</option>
+                      {templateOptions
+                        .filter((t) => !evalEditItem.kind || t.kind === evalEditItem.kind)
+                        .map((t) => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-[#606266] mb-1">提醒频率</label>
+                    <select
+                      className="w-full border border-[#dcdfe6] rounded px-2 py-1.5 text-sm bg-white"
+                      value={evalEditItem.frequency}
+                      onChange={(e) => setEvalEditItem({ ...evalEditItem, frequency: e.target.value as any })}
+                    >
+                      {Object.entries(EVAL_FREQ_LABEL).map(([v, l]) => (
+                        <option key={v} value={v}>{l}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-[#606266] mb-1">下次提醒日期</label>
+                    <input
+                      type="date"
+                      className="w-full border border-[#dcdfe6] rounded px-2 py-1.5 text-sm"
+                      value={evalEditItem.nextRemindDate || ''}
+                      onChange={(e) => setEvalEditItem({ ...evalEditItem, nextRemindDate: e.target.value })}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs text-[#606266] mb-1">备注</label>
+                    <input
+                      type="text"
+                      className="w-full border border-[#dcdfe6] rounded px-2 py-1.5 text-sm"
+                      placeholder="可选备注"
+                      value={evalEditItem.remark || ''}
+                      onChange={(e) => setEvalEditItem({ ...evalEditItem, remark: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <DefaultButton size="small" onClick={() => { setEvalEditItem(null); setIsNewEval(false); }}>取消</DefaultButton>
+                  <PrimaryButton size="small" onClick={saveEvalBinding}>保存绑定</PrimaryButton>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );

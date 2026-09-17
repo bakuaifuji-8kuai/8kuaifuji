@@ -1,13 +1,23 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import type { EvaluationTemplate, EvaluationIndicator, EvaluationType } from '@/types';
-import { EVALUATION_TYPE_LABELS } from '@/types';
+import { EVALUATION_TYPE_LABELS, EVALUATION_TYPE_GROUPS } from '@/types';
 import Card from '@/components/common/Card';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import Modal from '@/components/common/Modal';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
-import { Plus, Edit2, Trash2, Eye, GripVertical, Save } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, GripVertical, Save, Copy, Lock, Unlock } from 'lucide-react';
+
+type TabKey = 'all' | 'assessment' | 'yearly' | 'contract' | 'other';
+
+const TAB_CONFIG: { key: TabKey; label: string; desc: string }[] = [
+  { key: 'assessment', label: '考核管理', desc: '单个项目考核 / 月度考核 / 季度考核' },
+  { key: 'yearly', label: '年度评价', desc: '年度综合评价模板' },
+  { key: 'contract', label: '合同履约评价', desc: '合同执行过程履约评价' },
+  { key: 'other', label: '其他', desc: '质保履约等特殊类型' },
+  { key: 'all', label: '全部模板', desc: '查看所有类型模板' },
+];
 
 export default function EvaluationTemplatePage() {
   const evaluationTemplates = useStore((s) => s.evaluationTemplates) || [];
@@ -16,9 +26,10 @@ export default function EvaluationTemplatePage() {
   const deleteEvaluationTemplate = useStore((s) => s.deleteEvaluationTemplate);
   const currentUser = useStore((s) => s.currentUser);
 
-  const [filterType, setFilterType] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<TabKey>('assessment');
+  const [filterBuiltin, setFilterBuiltin] = useState<'all' | 'builtin' | 'custom'>('all');
   const [searchText, setSearchText] = useState<string>('');
-  const [applied, setApplied] = useState({ type: '', text: '' });
+  const [applied, setApplied] = useState({ builtin: 'all' as 'all' | 'builtin' | 'custom', text: '' });
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -28,38 +39,54 @@ export default function EvaluationTemplatePage() {
 
   // 编辑表单状态
   const [formName, setFormName] = useState('');
-  const [formType, setFormType] = useState<EvaluationType>('quarterly');
+  const [formType, setFormType] = useState<EvaluationType>('project_single');
   const [formDesc, setFormDesc] = useState('');
   const [indicators, setIndicators] = useState<EvaluationIndicator[]>([]);
 
+  // 根据 tab 筛选类型
+  const tabTypeFilter = useMemo<EvaluationType[]>(() => {
+    if (activeTab === 'all') return [];
+    const group = EVALUATION_TYPE_GROUPS[activeTab];
+    return group ? group.types : [];
+  }, [activeTab]);
+
   const filteredData = useMemo(() => {
     return evaluationTemplates.filter((t) => {
-      if (applied.type && t.type !== applied.type) return false;
+      // tab 类型筛选
+      if (tabTypeFilter.length > 0 && !tabTypeFilter.includes(t.type)) return false;
+      // 内置/自定义筛选
+      if (applied.builtin === 'builtin' && !t.isBuiltin) return false;
+      if (applied.builtin === 'custom' && t.isBuiltin) return false;
+      // 文字搜索
       if (applied.text && !t.name.includes(applied.text)) return false;
       return true;
     });
-  }, [evaluationTemplates, applied]);
+  }, [evaluationTemplates, tabTypeFilter, applied]);
 
   const stats = useMemo(() => {
     const total = evaluationTemplates.length;
-    const byType: Record<string, number> = {};
-    evaluationTemplates.forEach((t) => {
-      byType[t.type] = (byType[t.type] || 0) + 1;
-    });
-    return { total, byType };
+    const builtin = evaluationTemplates.filter((t) => t.isBuiltin).length;
+    const custom = total - builtin;
+    return { total, builtin, custom };
   }, [evaluationTemplates]);
+
+  // ==================== CRUD ====================
 
   const openAdd = () => {
     setIsNew(true);
     setEditItem(null);
     setFormName('');
-    setFormType('quarterly');
+    setFormType('project_single');
     setFormDesc('');
     setIndicators([]);
     setEditModalOpen(true);
   };
 
   const openEdit = (template: EvaluationTemplate) => {
+    if (template.isBuiltin) {
+      alert('系统内置模板不可直接编辑，请先点击「克隆为自定义」生成副本后再修改');
+      return;
+    }
     setIsNew(false);
     setEditItem(template);
     setFormName(template.name);
@@ -73,6 +100,39 @@ export default function EvaluationTemplatePage() {
     setViewItem(template);
     setViewModalOpen(true);
   };
+
+  /** 克隆模板：内置 → 自定义副本（可编辑）；自定义 → 另一份副本 */
+  const handleClone = (template: EvaluationTemplate) => {
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const cloned: EvaluationTemplate = {
+      id: 'CLONE_' + Date.now(),
+      name: template.isBuiltin ? `${template.name}（自定义副本）` : `${template.name} - 副本`,
+      type: template.type,
+      description: template.isBuiltin
+        ? `克隆自系统内置模板「${template.name}」\n${template.description || ''}`
+        : template.description,
+      indicators: template.indicators.map((ind) => ({ ...ind, id: ind.id + '_C' + Date.now() })),
+      totalWeight: template.totalWeight,
+      creator: currentUser.name,
+      createTime: now,
+      isBuiltin: false,
+      clonedFrom: template.id,
+    };
+    addEvaluationTemplate?.(cloned);
+    alert(`✅ 已克隆为自定义模板：${cloned.name}\n现在可以编辑了`);
+  };
+
+  const handleDelete = (template: EvaluationTemplate) => {
+    if (template.isBuiltin) {
+      alert('系统内置模板不可删除');
+      return;
+    }
+    if (confirm(`确定删除自定义模板「${template.name}」吗？此操作不可恢复。`)) {
+      deleteEvaluationTemplate?.(template.id);
+    }
+  };
+
+  // ==================== 指标编辑 ====================
 
   const handleAddIndicator = () => {
     const newIndicator: EvaluationIndicator = {
@@ -98,25 +158,18 @@ export default function EvaluationTemplatePage() {
     return indicators.reduce((sum, ind) => sum + (Number(ind.weight) || 0), 0);
   }, [indicators]);
 
+  // ==================== 保存 ====================
+
   const handleSave = () => {
-    if (!formName.trim()) {
-      alert('请输入模板名称');
-      return;
-    }
-    if (indicators.length === 0) {
-      alert('请至少添加一个考核指标');
-      return;
-    }
-    if (totalWeight !== 100) {
-      alert(`指标权重总和必须为100%，当前为${totalWeight}%`);
-      return;
-    }
+    if (!formName.trim()) { alert('请输入模板名称'); return; }
+    if (indicators.length === 0) { alert('请至少添加一个考核指标'); return; }
+    if (totalWeight !== 100) { alert(`指标权重总和必须为100%，当前为${totalWeight}%`); return; }
 
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
 
     if (isNew) {
       const newTemplate: EvaluationTemplate = {
-        id: 'ET' + Date.now(),
+        id: 'CUS_' + Date.now(),
         name: formName,
         type: formType,
         description: formDesc,
@@ -124,6 +177,7 @@ export default function EvaluationTemplatePage() {
         totalWeight: 100,
         creator: currentUser.name,
         createTime: now,
+        isBuiltin: false,
       };
       addEvaluationTemplate?.(newTemplate);
     } else if (editItem) {
@@ -140,83 +194,125 @@ export default function EvaluationTemplatePage() {
     setEditModalOpen(false);
   };
 
-  const handleDelete = (template: EvaluationTemplate) => {
-    if (confirm(`确定删除模板「${template.name}」吗？`)) {
-      deleteEvaluationTemplate?.(template.id);
-    }
-  };
+  // ==================== 表格列 ====================
 
   const columns: ColumnDef<EvaluationTemplate>[] = [
     {
       header: '模板名称',
-      accessorKey: 'name',
       cell: ({ row }) => (
-        <span className="font-medium text-slate-800">{row.original.name}</span>
+        <div className="flex items-center gap-2">
+          {row.original.isBuiltin ? (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] rounded bg-amber-50 text-amber-700 border border-amber-200">
+              <Lock size={10} /> 内置
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+              <Unlock size={10} /> 自定义
+            </span>
+          )}
+          <span className="font-medium text-slate-800">{row.original.name}</span>
+        </div>
       ),
     },
     {
       header: '考核类型',
-      accessorKey: 'type',
       cell: ({ row }) => (
-        <Badge variant={row.original.type === 'quarterly' ? 'primary' : row.original.type === 'single' ? 'success' : 'warning'}>
-          {EVALUATION_TYPE_LABELS[row.original.type]}
+        <Badge variant={
+          row.original.type === 'yearly' ? 'success' :
+          row.original.type === 'contract_performance' ? 'warning' :
+          row.original.type === 'monthly' ? 'info' :
+          row.original.type === 'quarterly' ? 'primary' :
+          row.original.type === 'warranty' ? 'warning' : 'default'
+        }>
+          {EVALUATION_TYPE_LABELS[row.original.type] || row.original.type}
         </Badge>
       ),
     },
     {
       header: '指标数量',
-      accessorKey: 'indicators',
       cell: ({ row }) => (
         <span className="text-slate-600">{row.original.indicators.length} 项</span>
       ),
     },
     {
       header: '创建人',
-      accessorKey: 'creator',
-      cell: ({ row }) => <span className="text-slate-600">{row.original.creator}</span>,
+      cell: ({ row }) => (
+        <span className="text-slate-600">{row.original.creator}{row.original.isBuiltin && '（系统）'}</span>
+      ),
     },
     {
       header: '创建时间',
-      accessorKey: 'createTime',
       cell: ({ row }) => <span className="text-slate-600">{row.original.createTime}</span>,
     },
     {
       header: '操作',
-      cell: ({ row }) => (
-        <div className="flex gap-2">
-          <TextButton onClick={() => openView(row.original)}><Eye size={14} /> 查看</TextButton>
-          <TextButton onClick={() => openEdit(row.original)}><Edit2 size={14} /> 编辑</TextButton>
-          <TextButton type="danger" onClick={() => handleDelete(row.original)}><Trash2 size={14} /> 删除</TextButton>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const t = row.original;
+        return (
+          <div className="flex gap-2">
+            <TextButton onClick={() => openView(t)}><Eye size={14} /> 查看</TextButton>
+            <TextButton onClick={() => handleClone(t)} title="克隆为自定义模板（可编辑）">
+              <Copy size={14} /> 克隆
+            </TextButton>
+            {!t.isBuiltin && (
+              <>
+                <TextButton onClick={() => openEdit(t)}><Edit2 size={14} /> 编辑</TextButton>
+                <TextButton type="danger" onClick={() => handleDelete(t)}><Trash2 size={14} /> 删除</TextButton>
+              </>
+            )}
+          </div>
+        );
+      },
     },
   ];
+
+  // ==================== 渲染 ====================
 
   return (
     <div className="p-5">
       {/* 页面标题 */}
       <div className="mb-5">
-        <h1 className="text-xl font-bold text-slate-800">评估模板管理</h1>
-        <p className="text-sm text-slate-500 mt-1">管理供应商履约考核模板，支持自定义考核指标和权重</p>
+        <h1 className="text-xl font-bold text-slate-800">考核评价模版管理</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          系统内置模板不可直接编辑，可「克隆为自定义」后调整；自定义模板支持自由增删改
+        </p>
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-4 gap-4 mb-5">
+      <div className="grid grid-cols-3 gap-4 mb-5">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
           <div className="text-sm text-slate-500">模板总数</div>
           <div className="text-2xl font-bold text-slate-800 mt-1">{stats.total}</div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-          <div className="text-sm text-slate-500">季度考核模板</div>
-          <div className="text-2xl font-bold text-indigo-600 mt-1">{stats.byType.quarterly || 0}</div>
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-amber-100">
+          <div className="text-sm text-slate-500">系统内置（不可改）</div>
+          <div className="text-2xl font-bold text-amber-600 mt-1">{stats.builtin}</div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-          <div className="text-sm text-slate-500">单次考核模板</div>
-          <div className="text-2xl font-bold text-green-600 mt-1">{stats.byType.single || 0}</div>
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-indigo-100">
+          <div className="text-sm text-slate-500">自定义（可编辑）</div>
+          <div className="text-2xl font-bold text-indigo-600 mt-1">{stats.custom}</div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-          <div className="text-sm text-slate-500">质保考核模板</div>
-          <div className="text-2xl font-bold text-amber-600 mt-1">{stats.byType.warranty || 0}</div>
+      </div>
+
+      {/* Tab 切换 */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 mb-4">
+        <div className="flex border-b border-slate-200">
+          {TAB_CONFIG.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-5 py-3 text-sm font-medium transition-all duration-200 border-b-2 ${
+                activeTab === tab.key
+                  ? 'border-indigo-500 text-indigo-600 bg-indigo-50/50'
+                  : 'border-transparent text-slate-600 hover:text-slate-800 hover:bg-slate-50'
+              }`}
+            >
+              <div className="flex flex-col items-start">
+                <span>{tab.label}</span>
+                <span className="text-[11px] text-slate-400 font-normal mt-0.5">{tab.desc}</span>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -224,14 +320,13 @@ export default function EvaluationTemplatePage() {
         {/* 筛选区域 */}
         <div className="flex items-center gap-4 mb-4">
           <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
+            value={applied.builtin}
+            onChange={(e) => setApplied({ ...applied, builtin: e.target.value as 'all' | 'builtin' | 'custom' })}
             className="h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
           >
-            <option value="">全部类型</option>
-            <option value="quarterly">季度考核</option>
-            <option value="single">项目单次考核</option>
-            <option value="warranty">质保履约考核</option>
+            <option value="all">全部来源</option>
+            <option value="builtin">仅系统内置</option>
+            <option value="custom">仅自定义</option>
           </select>
           <input
             type="text"
@@ -240,13 +335,12 @@ export default function EvaluationTemplatePage() {
             onChange={(e) => setSearchText(e.target.value)}
             className="h-9 px-3 border border-slate-300 rounded-lg text-sm w-64 focus:ring-2 focus:ring-indigo-500 outline-none"
           />
-          <DefaultButton onClick={() => setApplied({ type: filterType, text: searchText })}>搜索</DefaultButton>
-          <DefaultButton onClick={() => { setFilterType(''); setSearchText(''); setApplied({ type: '', text: '' }); }}>重置</DefaultButton>
-        </div>
+          <DefaultButton onClick={() => setApplied({ ...applied, text: searchText })}>搜索</DefaultButton>
+          <DefaultButton onClick={() => { setSearchText(''); setApplied({ builtin: 'all', text: '' }); }}>重置</DefaultButton>
 
-        {/* 操作按钮 */}
-        <div className="flex justify-end mb-4">
-          <PrimaryButton onClick={openAdd}><Plus size={14} /> 新增模板</PrimaryButton>
+          <div className="flex-1"></div>
+
+          <PrimaryButton onClick={openAdd}><Plus size={14} /> 新增自定义模板</PrimaryButton>
         </div>
 
         {/* 数据表格 */}
@@ -257,7 +351,7 @@ export default function EvaluationTemplatePage() {
       <Modal
         open={editModalOpen}
         onClose={() => setEditModalOpen(false)}
-        title={isNew ? '新增评估模板' : '编辑评估模板'}
+        title={isNew ? '新增自定义模板' : `编辑模板${editItem?.isBuiltin ? '（内置 · 只读）' : ''}`}
         size="lg"
       >
         <div className="space-y-4">
@@ -280,9 +374,9 @@ export default function EvaluationTemplatePage() {
                 onChange={(e) => setFormType(e.target.value as EvaluationType)}
                 className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
               >
-                <option value="quarterly">季度考核</option>
-                <option value="single">项目单次考核</option>
-                <option value="warranty">质保履约考核</option>
+                {Object.entries(EVALUATION_TYPE_LABELS).filter(([k]) => k !== 'single').map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -400,9 +494,17 @@ export default function EvaluationTemplatePage() {
         {viewItem && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-slate-500">模板名称：</span>
-                <span className="text-slate-800 font-medium">{viewItem.name}</span>
+              <div className="col-span-2 flex items-center gap-2">
+                <span className="font-medium text-slate-800 text-base">{viewItem.name}</span>
+                {viewItem.isBuiltin ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-amber-50 text-amber-700 border border-amber-200">
+                    <Lock size={11} /> 系统内置（不可直接编辑）
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    <Unlock size={11} /> 自定义
+                  </span>
+                )}
               </div>
               <div>
                 <span className="text-slate-500">考核类型：</span>
@@ -416,11 +518,17 @@ export default function EvaluationTemplatePage() {
                 <span className="text-slate-500">创建时间：</span>
                 <span className="text-slate-800">{viewItem.createTime}</span>
               </div>
+              {viewItem.isBuiltin && (
+                <div>
+                  <span className="text-slate-500">使用提示：</span>
+                  <span className="text-amber-600">请点击「克隆为自定义」后再调整</span>
+                </div>
+              )}
             </div>
             {viewItem.description && (
               <div>
                 <span className="text-slate-500 text-sm">模板描述：</span>
-                <p className="text-slate-800 mt-1">{viewItem.description}</p>
+                <p className="text-slate-800 mt-1 whitespace-pre-line">{viewItem.description}</p>
               </div>
             )}
             <div className="border-t border-slate-200 pt-3">
@@ -443,6 +551,13 @@ export default function EvaluationTemplatePage() {
                   权重总和: {viewItem.totalWeight}%
                 </span>
               </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              {viewItem.isBuiltin && (
+                <PrimaryButton onClick={() => { setViewModalOpen(false); handleClone(viewItem); }}>
+                  <Copy size={14} /> 克隆为自定义模板
+                </PrimaryButton>
+              )}
             </div>
           </div>
         )}

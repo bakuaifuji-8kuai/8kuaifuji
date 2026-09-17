@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
   Warehouse, Position, ProductCategory, Product, Supplier, SupplierAssessment, Customer,
   Inventory, InboundOrder, InboundApplication, OutboundOrder, CheckOrder, TransferOrder, ReturnOrder, PendingReturn,
@@ -381,7 +382,9 @@ interface WarehouseState {
   deleteEvaluationRecord: (id: string) => void;
 }
 
-export const useStore = create<WarehouseState>((set) => ({
+export const useStore = create<WarehouseState>()(
+  persist<WarehouseState>(
+    (set) => ({
   // 仓库
   warehouses: mockData.warehouses,
   setWarehouses: (data) => set({ warehouses: data }),
@@ -1320,4 +1323,23 @@ export const useStore = create<WarehouseState>((set) => ({
   deleteEvaluationRecord: (id) => set((state) => ({
     evaluationRecords: state.evaluationRecords.filter((r) => r.id !== id)
   })),
-}));
+    }),
+    {
+      name: 'wms-store',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => {
+        const keep: any = {};
+        for (const [k, v] of Object.entries(state)) {
+          if (Array.isArray(v) || (v && typeof v === 'object')) {
+            keep[k] = v;
+          }
+        }
+        return keep;
+      },
+      onRehydrateStorage: () => (state) => {
+        console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
+      },
+      version: 1,
+    }
+  )
+);

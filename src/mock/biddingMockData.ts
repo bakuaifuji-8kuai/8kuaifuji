@@ -318,7 +318,7 @@ export const MOCK_BIDDINGS: Bidding[] = (() => {
     BIDT04: 'evaluated',
     BIDT05: 'cancelled',
     BIDT06: 'bidding',
-    BIDT10: 'evaluated',
+    BIDT10: 'completed',
     'BID-SAME01': 'bidding',
     'BID-SAME02': 'bidding',
     'BID-SAME03': 'bidding',
@@ -347,6 +347,15 @@ export const MOCK_BIDDINGS: Bidding[] = (() => {
       createTime: `${ds} ${String(8 + idx).padStart(2, '0')}:${String(idx * 7).padStart(2, '0')}:00`,
       quotes: [] as any[],
     };
+    // completed 状态注入成交供应商，供"生成采购订单"演示
+    const winnerMap: Record<string, { id: string; name: string }> = {
+      BIDT10: { id: 'SUP-T25', name: '【测试10】博展物料供应商' },
+    };
+    const winner = winnerMap[row[0]];
+    if (winner) {
+      bid.winningSupplierId = winner.id;
+      bid.winningSupplierName = winner.name;
+    }
     return bid;
   }).concat([
     // ======== 线下录入类：谈判采购 ========

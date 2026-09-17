@@ -121,8 +121,7 @@ export default function SupplierPickerModal({
               <th className="py-2.5 text-left border-b border-[#ebeef5] text-slate-600">供应商名称</th>
               <th className="py-2.5 text-left border-b border-[#ebeef5] text-slate-600">联系人</th>
               <th className="py-2.5 text-left border-b border-[#ebeef5] text-slate-600">联系电话</th>
-              <th className="py-2.5 text-left border-b border-[#ebeef5] text-slate-600">归口部门</th>
-              <th className="py-2.5 text-center border-b border-[#ebeef5] text-slate-600">状态</th>
+                  <th className="py-2.5 text-center border-b border-[#ebeef5] text-slate-600">状态</th>
             </tr>
           </thead>
           <tbody>
@@ -155,7 +154,6 @@ export default function SupplierPickerModal({
                   <td className="py-2 text-slate-800 font-medium">{s.name}</td>
                   <td className="py-2 text-slate-700">{s.contact || '-'}</td>
                   <td className="py-2 text-slate-600">{s.phone || '-'}</td>
-                  <td className="py-2 text-slate-600">{s.managementDepartment || '-'}</td>
                   <td className="py-2 text-center">
                     <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-50 text-emerald-600">
                       启用
