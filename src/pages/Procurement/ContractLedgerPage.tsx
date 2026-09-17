@@ -118,8 +118,8 @@ export default function ContractLedgerPage() {
   const [evalEditItem, setEvalEditItem] = useState<ContractEvaluationBinding | null>(null);
   const [isNewEval, setIsNewEval] = useState(false);
 
-  // 统计面板是否展开
-  const [statsExpanded, setStatsExpanded] = useState(true);
+  // 预警详情弹框（点击顶部紧凑条弹出）
+  const [reminderDetailOpen, setReminderDetailOpen] = useState(false);
 
   // 合同提醒设置
   const [reminderSettingsOpen, setReminderSettingsOpen] = useState(false);
@@ -852,207 +852,205 @@ export default function ContractLedgerPage() {
         </div>
       </div>
 
-      {/* 合同提醒面板 */}
-      {reminderContracts.length > 0 && (
-        <div className="mb-3 border border-[#e6a23c] rounded bg-[#fdf6ec]">
-          <div
-            className="px-4 py-2 flex items-center justify-between cursor-pointer"
-            onClick={() => setStatsExpanded(!statsExpanded)}
+      {/* 紧凑预警条 + 统计入口（点击弹出 Modal） */}
+      <div className="mb-3 flex items-center gap-2 flex-wrap">
+        {/* 预警提醒条 */}
+        {reminderContracts.length > 0 ? (
+          <button
+            onClick={() => setReminderDetailOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors text-xs cursor-pointer"
           >
-            <div className="font-semibold text-[#e6a23c] text-xs">
-              🔔 合同预警提醒（共 {reminderContracts.length} 条）
-              <span className="text-[#909399] ml-2 font-normal">
-                （已支付占比 ≥ {reminderPaidThreshold}% / 到期提前 {reminderExpireDays} 天）
+            <span className="text-amber-500">🔔</span>
+            <span className="text-amber-700 font-medium">
+              {reminderContracts.length} 条预警
+            </span>
+            {reminderContracts.some((r) => r.level === 'danger') && (
+              <span className="px-1.5 py-0.5 bg-rose-500 text-white rounded text-[10px]">
+                紧急 {reminderContracts.filter((r) => r.level === 'danger').length}
               </span>
+            )}
+          </button>
+        ) : (
+          <span className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
+            ✅ 无预警
+          </span>
+        )}
+
+        {/* 统计汇总条 */}
+        <button
+          onClick={() => setReminderDetailOpen(true)}
+          className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors text-xs cursor-pointer"
+        >
+          <span>📊</span>
+          <span className="text-slate-700">
+            {stats.total} 份合同 · 总 {stats.totalAmount.toFixed(0)} 万 · {stats.activeCount} 执行中 · {stats.expiringCount} 即将到期
+          </span>
+        </button>
+
+        {/* 提醒设置（已有，保留原按钮） */}
+        <DefaultButton onClick={() => setReminderSettingsOpen(true)}>
+          <Bell size={14} /> 提醒设置
+        </DefaultButton>
+      </div>
+
+      {/* 预警详情 Modal —— 包含预警列表 + 统计汇总 */}
+      {reminderDetailOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between rounded-t-xl bg-gradient-to-r from-amber-50 to-orange-50">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🔔</span>
+                <div>
+                  <h3 className="font-bold text-slate-800">合同预警 & 统计汇总</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    预警 {reminderContracts.length} 条 · 紧急 {reminderContracts.filter((r) => r.level === 'danger').length} 条
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setReminderDetailOpen(false)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none px-2">×</button>
             </div>
-          </div>
-          <div className="px-4 pb-3">
-            <table className="w-full text-xs">
-              <thead className="text-[#909399]">
-                <tr>
-                  <th className="text-left py-1 font-normal">提醒类型</th>
-                  <th className="text-left py-1 font-normal">合同编号</th>
-                  <th className="text-left py-1 font-normal">合同名称</th>
-                  <th className="text-left py-1 font-normal">对方单位</th>
-                  <th className="text-left py-1 font-normal">提醒详情</th>
-                  <th className="text-left py-1 font-normal">经办人</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reminderContracts.map((r, idx) => (
-                  <tr key={idx} className="border-t border-[#faecd8]">
-                    <td className="py-1.5">
-                      {r.type === 'paid' ? (
-                        <span className={`px-2 py-0.5 rounded text-white ${r.level === 'danger' ? 'bg-[#f56c6c]' : 'bg-[#e6a23c]'}`}>
-                          支付预警
-                        </span>
-                      ) : r.type === 'eval' ? (
-                        <span className={`px-2 py-0.5 rounded text-white ${r.level === 'danger' ? 'bg-rose-500' : 'bg-amber-500'}`}>
-                          考核提醒
-                        </span>
-                      ) : (
-                        <span className={`px-2 py-0.5 rounded text-white ${r.level === 'danger' ? 'bg-[#f56c6c]' : 'bg-[#e6a23c]'}`}>
-                          到期预警
-                        </span>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {/* Section A：预警详情表格 */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                  <span className="w-1 h-4 bg-amber-500 rounded"></span>
+                  预警详情
+                </h4>
+                {reminderContracts.length === 0 ? (
+                  <div className="text-center py-8 text-green-600 bg-green-50 rounded-lg border border-green-200">
+                    ✅ 当前无合同预警，所有合同状态正常
+                  </div>
+                ) : (
+                  <table className="w-full text-xs border border-slate-200 rounded-lg overflow-hidden">
+                    <thead className="bg-slate-50 text-slate-600">
+                      <tr>
+                        <th className="text-left py-2 px-3 font-medium">类型</th>
+                        <th className="text-left py-2 px-3 font-medium">严重度</th>
+                        <th className="text-left py-2 px-3 font-medium">合同编号</th>
+                        <th className="text-left py-2 px-3 font-medium">合同名称</th>
+                        <th className="text-left py-2 px-3 font-medium">对方单位</th>
+                        <th className="text-left py-2 px-3 font-medium">详情</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reminderContracts.map((r, idx) => (
+                        <tr key={idx} className="border-t border-slate-100 hover:bg-amber-50/40">
+                          <td className="py-2 px-3">
+                            {r.type === 'paid' ? (
+                              <span className="px-2 py-0.5 rounded text-white text-[11px] bg-amber-500">支付预警</span>
+                            ) : r.type === 'eval' ? (
+                              <span className="px-2 py-0.5 rounded text-white text-[11px] bg-purple-500">考核提醒</span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-white text-[11px] bg-orange-500">到期预警</span>
+                            )}
+                          </td>
+                          <td className="py-2 px-3">
+                            <span className={r.level === 'danger' ? 'text-rose-500 font-medium' : 'text-amber-500'}>
+                              {r.level === 'danger' ? '● 紧急' : '○ 注意'}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-slate-700 font-mono">{r.contract.contractNo}</td>
+                          <td className="py-2 px-3 text-slate-800">{r.contract.contractName}</td>
+                          <td className="py-2 px-3 text-slate-600">{r.contract.counterpartyName || '-'}</td>
+                          <td className={`py-2 px-3 ${r.level === 'danger' ? 'text-rose-600 font-medium' : 'text-amber-700'}`}>{r.message}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* Section B：统计汇总 */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                  <span className="w-1 h-4 bg-indigo-500 rounded"></span>
+                  统计汇总（筛选后）
+                </h4>
+                {/* 6 个指标卡 */}
+                <div className="grid grid-cols-6 gap-3 mb-4">
+                  {[
+                    { label: '合同总数', value: stats.total, unit: '份', color: '#3b82f6', bg: '#eff6ff' },
+                    { label: '合同总金额', value: stats.totalAmount.toFixed(0), unit: '万元', color: '#22c55e', bg: '#f0fdf4' },
+                    { label: '已支付金额', value: stats.totalPaid.toFixed(0), unit: '万元', color: '#f59e0b', bg: '#fffbeb' },
+                    { label: '执行中', value: stats.activeCount, unit: '份', color: '#22c55e', bg: '#f0fdf4' },
+                    { label: '待审批', value: stats.pendingCount, unit: '份', color: '#f59e0b', bg: '#fffbeb' },
+                    { label: '即将到期(30天)', value: stats.expiringCount, unit: '份', color: '#ef4444', bg: '#fef2f2' },
+                  ].map((item, i) => (
+                    <div key={i} className="border border-slate-200 rounded-lg p-3 bg-white">
+                      <div className="text-xs text-slate-500">{item.label}</div>
+                      <div className="mt-1">
+                        <span className="text-xl font-bold" style={{ color: item.color }}>{item.value}</span>
+                        <span className="text-xs text-slate-400 ml-1">{item.unit}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 维度分布（压缩版，只显示按合同性质 + 按状态两列） */}
+                <div className="grid grid-cols-3 gap-3">
+                  {/* 按合同性质 */}
+                  <div className="border border-slate-200 rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 bg-slate-50 text-xs font-semibold text-slate-700">按合同性质</div>
+                    <div className="divide-y divide-slate-100 text-xs">
+                      <div className="flex justify-between px-3 py-2">
+                        <span className="text-green-700">● 招采类</span>
+                        <span className="text-slate-700 font-medium">{(contractLedgers || []).filter(c => c.contractNature === 'procurement').length} 份</span>
+                      </div>
+                      <div className="flex justify-between px-3 py-2">
+                        <span className="text-slate-500">● 非招采类</span>
+                        <span className="text-slate-700 font-medium">{(contractLedgers || []).filter(c => c.contractNature === 'non_procurement').length} 份</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* 按状态 */}
+                  <div className="border border-slate-200 rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 bg-slate-50 text-xs font-semibold text-slate-700">按状态</div>
+                    <div className="divide-y divide-slate-100 text-xs">
+                      {Object.entries(stats.byStatus).map(([key, v]) => (
+                        <div key={key} className="flex justify-between px-3 py-2">
+                          <span className="text-slate-600">{key}</span>
+                          <span className="text-slate-700 font-medium">{v.count} 份</span>
+                        </div>
+                      ))}
+                      {Object.keys(stats.byStatus).length === 0 && (
+                        <div className="px-3 py-4 text-center text-slate-400">无数据</div>
                       )}
-                    </td>
-                    <td className="py-1.5 text-[#303133]">{r.contract.contractNo}</td>
-                    <td className="py-1.5 text-[#303133]">{r.contract.contractName}</td>
-                    <td className="py-1.5 text-[#606266]">{r.contract.counterpartyName || '-'}</td>
-                    <td className={`py-1.5 ${r.level === 'danger' ? 'text-[#f56c6c] font-medium' : 'text-[#e6a23c]'}`}>
-                      {r.message}
-                    </td>
-                    <td className="py-1.5 text-[#606266]">{r.contract.handler || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                  {/* 按经办部门 TOP 3 */}
+                  <div className="border border-slate-200 rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 bg-slate-50 text-xs font-semibold text-slate-700">经办部门 TOP 3</div>
+                    <div className="divide-y divide-slate-100 text-xs">
+                      {Object.entries(stats.byDepartment).slice(0, 3).map(([key, v], i) => (
+                        <div key={key} className="flex justify-between px-3 py-2">
+                          <span className="text-slate-600">
+                            <span className="text-indigo-500 mr-1">{i + 1}.</span>{key}
+                          </span>
+                          <span className="text-slate-700 font-medium">{v.count} 份</span>
+                        </div>
+                      ))}
+                      {Object.keys(stats.byDepartment).length === 0 && (
+                        <div className="px-3 py-4 text-center text-slate-400">无数据</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 border-t border-slate-200 flex justify-end gap-2 bg-slate-50 rounded-b-xl">
+              <DefaultButton onClick={() => setReminderDetailOpen(false)}>关闭</DefaultButton>
+              <PrimaryButton onClick={() => { setReminderDetailOpen(false); setReminderSettingsOpen(true); }}>
+                <Bell size={14} /> 提醒设置
+              </PrimaryButton>
+            </div>
           </div>
         </div>
       )}
-
-      {/* 统计汇总面板 */}
-      <div className="mb-3 border border-[#ebeef5] rounded bg-white">
-        <div
-          className="px-4 py-2 flex items-center justify-between cursor-pointer bg-[#f5f7fa] rounded-t text-xs"
-          onClick={() => setStatsExpanded(!statsExpanded)}
-        >
-          <div className="font-semibold text-[#303133]">
-            📊 统计汇总
-            <span className="text-[#909399] ml-2 font-normal">
-              （筛选后：{stats.total} 份合同，总金额 {stats.totalAmount.toFixed(2)} 万元）
-            </span>
-          </div>
-          <span className="text-[#909399]">{statsExpanded ? '▲ 收起' : '▼ 展开'}</span>
-        </div>
-
-        {statsExpanded && (
-          <div className="p-4 space-y-4">
-            {/* 关键指标卡片 */}
-            <div className="grid grid-cols-6 gap-3">
-              {[
-                { label: '合同总数', value: stats.total, unit: '份', color: '#409eff', bg: '#ecf5ff' },
-                { label: '合同总金额', value: stats.totalAmount.toFixed(0), unit: '万元', color: '#67c23a', bg: '#f0f9eb' },
-                { label: '已支付金额', value: stats.totalPaid.toFixed(0), unit: '万元', color: '#e6a23c', bg: '#fdf6ec' },
-                { label: '执行中', value: stats.activeCount, unit: '份', color: '#67c23a', bg: '#f0f9eb' },
-                { label: '待审批', value: stats.pendingCount, unit: '份', color: '#e6a23c', bg: '#fdf6ec' },
-                { label: '即将到期(30天)', value: stats.expiringCount, unit: '份', color: '#f56c6c', bg: '#fef0f0' },
-              ].map((item, i) => (
-                <div key={i} className="border border-[#ebeef5] rounded p-3" style={{ background: item.bg }}>
-                  <div className="text-xs text-[#909399]">{item.label}</div>
-                  <div className="mt-1">
-                    <span className="text-lg font-bold" style={{ color: item.color }}>{item.value}</span>
-                    <span className="text-xs text-[#909399] ml-1">{item.unit}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* 维度统计表 */}
-            <div className="grid grid-cols-3 gap-3 text-xs">
-              {/* 按分类 */}
-              <div className="border border-[#ebeef5] rounded overflow-hidden">
-                <div className="px-3 py-2 bg-[#f5f7fa] font-semibold text-[#303133]">按分类</div>
-                <div className="divide-y divide-[#f0f2f5]">
-                  {Object.entries(stats.byCategory).map(([key, v]) => (
-                    <div key={key} className="flex justify-between px-3 py-1.5">
-                      <span className="text-[#606266]">{key}</span>
-                      <span className="text-[#303133]">{v.count}份 / ¥{v.amount.toFixed(1)}万</span>
-                    </div>
-                  ))}
-                  {Object.keys(stats.byCategory).length === 0 && (
-                    <div className="px-3 py-4 text-center text-[#c0c4cc]">无数据</div>
-                  )}
-                </div>
-              </div>
-
-              {/* 按类型 */}
-              <div className="border border-[#ebeef5] rounded overflow-hidden">
-                <div className="px-3 py-2 bg-[#f5f7fa] font-semibold text-[#303133]">按合同类型</div>
-                <div className="divide-y divide-[#f0f2f5]">
-                  {Object.entries(stats.byContractType).map(([key, v]) => (
-                    <div key={key} className="flex justify-between px-3 py-1.5">
-                      <span className="text-[#606266]">{key}</span>
-                      <span className="text-[#303133]">{v.count}份 / ¥{v.amount.toFixed(1)}万</span>
-                    </div>
-                  ))}
-                  {Object.keys(stats.byContractType).length === 0 && (
-                    <div className="px-3 py-4 text-center text-[#c0c4cc]">无数据</div>
-                  )}
-                </div>
-              </div>
-
-              {/* 按状态 */}
-              <div className="border border-[#ebeef5] rounded overflow-hidden">
-                <div className="px-3 py-2 bg-[#f5f7fa] font-semibold text-[#303133]">按状态</div>
-                <div className="divide-y divide-[#f0f2f5]">
-                  {Object.entries(stats.byStatus).map(([key, v]) => (
-                    <div key={key} className="flex justify-between px-3 py-1.5">
-                      <span className="text-[#606266]">{key}</span>
-                      <span className="text-[#303133]">{v.count}份 / ¥{v.amount.toFixed(1)}万</span>
-                    </div>
-                  ))}
-                  {Object.keys(stats.byStatus).length === 0 && (
-                    <div className="px-3 py-4 text-center text-[#c0c4cc]">无数据</div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3 text-xs">
-              {/* 按经办部门 */}
-              <div className="border border-[#ebeef5] rounded overflow-hidden">
-                <div className="px-3 py-2 bg-[#f5f7fa] font-semibold text-[#303133]">按经办部门</div>
-                <div className="divide-y divide-[#f0f2f5] max-h-48 overflow-y-auto">
-                  {Object.entries(stats.byDepartment).map(([key, v]) => (
-                    <div key={key} className="flex justify-between px-3 py-1.5">
-                      <span className="text-[#606266]">{key}</span>
-                      <span className="text-[#303133]">{v.count}份 / ¥{v.amount.toFixed(1)}万</span>
-                    </div>
-                  ))}
-                  {Object.keys(stats.byDepartment).length === 0 && (
-                    <div className="px-3 py-4 text-center text-[#c0c4cc]">无数据</div>
-                  )}
-                </div>
-              </div>
-
-              {/* 按年度 */}
-              <div className="border border-[#ebeef5] rounded overflow-hidden">
-                <div className="px-3 py-2 bg-[#f5f7fa] font-semibold text-[#303133]">按签订年度</div>
-                <div className="divide-y divide-[#f0f2f5]">
-                  {Object.entries(stats.byYear).map(([key, v]) => (
-                    <div key={key} className="flex justify-between px-3 py-1.5">
-                      <span className="text-[#606266]">{key}年</span>
-                      <span className="text-[#303133]">{v.count}份 / ¥{v.amount.toFixed(1)}万</span>
-                    </div>
-                  ))}
-                  {Object.keys(stats.byYear).length === 0 && (
-                    <div className="px-3 py-4 text-center text-[#c0c4cc]">无数据</div>
-                  )}
-                </div>
-              </div>
-
-              {/* TOP 10 供应商 */}
-              <div className="border border-[#ebeef5] rounded overflow-hidden">
-                <div className="px-3 py-2 bg-[#f5f7fa] font-semibold text-[#303133]">按供应商金额排行（TOP 10）</div>
-                <div className="divide-y divide-[#f0f2f5] max-h-48 overflow-y-auto">
-                  {stats.byCounterparty.map(([key, v], i) => (
-                    <div key={key} className="flex justify-between px-3 py-1.5">
-                      <span className="text-[#606266]">
-                        <span className="text-[#409eff] mr-1">{i + 1}.</span>{key}
-                      </span>
-                      <span className="text-[#303133]">{v.count}份 / ¥{v.amount.toFixed(1)}万</span>
-                    </div>
-                  ))}
-                  {stats.byCounterparty.length === 0 && (
-                    <div className="px-3 py-4 text-center text-[#c0c4cc]">无数据</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* 搜索筛选区 */}
       <SearchBar
