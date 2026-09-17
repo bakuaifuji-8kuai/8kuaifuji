@@ -5,7 +5,8 @@ import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
-import type { ContractLedger, Bidding, ContractEvaluationBinding, EvaluationType, ProcurementFormation, NonProcurementFormation, ProcurementContractType, NonProcurementContractType } from '@/types';
+import { getAutoPaidAmount } from '@/utils/contractAggregate';
+import type { ContractLedger, Bidding, ContractEvaluationBinding, EvaluationType, ProcurementFormation, NonProcurementFormation, ProcurementContractType, NonProcurementContractType, ProcurementDemand } from '@/types';
 import { PROCUREMENT_FORMATION_LABELS, NON_PROCUREMENT_FORMATION_LABELS, PROCUREMENT_CONTRACT_TYPE_LABELS, NON_PROCUREMENT_CONTRACT_TYPE_LABELS, ARCHIVE_STATUS_LABELS, BUSINESS_CATEGORY_LABELS } from '@/types';
 import { Printer, FileSpreadsheet, FileDown, Bell } from 'lucide-react';
 
@@ -67,6 +68,7 @@ export default function ContractLedgerPage() {
   const deleteContractLedger = useStore((s) => s.deleteContractLedger);
   const currentUser = useStore((s) => s.currentUser);
   const biddings = (useStore((s) => s.biddings) || []) as Bidding[];
+  const procurementDemands = (useStore((s) => s.procurementDemands) || []) as ProcurementDemand[];
   const evaluationTemplates = useStore((s) => s.evaluationTemplates) || [];
 
   // 从 store 动态派生模板选项（内置 + 用户自定义克隆）
@@ -757,12 +759,13 @@ export default function ContractLedgerPage() {
       const ratio = getRequisitionRatio(row);
       return ratio !== null ? `${ratio}%` : '-';
     }, footer: '' },
-    // 19. 已支付金额（万元）
+    // 19. 已支付金额（万元）— ⚠️ 展示值 = paidAmountBase + Σ(linkedDemandIds 需求金额)
+    //    聚合函数 getAutoPaidAmount 在 utils/contractAggregate.ts
     {
       key: 'paidAmount', title: '已支付金额(万)', align: 'right',
-      render: (row) => row.paidAmount?.toLocaleString() || '-',
+      render: (row) => getAutoPaidAmount(row as ContractLedger, procurementDemands, biddings).toLocaleString(),
       footer: (data) => {
-        const sum = data.reduce((s, c) => s + (c.paidAmount || 0), 0);
+        const sum = data.reduce((s, c) => s + getAutoPaidAmount(c as ContractLedger, procurementDemands, biddings), 0);
         return sum > 0 ? sum.toLocaleString() : '-';
       },
     },

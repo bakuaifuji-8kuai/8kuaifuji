@@ -5,6 +5,7 @@ import type {
   ProcurementFormation,
   ProcurementContractType,
   Bidding,
+  ProcurementDemand,
 } from '@/types';
 import {
   PROCUREMENT_FORMATION_LABELS,
@@ -56,6 +57,7 @@ export default function ContractProcurementPage() {
   const addContractLedger = useStore((s) => s.addContractLedger);
   const updateContractLedger = useStore((s) => s.updateContractLedger);
   const biddings = useStore((s) => s.biddings);
+  const procurementDemands = useStore((s) => s.procurementDemands);
   const currentUser = useStore((s) => s.currentUser);
 
   // ========== 审批视角列表过滤 ==========
@@ -328,6 +330,7 @@ export default function ContractProcurementPage() {
           form={form}
           update={update}
           biddings={biddings}
+          procurementDemands={procurementDemands}
           isEdit={!!editing}
         />
       </Modal>
@@ -340,34 +343,49 @@ interface FormProps {
   form: Partial<ContractLedger>;
   update: (patch: Partial<ContractLedger>) => void;
   biddings: Bidding[];
+  procurementDemands: ProcurementDemand[];
   isEdit: boolean;
 }
 
-function ContractProcurementForm({ form, update, biddings, isEdit }: FormProps) {
+function ContractProcurementForm({ form, update, biddings, procurementDemands, isEdit }: FormProps) {
   const formationOptions = Object.entries(PROCUREMENT_FORMATION_LABELS).map(([v, l]) => ({ value: v, label: l }));
   const contractTypeOptions = Object.entries(PROCUREMENT_CONTRACT_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }));
 
   // ========== 招采工单自动带入 ==========
-  const handleBiddingChange = (biddingId: string) => {
-    const bidding = biddings.find((b) => b.id === biddingId);
-    if (bidding) {
-      update({
-        biddingId: bidding.id,
-        biddingNo: bidding.biddingNo,
-        projectName: bidding.projectName,
-        contractName: bidding.projectName || form.contractName,
-        counterpartyName: bidding.winningSupplierName || form.counterpartyName,
-        winningDate: form.winningDate || bidding.awardTime,
-      });
-    }
+  // ========== 关联采购需求自动带入 ==========
+  // 需求背景：立项确认 needContract='yes' 的需求走标准链路 → 建工单 → 建合同
+  //          合同表单选"关联采购需求"后自动从工单带入数据
+  const handleDemandChange = (demandId: string) => {
+    const demand = procurementDemands.find((d) => d.id === demandId);
+    if (!demand) return;
+    // 需求关联的工单
+    const bidding = biddings.find((b) => b.id === demand.relatedOrderId || b.demandId === demand.id);
+    update({
+      biddingId: bidding?.id || '',
+      biddingNo: bidding?.biddingNo || '',
+      demandId: demand.id,
+      demandNo: demand.demandNo,
+      projectName: bidding?.projectName || demand.projectName,
+      contractName: bidding?.projectName || demand.projectName || form.contractName,
+      counterpartyName: bidding?.winningSupplierName || form.counterpartyName,
+      winningDate: form.winningDate || bidding?.awardTime,
+    });
   };
 
-  const biddingOptions = [
-    { value: '', label: '-- 选择关联采购工单（可选）--' },
-    ...biddings.map((b) => ({
-      value: b.id,
-      label: `${b.biddingNo} · ${b.projectName || '(无项目名)'}`,
-    })),
+  /**
+   * 关联采购需求下拉选项
+   * 筛选条件：needContract='yes'（走标准链路的）且已立项通过且有工单
+   * ⚠️ needContract='no' 的需求直接挂已有合同，不出现在这里
+   */
+  const demandOptions = [
+    { value: '', label: '-- 选择关联采购需求（可选）--' },
+    ...procurementDemands
+      .filter((d) => (d.needContract ?? 'yes') !== 'no') // 默认 yes，兼容老数据
+      .filter((d) => d.status === 'confirm_approved')
+      .map((d) => ({
+        value: d.id,
+        label: `${d.demandNo} · ${d.projectName || '(无项目名)'}`,
+      })),
   ];
 
   return (
@@ -408,6 +426,15 @@ function ContractProcurementForm({ form, update, biddings, isEdit }: FormProps) 
             value={form.formation as string || ''}
             onChange={(e) => update({ formation: e.target.value as ProcurementFormation })}
             placeholder="选择合同形成方式"
+          />
+          {/* 关联采购需求（needContract='yes' 的已立项通过需求）*/}
+          {/* 需求背景：合同表单选关联采购需求后，自动从关联工单带入对方单位、中标时间等字段 */}
+          <Select
+            label="关联采购需求"
+            options={demandOptions}
+            value={form.demandId || ''}
+            onChange={(e) => handleDemandChange(e.target.value)}
+            placeholder="选了之后自动从工单带入对方单位、中标时间"
           />
           {/* 中标时间 */}
           <Input

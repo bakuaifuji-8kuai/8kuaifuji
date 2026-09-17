@@ -1136,6 +1136,13 @@ export interface ProcurementDemand {
   confirmRejectTime?: string;   // 立项驳回时间
   // 立项阶段全局字段
   isThreeImportant?: boolean;   // 是否属于"三重一大"（三种立项方式都需勾选）
+  // ============== 立项确认阶段 — 合同关联 ==============
+  /** 是否需签订合同：yes=走标准链路（建工单→建合同→审批→归档）；no=挂已有执行中合同（需求金额自动计入合同已支付） */
+  needContract?: 'yes' | 'no' | null;
+  /** needContract='no' 时：关联的已有合同台账 ID（必须 status='active' 执行中） */
+  contractId?: string;
+  /** 合同编号快照（防合同删除后找不到，UI 自动带出合同名用） */
+  contractNoSnapshot?: string;
 }
 
 // 采购需求变更记录
@@ -1877,6 +1884,9 @@ export interface ContractLedger {
   contractName: string; // 合同名称
   /** 合同性质（顶层区分：招采类 vs 非招采类） */
   contractNature: ContractNature;
+  // ====== 关联招采数据 ======
+  demandId?: string;        // 关联采购需求 ID（合同表单"关联采购需求"下拉自动带）
+  demandNo?: string;        // 关联采购需求编号
   category: ContractCategory; // 分类
   /** 合同类型（根据 contractNature 动态取对应枚举） */
   contractType: ProcurementContractType | NonProcurementContractType;
@@ -1897,7 +1907,10 @@ export interface ContractLedger {
   endDate?: string;              // 合同结束日期
   expireDate?: string;           // 合同到期日期
   amount?: number;               // 合同金额（万元）
-  paidAmount?: number;           // 合同已支付金额（万元）
+  /** 合同已支付金额（万元）— ⚠️ 展示值 = paidAmountBase + Σ(linkedDemandIds 需求预估金额)，聚合函数在 utils/contractAggregate.ts */
+  paidAmount?: number;
+  /** paidAmount 的手动基础值（万元），needContract='no' 挂账需求会自动累加 */
+  paidAmountBase?: number;
   settlementAmount?: number;     // 合同结算金额（万元）
   performanceStatus?: string;    // 合同履行情况
   requisitionAmount?: number;    // 采购申请金额（元）🆕 预留，无采购申请模块时为空
@@ -1936,6 +1949,12 @@ export interface ContractLedger {
     amount?: number;       // 保证金金额（万元）
     receiveDate?: string;  // 收款时间
   };
+  /**
+   * 反查：needContract='no' 且挂在本合同上的采购需求 ID 列表
+   * 立项确认 needContract='no' + 选合同时自动追加；解绑时移除
+   * 用于 paidAmount 自动聚合 + 合同详情 tab 展示关联需求
+   */
+  linkedDemandIds?: string[];
 }
 
 // ===== 合约管理 label 常量（Excel 原始选项）=====

@@ -6,7 +6,9 @@ import type {
   ProcurementDemand,
   ProcurementMode,
   ProjectRow,
+  ContractLedger,
 } from '@/types';
+import { getAutoPaidAmount, isContractLinkable, addLinkedDemand } from '@/utils/contractAggregate';
 
 // ============ 业务输入类型 → 表单类型映射 ============
 // 5 输入 → 3 表单
@@ -68,7 +70,7 @@ const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
 };
 
 export default function ProcurementDemandConfirmPage() {
-  const { procurementDemands, updateProcurementDemand, currentUser } = useStore();
+  const { procurementDemands, updateProcurementDemand, currentUser, contractLedgers, updateContractLedger } = useStore();
 
   // ============ 状态 ============
   const [activeTab, setActiveTab] = useState('approved');
@@ -78,6 +80,11 @@ export default function ProcurementDemandConfirmPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [projectRows, setProjectRows] = useState<ProjectRow[]>([]);
+  // ====== 合同关联（needContract）======
+  const [needContract, setNeedContract] = useState<'yes' | 'no' | null>(null);
+  const [contractNoInput, setContractNoInput] = useState('');
+  const [linkedContract, setLinkedContract] = useState<ContractLedger | null>(null);
+  const [contractError, setContractError] = useState('');
   // 附件（简化为文件名列表，演示用）
   const [attachments, setAttachments] = useState<string[]>([]);
   // 筛选条件
@@ -170,11 +177,35 @@ export default function ProcurementDemandConfirmPage() {
   // ============ 审批通过 ============
   const handleConfirmApprove = () => {
     if (!selected) return;
-    updateProcurementDemand(selected.id, {
+
+    // ====== needContract 校验 ======
+    // 未选择 → 强制 needContract='yes'（走标准链路）
+    const finalNeedContract = needContract ?? 'yes';
+    let updatePatch: any = {
       status: 'confirm_approved',
       confirmApprover: currentUser.name,
       confirmApproveTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    });
+      needContract: finalNeedContract,
+    };
+
+    if (finalNeedContract === 'no') {
+      // 选"否" → 必须输入有效的合同编号
+      if (!linkedContract) {
+        alert('请输入有效的执行中合同编号，确认该需求挂到哪个合同上');
+        return;
+      }
+      updatePatch.contractId = linkedContract.id;
+      updatePatch.contractNoSnapshot = linkedContract.contractNo;
+    }
+
+    updateProcurementDemand(selected.id, updatePatch);
+
+    // ====== needContract='no' → 反向写入合同台账 linkedDemandIds ======
+    if (finalNeedContract === 'no' && linkedContract) {
+      const newIds = addLinkedDemand(linkedContract, selected.id);
+      updateContractLedger(linkedContract.id, { linkedDemandIds: newIds });
+    }
+
     alert('已立项通过，下游系统可见此需求');
   };
 
@@ -495,6 +526,94 @@ export default function ProcurementDemandConfirmPage() {
                 </div>
               </label>
             )}
+
+            {/* ================ 是否需签订合同 ================ */}
+            {/* 需求背景：needContract='no' 时，需求不建新合同，直接挂到一个已有的"执行中"合同台账上，
+                 该需求的预估金额自动计入合同的 paidAmount（见 utils/contractAggregate.ts） */}
+            <div className="mt-5 p-4 rounded-xl border border-slate-200 bg-slate-50/60">
+              <div className="text-sm font-semibold text-slate-800 mb-3">
+                是否需签订合同 <span className="text-rose-500">*</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setNeedContract('yes'); setContractError(''); setLinkedContract(null); setContractNoInput(''); }}
+                  className={`p-3 rounded-lg border-2 text-left transition-all ${
+                    needContract === 'yes'
+                      ? 'border-indigo-500 bg-white shadow-sm'
+                      : 'border-slate-200 hover:border-indigo-300'
+                  }`}
+                >
+                  <div className="text-sm font-medium text-slate-800">是（走标准流程）</div>
+                  <div className="text-xs text-slate-500 mt-0.5">建工单 → 新建合同 → 审批 → 归档</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setNeedContract('no'); }}
+                  className={`p-3 rounded-lg border-2 text-left transition-all ${
+                    needContract === 'no'
+                      ? 'border-indigo-500 bg-white shadow-sm'
+                      : 'border-slate-200 hover:border-indigo-300'
+                  }`}
+                >
+                  <div className="text-sm font-medium text-slate-800">否（挂已有合同）</div>
+                  <div className="text-xs text-slate-500 mt-0.5">不建新合同，需求金额计入已有执行中合同</div>
+                </button>
+              </div>
+
+              {/* needContract='no' 时展开：合同编号输入 + 自动带出合同名 */}
+              {needContract === 'no' && (
+                <div className="mt-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-xs text-slate-500 mb-1">合同编号 <span className="text-rose-500">*</span></div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={contractNoInput}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setContractNoInput(v);
+                            setContractError('');
+                            setLinkedContract(null);
+                            if (v.trim()) {
+                              const found = contractLedgers.find((l) =>
+                                l.contractNo.toLowerCase() === v.trim().toLowerCase()
+                              );
+                              if (!found) {
+                                setContractError('合同编号不存在');
+                              } else if (!isContractLinkable(found)) {
+                                setContractError(`合同不可关联（当前状态：${found.status}，仅"执行中"的招采类合同可关联新需求）`);
+                              } else {
+                                setLinkedContract(found);
+                              }
+                            }
+                          }}
+                          placeholder="输入合同编号，如 HT-202609001"
+                          className="flex-1 h-8 px-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+                        />
+                      </div>
+                      {contractError && (
+                        <div className="text-xs text-rose-500 mt-1">⚠ {contractError}</div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500 mb-1">合同名称（自动带出）</div>
+                      <div className="h-8 px-2 py-1 border border-slate-200 rounded-lg text-sm bg-slate-100 text-slate-500 truncate">
+                        {linkedContract ? linkedContract.contractName : contractNoInput && !contractError ? '（校验中...）' : '-'}
+                      </div>
+                      {linkedContract && (
+                        <div className="text-[11px] text-slate-500 mt-1">
+                          原合同金额 {(linkedContract.amount ?? 0).toLocaleString()} 万
+                          {' · '}已支付 {(getAutoPaidAmount(linkedContract, procurementDemands)).toLocaleString()} 万
+                          {' · '}关联需求 {linkedContract.linkedDemandIds?.length ?? 0} 条
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* --- 立项字段矩阵 --- */}
             {(selected.status === 'approved' || selected.status === 'confirm_rejected' || selected.status === 'confirm_pending') && (
