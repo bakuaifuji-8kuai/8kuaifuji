@@ -16,7 +16,16 @@ import type {
 } from '@/types';
 import { BIDDING_METHOD_LABEL } from '@/types';
 
-/** 采购方式下拉选项 */
+/**
+ * 采购方式下拉选项（9 种，对齐 916 文档 L18）
+ *
+ * 排序规则：招标类在前（法定/自愿招标无专属表盘），国企采购在后
+ * - framework（框架协议采购）= 唯一"目录内比价"线上报价模式（详见下方 isCatalogCompare）
+ * - legal_bidding / voluntary_bidding = 走线下录入，无专属表盘模板
+ *
+ * 需求背景：916 文档列 9 种，项目初始只有 7 种国企采购
+ *          → 2026-09-17 用户反馈下拉要做全但选不中，补齐 legal_bidding + voluntary_bidding
+ */
 const PROCUREMENT_OPTIONS: Array<{ value: BiddingProcurementMethod; label: string }> = [
   { value: 'legal_bidding', label: '法定招标' },
   { value: 'voluntary_bidding', label: '自愿招标' },

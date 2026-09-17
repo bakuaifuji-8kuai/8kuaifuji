@@ -1003,7 +1003,18 @@ export interface ProcurementPlan {
 export type ProcurementDemandType = 'material' | 'implementation_project' | 'service_project';
 // 物资采购 / 实施项目 / 服务项目
 
-// 框架合同清单内/外采购
+// ====================================================================
+// 采购需求申请 — 框架合同清单内/外采购类型
+// ====================================================================
+// 需求背景：采购需求申请表单的核心选择，决定了"选择物资"弹窗里能看到哪些商品
+// - within_framework（清单内）：只能选有有效框架合同的物资 → 后续走 framework 采购链路
+// - outside_framework（清单外）：只能选无有效框架合同的物资 → 后续走完整招采流程
+// - new_supplier（新增供应商目录）：清单内+清单外全部可选
+//
+// ⚠️ 重要业务规则：framework（框架合同清单内/外）的采购，在合约管理模块只与【合同台账】
+//   关联（自动生成一条轻量台账记录记账），不跟【合同审批、归档、履约评估】流程关联。
+//   非 framework 采购维持完整链路：手工建合同 → 审批 → 归档 → 履约 → 评估。
+// ====================================================================
 export type ProcurementType = 'within_framework' | 'outside_framework' | 'new_supplier';
 // within_framework：清单内，只能选有有效框架合同的物资
 // outside_framework：清单外，只能选无有效框架合同的物资
@@ -1163,14 +1174,28 @@ export interface DemandChangeRecord {
 
 // ==================== 采购实施过程类型 ====================
 
-/** 招采执行-采购方式（国企采购 6 种） */
+/**
+ * 招采执行-采购方式（9 种，对齐 916 文档《招采管理系统表盘模版》L18）
+ *
+ * 分两大体系：
+ *   【国企采购 7 种】— 有对应表盘模板
+ *     inquiry/competitive_bidding/negotiation_open/negotiation_invited/direct/framework/e_mall
+ *   【招标 2 种】— 无专属表盘，走线下录入模式
+ *     legal_bidding（法定招标）/ voluntary_bidding（自愿招标）
+ *
+ * 线上 vs 线下：
+ *   ✅ framework 是唯一"目录内比价（线上报价）"模式，其他 8 种全是线下录入
+ *
+ * 需求背景：916 文档 L18 列了 9 种采购方式枚举，项目初始版本只有 7 种国企采购
+ *          → 2026-09-17 补齐法定招标+自愿招标，用户反馈下拉要做全但选不中
+ */
 export type BiddingProcurementMethod =
   | 'inquiry'               // 询比采购（线下录入）
   | 'competitive_bidding'   // 竞价采购（线下录入）
   | 'negotiation_open'      // 谈判采购-公开（线下录入）
   | 'negotiation_invited'   // 谈判采购-邀请（线下录入）
   | 'direct'                // 直接采购（线下录入，最简单）
-  | 'framework'             // 框架协议采购（目录内比价，唯一一种）
+  | 'framework'             // 框架协议采购（目录内比价，唯一线上报价模式）
   | 'e_mall'                // 电子商城采购（线下录入）
   | 'legal_bidding'         // 法定招标（线下录入，无专属表盘）
   | 'voluntary_bidding';    // 自愿招标（线下录入，无专属表盘）
@@ -1830,11 +1855,25 @@ export type ContractNature = 'procurement' | 'non_procurement';
 // 合同状态
 export type ContractStatus = 'draft' | 'pending' | 'approved' | 'active' | 'expired' | 'terminated' | 'completed' | 'invalid' | 'suspended';
 
+// ====================================================================
 // 合同台账记录
+// ====================================================================
+// 需求背景：
+//   1. 列顺序严格对齐 916 文档 L50-52（26 列），其中"合同性质(contractNature)"为本项目自增区分列
+//      （916L50 无但实际业务需要区分招采类 vs 非招采类合同）
+//   2. "合同主要内容(mainContent)"和"合同履约评估情况(contractEvaluations)"为 916L50 有但原项目缺失的字段
+//      → 2026-09-17 台账列对齐时补齐
+//   3. 合同编号(contractNo) 改为手工输入，不再自动生成（commit 9d1d88b 初次改，7d88379 清理残留死函数）
+//
+// ⚠️ framework 采购隔离规则（重要）：
+//   framework（框架协议/清单内比价）来源的采购数据，在合约管理只与"合同台账"关联（自动生成轻量记账台账），
+//   不进入合同审批流、不走归档、不走履约评估。只有非 framework 采购维持完整链路：
+//     招采工单 → 手工建合同 → 合同审批 → 合同台账 → 归档 → 履约评估 → 供应商考核
+// ====================================================================
 export interface ContractLedger {
   id: string;
   contractId: string;
-  contractNo: string; // 合同编码
+  contractNo: string; // 合同编码 —— ⚠️ 手工输入，不自动生成
   contractName: string; // 合同名称
   /** 合同性质（顶层区分：招采类 vs 非招采类） */
   contractNature: ContractNature;
