@@ -297,7 +297,7 @@ export const componentLibrary: ComponentMeta[] = [
     defaultProps: {
       label: '合同编号',
       fieldName: 'contractNo',
-      placeholder: '系统自动生成或手动输入',
+      placeholder: '手工输入，如：HT-202609001',
       required: true,
       width: 'half',
     },
