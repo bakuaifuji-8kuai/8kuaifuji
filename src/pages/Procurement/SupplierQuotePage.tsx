@@ -3,9 +3,6 @@ import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Bu
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
-import TaxViewToggle from '@/components/common/TaxViewToggle';
-import type { TaxViewMode } from '@/utils/taxView';
-import { getDisplayUnitPrice, getDisplayAmount, getDisplayTotal, sumDisplayAmount, fmtPrice, fmtTaxRate, showTaxRate, PRICE_LABEL_SUFFIX, AMOUNT_LABEL_SUFFIX } from '@/utils/taxView';
 import { useStore } from '@/store/useStore';
 import { MOCK_BIDDINGS, MOCK_SUPPLIER_QUOTES } from '@/mock/biddingMockData';
 import type { Bidding, BiddingItem, Supplier, SupplierQuote, SupplierQuoteDetail, BiddingQuote } from '@/types';
@@ -28,9 +25,6 @@ export default function SupplierQuotePage() {
     if (supplierQuotes.length === 0) setSupplierQuotes?.(MOCK_SUPPLIER_QUOTES);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // ====== 含税/不含税视图开关（页面级，一个单据内口径统一）======
-  const [taxViewMode, setTaxViewMode] = useState<TaxViewMode>('inclusive');
 
   const [filterNo, setFilterNo] = useState('');
   const [filterBiddingId, setFilterBiddingId] = useState('');
@@ -151,25 +145,21 @@ export default function SupplierQuotePage() {
         });
       });
     });
-    // 计算聚合值（根据含税/不含税模式）
+    // 计算聚合值
     map.forEach((row) => {
       row.quoteCount = row.quotes.length;
       if (row.quoteCount > 0) {
-        const prices = row.quotes
-          .map((q) => getDisplayUnitPrice(q, taxViewMode))
-          .filter((v): v is number => v !== undefined);
-        if (prices.length > 0) {
-          row.lowestPrice = Math.min(...prices);
-          row.highestPrice = Math.max(...prices);
-          row.avgPrice = Math.round((prices.reduce((a, b) => a + b, 0) / prices.length) * 100) / 100;
-        }
+        const prices = row.quotes.map((q) => q.unitPrice);
+        row.lowestPrice = Math.min(...prices);
+        row.highestPrice = Math.max(...prices);
+        row.avgPrice = Math.round((prices.reduce((a, b) => a + b, 0) / prices.length) * 100) / 100;
       }
     });
     return Array.from(map.values()).sort((a, b) => {
       if (a.biddingNo !== b.biddingNo) return a.biddingNo.localeCompare(b.biddingNo);
       return a.productCode.localeCompare(b.productCode);
     });
-  }, [supplierQuotes, applied.biddingId, applied.supplier, applied.status, filterProductKeyword, taxViewMode]);
+  }, [supplierQuotes, applied.biddingId, applied.supplier, applied.status, filterProductKeyword]);
 
   // ==== 按工单汇总聚合 ====
   interface OrderQuoteRow {
@@ -236,101 +226,91 @@ export default function SupplierQuotePage() {
     return Array.from(map.values()).sort((a, b) => a.biddingNo.localeCompare(b.biddingNo));
   }, [supplierQuotes, applied.biddingId, applied.supplier, applied.status]);
 
-  // 根据含税/不含税模式动态生成列
-  const columns: ColumnDef<SupplierQuote>[] = useMemo(() => {
-    const base: ColumnDef<SupplierQuote>[] = [
-      { key: 'quoteNo', title: '报价单号' },
-      { key: 'biddingNo', title: '关联工单号' },
-      { key: 'biddingName', title: '工单名称' },
-      { key: 'supplierName', title: '供应商' },
-      { key: 'contactPerson', title: '联系人', render: (row) => row.contactPerson || '-' },
-      { key: 'contactPhone', title: '联系电话', render: (row) => row.contactPhone || '-' },
-      {
-        key: 'totalAmount',
-        title: '报价总额' + AMOUNT_LABEL_SUFFIX(taxViewMode),
-        render: (row) => {
-          const bidding = biddings.find(b => b.id === row.biddingId);
-          const now = new Date();
-          const start = bidding?.startTime ? new Date(bidding.startTime) : null;
-          const end = bidding?.endTime ? new Date(bidding.endTime) : null;
-          const isInPeriod = start && end && now >= start && now <= end;
-          if (isInPeriod) return '***';
-          const v = getDisplayTotal(row, taxViewMode);
-          return '¥' + fmtPrice(v);
-        },
+  const columns: ColumnDef<SupplierQuote>[] = [
+    { key: 'quoteNo', title: '报价单号' },
+    { key: 'biddingNo', title: '关联工单号' },
+    { key: 'biddingName', title: '工单名称' },
+    { key: 'supplierName', title: '供应商' },
+    { key: 'contactPerson', title: '联系人', render: (row) => row.contactPerson || '-' },
+    { key: 'contactPhone', title: '联系电话', render: (row) => row.contactPhone || '-' },
+    {
+      key: 'totalAmount',
+      title: '报价总额',
+      render: (row) => {
+        const bidding = biddings.find(b => b.id === row.biddingId);
+        const now = new Date();
+        const start = bidding?.startTime ? new Date(bidding.startTime) : null;
+        const end = bidding?.endTime ? new Date(bidding.endTime) : null;
+        const isInPeriod = start && end && now >= start && now <= end;
+        if (isInPeriod) return '***';
+        return `¥${row.totalAmount.toLocaleString()}`;
       },
-    ];
-    // 含税模式才显示税率和税额
-    if (showTaxRate(taxViewMode)) {
-      base.push({
-        key: 'taxRate',
-        title: '税率',
-        render: (row) => {
-          const bidding = biddings.find(b => b.id === row.biddingId);
-          const now = new Date();
-          const start = bidding?.startTime ? new Date(bidding.startTime) : null;
-          const end = bidding?.endTime ? new Date(bidding.endTime) : null;
-          const isInPeriod = start && end && now >= start && now <= end;
-          if (isInPeriod) return '***';
-          return fmtTaxRate(row.taxRate);
-        },
-      });
-      base.push({
-        key: 'taxAmount',
-        title: '税额',
-        render: (row) => {
-          const bidding = biddings.find(b => b.id === row.biddingId);
-          const now = new Date();
-          const start = bidding?.startTime ? new Date(bidding.startTime) : null;
-          const end = bidding?.endTime ? new Date(bidding.endTime) : null;
-          const isInPeriod = start && end && now >= start && now <= end;
-          if (isInPeriod) return '***';
-          return row.taxAmount != null ? '¥' + row.taxAmount.toLocaleString() : '-';
-        },
-      });
-    }
-    base.push(
-      { key: 'quoteDate', title: '报价日期' },
-      { key: 'submittedAt', title: '提交时间', render: (row) => row.submittedAt?.split(' ')[0] || '-' },
-      {
-        key: 'status',
-        title: '状态',
-        render: (row) => {
-          const map: Record<string, { label: string; color: string }> = {
-            submitted: { label: '已提交', color: 'text-[#e6a23c]' },
-            accepted: { label: '已采纳', color: 'text-[#67c23a]' },
-            rejected: { label: '已驳回', color: 'text-[#f56c6c]' },
-          };
-          return <span className={map[row.status]?.color}>{map[row.status]?.label}</span>;
-        },
+    },
+    {
+      key: 'taxRate',
+      title: '税率',
+      render: (row) => {
+        const bidding = biddings.find(b => b.id === row.biddingId);
+        const now = new Date();
+        const start = bidding?.startTime ? new Date(bidding.startTime) : null;
+        const end = bidding?.endTime ? new Date(bidding.endTime) : null;
+        const isInPeriod = start && end && now >= start && now <= end;
+        if (isInPeriod) return '***';
+        return row.taxRate != null ? (row.taxRate * 100).toFixed(0) + '%' : '-';
       },
-      {
-        key: 'op',
-        title: '操作',
-        render: (row) => (
-          <div className="flex items-center gap-2 flex-wrap">
-            <TextButton onClick={() => setViewItem(row)}>查看详情</TextButton>
-            {row.status === 'submitted' && (
-              <>
-                <TextButton type="primary" onClick={() => handleAccept(row)}>采纳</TextButton>
-                <TextButton type="danger" onClick={() => handleReject(row)}>驳回</TextButton>
-              </>
-            )}
-            {row.status === 'accepted' && (
-              <TextButton type="primary" onClick={() => handleSyncToBidding(row)}>回写工单</TextButton>
-            )}
-            <TextButton
-              type="danger"
-              onClick={() => {
-                if (confirm(`确认删除报价单 ${row.quoteNo}？`)) deleteSupplierQuote?.(row.id);
-              }}
-            >删除</TextButton>
-          </div>
-        ),
-      }
-    );
-    return base;
-  }, [taxViewMode, biddings, deleteSupplierQuote]);
+    },
+    {
+      key: 'taxAmount',
+      title: '税额',
+      render: (row) => {
+        const bidding = biddings.find(b => b.id === row.biddingId);
+        const now = new Date();
+        const start = bidding?.startTime ? new Date(bidding.startTime) : null;
+        const end = bidding?.endTime ? new Date(bidding.endTime) : null;
+        const isInPeriod = start && end && now >= start && now <= end;
+        if (isInPeriod) return '***';
+        return row.taxAmount != null ? '¥' + row.taxAmount.toLocaleString() : '-';
+      },
+    },
+    { key: 'quoteDate', title: '报价日期' },
+    { key: 'submittedAt', title: '提交时间', render: (row) => row.submittedAt?.split(' ')[0] || '-' },
+    {
+      key: 'status',
+      title: '状态',
+      render: (row) => {
+        const map: Record<string, { label: string; color: string }> = {
+          submitted: { label: '已提交', color: 'text-[#e6a23c]' },
+          accepted: { label: '已采纳', color: 'text-[#67c23a]' },
+          rejected: { label: '已驳回', color: 'text-[#f56c6c]' },
+        };
+        return <span className={map[row.status]?.color}>{map[row.status]?.label}</span>;
+      },
+    },
+    {
+      key: 'op',
+      title: '操作',
+      render: (row) => (
+        <div className="flex items-center gap-2 flex-wrap">
+          <TextButton onClick={() => setViewItem(row)}>查看详情</TextButton>
+          {row.status === 'submitted' && (
+            <>
+              <TextButton type="primary" onClick={() => handleAccept(row)}>采纳</TextButton>
+              <TextButton type="danger" onClick={() => handleReject(row)}>驳回</TextButton>
+            </>
+          )}
+          {row.status === 'accepted' && (
+            <TextButton type="primary" onClick={() => handleSyncToBidding(row)}>回写工单</TextButton>
+          )}
+          <TextButton
+            type="danger"
+            onClick={() => {
+              if (confirm(`确认删除报价单 ${row.quoteNo}？`)) deleteSupplierQuote?.(row.id);
+            }}
+          >删除</TextButton>
+        </div>
+      ),
+    },
+  ];
 
   const [viewItem, setViewItem] = useState<SupplierQuote | null>(null);
   const [orderDetailBiddingId, setOrderDetailBiddingId] = useState<string | null>(null);
@@ -684,11 +664,6 @@ export default function SupplierQuotePage() {
         </button>
       </div>
 
-      {/* 含税/不含税视图切换（页面级，一个单据内口径统一） */}
-      <div className="flex items-center justify-end mb-3">
-        <TaxViewToggle value={taxViewMode} onChange={setTaxViewMode} />
-      </div>
-
       {/* 搜索区：按物资时显示物资关键词筛选 */}
       <SearchBar
         onSearch={() =>
@@ -756,9 +731,9 @@ export default function SupplierQuotePage() {
                   <th className="px-3 py-2 text-center font-medium whitespace-nowrap">单位</th>
                   <th className="px-3 py-2 text-right font-medium whitespace-nowrap">数量</th>
                   <th className="px-3 py-2 text-center font-medium whitespace-nowrap">报价供应商数</th>
-                  <th className="px-3 py-2 text-right font-medium whitespace-nowrap">最低单价{' '}{PRICE_LABEL_SUFFIX(taxViewMode)}</th>
-                  <th className="px-3 py-2 text-right font-medium whitespace-nowrap">最高单价{' '}{PRICE_LABEL_SUFFIX(taxViewMode)}</th>
-                  <th className="px-3 py-2 text-right font-medium whitespace-nowrap">平均单价{' '}{PRICE_LABEL_SUFFIX(taxViewMode)}</th>
+                  <th className="px-3 py-2 text-right font-medium whitespace-nowrap">最低单价</th>
+                  <th className="px-3 py-2 text-right font-medium whitespace-nowrap">最高单价</th>
+                  <th className="px-3 py-2 text-right font-medium whitespace-nowrap">平均单价</th>
                   <th className="px-3 py-2 text-center font-medium whitespace-nowrap">操作</th>
                 </tr>
               </thead>
@@ -869,10 +844,8 @@ export default function SupplierQuotePage() {
                   <th className="px-3 py-2 text-left font-medium whitespace-nowrap">工单号</th>
                   <th className="px-3 py-2 text-left font-medium">工单名称</th>
                   <th className="px-3 py-2 text-center font-medium whitespace-nowrap">报价供应商数</th>
-                  <th className="px-3 py-2 text-right font-medium whitespace-nowrap">报价总额{' '}{AMOUNT_LABEL_SUFFIX(taxViewMode)}</th>
-                  {showTaxRate(taxViewMode) && (
-                    <th className="px-3 py-2 text-center font-medium whitespace-nowrap">最低税率</th>
-                  )}
+                  <th className="px-3 py-2 text-right font-medium whitespace-nowrap">报价总额</th>
+                  <th className="px-3 py-2 text-center font-medium whitespace-nowrap">最低税率</th>
                   <th className="px-3 py-2 text-left font-medium whitespace-nowrap">最新提交</th>
                   <th className="px-3 py-2 text-center font-medium whitespace-nowrap">操作</th>
                 </tr>
@@ -880,7 +853,7 @@ export default function SupplierQuotePage() {
               <tbody>
                 {orderRows.length === 0 && (
                   <tr>
-                    <td colSpan={showTaxRate(taxViewMode) ? 7 : 6} className="px-3 py-8 text-center text-[#909399] border-t border-[#ebeef5]">
+                    <td colSpan={7} className="px-3 py-8 text-center text-[#909399] border-t border-[#ebeef5]">
                       暂无匹配的报价数据
                     </td>
                   </tr>
@@ -902,14 +875,12 @@ export default function SupplierQuotePage() {
                     </td>
                     <td className="px-3 py-2 text-right">
                       <span className="font-bold text-[#f56c6c] whitespace-nowrap">
-                        {isInPeriod ? '***' : '¥' + fmtPrice(getDisplayTotal(row, taxViewMode))}
+                        {isInPeriod ? '***' : `¥${row.totalAmount.toLocaleString()}`}
                       </span>
                     </td>
-                    {showTaxRate(taxViewMode) && (
-                      <td className="px-3 py-2 text-center whitespace-nowrap">
-                        {isInPeriod ? '***' : fmtTaxRate(row.lowestTaxRate)}
-                      </td>
-                    )}
+                    <td className="px-3 py-2 text-center whitespace-nowrap">
+                      {isInPeriod ? '***' : (row.lowestTaxRate != null ? (row.lowestTaxRate * 100).toFixed(0) + '%' : '-')}
+                    </td>
                     <td className="px-3 py-2 text-[#606266] whitespace-nowrap">{row.latestSubmittedAt || '-'}</td>
                     <td className="px-3 py-2 text-center whitespace-nowrap">
                       <TextButton
@@ -999,16 +970,14 @@ export default function SupplierQuotePage() {
                       <th className="px-3 py-2 text-center font-medium w-12">单位</th>
                       <th className="px-3 py-2 text-right font-medium w-16">数量</th>
                       <th className="px-3 py-2 text-center font-medium w-24">报价数</th>
-                      <th className="px-3 py-2 text-right font-medium w-24">最低单价{' '}{PRICE_LABEL_SUFFIX(taxViewMode)}</th>
-                      <th className="px-3 py-2 text-right font-medium w-24">最高单价{' '}{PRICE_LABEL_SUFFIX(taxViewMode)}</th>
+                      <th className="px-3 py-2 text-right font-medium w-24">最低单价</th>
+                      <th className="px-3 py-2 text-right font-medium w-24">最高单价</th>
                       <th className="px-3 py-2 text-center font-medium w-12">操作</th>
                     </tr>
                   </thead>
                   <tbody>
                     {products.map((p) => {
-                      const prices = p.quotes
-                        .map(q => getDisplayUnitPrice(q, taxViewMode))
-                        .filter((v): v is number => v !== undefined);
+                      const prices = p.quotes.map(q => q.unitPrice);
                       const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
                       const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
                       return (
@@ -1024,8 +993,8 @@ export default function SupplierQuotePage() {
                                 {p.quotes.length} 家
                               </span>
                             </td>
-                            <td className="px-3 py-2 text-right font-bold text-[#67c23a]">¥{fmtPrice(minPrice)}</td>
-                            <td className="px-3 py-2 text-right text-[#f56c6c]">¥{fmtPrice(maxPrice)}</td>
+                            <td className="px-3 py-2 text-right font-bold text-[#67c23a]">¥{minPrice.toLocaleString()}</td>
+                            <td className="px-3 py-2 text-right text-[#f56c6c]">¥{maxPrice.toLocaleString()}</td>
                             <td className="px-3 py-2 text-center">
                               <TextButton
                                 onClick={() => {
@@ -1046,22 +1015,17 @@ export default function SupplierQuotePage() {
                                     <tr>
                                       <th className="px-2 py-1.5 text-left text-[10px] font-medium w-32">供应商</th>
                                       <th className="px-2 py-1.5 text-center text-[10px] font-medium w-20">状态</th>
-                                      <th className="px-2 py-1.5 text-right text-[10px] font-medium w-20">单价{' '}{PRICE_LABEL_SUFFIX(taxViewMode)}</th>
-                                      {showTaxRate(taxViewMode) && (
-                                        <th className="px-2 py-1.5 text-center text-[10px] font-medium w-16">税率</th>
-                                      )}
-                                      <th className="px-2 py-1.5 text-right text-[10px] font-medium w-20">金额{' '}{AMOUNT_LABEL_SUFFIX(taxViewMode)}</th>
-                                      {showTaxRate(taxViewMode) && (
-                                        <th className="px-2 py-1.5 text-right text-[10px] font-medium w-20">税额</th>
-                                      )}
+                                      <th className="px-2 py-1.5 text-right text-[10px] font-medium w-20">单价</th>
+                                      <th className="px-2 py-1.5 text-center text-[10px] font-medium w-16">税率</th>
+                                      <th className="px-2 py-1.5 text-right text-[10px] font-medium w-20">金额</th>
+                                      <th className="px-2 py-1.5 text-right text-[10px] font-medium w-20">税额</th>
                                       <th className="px-2 py-1.5 text-center text-[10px] font-medium w-20">交货日期</th>
                                       <th className="px-2 py-1.5 text-center text-[10px] font-medium w-32">操作</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {p.quotes.map((q, idx) => {
-                                      const qtyPrice = getDisplayUnitPrice(q, taxViewMode) ?? 0;
-                                      const isLowest = qtyPrice === minPrice && minPrice > 0;
+                                      const isLowest = q.unitPrice === minPrice;
                                       const statusInfo: Record<string, { label: string; color: string }> = {
                                         submitted: { label: '已提交', color: 'text-[#e6a23c]' },
                                         accepted: { label: '已采纳', color: 'text-[#67c23a]' },
@@ -1075,14 +1039,10 @@ export default function SupplierQuotePage() {
                                             {isLowest && <span className="ml-1 text-[#67c23a]">★最低</span>}
                                           </td>
                                           <td className={'px-2 py-1.5 text-center text-[10px] ' + st.color}>[{st.label}]</td>
-                                          <td className="px-2 py-1.5 text-right text-[10px] text-[#f56c6c] font-semibold">¥{fmtPrice(qtyPrice)}</td>
-                                          {showTaxRate(taxViewMode) && (
-                                            <td className="px-2 py-1.5 text-center text-[10px]">{fmtTaxRate(q.taxRate)}</td>
-                                          )}
-                                          <td className="px-2 py-1.5 text-right text-[10px]">¥{fmtPrice(getDisplayAmount(q, taxViewMode))}</td>
-                                          {showTaxRate(taxViewMode) && (
-                                            <td className="px-2 py-1.5 text-right text-[10px] text-[#67c23a]">{q.taxAmount != null ? '¥' + q.taxAmount.toLocaleString() : '-'}</td>
-                                          )}
+                                          <td className="px-2 py-1.5 text-right text-[10px] text-[#f56c6c] font-semibold">¥{q.unitPrice.toLocaleString()}</td>
+                                          <td className="px-2 py-1.5 text-center text-[10px]">{q.taxRate != null ? (q.taxRate * 100).toFixed(0) + '%' : '-'}</td>
+                                          <td className="px-2 py-1.5 text-right text-[10px]">¥{q.amount.toLocaleString()}</td>
+                                          <td className="px-2 py-1.5 text-right text-[10px] text-[#67c23a]">{q.taxAmount != null ? '¥' + q.taxAmount.toLocaleString() : '-'}</td>
                                           <td className="px-2 py-1.5 text-center text-[10px]">{q.deliveryDate || '-'}</td>
                                           <td className="px-2 py-1.5 text-center text-[10px]">
                                             <TextButton
@@ -1560,21 +1520,21 @@ export default function SupplierQuotePage() {
                 <div className="text-lg font-bold text-[#67c23a]">{materialDetailRow.quoteCount} 家</div>
               </div>
               <div className="px-3 py-2 bg-[#f0f9eb] rounded border border-[#c2e7b0]">
-                <div className="text-[#909399]">最低单价{' '}{PRICE_LABEL_SUFFIX(taxViewMode)}</div>
+                <div className="text-[#909399]">最低单价</div>
                 <div className="text-lg font-bold text-[#67c23a]">
-                  {materialDetailRow.lowestPrice != null ? '¥' + fmtPrice(materialDetailRow.lowestPrice) : '-'}
+                  {materialDetailRow.lowestPrice != null ? '¥' + materialDetailRow.lowestPrice.toLocaleString() : '-'}
                 </div>
               </div>
               <div className="px-3 py-2 bg-[#fdf6ec] rounded border border-[#f5dab1]">
-                <div className="text-[#909399]">最高单价{' '}{PRICE_LABEL_SUFFIX(taxViewMode)}</div>
+                <div className="text-[#909399]">最高单价</div>
                 <div className="text-lg font-bold text-[#f56c6c]">
-                  {materialDetailRow.highestPrice != null ? '¥' + fmtPrice(materialDetailRow.highestPrice) : '-'}
+                  {materialDetailRow.highestPrice != null ? '¥' + materialDetailRow.highestPrice.toLocaleString() : '-'}
                 </div>
               </div>
               <div className="px-3 py-2 bg-[#ecf5ff] rounded border border-[#b3d8ff]">
-                <div className="text-[#909399]">平均单价{' '}{PRICE_LABEL_SUFFIX(taxViewMode)}</div>
+                <div className="text-[#909399]">平均单价</div>
                 <div className="text-lg font-bold text-[#409eff]">
-                  {materialDetailRow.avgPrice != null ? '¥' + fmtPrice(materialDetailRow.avgPrice) : '-'}
+                  {materialDetailRow.avgPrice != null ? '¥' + materialDetailRow.avgPrice.toLocaleString() : '-'}
                 </div>
               </div>
             </div>
