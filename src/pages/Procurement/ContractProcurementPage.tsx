@@ -130,8 +130,8 @@ export default function ContractProcurementPage() {
     } else {
       const newLedger: ContractLedger = {
         id: 'CL' + Date.now() + Math.random().toString(36).slice(2, 7),
-        contractId: generateContractNo(),
-        contractNo: generateContractNo(),
+        contractId: finalForm.contractNo || '',
+        contractNo: finalForm.contractNo || '',
         contractName: finalForm.contractName || '未命名合同',
         contractNature: 'procurement',
         category: 'procurement',
@@ -393,8 +393,8 @@ function ContractProcurementForm({ form, update, biddings, isEdit }: FormProps) 
           <Input
             label="合同编号"
             value={form.contractNo || ''}
-            disabled
-            placeholder="自动生成"
+            onChange={(e) => update({ contractNo: e.target.value })}
+            placeholder="手工输入，如：HT-202609001"
           />
           <Input
             label="合同名称"

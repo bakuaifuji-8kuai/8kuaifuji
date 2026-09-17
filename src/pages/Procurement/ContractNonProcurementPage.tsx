@@ -127,8 +127,8 @@ export default function ContractNonProcurementPage() {
     } else {
       const newLedger: ContractLedger = {
         id: 'CL' + Date.now() + Math.random().toString(36).slice(2, 7),
-        contractId: generateContractNo(),
-        contractNo: generateContractNo(),
+        contractId: finalForm.contractNo || '',
+        contractNo: finalForm.contractNo || '',
         contractName: finalForm.contractName || '未命名合同',
         contractNature: 'non_procurement',
         category: 'other',
@@ -362,8 +362,8 @@ function ContractNonProcurementForm({ form, update }: FormProps) {
           <Input
             label="合同编号"
             value={form.contractNo || ''}
-            disabled
-            placeholder="自动生成"
+            onChange={(e) => update({ contractNo: e.target.value })}
+            placeholder="手工输入，如：HT-202609001"
           />
         </div>
       </Section>
