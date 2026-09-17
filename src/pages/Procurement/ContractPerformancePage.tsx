@@ -7,8 +7,8 @@ import { PrimaryButton, DefaultButton } from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import { Plus, Save, Send, FileUp, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
 
-export default function EvaluationExecutePage() {
-  const evaluationTemplates = (useStore((s) => s.evaluationTemplates) || []).filter((t) => t.type !== 'contract_performance');
+export default function ContractPerformancePage() {
+  const evaluationTemplates = (useStore((s) => s.evaluationTemplates) || []).filter((t) => t.type === 'contract_performance');
   const evaluationRecords = useStore((s) => s.evaluationRecords) || [];
   const addEvaluationRecord = useStore((s) => s.addEvaluationRecord);
   const updateEvaluationRecord = useStore((s) => s.updateEvaluationRecord);
@@ -106,11 +106,11 @@ export default function EvaluationExecutePage() {
 
   const handleSaveDraft = () => {
     if (!selectedTemplate) {
-      alert('请先选择评估模板');
+      alert('请先选择合同履约评估模板');
       return;
     }
-    if (!selectedSupplierId) {
-      alert('请选择供应商');
+    if (!selectedContractId) {
+      alert('请选择合同');
       return;
     }
     saveRecord('draft');
@@ -118,11 +118,11 @@ export default function EvaluationExecutePage() {
 
   const handleSubmit = () => {
     if (!selectedTemplate) {
-      alert('请先选择评估模板');
+      alert('请先选择合同履约评估模板');
       return;
     }
-    if (!selectedSupplierId) {
-      alert('请选择供应商');
+    if (!selectedContractId) {
+      alert('请选择合同');
       return;
     }
     // 校验所有指标是否已评分
@@ -136,7 +136,7 @@ export default function EvaluationExecutePage() {
   };
 
   const saveRecord = (status: EvaluationStatus) => {
-    if (!selectedTemplate || !selectedSupplierId) return;
+    if (!selectedTemplate || !selectedContractId) return;
 
     const scoreItems: EvaluationScoreItem[] = selectedTemplate.indicators.map((ind) => {
       const scoreData = scores[ind.id] || { score: 0, comment: '' };
@@ -155,12 +155,12 @@ export default function EvaluationExecutePage() {
       id: 'ER' + Date.now(),
       templateId: selectedTemplate.id,
       templateName: selectedTemplate.name,
-      supplierId: selectedSupplierId,
-      supplierName: selectedSupplier?.name || '',
-      contractId: selectedContractId || undefined,
+      supplierId: selectedSupplierId || '',
+      supplierName: selectedSupplier?.name || selectedContract?.counterpartyName || '',
+      contractId: selectedContractId,
       contractNo: selectedContract?.contractNo || undefined,
       projectName: projectName || selectedContract?.projectName,
-      type: selectedTemplate.type,
+      type: 'contract_performance',
       scores: scoreItems,
       totalScore,
       evaluator: currentUser.name,
@@ -176,7 +176,7 @@ export default function EvaluationExecutePage() {
     };
 
     addEvaluationRecord?.(newRecord);
-    alert(status === 'draft' ? '草稿已保存' : '评估已提交审批');
+    alert(status === 'draft' ? '草稿已保存' : '合同履约评估已提交审批');
 
     // 重置表单
     resetForm();
@@ -201,6 +201,7 @@ export default function EvaluationExecutePage() {
   const recentRecords = useMemo(() => {
     return evaluationRecords
       .filter((r) => r.status === 'pending' || r.status === 'draft')
+      .filter((r) => r.type === 'contract_performance')
       .slice(0, 5);
   }, [evaluationRecords]);
 
@@ -208,9 +209,17 @@ export default function EvaluationExecutePage() {
     <div className="p-5">
       {/* 页面标题 */}
       <div className="mb-5">
-        <h1 className="text-xl font-bold text-slate-800">评估执行</h1>
-        <p className="text-sm text-slate-500 mt-1">选择模板和供应商，完成在线评分并提交审批</p>
+        <h1 className="text-xl font-bold text-slate-800">合同履约评估执行</h1>
+        <p className="text-sm text-slate-500 mt-1">选择合同履约评估模板和目标合同，完成在线评分并提交审批</p>
       </div>
+
+      {/* 顶部说明卡片 */}
+      <Card className="mb-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-100">
+        <div className="text-sm text-indigo-700">
+          📋 本页面仅用于 <b>合同履约评估</b> — 评价合同履行情况（交付质量、履约进度、违约情况等），
+          请选择已归档/履行中的合同进行评估。供应商绩效考核请前往「供应商管理 → 考核评价管理」。
+        </div>
+      </Card>
 
       <div className="grid grid-cols-3 gap-5">
         {/* 左侧：基本信息和评分表单 */}
@@ -232,45 +241,54 @@ export default function EvaluationExecutePage() {
                   }}
                   className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                 >
-                  <option value="">请选择评估模板</option>
+                  <option value="">请选择合同履约评估模板</option>
                   {evaluationTemplates.map((t) => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </select>
               </div>
+              {/* 合同选择器：置顶、必选 */}
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">
-                  供应商 <span className="text-red-500">*</span>
+                  合同 <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={selectedSupplierId}
-                  onChange={(e) => setSelectedSupplierId(e.target.value)}
-                  className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                >
-                  <option value="">请选择供应商</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">关联合同（可选）</label>
                 <select
                   value={selectedContractId}
                   onChange={(e) => {
-                    setSelectedContractId(e.target.value);
-                    const contract = contractLedgers.find((c) => c.id === e.target.value);
+                    const newContractId = e.target.value;
+                    setSelectedContractId(newContractId);
+                    const contract = contractLedgers.find((c) => c.id === newContractId);
                     if (contract) {
                       setProjectName(contract.projectName || '');
+                      // 根据合同的 counterpartyName 自动匹配供应商
+                      const matchedSupplier = suppliers.find((s) =>
+                        s.name === contract.counterpartyName
+                      );
+                      setSelectedSupplierId(matchedSupplier?.id || '');
+                    } else {
+                      setSelectedSupplierId('');
                     }
                   }}
                   className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                 >
-                  <option value="">请选择关联合同</option>
+                  <option value="">请选择合同</option>
                   {contractLedgers.map((c) => (
                     <option key={c.id} value={c.id}>{c.contractNo} - {c.contractName}</option>
                   ))}
                 </select>
+              </div>
+              {/* 供应商：从合同自动带出，disabled */}
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  供应商（合同对方）
+                </label>
+                <input
+                  type="text"
+                  value={selectedContract?.counterpartyName || selectedSupplier?.name || ''}
+                  disabled
+                  placeholder="选择合同后自动带出"
+                  className="w-full h-9 px-3 border border-slate-200 bg-slate-50 rounded-lg text-sm text-slate-500 outline-none"
+                />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">评估日期</label>
@@ -298,9 +316,9 @@ export default function EvaluationExecutePage() {
           {selectedTemplate && (
             <Card>
               <div className="flex items-center justify-between mb-4">
-                <div className="text-sm font-medium text-slate-700">考核评分</div>
-                <Badge variant={selectedTemplate.type === 'quarterly' ? 'primary' : selectedTemplate.type === 'single' ? 'success' : 'warning'}>
-                  {EVALUATION_TYPE_LABELS[selectedTemplate.type]}
+                <div className="text-sm font-medium text-slate-700">合同履约评分</div>
+                <Badge variant="primary">
+                  合同履约评估
                 </Badge>
               </div>
               <div className="space-y-3">
@@ -365,12 +383,12 @@ export default function EvaluationExecutePage() {
 
           {/* 备注和附件 */}
           <Card>
-            <div className="text-sm font-medium text-slate-700 mb-4">评估备注</div>
+            <div className="text-sm font-medium text-slate-700 mb-4">履约评估备注</div>
             <textarea
               value={remark}
               onChange={(e) => setRemark(e.target.value)}
               className="w-full h-24 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
-              placeholder="请输入评估备注..."
+              placeholder="请输入合同履约评估备注..."
             />
             <div className="mt-4">
               <div className="flex items-center justify-between mb-2">
@@ -413,7 +431,7 @@ export default function EvaluationExecutePage() {
         <div className="col-span-1 space-y-5">
           {/* 总分卡片 */}
           <Card>
-            <div className="text-sm font-medium text-slate-700 mb-4">评估得分</div>
+            <div className="text-sm font-medium text-slate-700 mb-4">履约评估得分</div>
             <div className={`rounded-xl p-6 text-center ${scoreLevel.bg} ${scoreLevel.border} border-2`}>
               <div className={`text-5xl font-bold ${scoreLevel.color}`}>
                 {totalScore}
@@ -455,7 +473,7 @@ export default function EvaluationExecutePage() {
 
           {/* 最近待处理记录 */}
           <Card>
-            <div className="text-sm font-medium text-slate-700 mb-3">待处理记录</div>
+            <div className="text-sm font-medium text-slate-700 mb-3">履约评估待处理记录</div>
             {recentRecords.length === 0 ? (
               <div className="text-center py-4 text-slate-400 text-sm">暂无待处理记录</div>
             ) : (
@@ -463,7 +481,7 @@ export default function EvaluationExecutePage() {
                 {recentRecords.map((record) => (
                   <div key={record.id} className="border border-slate-200 rounded-lg p-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-700">{record.supplierName}</span>
+                      <span className="text-sm font-medium text-slate-700">{record.contractNo || record.supplierName}</span>
                       <Badge variant={record.status === 'draft' ? 'default' : 'warning'}>
                         {EVALUATION_STATUS_LABELS[record.status]}
                       </Badge>
