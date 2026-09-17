@@ -42,6 +42,8 @@ const menuItems: MenuItem[] = [
       ]},
       { title: '合约管理', path: '/procurement/contract-group', children: [
         { title: '合同文本管理', path: '/procurement/contract-template' },
+        { title: '招采类合同', path: '/procurement/contract-procurement' },
+        { title: '非招采类合同', path: '/procurement/contract-non-procurement' },
         { title: '合同台账', path: '/procurement/contract' },
         { title: '合同归档', path: '/procurement/contract-archive' },
       ]},

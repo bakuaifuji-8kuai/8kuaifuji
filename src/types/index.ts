@@ -1786,6 +1786,9 @@ export type ContractCategory =
 // 合同形成方式
 export type ContractFormation = 'online' | 'offline';
 
+// 合同性质（顶层区分：招采类 vs 非招采类）
+export type ContractNature = 'procurement' | 'non_procurement';
+
 // 合同状态
 export type ContractStatus = 'draft' | 'pending' | 'approved' | 'active' | 'expired' | 'terminated' | 'completed' | 'invalid' | 'suspended';
 
@@ -1795,6 +1798,8 @@ export interface ContractLedger {
   contractId: string;
   contractNo: string; // 合同编码
   contractName: string; // 合同名称
+  /** 合同性质（顶层区分：招采类 vs 非招采类） */
+  contractNature: ContractNature;
   category: ContractCategory; // 分类
   contractType: 'engineering' | 'non_engineering'; // 工程类/非工程类
   formation: ContractFormation; // 合同形成方式
@@ -1824,12 +1829,22 @@ export interface ContractLedger {
   archivedAttachments?: string; // 存档附件资料
   remark?: string;
   status: ContractStatus;
-  // 关联采购工单
+  // 关联采购工单（招采类合同常用）
   biddingId?: string; // 关联采购工单ID
   biddingNo?: string; // 关联采购工单编号
   projectName?: string; // 项目名称（从工单带入）
-  /** 合同考核绑定（一个合同可加多种考核） */
+  /** 合同考核绑定（一个合同可加多种考核，招采类合同常用） */
   contractEvaluations?: ContractEvaluationBinding[];
+  // ===== 招采类合同独有字段（contractNature='procurement' 时有效） =====
+  /** 履约评价（保证金/质保金）：是则自动关联履约评价流程 */
+  guaranteeEvaluation?: { isOpen: boolean; guaranteeType?: string };
+  /** 考核管理：单个项目考核 / 月度 / 季度 — 自动关联供应商考核流程 */
+  assessmentManagement?: 'single_project' | 'monthly' | 'quarterly' | null;
+  /** 年度评价：是则自动关联供应商年度评价流程 */
+  yearlyEvaluation?: boolean;
+  // ===== 非招采类合同独有字段（contractNature='non_procurement' 时有效） =====
+  /** 履约保证金：如选择展览服务合同需增加此字段 */
+  performanceBond?: { isOpen: boolean; amount?: number; receiveDate?: string };
 }
 
 // ==================== 合同考核绑定 ====================

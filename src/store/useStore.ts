@@ -279,6 +279,10 @@ interface WarehouseState {
   addContractLedger: (ledger: ContractLedger) => void;
   updateContractLedger: (id: string, data: Partial<ContractLedger>) => void;
   deleteContractLedger: (id: string) => void;
+  /** 招采类合同（contractNature='procurement'） */
+  contractProcurementLedgers: ContractLedger[];
+  /** 非招采类合同（contractNature='non_procurement'） */
+  contractNonProcurementLedgers: ContractLedger[];
 
   // 采购订单
   procurementOrders: ProcurementOrder[];
@@ -1087,6 +1091,13 @@ export const useStore = create<WarehouseState>()(
   deleteContractLedger: (id) => set((state) => ({
     contractLedgers: state.contractLedgers.filter((l) => l.id !== id)
   })),
+  // contractNature 过滤快捷方法（每次调用从 state.contractLedgers 实时 filter）
+  get contractProcurementLedgers() {
+    return useStore.getState().contractLedgers.filter((l) => l.contractNature === 'procurement');
+  },
+  get contractNonProcurementLedgers() {
+    return useStore.getState().contractLedgers.filter((l) => l.contractNature === 'non_procurement');
+  },
 
   // 采购订单
   procurementOrders: mockData.procurementOrders || [],

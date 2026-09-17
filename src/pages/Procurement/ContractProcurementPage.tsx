@@ -59,8 +59,8 @@ const isExpired = (date?: string) => {
   return new Date(date).getTime() < new Date().getTime();
 };
 
-export default function ContractLedgerPage() {
-  const contractLedgers = useStore((s) => s.contractLedgers) || [];
+export default function ContractProcurementPage() {
+  const contractLedgers = (useStore((s) => s.contractLedgers) || []).filter((l) => l.contractNature === 'procurement');
   const addContractLedger = useStore((s) => s.addContractLedger);
   const updateContractLedger = useStore((s) => s.updateContractLedger);
   const deleteContractLedger = useStore((s) => s.deleteContractLedger);
@@ -88,12 +88,11 @@ export default function ContractLedgerPage() {
   const [filterYear, setFilterYear] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
-  const [filterNature, setFilterNature] = useState('');
 
   const [applied, setApplied] = useState({
     no: '', name: '', status: '', category: '', contractType: '',
     counterparty: '', department: '', project: '', year: '',
-    dateFrom: '', dateTo: '', nature: '',
+    dateFrom: '', dateTo: '',
   });
 
   // 弹窗状态
@@ -138,7 +137,6 @@ export default function ContractLedgerPage() {
       }
       if (applied.dateFrom && (!c.signingDate || c.signingDate < applied.dateFrom)) return false;
       if (applied.dateTo && (!c.signingDate || c.signingDate > applied.dateTo)) return false;
-      if (applied.nature && c.contractNature !== applied.nature) return false;
       return true;
     });
   }, [contractLedgers, applied]);
@@ -483,6 +481,8 @@ export default function ContractLedgerPage() {
       alert('请填写合同名称');
       return;
     }
+    // 强制招采类合同
+    editItem.contractNature = 'procurement';
     if (isNew) {
       addContractLedger(editItem);
     } else {
@@ -581,20 +581,6 @@ export default function ContractLedgerPage() {
   const columns: ColumnDef<ContractLedger>[] = [
     { key: 'contractNo', title: '合同编码', render: (row) => row.contractNo,
       footer: (data: ContractLedger[]) => `合计 ${data.length} 份` },
-    {
-      key: 'contractNature',
-      title: '合同性质',
-      render: (row) => (
-        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-          row.contractNature === 'procurement'
-            ? 'bg-green-50 text-green-700 border border-green-200'
-            : 'bg-slate-100 text-slate-600 border border-slate-200'
-        }`}>
-          {row.contractNature === 'procurement' ? '招采类' : '非招采类'}
-        </span>
-      ),
-      footer: '',
-    },
     { key: 'contractName', title: '合同名称', render: (row) => row.contractName, footer: '' },
     {
       key: 'category',
@@ -762,6 +748,7 @@ export default function ContractLedgerPage() {
           <DefaultButton onClick={handleExportPDF}>
             <FileDown size={14} /> 导出 PDF
           </DefaultButton>
+          <PrimaryButton onClick={openAdd}>+ 新增合同</PrimaryButton>
         </div>
       </div>
 
@@ -971,17 +958,16 @@ export default function ContractLedgerPage() {
           counterparty: filterCounterparty, department: filterDepartment,
           project: filterProject, year: filterYear,
           dateFrom: filterDateFrom, dateTo: filterDateTo,
-          nature: filterNature,
         })}
         onReset={() => {
           setFilterNo(''); setFilterName(''); setFilterStatus('');
           setFilterCategory(''); setFilterContractType(''); setFilterCounterparty('');
           setFilterDepartment(''); setFilterProject(''); setFilterYear('');
-          setFilterDateFrom(''); setFilterDateTo(''); setFilterNature('');
+          setFilterDateFrom(''); setFilterDateTo('');
           setApplied({
             no: '', name: '', status: '', category: '', contractType: '',
             counterparty: '', department: '', project: '', year: '',
-            dateFrom: '', dateTo: '', nature: '',
+            dateFrom: '', dateTo: '',
           });
         }}
       >
@@ -1042,17 +1028,6 @@ export default function ContractLedgerPage() {
         />
         <SearchField label="签订日期起" type="date" value={filterDateFrom} onChange={setFilterDateFrom} />
         <SearchField label="签订日期止" type="date" value={filterDateTo} onChange={setFilterDateTo} />
-        <SearchField
-          label="合同性质"
-          type="select"
-          value={filterNature}
-          onChange={setFilterNature}
-          options={[
-            { value: '', label: '全部' },
-            { value: 'procurement', label: '招采类合同' },
-            { value: 'non_procurement', label: '非招采类合同' },
-          ]}
-        />
       </SearchBar>
 
       {/* 主数据表格 */}
