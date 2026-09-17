@@ -1171,7 +1171,9 @@ export type BiddingProcurementMethod =
   | 'negotiation_invited'   // 谈判采购-邀请（线下录入）
   | 'direct'                // 直接采购（线下录入，最简单）
   | 'framework'             // 框架协议采购（目录内比价，唯一一种）
-  | 'e_mall';               // 电子商城采购（线下录入）
+  | 'e_mall'                // 电子商城采购（线下录入）
+  | 'legal_bidding'         // 法定招标（线下录入，无专属表盘）
+  | 'voluntary_bidding';    // 自愿招标（线下录入，无专属表盘）
 
 /** 采购方式中文名 */
 export const BIDDING_METHOD_LABEL: Record<BiddingProcurementMethod, string> = {
@@ -1182,6 +1184,8 @@ export const BIDDING_METHOD_LABEL: Record<BiddingProcurementMethod, string> = {
   direct: '直接采购',
   framework: '框架协议采购',
   e_mall: '电子商城采购',
+  legal_bidding: '法定招标',
+  voluntary_bidding: '自愿招标',
 };
 
 /**

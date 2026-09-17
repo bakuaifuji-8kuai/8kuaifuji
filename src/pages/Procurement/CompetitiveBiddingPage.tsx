@@ -18,6 +18,8 @@ import { BIDDING_METHOD_LABEL } from '@/types';
 
 /** 采购方式下拉选项 */
 const PROCUREMENT_OPTIONS: Array<{ value: BiddingProcurementMethod; label: string }> = [
+  { value: 'legal_bidding', label: '法定招标' },
+  { value: 'voluntary_bidding', label: '自愿招标' },
   { value: 'inquiry', label: '询比采购' },
   { value: 'competitive_bidding', label: '竞价采购' },
   { value: 'negotiation_open', label: '谈判采购-公开' },
