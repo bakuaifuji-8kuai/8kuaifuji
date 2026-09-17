@@ -1030,8 +1030,8 @@ export interface ProjectRow {
   dept: string;              // 需求部门
   projectName: string;      // 项目名称
   mainContent?: string;     // 主要内容（仅采购项目申请表）
-  budgetAmount: number;      // 预算总金额（会议审批）/ 不含税预算总金额（签报/申请表）
-  budgetControlAmount: number; // 预算控制金额
+  budgetAmount: number;      // 不含税预算总金额（全场景统一口径）
+  budgetControlAmount: number; // 不含税预算审定总金额（预算审核后审定值）
   approvalMeetingName?: string; // 立项审批会议名称（仅会议审批）
   approvalDate: string;     // 立项审批日期
   remark?: string;          // 备注（采购项目申请表 + 服务类）

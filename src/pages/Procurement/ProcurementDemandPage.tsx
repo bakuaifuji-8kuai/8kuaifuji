@@ -1291,7 +1291,7 @@ export default function ProcurementDemandPage() {
                     <th className="px-2 py-2 text-center border border-[#ebeef5] w-32">需求部门<span className="text-[#f56c6c] ml-0.5">*</span></th>
                     <th className="px-2 py-2 text-center border border-[#ebeef5] w-40">项目名称<span className="text-[#f56c6c] ml-0.5">*</span></th>
                     <th className="px-2 py-2 text-center border border-[#ebeef5] w-56">主要内容</th>
-                    <th className="px-2 py-2 text-center border border-[#ebeef5] w-32">预算总金额(元)<span className="text-[#f56c6c] ml-0.5">*</span></th>
+                    <th className="px-2 py-2 text-center border border-[#ebeef5] w-32">不含税预算总金额(元)<span className="text-[#f56c6c] ml-0.5">*</span></th>
                     <th className="px-2 py-2 text-center border border-[#ebeef5] w-36">备注</th>
                     <th className="px-2 py-2 text-center border border-[#ebeef5] w-16">操作</th>
                   </tr>
@@ -1402,7 +1402,7 @@ export default function ProcurementDemandPage() {
                         <th className="px-2 py-2 text-xs text-left">主要内容</th>
                         <th className="px-2 py-2 text-xs text-left w-24">原预算</th>
                         <th className="px-2 py-2 text-xs text-left w-28">新预算（不得超原）</th>
-                        <th className="px-2 py-2 text-xs text-left w-24">预算控制金额</th>
+                        <th className="px-2 py-2 text-xs text-left w-24">不含税预算审定总金额</th>
                         <th className="px-2 py-2 text-xs text-left w-16">操作</th>
                       </tr>
                     </thead>

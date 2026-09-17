@@ -157,7 +157,7 @@ export default function ProcurementDemandConfirmPage() {
       }
       for (const r of projectRows) {
         if (!r.dept || !r.projectName || !r.budgetAmount) {
-          alert('请完整填写所有项目行的需求部门、项目名称、预算总金额');
+          alert('请完整填写所有项目行的需求部门、项目名称、不含税预算总金额');
           return;
         }
       }
@@ -777,12 +777,12 @@ function ConfirmFormFields({
           <>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className={labelCls}>预算总金额（元）<span className={requiredCls}>*</span></div>
+                <div className={labelCls}>不含税预算总金额（元）<span className={requiredCls}>*</span></div>
                 <input type="number" className={inputCls} disabled={confirmLocked} placeholder="自动关联申请阶段的物资清单" />
               </div>
               <div>
-                <div className={labelCls}>预算控制金额（元）<span className={requiredCls}>*</span></div>
-                <input type="number" className={inputCls} disabled={confirmLocked} placeholder="请输入预算控制金额" />
+                <div className={labelCls}>不含税预算审定总金额（元）<span className={requiredCls}>*</span></div>
+                <input type="number" className={inputCls} disabled={confirmLocked} placeholder="请输入预算审定金额" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -823,8 +823,8 @@ function ConfirmFormFields({
               <input type="number" className={inputCls} disabled={confirmLocked} placeholder="自动关联申请阶段" />
             </div>
             <div>
-              <div className={labelCls}>预算控制金额（元）<span className={requiredCls}>*</span></div>
-              <input type="number" className={inputCls} disabled={confirmLocked} placeholder="请输入预算控制金额" />
+              <div className={labelCls}>不含税预算审定总金额（元）<span className={requiredCls}>*</span></div>
+              <input type="number" className={inputCls} disabled={confirmLocked} placeholder="请输入预算审定金额" />
             </div>
             <div>
               <div className={labelCls}>立项审批日期<span className={requiredCls}>*</span></div>
@@ -841,8 +841,8 @@ function ConfirmFormFields({
               <input type="number" className={inputCls} disabled={confirmLocked} placeholder="自动关联申请阶段" />
             </div>
             <div>
-              <div className={labelCls}>预算控制金额（元）<span className={requiredCls}>*</span></div>
-              <input type="number" className={inputCls} disabled={confirmLocked} placeholder="请输入预算控制金额" />
+              <div className={labelCls}>不含税预算审定总金额（元）<span className={requiredCls}>*</span></div>
+              <input type="number" className={inputCls} disabled={confirmLocked} placeholder="请输入预算审定金额" />
             </div>
             <div>
               <div className={labelCls}>立项审批日期<span className={requiredCls}>*</span></div>
@@ -871,7 +871,7 @@ function ConfirmFormFields({
 
   // 服务类 / 工程类 → 多行项目表单
   const getTableHeaders = () => {
-    const base = ['#', '需求部门*', '项目名称*', ['主要内容'], mode === 'meeting' ? '预算总金额*' : '不含税预算*', '预算控制金额*'];
+    const base = ['#', '需求部门*', '项目名称*', ['主要内容'], '不含税预算总金额*', '不含税预算审定总金额*'];
     if (mode === 'meeting') base.push('立项审批会议名称*', '立项审批日期*');
     if (mode === 'sign_report') base.push('立项审批日期*');
     if (mode === 'application_form') base.push('立项审批日期*');
