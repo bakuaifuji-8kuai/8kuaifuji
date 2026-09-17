@@ -403,7 +403,7 @@ export default function ProcurementDemandConfirmPage() {
                   <div className="text-slate-700 font-medium">{FORM_TYPE_LABEL[formType!]}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-slate-500 mb-0.5">框架采购</div>
+                  <div className="text-xs text-slate-500 mb-0.5">框架合同</div>
                   <div className="text-slate-700">
                     {selected.procurementType === 'within_framework' ? '清单内' : selected.procurementType === 'outside_framework' ? '清单外' : '新增供应商'}
                   </div>
