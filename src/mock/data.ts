@@ -4406,41 +4406,31 @@ export const evaluationRecords: EvaluationRecord[] = [
 ];
 
 // ============================================================================
-// 招采全链路 Demo 数据覆盖（2026-09-17）
-// 用独立文件的完整 demo 数据替换上方旧 mock
+// 招采全链路 Demo 数据覆盖 v2（2026-09-17 重建）
+// 完整链路：Supplier → Plan → Demand → Bidding → SupplierQuote → Contract → Order → Inspection → Evaluation
 // ============================================================================
 import * as _procurementDemo from './procurementDemoData';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const _procurement = _procurementDemo;
-// 覆盖上方同名 export：通过 Object.assign 保持兼容
+
+// ------- 1. 覆盖 data.ts 已有的 6 个数组（清空 + push）-------
 const _oldProcurementDemands = procurementDemands;
 const _oldContractLedgers = contractLedgers;
 const _oldContractPurchaseOrders = contractPurchaseOrders;
 const _oldProcurementInspections = procurementInspections;
 const _oldEvaluationTemplates = evaluationTemplates;
 const _oldEvaluationRecords = evaluationRecords;
-// 直接赋值替换（TS const 但运行时可改数组内容）
-if (_procurementDemo.procurementDemands) {
-  (_oldProcurementDemands as any).length = 0;
-  (_oldProcurementDemands as any).push(..._procurementDemo.procurementDemands);
-}
-if (_procurementDemo.contractLedgers) {
-  (_oldContractLedgers as any).length = 0;
-  (_oldContractLedgers as any).push(..._procurementDemo.contractLedgers);
-}
-if (_procurementDemo.contractPurchaseOrders) {
-  (_oldContractPurchaseOrders as any).length = 0;
-  (_oldContractPurchaseOrders as any).push(..._procurementDemo.contractPurchaseOrders);
-}
-if (_procurementDemo.procurementInspections) {
-  (_oldProcurementInspections as any).length = 0;
-  (_oldProcurementInspections as any).push(..._procurementDemo.procurementInspections);
-}
-if (_procurementDemo.evaluationTemplates) {
-  (_oldEvaluationTemplates as any).length = 0;
-  (_oldEvaluationTemplates as any).push(..._procurementDemo.evaluationTemplates);
-}
-if (_procurementDemo.evaluationRecords) {
-  (_oldEvaluationRecords as any).length = 0;
-  (_oldEvaluationRecords as any).push(..._procurementDemo.evaluationRecords);
-}
+const _oldSuppliers = suppliers;
+const _oldProcurementPlans = procurementPlans;
+if (_procurementDemo.procurementDemands) { (_oldProcurementDemands as any).length = 0; (_oldProcurementDemands as any).push(..._procurementDemo.procurementDemands); }
+if (_procurementDemo.contractLedgers) { (_oldContractLedgers as any).length = 0; (_oldContractLedgers as any).push(..._procurementDemo.contractLedgers); }
+if (_procurementDemo.contractPurchaseOrders) { (_oldContractPurchaseOrders as any).length = 0; (_oldContractPurchaseOrders as any).push(..._procurementDemo.contractPurchaseOrders); }
+if (_procurementDemo.procurementInspections) { (_oldProcurementInspections as any).length = 0; (_oldProcurementInspections as any).push(..._procurementDemo.procurementInspections); }
+if (_procurementDemo.evaluationTemplates) { (_oldEvaluationTemplates as any).length = 0; (_oldEvaluationTemplates as any).push(..._procurementDemo.evaluationTemplates); }
+if (_procurementDemo.evaluationRecords) { (_oldEvaluationRecords as any).length = 0; (_oldEvaluationRecords as any).push(..._procurementDemo.evaluationRecords); }
+if (_procurementDemo.suppliers) { (_oldSuppliers as any).length = 0; (_oldSuppliers as any).push(..._procurementDemo.suppliers); }
+if (_procurementDemo.procurementPlans) { (_oldProcurementPlans as any).length = 0; (_oldProcurementPlans as any).push(..._procurementDemo.procurementPlans); }
+
+// ------- 2. 新增 data.ts 原来没有的数组（直接 re-export）-------
+export const biddings = _procurementDemo.biddings;
+export const supplierQuotes = _procurementDemo.supplierQuotes;
