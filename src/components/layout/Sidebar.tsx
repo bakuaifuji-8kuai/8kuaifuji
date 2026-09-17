@@ -47,6 +47,7 @@ const menuItems: MenuItem[] = [
         { title: '合同台账', path: '/procurement/contract' },
         { title: '合同归档', path: '/procurement/contract-archive' },
         { title: '合同履约评估', path: '/procurement/contract-performance' },
+        { title: '履约评估记录', path: '/procurement/contract-eval-record' },
       ]},
       { title: '招采订单管理', path: '/procurement/contract-purchase-order' },
       { title: '供应商管理', path: '/procurement/supplier-group', children: [

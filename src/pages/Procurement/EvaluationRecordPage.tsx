@@ -9,14 +9,14 @@ import Modal from '@/components/common/Modal';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import { Eye, Check, X, Download, Trash2, BarChart3 } from 'lucide-react';
 
-export default function EvaluationRecordPage() {
+export default function EvaluationRecordPage({ defaultType }: { defaultType?: string } = {}) {
   const evaluationRecords = useStore((s) => s.evaluationRecords) || [];
   const updateEvaluationRecord = useStore((s) => s.updateEvaluationRecord);
   const deleteEvaluationRecord = useStore((s) => s.deleteEvaluationRecord);
   const currentUser = useStore((s) => s.currentUser);
 
   const [filterStatus, setFilterStatus] = useState<string>('');
-  const [filterType, setFilterType] = useState<string>('');
+  const [filterType, setFilterType] = useState<string>(defaultType || '');
   const [searchText, setSearchText] = useState<string>('');
   const [filterDateFrom, setFilterDateFrom] = useState<string>('');
   const [filterDateTo, setFilterDateTo] = useState<string>('');
@@ -30,6 +30,7 @@ export default function EvaluationRecordPage() {
 
   const filteredData = useMemo(() => {
     return evaluationRecords.filter((r) => {
+      if (defaultType && r.type !== defaultType) return false;  // 强制过滤：合约管理入口只显示合同履约评估
       if (applied.status && r.status !== applied.status) return false;
       if (applied.type && r.type !== applied.type) return false;
       if (applied.text && !r.supplierName.includes(applied.text) && !r.templateName.includes(applied.text)) return false;
@@ -37,7 +38,7 @@ export default function EvaluationRecordPage() {
       if (applied.dateTo && r.evaluationDate > applied.dateTo) return false;
       return true;
     });
-  }, [evaluationRecords, applied]);
+  }, [evaluationRecords, applied, defaultType]);
 
   const stats = useMemo(() => {
     const total = evaluationRecords.length;
@@ -260,8 +261,12 @@ export default function EvaluationRecordPage() {
     <div className="p-5">
       {/* 页面标题 */}
       <div className="mb-5">
-        <h1 className="text-xl font-bold text-slate-800">评估记录</h1>
-        <p className="text-sm text-slate-500 mt-1">查看所有供应商履约评估记录，支持筛选、审批和统计分析</p>
+        <h1 className="text-xl font-bold text-slate-800">{defaultType === 'contract_performance' ? '履约评估记录' : '考核评价记录'}</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          {defaultType === 'contract_performance'
+            ? '查看所有合同履约评估记录，支持筛选、审批和统计分析'
+            : '查看所有供应商考核评价记录，支持筛选、审批和统计分析'}
+        </p>
       </div>
 
       {/* 统计卡片 */}
@@ -309,11 +314,17 @@ export default function EvaluationRecordPage() {
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                disabled={!!defaultType}
+                className={`h-9 px-3 border border-slate-300 rounded-lg text-sm outline-none ${
+                  defaultType ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'focus:ring-2 focus:ring-indigo-500'
+                }`}
               >
                 <option value="">全部类型</option>
+                <option value="contract_performance">合同履约评价</option>
+                <option value="project_single">单个项目考核</option>
+                <option value="monthly">月度考核</option>
                 <option value="quarterly">季度考核</option>
-                <option value="single">项目单次考核</option>
+                <option value="yearly">年度评价</option>
                 <option value="warranty">质保履约考核</option>
               </select>
               <input

@@ -49,6 +49,7 @@ import ContractProcurementPage from "@/pages/Procurement/ContractProcurementPage
 import ContractNonProcurementPage from "@/pages/Procurement/ContractNonProcurementPage";
 import ContractArchivePage from "@/pages/Procurement/ContractArchivePage";
 import ContractPerformancePage from "@/pages/Procurement/ContractPerformancePage";
+import EvaluationRecordPage from "@/pages/Procurement/EvaluationRecordPage";
 import ProcurementOrderPage from "@/pages/Procurement/ProcurementOrderPage";
 import SupplierPage from "@/pages/Procurement/SupplierPage";
 import ProcurementInspectionPage from "@/pages/Procurement/ProcurementInspectionPage";
@@ -62,7 +63,6 @@ import ContractPurchaseOrderPage from "@/pages/Procurement/ContractPurchaseOrder
 import ProcurementPlanSummaryPage from "@/pages/Procurement/ProcurementPlanSummaryPage";
 import EvaluationTemplatePage from "@/pages/Procurement/EvaluationTemplatePage";
 import EvaluationExecutePage from "@/pages/Procurement/EvaluationExecutePage";
-import EvaluationRecordPage from "@/pages/Procurement/EvaluationRecordPage";
 
 export default function App() {
   return (
@@ -121,6 +121,7 @@ export default function App() {
           <Route path="procurement/contract-procurement" element={<ContractProcurementPage />} />
           <Route path="procurement/contract-non-procurement" element={<ContractNonProcurementPage />} />
           <Route path="procurement/contract-performance" element={<ContractPerformancePage />} />
+          <Route path="procurement/contract-eval-record" element={<EvaluationRecordPage defaultType="contract_performance" />} />
           <Route path="procurement/contract-archive" element={<ContractArchivePage />} />
           <Route path="procurement/contract-purchase-order" element={<ContractPurchaseOrderPage />} />
           <Route path="procurement/order" element={<ProcurementOrderPage />} />
