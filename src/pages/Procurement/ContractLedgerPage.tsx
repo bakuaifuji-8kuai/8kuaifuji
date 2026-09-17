@@ -633,13 +633,15 @@ export default function ContractLedgerPage() {
   };
 
   // ========== 表格列定义 ==========
+  // ========== 合同台账列定义（按916文档 L50-52 字段顺序）==========
   const columns: ColumnDef<ContractLedger>[] = [
-    // 1. 合同性质
+    // 0. 合同性质（业务区分用，916L50无但实际必需）
     {
       key: 'contractNature',
       title: '合同性质',
+      width: '72',
       render: (row) => (
-        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+        <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-medium ${
           row.contractNature === 'procurement'
             ? 'bg-green-50 text-green-700 border border-green-200'
             : 'bg-slate-100 text-slate-600 border border-slate-200'
@@ -649,41 +651,42 @@ export default function ContractLedgerPage() {
       ),
       footer: '',
     },
-    // 2. 合同名称
+    // 1. 合同名称
     { key: 'contractName', title: '合同名称', render: (row) => row.contractName, footer: '' },
-    // 3. 合同编号
+    // 2. 合同编号
     { key: 'contractNo', title: '合同编号', render: (row) => row.contractNo,
-      footer: (data: ContractLedger[]) => `合计 ${data.length} 份` },
-    // 4. 合同类型
+      footer: (data) => `合计 ${data.length} 份` },
+    // 3. 合同类型
     { key: 'contractType', title: '合同类型', render: (row) => getContractTypeLabel(row), footer: '' },
-    // 5. 合同形成方式
+    // 4. 合同形成方式
     { key: 'formation', title: '合同形成方式', render: (row) => getFormationLabel(row), footer: '' },
-    // 6. 中标时间
+    // 5. 中标时间
     { key: 'winningDate', title: '中标时间', render: (row) => {
       if (row.contractNature !== 'procurement') return <span className="text-[#c0c4cc]">-</span>;
       return row.winningDate || '-';
     }, footer: '' },
-    // 7. 示范文本
+    // 6. 示范文本（是/否）
     { key: 'isModelText', title: '示范文本', render: (row) => (
       row.isModelText
         ? <span className="inline-block px-2 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200">是</span>
         : <span className="inline-block px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-500 border border-slate-200">否</span>
     ), footer: '' },
-    // 8. 经办部门
+    // 7-11. 合同当事人（我方3列 + 对方2列）
     { key: 'handlingDepartment', title: '经办部门', render: (row) => row.handlingDepartment || '-', footer: '' },
-    // 9. 经办人
     { key: 'handler', title: '经办人', render: (row) => row.handler || '-', footer: '' },
-    // 10. 联系方式
     { key: 'handlerContact', title: '联系方式', render: (row) => row.handlerContact || '-', footer: '' },
-    // 11. 对方单位
     { key: 'counterpartyName', title: '对方单位', render: (row) => row.counterpartyName || '-', footer: '' },
-    // 12. 对方负责人
     { key: 'counterpartyContact', title: '对方负责人', render: (row) => row.counterpartyContact || '-', footer: '' },
+    // 12. 合同主要内容（916L50字段，原缺失）
+    { key: 'mainContent', title: '合同主要内容', width: '200', render: (row) => {
+      const text = row.mainContent || '-';
+      return <span title={text} className="block max-w-[200px] truncate">{text}</span>;
+    }, footer: '' },
     // 13. 签订日期
     { key: 'signingDate', title: '签订日期', render: (row) => row.signingDate || '-', footer: '' },
-    // 14. 生效日期
+    // 14. 合同约定生效日期
     { key: 'effectiveDate', title: '生效日期', render: (row) => row.effectiveDate || '-', footer: '' },
-    // 15. 终止日期（保留到期高亮）
+    // 15. 合同约定终止日期
     {
       key: 'terminationDate',
       title: '终止日期',
@@ -702,77 +705,73 @@ export default function ContractLedgerPage() {
         );
       },
     },
-    // 16. 合同金额(万) — footer 合计
+    // 16. 合同金额（万元）
     {
       key: 'amount', title: '合同金额(万)', align: 'right',
       render: (row) => row.amount?.toLocaleString() || '-',
-      footer: (data: ContractLedger[]) => {
+      footer: (data) => {
         const sum = data.reduce((s, c) => s + (c.amount || 0), 0);
         return sum > 0 ? sum.toLocaleString() : '-';
       },
     },
-    // 17. 采购申请金额(万)
+    // 17. 采购申请合计金额（万元）
     { key: 'requisitionAmount', title: '采购申请金额(万)', align: 'right', render: (row) => {
       if (!row.requisitionAmount) return '-';
-      // requisitionAmount 是元，转成万元显示
       return (row.requisitionAmount / 10000).toLocaleString(undefined, { maximumFractionDigits: 2 });
     }, footer: '' },
-    // 18. 采购申请比(%) — 计算字段
-    { key: 'requisitionRatio', title: '采购申请比(%)', align: 'right', render: (row) => {
+    // 18. 采购申请占合同金额比例（%）
+    { key: 'requisitionRatio', title: '采购申请占比(%)', align: 'right', render: (row) => {
       const ratio = getRequisitionRatio(row);
       return ratio !== null ? `${ratio}%` : '-';
     }, footer: '' },
-    // 19. 已支付金额(万) — footer 合计
+    // 19. 已支付金额（万元）
     {
       key: 'paidAmount', title: '已支付金额(万)', align: 'right',
       render: (row) => row.paidAmount?.toLocaleString() || '-',
-      footer: (data: ContractLedger[]) => {
+      footer: (data) => {
         const sum = data.reduce((s, c) => s + (c.paidAmount || 0), 0);
         return sum > 0 ? sum.toLocaleString() : '-';
       },
     },
-    // 20. 结算金额(万) — footer 合计
+    // 20. 合同结算金额（万元）
     {
       key: 'settlementAmount', title: '结算金额(万)', align: 'right',
       render: (row) => row.settlementAmount?.toLocaleString() || '-',
-      footer: (data: ContractLedger[]) => {
+      footer: (data) => {
         const sum = data.reduce((s, c) => s + (c.settlementAmount || 0), 0);
         return sum > 0 ? sum.toLocaleString() : '-';
       },
     },
-    // 21. 合同履行情况
-    { key: 'performanceStatus', title: '合同履行情况', render: (row) => row.performanceStatus || '-', footer: '' },
-    // 22. 资金流向
-    { key: 'businessCategory', title: '资金流向', render: (row) => {
+    // 21. 资金流向分类
+    { key: 'businessCategory', title: '资金流向分类', render: (row) => {
       if (!row.businessCategory) return '-';
       return BUSINESS_CATEGORY_LABELS[row.businessCategory] || row.businessCategory;
     }, footer: '' },
-    // 23. 归档情况
-    { key: 'archiveStatus', title: '归档情况', render: (row) => {
-      if (!row.archiveStatus) return '-';
-      const config = {
-        not_started: { cls: 'bg-slate-100 text-slate-500 border-slate-200' },
-        in_progress: { cls: 'bg-amber-50 text-amber-700 border-amber-200' },
-        archived: { cls: 'bg-green-50 text-green-700 border-green-200' },
-      };
-      const cls = config[row.archiveStatus]?.cls || 'bg-slate-100 text-slate-500 border-slate-200';
+    // 22. 合同履行情况
+    { key: 'performanceStatus', title: '合同履行情况', render: (row) => row.performanceStatus || '-', footer: '' },
+    // 23. 合同履约评估情况（916L50字段，原缺失）
+    { key: 'evalStatus', title: '合同履约评估情况', width: '180', render: (row) => {
+      const evals = row.contractEvaluations || [];
+      if (evals.length === 0) return <span className="text-[#c0c4cc]">未设置</span>;
+      const kinds = [...new Set(evals.map(e => e.kind))];
+      const kindLabel = { single_project: '单个项目', monthly: '月度', quarterly: '季度', yearly: '年度' };
       return (
-        <span className={`inline-block px-2 py-0.5 rounded text-xs border ${cls}`}>
-          {ARCHIVE_STATUS_LABELS[row.archiveStatus]}
-        </span>
+        <div className="flex flex-wrap gap-1">
+          {kinds.map(k => (
+            <span key={k} className="px-1.5 py-0.5 rounded text-[11px] bg-purple-50 text-purple-700 border border-purple-200">
+              {kindLabel[k] || k}
+            </span>
+          ))}
+        </div>
       );
     }, footer: '' },
-    // 24. 状态（保留到期高亮逻辑）
+    // 24. 合同状态
     {
-      key: 'status',
-      title: '状态',
-      footer: '',
+      key: 'status', title: '合同状态', footer: '',
       render: (row) => {
         let displayStatus = statusMap[row.status] || statusMap.draft;
         let extraLabel = '';
-        if (row.status === 'active' && isExpired(row.terminationDate)) {
-          extraLabel = ' (已过期)';
-        }
+        if (row.status === 'active' && isExpired(row.terminationDate)) extraLabel = ' (已过期)';
         return (
           <span className={`px-2 py-0.5 rounded text-xs ${displayStatus.color} ${displayStatus.bg}`}>
             {displayStatus.label}{extraLabel}
@@ -782,10 +781,9 @@ export default function ContractLedgerPage() {
     },
     // 25. 备注
     { key: 'remark', title: '备注', render: (row) => row.remark || '-', footer: '' },
-    // 26. 操作
+    // 操作列（916L50无，UI保留）
     {
-      key: 'op',
-      title: '操作',
+      key: 'op', title: '操作',
       render: (row) => (
         <div className="flex items-center gap-2 flex-wrap">
           <TextButton onClick={() => setViewItem(row)}>查看详情</TextButton>
@@ -793,13 +791,11 @@ export default function ContractLedgerPage() {
           <TextButton
             onClick={() => {
               const nextStatus = row.archiveStatus === 'archived' ? 'not_started' : 'archived';
-              updateContractLedger(row.id, { ...row, archiveStatus: nextStatus as any });
+              updateContractLedger(row.id, { ...row, archiveStatus: nextStatus });
             }}
           >{row.archiveStatus === 'archived' ? '取消归档' : '归档'}</TextButton>
           {(row.status === 'active' || row.status === 'approved') && (
-            <>
-              <TextButton type="danger" onClick={() => { setTerminateItem(row); setTerminateReason(''); }}>终止</TextButton>
-            </>
+            <TextButton type="danger" onClick={() => { setTerminateItem(row); setTerminateReason(''); }}>终止</TextButton>
           )}
           {(row.status === 'terminated' || row.status === 'expired' || row.status === 'invalid') && (
             <TextButton onClick={() => handleActivate(row)}>恢复执行</TextButton>
