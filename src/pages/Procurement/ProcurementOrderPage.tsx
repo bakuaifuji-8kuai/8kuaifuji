@@ -3,6 +3,9 @@ import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Bu
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
+import TaxViewToggle from '@/components/common/TaxViewToggle';
+import type { TaxViewMode } from '@/utils/taxView';
+import { sumDisplayAmount, fmtPrice, fmtTaxRate, showTaxRate, AMOUNT_LABEL_SUFFIX, PRICE_LABEL_SUFFIX, getDisplayUnitPrice, getDisplayAmount } from '@/utils/taxView';
 import { useStore } from '@/store/useStore';
 import type { ProcurementOrder, ProcurementOrderDetail, ProcurementOrderChange } from '@/types';
 
@@ -42,6 +45,9 @@ export default function ProcurementOrderPage() {
   const suppliers = useStore((s) => s.suppliers);
   const currentUser = useStore((s) => s.currentUser);
 
+  // ====== 含税/不含税视图开关（页面级，一个单据内口径统一）======
+  const [taxViewMode, setTaxViewMode] = useState<TaxViewMode>('inclusive');
+
   // =============== 筛选条件 ===============
   const [filterNo, setFilterNo] = useState('');
   const [filterDemand, setFilterDemand] = useState('');
@@ -74,12 +80,15 @@ export default function ProcurementOrderPage() {
   const stats = useMemo(() => {
     return {
       total: filteredData.length,
-      totalAmount: filteredData.reduce((s, o) => s + o.details.reduce((ds, d) => ds + (d.amount || 0), 0), 0),
+      totalAmount: filteredData.reduce(
+        (s, o) => s + sumDisplayAmount(o.details, taxViewMode),
+        0
+      ),
       pending: filteredData.filter((o) => o.status === 'pending').length,
       active: filteredData.filter((o) => ['pending', 'approved', 'sent'].includes(o.status)).length,
       completed: filteredData.filter((o) => o.status === 'completed').length,
     };
-  }, [filteredData]);
+  }, [filteredData, taxViewMode]);
 
   // =============== 弹窗状态 ===============
   const [editItem, setEditItem] = useState<ProcurementOrder | null>(null);
@@ -119,11 +128,11 @@ export default function ProcurementOrderPage() {
     { key: 'supplierName', title: '供应商', render: (row) => row.supplierName || '-' },
     {
       key: 'totalAmount',
-      title: '订单金额(元)',
+      title: '订单金额' + AMOUNT_LABEL_SUFFIX(taxViewMode),
       align: 'right',
       render: (row) => {
-        const total = row.details.reduce((s, d) => s + (d.amount || 0), 0);
-        return total > 0 ? '¥' + total.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-';
+        const total = sumDisplayAmount(row.details, taxViewMode);
+        return total > 0 ? '¥' + fmtPrice(total) : '-';
       },
     },
     {
@@ -447,10 +456,15 @@ export default function ProcurementOrderPage() {
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <h2 className="text-sm font-semibold text-[#303133]">采购订单管理</h2>
-          <span className="text-xs text-[#909399]">共 {stats.total} 份，总金额 ¥{stats.totalAmount.toLocaleString()} 元</span>
+          <span className="text-xs text-[#909399]">
+            共 {stats.total} 份，总金额 ¥{fmtPrice(stats.totalAmount)}{AMOUNT_LABEL_SUFFIX(taxViewMode)}
+          </span>
           {stats.pending > 0 && <span className="text-xs text-[#e6a23c] px-2 py-0.5 bg-[#fdf6ec] rounded">⚠ {stats.pending} 份待审批</span>}
         </div>
-        <PrimaryButton onClick={openAdd}>+ 新增订单</PrimaryButton>
+        <div className="flex items-center gap-3">
+          <TaxViewToggle value={taxViewMode} onChange={setTaxViewMode} />
+          <PrimaryButton onClick={openAdd}>+ 新增订单</PrimaryButton>
+        </div>
       </div>
 
       {/* 搜索筛选区 */}
@@ -954,8 +968,8 @@ export default function ProcurementOrderPage() {
                       <th className="px-2 py-2 text-left text-[#606266] font-medium w-20">规格</th>
                       <th className="px-2 py-2 text-left text-[#606266] font-medium w-16">单位</th>
                       <th className="px-2 py-2 text-center text-[#606266] font-medium w-20">数量</th>
-                      <th className="px-2 py-2 text-center text-[#606266] font-medium w-24">单价(元)</th>
-                      <th className="px-2 py-2 text-center text-[#606266] font-medium w-24">金额(元)</th>
+                      <th className="px-2 py-2 text-center text-[#606266] font-medium w-24">单价{PRICE_LABEL_SUFFIX(taxViewMode)}</th>
+                      <th className="px-2 py-2 text-center text-[#606266] font-medium w-24">金额{AMOUNT_LABEL_SUFFIX(taxViewMode)}</th>
                       <th className="px-2 py-2 text-center text-[#606266] font-medium w-28">交货日期</th>
                     </tr>
                   </thead>
@@ -967,8 +981,8 @@ export default function ProcurementOrderPage() {
                         <td className="px-2 py-2">{d.specification || '-'}</td>
                         <td className="px-2 py-2">{d.unit}</td>
                         <td className="px-2 py-2 text-center">{d.quantity}</td>
-                        <td className="px-2 py-2 text-right">{d.unitPrice?.toLocaleString() || '-'}</td>
-                        <td className="px-2 py-2 text-right font-medium">¥{(d.amount || 0).toLocaleString()}</td>
+                        <td className="px-2 py-2 text-right">{fmtPrice(getDisplayUnitPrice(d, taxViewMode))}</td>
+                        <td className="px-2 py-2 text-right font-medium">¥{fmtPrice(getDisplayAmount(d, taxViewMode))}</td>
                         <td className="px-2 py-2 text-center text-[#909399]">{d.deliveryDate || '-'}</td>
                       </tr>
                     ))}
