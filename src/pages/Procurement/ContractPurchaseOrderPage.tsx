@@ -3,9 +3,10 @@ import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Bu
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
+import DemandPickerModal from '@/components/common/DemandPickerModal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
-import type { ContractPurchaseOrder, ContractPurchaseOrderDetail, ContractPurchaseOrderStatus, ContractPurchaseOrderChangeRecord } from '@/types';
+import type { ContractPurchaseOrder, ContractPurchaseOrderDetail, ContractPurchaseOrderStatus, ContractPurchaseOrderChangeRecord, ProcurementDemand } from '@/types';
 
 // 测试数据：执行中的合同
 const MOCK_CONTRACTS = [
@@ -230,7 +231,7 @@ export default function ContractPurchaseOrderPage() {
     setContractPickerOpen(true);
   };
 
-  const handleSelectDemand = (demand: any) => {
+  const handleSelectDemand = (demand: ProcurementDemand) => {
     const newDetails: ContractPurchaseOrderDetail[] = demand.details.map((d: any, idx: number) => {
       const matchedProduct = products.find(
         (p) => p.name === d.productName && p.specification === d.specification
@@ -256,9 +257,10 @@ export default function ContractPurchaseOrderPage() {
       ...editItem,
       procurementDemandId: demand.id,
       procurementDemandNo: demand.demandNo,
-      projectId: demand.projectId,
+      projectId: undefined,
       projectName: demand.projectName,
-      projectType: demand.projectType,
+      projectType: demand.demandType === 'implementation_project' ? 'implementation_project'
+        : demand.demandType === 'service_project' ? 'service_project' : undefined,
     });
     setEditDetails(newDetails);
     setContractPickerOpen(false);
@@ -673,50 +675,15 @@ export default function ContractPurchaseOrderPage() {
       </Modal>
 
       {/* 采购需求选择弹窗 */}
-      <Modal
+      <DemandPickerModal
         open={contractPickerOpen}
-        title="选择采购需求"
         onClose={() => setContractPickerOpen(false)}
-        footer={<DefaultButton onClick={() => setContractPickerOpen(false)}>关闭</DefaultButton>}
-        width="900px"
-      >
-        <div>
-          <div className="text-xs text-[#909399] mb-3">请选择已审批通过的采购需求，系统将自动携带项目信息、物料明细、预算价格。</div>
-          <div className="border border-[#ebeef5] rounded overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="bg-[#f5f7fa] text-[#606266]">
-                  <th className="px-3 py-2 text-left">需求编号</th>
-                  <th className="px-3 py-2 text-left">项目名称</th>
-                  <th className="px-3 py-2 text-left">申请人</th>
-                  <th className="px-3 py-2 text-center">物料数</th>
-                  <th className="px-3 py-2 text-right">预估金额</th>
-                  <th className="px-3 py-2 text-center">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {procurementDemands.filter(d => d.status === 'approved').map(d => (
-                  <tr key={d.id} className="border-t border-[#ebeef5] hover:bg-[#f5f7fa]">
-                    <td className="px-3 py-2">{d.demandNo}</td>
-                    <td className="px-3 py-2">{d.projectName}</td>
-                    <td className="px-3 py-2">{d.applicant}</td>
-                    <td className="px-3 py-2 text-center">{d.details.length}</td>
-                    <td className="px-3 py-2 text-right">¥{(d.estimatedAmount || 0).toLocaleString()}</td>
-                    <td className="px-3 py-2 text-center">
-                      <PrimaryButton size="small" onClick={() => handleSelectDemand(d)}>选择</PrimaryButton>
-                    </td>
-                  </tr>
-                ))}
-                {procurementDemands.filter(d => d.status === 'approved').length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-3 py-8 text-center text-[#909399]">暂无已审批通过的采购需求</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </Modal>
+        demands={procurementDemands}
+        onConfirm={(demand) => {
+          if (demand) handleSelectDemand(demand);
+          setContractPickerOpen(false);
+        }}
+      />
 
       {/* 变更申请弹窗 */}
       <Modal

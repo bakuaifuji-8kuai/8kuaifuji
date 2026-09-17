@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
+import { Search, Check, Filter } from 'lucide-react';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
-import type { ProcurementInspection } from '@/types';
+import type { ProcurementInspection, ContractPurchaseOrder } from '@/types';
 
 export default function ProcurementInspectionPage() {
   const procurementInspections = useStore((s) => s.procurementInspections);
@@ -94,6 +95,9 @@ export default function ProcurementInspectionPage() {
   const [editItem, setEditItem] = useState<ProcurementInspection | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [viewItem, setViewItem] = useState<ProcurementInspection | null>(null);
+  const [orderPickerOpen, setOrderPickerOpen] = useState(false);
+  const [orderPickerKeyword, setOrderPickerKeyword] = useState('');
+  const [orderPickerTempId, setOrderPickerTempId] = useState<string | undefined>(undefined);
 
   const openAdd = () => {
     const now = new Date();
@@ -204,37 +208,73 @@ export default function ProcurementInspectionPage() {
     setEditItem(null);
   };
 
-  const loadFromOrder = () => {
-    const orderNo = prompt('请输入订单编号：');
-    if (!orderNo) return;
-    const order = procurementOrders.find((o) => o.orderNo === orderNo);
-    if (!order) {
-      alert('未找到该订单');
+  const openOrderPicker = () => {
+    setOrderPickerKeyword('');
+    setOrderPickerTempId(editItem?.orderId);
+    setOrderPickerOpen(true);
+  };
+
+  // 筛选可验收的订单：submitted 状态 + 关键字
+  const availableOrders = useMemo(() => {
+    const kw = orderPickerKeyword.trim().toLowerCase();
+    return procurementOrders.filter((o) => {
+      if (o.status !== 'submitted') return false;
+      if (!kw) return true;
+      return (
+        (o.orderNo || '').toLowerCase().includes(kw) ||
+        (o.contractNo || '').toLowerCase().includes(kw) ||
+        (o.supplierName || '').toLowerCase().includes(kw) ||
+        (o.projectName || '').toLowerCase().includes(kw)
+      );
+    });
+  }, [procurementOrders, orderPickerKeyword]);
+
+  const confirmPickOrder = () => {
+    if (!orderPickerTempId || !editItem) {
+      setOrderPickerOpen(false);
       return;
     }
-    const details = order.details.map((d) => ({
+    const order = procurementOrders.find((o) => o.id === orderPickerTempId);
+    if (!order) {
+      setOrderPickerOpen(false);
+      return;
+    }
+    // 修正字段名：ContractPurchaseOrderDetail.orderQuantity 不是 quantity
+    const details = (order.details || []).map((d) => ({
       id: 'PID' + Date.now() + Math.random(),
       productId: d.productId,
       productCode: d.productCode,
       productName: d.productName,
       specification: d.specification,
       unit: d.unit,
-      orderedQuantity: d.quantity,
-      inspectedQuantity: d.quantity,
-      passQuantity: d.quantity,
+      orderedQuantity: d.orderQuantity,
+      inspectedQuantity: d.orderQuantity,
+      passQuantity: d.orderQuantity,
       failQuantity: 0,
       isQualified: true,
     }));
-    if (editItem) {
-      setEditItem({
-        ...editItem,
-        orderId: order.id,
-        orderNo: order.orderNo,
-        supplierId: order.supplierId,
-        supplierName: order.supplierName,
-        details,
-      });
-    }
+    setEditItem({
+      ...editItem,
+      orderId: order.id,
+      orderNo: order.orderNo,
+      supplierId: order.supplierId,
+      supplierName: order.supplierName,
+      details,
+    });
+    setOrderPickerOpen(false);
+  };
+
+  const clearOrderLink = () => {
+    if (!editItem) return;
+    if (!confirm('确认清除关联订单及其明细？（不影响订单本身数据）')) return;
+    setEditItem({
+      ...editItem,
+      orderId: undefined,
+      orderNo: '',
+      supplierId: undefined,
+      supplierName: '',
+      details: [],
+    });
   };
 
   const updateDetail = (index: number, field: string, value: any) => {
@@ -335,12 +375,19 @@ export default function ProcurementInspectionPage() {
                 )}
               </div>
               <div>
-                <div className="mb-1 text-[#606266]">关联订单</div>
-                <input
-                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
-                  value={editItem.orderNo || ''}
-                  onChange={(e) => setEditItem({ ...editItem, orderNo: e.target.value })}
-                />
+                <div className="mb-1 text-[#606266]">关联采购订单（可选）</div>
+                <div className="flex items-center gap-2">
+                  <input
+                    className="flex-1 h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa]"
+                    value={editItem.orderNo || ''}
+                    disabled
+                    placeholder="点击「选择订单」自动带出明细，也可手工录入"
+                  />
+                  <DefaultButton onClick={openOrderPicker}>选择订单</DefaultButton>
+                  {editItem.orderNo && (
+                    <TextButton type="danger" onClick={clearOrderLink}>清空</TextButton>
+                  )}
+                </div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -371,8 +418,9 @@ export default function ProcurementInspectionPage() {
               />
             </div>
             <div className="flex gap-2">
-              <DefaultButton onClick={loadFromOrder}>从订单导入明细</DefaultButton>
-              <DefaultButton onClick={addDetail}>添加验收明细</DefaultButton>
+              <DefaultButton onClick={openOrderPicker}>选订单自动带出明细</DefaultButton>
+              <DefaultButton onClick={addDetail}>手工添加验收明细</DefaultButton>
+              <span className="text-xs text-[#909399] self-center ml-2">两种方式并存：选订单自动回填 / 纯手工录入</span>
             </div>
             <div>
               <div className="border border-[#dcdfe6] rounded">
@@ -535,6 +583,94 @@ export default function ProcurementInspectionPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* 采购订单选择弹框 */}
+      <Modal
+        open={orderPickerOpen}
+        title="选择待验收的采购订单"
+        onClose={() => setOrderPickerOpen(false)}
+        footer={
+          <>
+            <span className="text-xs text-slate-500 mr-auto">
+              仅展示 <b className="text-indigo-600">已提交</b> 状态的订单，共 {availableOrders.length} 条
+            </span>
+            <DefaultButton onClick={() => setOrderPickerOpen(false)}>取消</DefaultButton>
+            <PrimaryButton onClick={confirmPickOrder}>确认选择</PrimaryButton>
+          </>
+        }
+        width="max-w-[900px]"
+      >
+        {/* 搜索 */}
+        <div className="mb-3 p-3 bg-slate-50 rounded border border-slate-100">
+          <div className="flex items-center gap-2">
+            <Search size={12} className="text-indigo-500" />
+            <span className="text-xs font-medium text-slate-700">快速搜索</span>
+          </div>
+          <div className="relative mt-2">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+            <input
+              type="text"
+              value={orderPickerKeyword}
+              onChange={(e) => setOrderPickerKeyword(e.target.value)}
+              placeholder="搜索订单编号 / 合同编号 / 供应商 / 项目名称"
+              className="w-full h-8 pl-8 pr-2 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+        {/* 表格 */}
+        <div className="border border-slate-200 rounded max-h-[420px] overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 sticky top-0 z-10">
+              <tr>
+                <th className="w-10 py-2.5 text-center border-b border-slate-200"></th>
+                <th className="py-2.5 text-left border-b border-slate-200 text-slate-600 text-xs">订单编号</th>
+                <th className="py-2.5 text-left border-b border-slate-200 text-slate-600 text-xs">合同编号</th>
+                <th className="py-2.5 text-left border-b border-slate-200 text-slate-600 text-xs">项目名称</th>
+                <th className="py-2.5 text-left border-b border-slate-200 text-slate-600 text-xs">供应商</th>
+                <th className="py-2.5 text-right border-b border-slate-200 text-slate-600 text-xs">订单金额</th>
+                <th className="py-2.5 text-left border-b border-slate-200 text-slate-600 text-xs">提交日期</th>
+              </tr>
+            </thead>
+            <tbody>
+              {availableOrders.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="py-10 text-center text-slate-400 text-xs">
+                    {orderPickerKeyword ? '没有匹配的待验收订单' : '暂无可验收的采购订单，请先在「招采订单管理」提交订单'}
+                  </td>
+                </tr>
+              )}
+              {availableOrders.map((order: ContractPurchaseOrder) => {
+                const checked = orderPickerTempId === order.id;
+                return (
+                  <tr
+                    key={order.id}
+                    onClick={() => setOrderPickerTempId(order.id)}
+                    className={`border-t border-slate-100 cursor-pointer hover:bg-indigo-50/40 transition-colors ${
+                      checked ? 'bg-indigo-50/70' : ''
+                    }`}
+                  >
+                    <td className="py-2 text-center">
+                      {checked ? (
+                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-indigo-500">
+                          <Check size={10} className="text-white" />
+                        </span>
+                      ) : (
+                        <span className="inline-block w-4 h-4 rounded-full border border-slate-300" />
+                      )}
+                    </td>
+                    <td className="py-2 font-mono text-xs text-indigo-600">{order.orderNo}</td>
+                    <td className="py-2 font-mono text-xs text-slate-600">{order.contractNo || '-'}</td>
+                    <td className="py-2 text-slate-800 font-medium text-xs">{order.projectName || '-'}</td>
+                    <td className="py-2 text-slate-700 text-xs">{order.supplierName || '-'}</td>
+                    <td className="py-2 text-right text-slate-700 text-xs">¥{(order.details?.reduce((s, d) => s + (d.amount || 0), 0) || 0).toLocaleString()}</td>
+                    <td className="py-2 text-slate-500 text-xs">{(order.submitTime || order.createTime || '').split(' ')[0] || '-'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </Modal>
     </div>
   );
