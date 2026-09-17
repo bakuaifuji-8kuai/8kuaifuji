@@ -772,7 +772,7 @@ export default function CompetitiveBiddingPage() {
     const nextNo = list.length + 1;
     setEditItem({
       ...editItem,
-      offlineDetails: [...list, { rowNo: nextNo, itemName: '', quantity: 1, unit: '个', taxRate: 0.13 }],
+      offlineDetails: [...list, { rowNo: nextNo, itemName: '', quantity: 1, unit: '个', taxRate: 0.13, supplierName: '' }],
     });
   };
 
@@ -1123,6 +1123,7 @@ export default function CompetitiveBiddingPage() {
                         <thead>
                           <tr className="bg-gradient-to-r from-slate-50 to-indigo-50/30">
                             <th className="px-3 py-2.5 text-left w-10 text-[13px] text-slate-600 font-semibold">#</th>
+                            <th className="px-3 py-2.5 text-left w-32 text-[13px] text-slate-600 font-semibold">供应商单位</th>
                             <th className="px-3 py-2.5 text-left text-[13px] text-slate-600 font-semibold">项目/物料名称 <span className="text-rose-500">*</span></th>
                             <th className="px-3 py-2.5 text-left w-20 text-[13px] text-slate-600 font-semibold">数量</th>
                             <th className="px-3 py-2.5 text-left w-16 text-[13px] text-slate-600 font-semibold">单位</th>
@@ -1138,6 +1139,12 @@ export default function CompetitiveBiddingPage() {
                           {editItem.offlineDetails.map((row, idx) => (
                             <tr key={idx} className="border-t border-slate-100 transition-colors hover:bg-indigo-50/20">
                               <td className="px-3 py-2.5 text-slate-400 text-[13px]">{idx + 1}</td>
+                              <td className="px-3 py-2.5">
+                                <input className="w-full h-8 px-2.5 border border-slate-200 rounded-md text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-400 transition-all"
+                                  value={row.supplierName || ''}
+                                  placeholder="线下已确定的供应商"
+                                  onChange={(e) => updateOfflineItem(idx, { supplierName: e.target.value })} />
+                              </td>
                               <td className="px-3 py-2.5">
                                 <input className="w-full h-8 px-2.5 border border-slate-200 rounded-md text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-400 transition-all"
                                   value={row.itemName}
@@ -1185,7 +1192,7 @@ export default function CompetitiveBiddingPage() {
                         </tbody>
                         <tfoot>
                           <tr className="bg-gradient-to-r from-slate-100 to-indigo-50/40 border-t border-slate-200">
-                            <td colSpan={7} className="px-3 py-2.5 text-right text-slate-600 font-semibold text-[13px]">合计：</td>
+                            <td colSpan={8} className="px-3 py-2.5 text-right text-slate-600 font-semibold text-[13px]">合计：</td>
                             <td className="px-3 py-2.5 text-slate-700 font-semibold text-[13px]">¥{offlineTotals.ex.toLocaleString()}</td>
                             <td className="px-3 py-2.5 text-purple-700 font-bold text-[13px]">¥{offlineTotals.in.toLocaleString()}</td>
                             <td></td>
@@ -1545,7 +1552,7 @@ export default function CompetitiveBiddingPage() {
                         </tbody>
                         <tfoot>
                           <tr className="border-t-2 border-[#c2e7b0] bg-[#f0f9eb]">
-                            <td colSpan={8} className="px-3 py-2 text-xs text-right font-bold text-[#606266]">含税合计</td>
+                            <td colSpan={9} className="px-3 py-2 text-xs text-right font-bold text-[#606266]">含税合计</td>
                             <td className="px-3 py-2 text-xs text-right font-bold text-[#f56c6c]">
                               ¥{confirmedSupplierQuote.totalAmount.toLocaleString()}
                             </td>

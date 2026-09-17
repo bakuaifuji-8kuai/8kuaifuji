@@ -121,6 +121,8 @@ export default function ContractLedgerPage() {
   const [reminderSettingsOpen, setReminderSettingsOpen] = useState(false);
   const [reminderPaidThreshold, setReminderPaidThreshold] = useState(80);  // 已支付金额占比阈值（%）
   const [reminderExpireDays, setReminderExpireDays] = useState(30);        // 到期日前提前多少天提醒（天）
+  const [reminderEvalEnabled, setReminderEvalEnabled] = useState(true);    // 合同考核到期提醒开关
+  const [reminderEvalDays, setReminderEvalDays] = useState(7);             // 考核到期日前提前多少天提醒（天）
 
   const filteredData = useMemo(() => {
     return contractLedgers.filter((c) => {
@@ -240,12 +242,12 @@ export default function ContractLedgerPage() {
   const reminderContracts = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const result: Array<{ contract: ContractLedger; type: 'paid' | 'expire'; message: string; level: 'warning' | 'danger' }> = [];
+    const result: Array<{ contract: ContractLedger; type: 'paid' | 'expire' | 'eval'; message: string; level: 'warning' | 'danger' }> = [];
     filteredData.forEach((c) => {
       if (c.status === 'terminated' || c.status === 'completed') return;
       // 1) 已支付金额占比提醒
-      const total = Number((c as any).contractAmount || (c as any).totalAmount || 0);
-      const paid = Number((c as any).paidAmount || 0);
+      const total = Number((c as any).contractAmount || (c as any).totalAmount || c.amount || 0);
+      const paid = Number((c as any).paidAmount || c.paidAmount || 0);
       if (total > 0) {
         const ratio = (paid / total) * 100;
         if (ratio >= reminderPaidThreshold) {
@@ -258,7 +260,7 @@ export default function ContractLedgerPage() {
         }
       }
       // 2) 到期日提前提醒
-      const expire = c.endDate || c.expireDate;
+      const expire = c.endDate || c.expireDate || c.terminationDate;
       if (expire) {
         const expireDate = new Date(expire);
         const diffDays = Math.ceil((expireDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -278,9 +280,34 @@ export default function ContractLedgerPage() {
           });
         }
       }
+      // 3) 合同考核到期提醒（合同考核绑定中的 nextRemindDate）
+      if (reminderEvalEnabled && c.contractEvaluations && c.contractEvaluations.length > 0) {
+        c.contractEvaluations.forEach((ev) => {
+          if (!ev.nextRemindDate) return;
+          const remindDate = new Date(ev.nextRemindDate);
+          const diffDays = Math.ceil((remindDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          const kindLabel: Record<string, string> = { monthly: '月度考核', quarterly: '季度考核', yearly: '年度评价', contract_performance: '履约评价', project_single: '项目考核' };
+          const label = kindLabel[ev.kind] || '考核';
+          if (diffDays >= 0 && diffDays <= reminderEvalDays) {
+            result.push({
+              contract: c,
+              type: 'eval',
+              message: `${label}${diffDays === 0 ? '今日到期' : diffDays + ' 天后到期'}（${ev.templateName || ev.kind}）`,
+              level: diffDays <= 3 ? 'danger' : 'warning',
+            });
+          } else if (diffDays < 0 && diffDays >= -30) {
+            result.push({
+              contract: c,
+              type: 'eval',
+              message: `${label}已过期 ${Math.abs(diffDays)} 天，待执行`,
+              level: 'danger',
+            });
+          }
+        });
+      }
     });
     return result;
-  }, [filteredData, reminderPaidThreshold, reminderExpireDays]);
+  }, [filteredData, reminderPaidThreshold, reminderExpireDays, reminderEvalEnabled, reminderEvalDays]);
 
   // ========== 导出 Excel (CSV) ==========
   const handleExportExcel = () => {
@@ -798,6 +825,10 @@ export default function ContractLedgerPage() {
                       {r.type === 'paid' ? (
                         <span className={`px-2 py-0.5 rounded text-white ${r.level === 'danger' ? 'bg-[#f56c6c]' : 'bg-[#e6a23c]'}`}>
                           支付预警
+                        </span>
+                      ) : r.type === 'eval' ? (
+                        <span className={`px-2 py-0.5 rounded text-white ${r.level === 'danger' ? 'bg-rose-500' : 'bg-amber-500'}`}>
+                          考核提醒
                         </span>
                       ) : (
                         <span className={`px-2 py-0.5 rounded text-white ${r.level === 'danger' ? 'bg-[#f56c6c]' : 'bg-[#e6a23c]'}`}>
@@ -1558,13 +1589,54 @@ export default function ContractLedgerPage() {
             </div>
           </div>
 
+          {/* 字段3：合同考核到期提醒 */}
+          <div className="border border-[#ebeef5] rounded p-3">
+            <div className="flex items-start gap-2 mb-2">
+              <div className="w-1 h-4 bg-purple-500 rounded mt-0.5"></div>
+              <div className="flex-1">
+                <div className="text-sm font-medium text-[#303133]">③ 合同考核到期提醒</div>
+                <div className="text-xs text-[#909399] mt-1">
+                  已绑定考核（月度/季度/年度/履约评价等）的合同，在下次考核到期前自动提醒。
+                </div>
+              </div>
+              <label className="inline-flex items-center gap-1.5 cursor-pointer flex-shrink-0">
+                <input
+                  type="checkbox"
+                  checked={reminderEvalEnabled}
+                  onChange={(e) => setReminderEvalEnabled(e.target.checked)}
+                  className="w-4 h-4 accent-purple-500"
+                />
+                <span className="text-sm text-[#606266]">启用</span>
+              </label>
+            </div>
+            <div className="flex items-center gap-2 mt-3">
+              <span className="text-xs text-[#606266]">到期前</span>
+              <input
+                type="number"
+                min={0}
+                max={60}
+                value={reminderEvalDays}
+                onChange={(e) => setReminderEvalDays(Number(e.target.value) || 0)}
+                disabled={!reminderEvalEnabled}
+                className="w-20 h-8 px-2 border border-[#dcdfe6] rounded text-sm disabled:bg-[#f5f7fa] disabled:cursor-not-allowed"
+              />
+              <span className="text-sm text-[#606266]">天开始提醒</span>
+              <span className="text-xs text-[#909399] ml-2">
+                （已过期 30 天内的考核也会预警）
+              </span>
+            </div>
+            <div className="text-xs text-purple-600 mt-2 bg-purple-50 p-2 rounded">
+              💡 仅对已绑定考核的合同生效，建议设置 3~14 天，确保考核按时执行不遗漏。
+            </div>
+          </div>
+
           {/* 实时触发统计 */}
           <div className="border border-[#dcdfe6] rounded p-3 bg-[#f5f7fa]">
             <div className="text-xs text-[#606266] mb-1">当前设置下命中提醒的合同数</div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-[#e6a23c]">🔔 共 <b>{reminderContracts.length}</b> 条</span>
               <span className="text-xs text-[#909399]">
-                （支付预警 + 到期预警）
+                （支付预警 + 到期预警{reminderEvalEnabled ? ' + 考核提醒' : ''}）
               </span>
             </div>
           </div>
