@@ -826,7 +826,7 @@ export default function ProcurementDemandPage() {
               {/* 业务决策维度：业务类型* + 框架合同清单内/外采购*  — 两连（需求立项方式在"提交审批"时弹框选择） */}
               <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr' }}>
                 <div>
-                  <div className="mb-1 text-xs text-[#606266]">业务类型<span className="text-[#f56c6c] ml-0.5">*</span></div>
+                  <div className="mb-1 text-xs text-[#606266]">需求类型<span className="text-[#f56c6c] ml-0.5">*</span></div>
                   <select
                     className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm"
                     value={(editItem.businessCategory && editItem.subType)

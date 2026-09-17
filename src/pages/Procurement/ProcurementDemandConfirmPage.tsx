@@ -296,7 +296,7 @@ export default function ProcurementDemandConfirmPage() {
             onChange={(e) => setBizFilter(e.target.value)}
             className="w-full h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
           >
-            <option value="all">全部业务类型</option>
+            <option value="all">全部需求类型</option>
             <option value="engineering/construction">工程类 / 施工</option>
             <option value="engineering/service">工程类 / 服务</option>
             <option value="engineering/goods">工程类 / 货物</option>
@@ -395,7 +395,7 @@ export default function ProcurementDemandConfirmPage() {
               <h3 className="text-xl font-semibold text-slate-800 mt-3">{selected.projectName || '(未命名)'}</h3>
               <div className="grid grid-cols-3 gap-4 mt-4 text-sm">
                 <div>
-                  <div className="text-xs text-slate-500 mb-0.5">业务类型</div>
+                  <div className="text-xs text-slate-500 mb-0.5">需求类型</div>
                   <div className="text-slate-700">{getBusinessTypeLabel(selected)}</div>
                 </div>
                 <div>
