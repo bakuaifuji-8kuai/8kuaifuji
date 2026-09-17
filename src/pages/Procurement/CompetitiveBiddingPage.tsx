@@ -411,7 +411,7 @@ export default function CompetitiveBiddingPage() {
 
   const handleStartBidding = (bidding: Bidding) => {
     // 只有目录内比价才自动模拟供应商报价
-    if (!isCatalogCompare()) return;
+    if (!isCatalogCompare(bidding.procurementMethod)) return;
     updateBidding?.(bidding.id, { status: 'bidding', approvalStatus: 'approved' });
     simulateSupplierQuotes(bidding.id);
   };
@@ -573,7 +573,7 @@ export default function CompetitiveBiddingPage() {
     if (!editItem) return;
     // 采购方式默认值
     const procurementMethod = editItem.procurementMethod || 'framework';
-    const isCatalog = isCatalogCompare();
+    const isCatalog = isCatalogCompare(procurementMethod);
 
     // 项目名称必填
     if (!editItem.projectName && !editItem.biddingName) {
@@ -995,7 +995,7 @@ export default function CompetitiveBiddingPage() {
             </div>
 
             {/* ============ 明细区域 - 按采购方式动态切换 ============ */}
-            {isCatalogCompare() ? (
+            {isCatalogCompare(editItem.procurementMethod) ? (
               /* ===== 模式1: 目录内比价（线上报价）— 物资明细+单品上限 ===== */
               <>
                 <div>
@@ -1353,7 +1353,8 @@ export default function CompetitiveBiddingPage() {
             </div>
             )}
 
-            {/* 竞价小组评定结果附件 */}
+            {/* 竞价小组评定结果附件（仅框架协议采购） */}
+            {editItem?.procurementMethod === 'framework' && (
             <div className="border border-[#67c23a] rounded p-3 bg-[#f0f9eb]">
               <div className="flex items-center justify-between mb-2">
                 <div>
@@ -1403,6 +1404,7 @@ export default function CompetitiveBiddingPage() {
                 </div>
               )}
             </div>
+            )}
           </div>
         )}
       </Modal>
@@ -1765,7 +1767,8 @@ export default function CompetitiveBiddingPage() {
               </div>
             )}
 
-            {/* 竞价小组评定结果附件 */}
+            {/* 竞价小组评定结果附件（仅框架协议采购） */}
+            {viewItem.procurementMethod === 'framework' && (
             <div className="border border-[#67c23a] rounded p-3 bg-[#f0f9eb]">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-xs font-bold text-[#303133]">📎 竞价小组评定结果附件</div>
@@ -1800,6 +1803,7 @@ export default function CompetitiveBiddingPage() {
                 </div>
               )}
             </div>
+            )}
 
             {/* 成交结果（库内采购） */}
             {viewItem.status === 'completed' && !confirmedQuote && (
