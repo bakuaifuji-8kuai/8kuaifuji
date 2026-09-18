@@ -8,6 +8,9 @@ import ProductApplicationPage from "@/pages/Basic/ProductApplication";
 import ImplementationProjectPage from "@/pages/Basic/ImplementationProjectPage";
 import ServiceProjectPage from "@/pages/Basic/ServiceProjectPage";
 import WorkOrderProductConfigPage from "@/pages/Basic/WorkOrderProductConfig";
+import ServiceCategoryPage from "@/pages/Basic/ServiceCategory";
+import ServiceProductPage from "@/pages/Basic/ServiceProduct";
+import ServiceApplicationPage from "@/pages/Basic/ServiceApplication";
 import InboundPage from "@/pages/Inbound/InboundPage";
 import OutboundPage from "@/pages/Outbound/OutboundPage";
 import ReturnPage from "@/pages/Outbound/ReturnPage";
@@ -80,6 +83,9 @@ export default function App() {
           <Route path="basic/implementation-project" element={<ImplementationProjectPage />} />
           <Route path="basic/service-project" element={<ServiceProjectPage />} />
           <Route path="basic/workorder-product-config" element={<WorkOrderProductConfigPage />} />
+          <Route path="basic/service-category" element={<ServiceCategoryPage />} />
+          <Route path="basic/service-product" element={<ServiceProductPage />} />
+          <Route path="basic/service-application" element={<ServiceApplicationPage />} />
 
           {/* 入库管理 */}
           <Route path="inbound/purchase" element={<InboundPage type="purchase" />} />

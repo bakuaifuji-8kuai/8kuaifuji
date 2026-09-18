@@ -1,4 +1,4 @@
-// 仓库类别
+﻿// 仓库类别
 export type WarehouseCategory = 'exhibition' | 'consumable' | 'fixed_asset';
 
 // 仓库属性
@@ -60,6 +60,36 @@ export interface Product {
   weight?: string;
   dimensions?: string;
   stockQuantity?: number; // 库存数量（从库存查询中取）
+  isContractItem?: boolean;
+  status: 'enabled' | 'disabled';
+}
+
+// ============ 非工程类-服务 独立类型（物理隔离，B 方案） ============
+
+export interface ServiceCategory {
+  id: string;
+  code: string;
+  name: string;
+  parentId?: string;
+  sort: number;
+  codePrefix?: string;
+  children?: ServiceCategory[];
+}
+
+export interface Service {
+  id: string;
+  code: string;
+  codePrefix?: string;
+  name: string;
+  categoryId?: string;
+  categoryName?: string;
+  unit: string;
+  specification?: string;
+  origin?: string;
+  brand?: string;
+  material?: string;
+  weight?: string;
+  dimensions?: string;
   isContractItem?: boolean;
   status: 'enabled' | 'disabled';
 }
@@ -876,6 +906,40 @@ export interface ProductApplication {
   approvalHistory?: ApprovalRecord[]; // 审批历史
 }
 
+// 服务申请单明细（独立）
+export interface ServiceApplicationDetail {
+  id: string;
+  applicationId: string;
+  productName: string;
+  serviceName?: string;
+  categoryName?: string;
+  specification?: string;
+  unit?: string;
+  reason?: string;
+}
+
+// 服务申请单状态（独立）
+export type ServiceApplicationStatus = 'draft' | 'pending' | 'approved' | 'rejected';
+
+// 服务申请单（独立）
+export interface ServiceApplication {
+  id: string;
+  applicationNo: string;
+  applicant: string;
+  applicantDept?: string;
+  status: ServiceApplicationStatus;
+  applyDate: string;
+  expectedDate?: string;
+  remark?: string;
+  createTime: string;
+  details: ServiceApplicationDetail[];
+  attachments?: Attachment[];
+  approver?: string;
+  approveTime?: string;
+  approveRemark?: string;
+  approvalHistory?: ApprovalRecord[];
+}
+
 // 作业项目
 export interface WorkOrderItem {
   id: string;
@@ -1000,8 +1064,13 @@ export interface ProcurementPlan {
 }
 
 // 采购需求申请类型
-export type ProcurementDemandType = 'material' | 'implementation_project' | 'service_project';
-// 物资采购 / 实施项目 / 服务项目
+export type ProcurementDemandType =
+  | 'material'
+  | 'implementation_project'
+  | 'service_project'
+  | 'service_non_engineering'     // 非工程类-服务（渲染服务清单内/外两张表）
+  | 'material_non_engineering';   // 非工程类-货物（渲染货物明细，从 products 取数据）
+// 物资采购 / 实施项目 / 服务项目 / 非工程类-服务 / 非工程类-货物
 
 // ====================================================================
 // 采购需求申请 — 框架合同清单内/外采购类型

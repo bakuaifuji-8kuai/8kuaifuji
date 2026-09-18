@@ -20,6 +20,8 @@ import type {
   ContractText, ContractTextVersion, TextAnnotation, TextSupplement, Attachment,
   // 履约评估
   EvaluationTemplate, EvaluationRecord, EvaluationIndicator,
+  // 非工程类-服务独立类型（B 方案）
+  ServiceCategory, Service, ServiceApplication,
 } from '@/types';
 import * as mockData from '@/mock/data';
 
@@ -100,6 +102,28 @@ interface WarehouseState {
   addProductApplication: (application: ProductApplication) => void;
   updateProductApplication: (id: string, application: Partial<ProductApplication>) => void;
   deleteProductApplication: (id: string) => void;
+
+  // ===== 非工程类-服务独立状态（B 方案） =====
+  // 服务分类
+  serviceCategories: ServiceCategory[];
+  setServiceCategories: (data: ServiceCategory[]) => void;
+  addServiceCategory: (category: ServiceCategory) => void;
+  updateServiceCategory: (id: string, category: Partial<ServiceCategory>) => void;
+  deleteServiceCategory: (id: string) => void;
+
+  // 服务档案
+  services: Service[];
+  setServices: (data: Service[]) => void;
+  addService: (service: Service) => void;
+  updateService: (id: string, service: Partial<Service>) => void;
+  deleteService: (id: string) => void;
+
+  // 服务申请单
+  serviceApplications: ServiceApplication[];
+  setServiceApplications: (data: ServiceApplication[]) => void;
+  addServiceApplication: (application: ServiceApplication) => void;
+  updateServiceApplication: (id: string, application: Partial<ServiceApplication>) => void;
+  deleteServiceApplication: (id: string) => void;
 
   // 采购合同
   contracts: Contract[];
@@ -468,6 +492,37 @@ export const useStore = create<WarehouseState>()(
   })),
   deleteProductApplication: (id) => set((state) => ({
     productApplications: state.productApplications.filter((a) => a.id !== id)
+  })),
+
+  // ===== 非工程类-服务独立状态实现（B 方案） =====
+  serviceCategories: mockData.serviceCategories || [],
+  setServiceCategories: (data) => set({ serviceCategories: data }),
+  addServiceCategory: (category) => set((state) => ({ serviceCategories: [...state.serviceCategories, category] })),
+  updateServiceCategory: (id, category) => set((state) => ({
+    serviceCategories: state.serviceCategories.map((c) => c.id === id ? { ...c, ...category } : c)
+  })),
+  deleteServiceCategory: (id) => set((state) => ({
+    serviceCategories: state.serviceCategories.filter((c) => c.id !== id)
+  })),
+
+  services: mockData.services || [],
+  setServices: (data) => set({ services: data }),
+  addService: (service) => set((state) => ({ services: [...state.services, service] })),
+  updateService: (id, service) => set((state) => ({
+    services: state.services.map((s) => s.id === id ? { ...s, ...service } : s)
+  })),
+  deleteService: (id) => set((state) => ({
+    services: state.services.filter((s) => s.id !== id)
+  })),
+
+  serviceApplications: mockData.serviceApplications || [],
+  setServiceApplications: (data) => set({ serviceApplications: data }),
+  addServiceApplication: (application) => set((state) => ({ serviceApplications: [...state.serviceApplications, application] })),
+  updateServiceApplication: (id, application) => set((state) => ({
+    serviceApplications: state.serviceApplications.map((a) => a.id === id ? { ...a, ...application } : a)
+  })),
+  deleteServiceApplication: (id) => set((state) => ({
+    serviceApplications: state.serviceApplications.filter((a) => a.id !== id)
   })),
 
   // 采购合同

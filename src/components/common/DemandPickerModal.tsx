@@ -29,6 +29,8 @@ const DEMAND_TYPE_LABEL: Record<ProcurementDemandType, string> = {
   material: '物资采购',
   implementation_project: '实施项目',
   service_project: '服务项目',
+  service_non_engineering: '非工程类-服务',
+  material_non_engineering: '非工程类-货物',
 };
 
 const PROCUREMENT_TYPE_LABEL: Record<ProcurementType, string> = {

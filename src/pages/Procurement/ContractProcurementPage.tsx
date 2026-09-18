@@ -360,6 +360,9 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
     if (!demand) return;
     // 需求关联的工单
     const bidding = biddings.find((b) => b.id === demand.relatedOrderId || b.demandId === demand.id);
+    // 需求类型自动推导：从关联采购需求的 businessCategory 映射
+    const autoContractType: ProcurementContractType =
+      demand.businessCategory === 'engineering' ? 'engineering' : 'non_engineering';
     update({
       biddingId: bidding?.id || '',
       biddingNo: bidding?.biddingNo || '',
@@ -368,7 +371,8 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
       projectName: bidding?.projectName || demand.projectName,
       contractName: bidding?.projectName || demand.projectName || form.contractName,
       counterpartyName: bidding?.winningSupplierName || form.counterpartyName,
-      winningDate: form.winningDate || bidding?.awardTime,
+      winningDate: bidding?.awardTime || demand.approveTime || '',
+      contractType: autoContractType,
     });
   };
 
@@ -409,14 +413,15 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
             onChange={(e) => update({ contractNo: e.target.value })}
             placeholder="手工输入，如：HT-202609001"
           />
-          {/* 合同类型* */}
+          {/* 需求类型（招采类：选了关联采购需求后自动带入并锁定）*/}
           <Select
-            label="合同类型 *"
+            label="需求类型 *"
             required
+            disabled={!!form.demandId}
             options={contractTypeOptions}
             value={form.contractType as string || ''}
             onChange={(e) => update({ contractType: e.target.value as ProcurementContractType })}
-            placeholder="选择合同类型"
+            placeholder={form.demandId ? '由关联采购需求自动带入' : '选择需求类型'}
           />
           {/* 合同形成方式* */}
           <Select
@@ -443,16 +448,26 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
             value={form.winningDate || ''}
             onChange={(e) => update({ winningDate: e.target.value })}
           />
-          {/* 示范文本* */}
-          <div className="flex items-end gap-6">
+          {/* 示范文本* —— 两个 checkbox 实现单选语义（是/否二选一） */}
+          <div className="flex items-end gap-4">
+            <span className="text-sm text-slate-700 pb-2 mr-2">示范文本 *</span>
             <label className="flex items-center gap-2 cursor-pointer pb-2">
               <input
                 type="checkbox"
-                checked={form.isModelText ?? true}
-                onChange={(e) => update({ isModelText: e.target.checked })}
+                checked={form.isModelText === true}
+                onChange={() => update({ isModelText: true })}
                 className="w-4 h-4 rounded"
               />
-              <span className="text-sm text-slate-700">示范文本（是/否）*</span>
+              <span className="text-sm text-slate-700">是</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer pb-2">
+              <input
+                type="checkbox"
+                checked={form.isModelText === false}
+                onChange={() => update({ isModelText: false })}
+                className="w-4 h-4 rounded"
+              />
+              <span className="text-sm text-slate-700">否</span>
             </label>
           </div>
         </div>

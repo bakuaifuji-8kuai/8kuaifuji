@@ -17,12 +17,15 @@ import { getAutoPaidAmount, isContractLinkable, addLinkedDemand } from '@/utils/
 type ConfirmFormType = 'material' | 'service' | 'engineering';
 
 function toFormType(demand: ProcurementDemand): ConfirmFormType {
+  // 非工程类 — 服务/货物都走 details 明细表（归为 material 表单类型）
+  if (demand.businessCategory === 'non_engineering') return 'material';
+  if (demand.demandType === 'service_non_engineering' || demand.demandType === 'material_non_engineering') return 'material';
+  // 工程类原有逻辑
   if (demand.businessCategory === 'engineering' && demand.subType === 'construction') return 'engineering';
   const st = demand.subType || (demand.demandType === 'material' ? 'goods' : 'service');
   if (st === 'goods') return 'material';
   if (st === 'service') return 'service';
   if (st === 'construction') return 'engineering';
-  // 兜底
   if (demand.demandType === 'material') return 'material';
   if (demand.demandType === 'implementation_project') return 'engineering';
   return 'service';

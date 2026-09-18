@@ -11,11 +11,15 @@ import { exportDetailList, parseAndValidateExcel, type RowResult } from '@/utils
 import type { ProcurementDemand, ProcurementDemandDetail, ProcurementDemandChange, Contract, ProductContract, ProcurementType, ProcurementMode, ProjectRow, DemandChangeRecord, Project, ContractPurchaseOrder, ContractPurchaseOrderDetail } from '@/types';
 
 // ============ 业务分类 <-> 底层 demandType 映射 ============
-// 业务分类 + 细分 → 底层模板类型
+// 业务分类 + 细分 → 底层模板类型（5 种，对应 5 种明细渲染）
 function subTypeToDemandType(
   bc: 'engineering' | 'non_engineering',
   st: 'construction' | 'service' | 'goods'
-): 'implementation_project' | 'service_project' | 'material' {
+): 'implementation_project' | 'service_project' | 'material' | 'service_non_engineering' | 'material_non_engineering' {
+  // 非工程类优先判断（之前被忽略）
+  if (bc === 'non_engineering' && st === 'service') return 'service_non_engineering';
+  if (bc === 'non_engineering' && st === 'goods') return 'material_non_engineering';
+  // 工程类原有逻辑
   if (st === 'construction') return 'implementation_project';
   if (st === 'service') return 'service_project';
   return 'material'; // goods
@@ -24,6 +28,8 @@ function subTypeToDemandType(
 // 反向：底层 demandType → 业务分类 + 细分（老数据兜底）
 // 返回字段名必须是 businessCategory / subType，才能直接 spread 进 ProcurementDemand 对象
 function demandTypeToCategory(dt: string): { businessCategory: 'engineering' | 'non_engineering'; subType: 'construction' | 'service' | 'goods' } {
+  if (dt === 'service_non_engineering') return { businessCategory: 'non_engineering', subType: 'service' };
+  if (dt === 'material_non_engineering') return { businessCategory: 'non_engineering', subType: 'goods' };
   if (dt === 'implementation_project') return { businessCategory: 'engineering', subType: 'construction' };
   if (dt === 'service_project') return { businessCategory: 'engineering', subType: 'service' };
   return { businessCategory: 'engineering', subType: 'goods' }; // material 兜底为 工程类-货物
@@ -74,6 +80,9 @@ export default function ProcurementDemandPage() {
   const currentUser = useStore((s) => s.currentUser);
   const implementationProjects = useStore((s) => s.implementationProjects);
   const serviceProjects = useStore((s) => s.serviceProjects);
+  // 非工程类-服务数据
+  const services = useStore((s) => s.services);
+  const serviceCategories = useStore((s) => s.serviceCategories);
   // 月度采购计划
   const procurementPlans = useStore((s) => s.procurementPlans);
   // 下游单据：用于变更时校验是否被引用
@@ -534,6 +543,16 @@ export default function ProcurementDemandPage() {
       return;
     }
 
+    // 非工程类-服务：从 services 池选
+    if (editItem.demandType === 'service_non_engineering') {
+      const svcFiltered = services.filter((s) => s.status === 'enabled');
+      setFilteredProducts(svcFiltered as any);
+      setProductPickerOpen(true);
+      return;
+    }
+
+    // 非工程类-货物：从 products 池选（复用下面的过滤逻辑）
+
     // 物资采购类型：直接进入物资档案选择
     // 物资采购类型：按采购类型过滤物资（框架采购/单次采购）
     const now = new Date();
@@ -966,9 +985,247 @@ export default function ProcurementDemandPage() {
               </div>
             </div>
 
-            {/* 下方：根据需求类型切换 — 物资类显示明细表，服务/工程类显示项目明细多行表 */}
-            {editItem.demandType === 'material' ? (
-            <div className="flex flex-col overflow-hidden">
+            {/* 下方：根据需求类型切换 — 5 种明细表 */}
+            {(() => {
+              const dt = editItem.demandType;
+              const isNonEngSvc = dt === 'service_non_engineering';
+              const isNonEngGoods = dt === 'material_non_engineering';
+              const isNonEng = isNonEngSvc || isNonEngGoods;
+              const isProject = dt === 'implementation_project' || dt === 'service_project';
+
+              if (isNonEng) {
+                // ============ 非工程类-服务/货物明细表 ============
+                const isWithin = editItem.procurementType === 'within_framework';
+                const unitLabel = isNonEngSvc ? '服务' : '货物';
+                const totalAmount = details.reduce((s, d) => s + ((d.amountExcludingTax || 0) as number), 0);
+
+                return (
+                  <div className="flex flex-col overflow-hidden" key="non-eng">
+                    {/* 操作按钮区 */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-6">
+                        <span className="text-[#606266] font-semibold">
+                          {isNonEngSvc ? '非工程类-服务' : '非工程类-货物'}需求明细清单
+                        </span>
+                        <span className="text-xs text-[#909399]">明细数量：<span className="text-[#606266]">{details.length} 条</span></span>
+                        <span className="text-xs text-[#909399]">
+                          不含税预算总金额：<span className="text-red-500 font-semibold">¥ {totalAmount.toFixed(2)}</span>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <DefaultButton size="sm" onClick={handleImportClick} disabled={!isWithin}>导入清单</DefaultButton>
+                        <DefaultButton size="sm" onClick={handleExportList}>导出</DefaultButton>
+                        <PrimaryButton size="sm" onClick={addDetail}>+ 添加{unitLabel}</PrimaryButton>
+                      </div>
+                    </div>
+
+                    {/* 清单内：宽表（含合同相关列） */}
+                    {isWithin ? (
+                      <div className="border border-slate-200 rounded-lg overflow-hidden">
+                        <table className="w-full text-xs">
+                          <thead className="bg-slate-50 text-slate-600">
+                            <tr>
+                              <th className="px-2 py-2 text-left w-12">序号</th>
+                              <th className="px-2 py-2 text-left">编码</th>
+                              <th className="px-2 py-2 text-left">名称</th>
+                              <th className="px-2 py-2 text-left">分类</th>
+                              <th className="px-2 py-2 text-left">规格/参数</th>
+                              <th className="px-2 py-2 text-left w-14">单位</th>
+                              <th className="px-2 py-2 text-right w-20">数量</th>
+                              <th className="px-2 py-2 text-right w-24">不含税单价</th>
+                              <th className="px-2 py-2 text-right w-24">不含税金额</th>
+                              <th className="px-2 py-2 text-center w-24">合同清单内外</th>
+                              <th className="px-2 py-2 text-left w-28">合同编号</th>
+                              <th className="px-2 py-2 text-left w-28">合同有效期</th>
+                              <th className="px-2 py-2 text-left">备注</th>
+                              <th className="px-2 py-2 text-center w-16">操作</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {details.length === 0 && (
+                              <tr><td colSpan={14} className="px-3 py-8 text-center text-slate-400">暂无{unitLabel}明细，点击"+ 添加{unitLabel}"开始录入</td></tr>
+                            )}
+                            {details.map((d, idx) => (
+                              <tr key={d.id} className="border-t border-slate-100 hover:bg-slate-50">
+                                <td className="px-2 py-1.5 text-slate-500">{idx + 1}</td>
+                                <td className="px-2 py-1.5 text-slate-800 font-mono">{(d as any).productCode || d.productCode || '-'}</td>
+                                <td className="px-2 py-1.5 text-slate-800">{d.productName}</td>
+                                <td className="px-2 py-1.5 text-slate-600">{d.productType || d.productAttribute || '-'}</td>
+                                <td className="px-2 py-1.5 text-slate-600">{d.specification || '-'}</td>
+                                <td className="px-2 py-1.5 text-slate-600">{d.unit || '-'}</td>
+                                <td className="px-2 py-1.5 text-right text-slate-800">{d.quantity}</td>
+                                <td className="px-2 py-1.5 text-right text-slate-800">{(d.unitPriceExcludingTax || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1.5 text-right text-slate-800 font-medium">{(d.amountExcludingTax || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1.5 text-center">
+                                  <span className={`px-1.5 py-0.5 rounded text-xs ${(d as any).contractInside ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                    {(d as any).contractInside ? '清单内' : '清单外'}
+                                  </span>
+                                </td>
+                                <td className="px-2 py-1.5 text-slate-600">{(d as any).contractNo || '-'}</td>
+                                <td className="px-2 py-1.5 text-slate-600">{(d as any).contractValid || '-'}</td>
+                                <td className="px-2 py-1.5 text-slate-500">{d.remark || '-'}</td>
+                                <td className="px-2 py-1.5 text-center">
+                                  <button className="text-rose-500 hover:underline" onClick={() => { setDetails(details.filter(x => x.id !== d.id)); }}>删除</button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          {details.length > 0 && (
+                            <tfoot className="bg-slate-50 border-t border-slate-200">
+                              <tr>
+                                <td colSpan={8} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
+                                <td className="px-2 py-2 text-right text-red-500 font-semibold">¥ {totalAmount.toFixed(2)}</td>
+                                <td colSpan={5}></td>
+                              </tr>
+                            </tfoot>
+                          )}
+                        </table>
+                      </div>
+                    ) : (
+                      /* 清单外 / 新增供应商：窄表 */
+                      <div className="border border-slate-200 rounded-lg overflow-hidden">
+                        <table className="w-full text-xs">
+                          <thead className="bg-slate-50 text-slate-600">
+                            <tr>
+                              <th className="px-2 py-2 text-left w-12">序号</th>
+                              <th className="px-2 py-2 text-left">编码</th>
+                              <th className="px-2 py-2 text-left">名称</th>
+                              <th className="px-2 py-2 text-left">分类</th>
+                              <th className="px-2 py-2 text-left">规格/参数</th>
+                              <th className="px-2 py-2 text-left w-14">单位</th>
+                              <th className="px-2 py-2 text-right w-20">数量</th>
+                              <th className="px-2 py-2 text-right w-28">不含税预算单价</th>
+                              <th className="px-2 py-2 text-right w-28">不含税预算金额</th>
+                              <th className="px-2 py-2 text-left">备注</th>
+                              <th className="px-2 py-2 text-center w-16">操作</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {details.length === 0 && (
+                              <tr><td colSpan={11} className="px-3 py-8 text-center text-slate-400">暂无{unitLabel}明细，点击"+ 添加{unitLabel}"开始录入</td></tr>
+                            )}
+                            {details.map((d, idx) => (
+                              <tr key={d.id} className="border-t border-slate-100 hover:bg-slate-50">
+                                <td className="px-2 py-1.5 text-slate-500">{idx + 1}</td>
+                                <td className="px-2 py-1.5 text-slate-800 font-mono">{(d as any).productCode || d.productCode || '-'}</td>
+                                <td className="px-2 py-1.5 text-slate-800">{d.productName}</td>
+                                <td className="px-2 py-1.5 text-slate-600">{d.productType || d.productAttribute || '-'}</td>
+                                <td className="px-2 py-1.5 text-slate-600">{d.specification || '-'}</td>
+                                <td className="px-2 py-1.5 text-slate-600">{d.unit || '-'}</td>
+                                <td className="px-2 py-1.5 text-right text-slate-800">{d.quantity}</td>
+                                <td className="px-2 py-1.5 text-right text-slate-800">{(d.unitPriceExcludingTax || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1.5 text-right text-slate-800 font-medium">{(d.amountExcludingTax || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1.5 text-slate-500">{d.remark || '-'}</td>
+                                <td className="px-2 py-1.5 text-center">
+                                  <button className="text-rose-500 hover:underline" onClick={() => { setDetails(details.filter(x => x.id !== d.id)); }}>删除</button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          {details.length > 0 && (
+                            <tfoot className="bg-slate-50 border-t border-slate-200">
+                              <tr>
+                                <td colSpan={7} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
+                                <td className="px-2 py-2 text-right text-red-500 font-semibold">¥ {totalAmount.toFixed(2)}</td>
+                                <td colSpan={3}></td>
+                              </tr>
+                            </tfoot>
+                          )}
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // 原有：物资明细表（按 procurementType 分清单内宽表 / 清单外精简窄表）
+              if (dt === 'material') {
+                const isWithin = editItem.procurementType === 'within_framework';
+
+                // ========== 清单外 / 新增供应商目录：精简窄表 ==========
+                if (!isWithin) {
+                  const totalAmount = details.reduce((s, d) => s + (d.amountExcludingTax || 0), 0);
+                  return (
+                    <div className="flex flex-col overflow-hidden" key="material-outside">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-6">
+                          <span className="text-slate-600 font-semibold">采购申请需求明细清单</span>
+                          <span className="text-xs text-slate-400">明细数量：<span className="text-slate-600">{details.length} 条</span></span>
+                          <span className="text-xs text-slate-400">
+                            不含税预算总金额：<span className="text-red-500 font-semibold">¥ {totalAmount.toFixed(2)}</span>
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          <DefaultButton size="small" onClick={handleExportList}>导出清单</DefaultButton>
+                          <PrimaryButton size="small" onClick={addDetail}>+ 选择物资</PrimaryButton>
+                        </div>
+                      </div>
+                      <div className="border border-slate-200 rounded-lg overflow-hidden">
+                        <table className="w-full text-xs">
+                          <thead className="bg-slate-50 text-slate-600">
+                            <tr>
+                              <th className="px-2 py-2 text-left w-12">序号</th>
+                              <th className="px-2 py-2 text-left">项目编号</th>
+                              <th className="px-2 py-2 text-left">项目名称</th>
+                              <th className="px-2 py-2 text-left">商品编码</th>
+                              <th className="px-2 py-2 text-left">产品名称</th>
+                              <th className="px-2 py-2 text-left">规格/参数</th>
+                              <th className="px-2 py-2 text-left w-14">单位</th>
+                              <th className="px-2 py-2 text-right w-20">采购数量</th>
+                              <th className="px-2 py-2 text-right w-28">不含税预算单价（元）</th>
+                              <th className="px-2 py-2 text-right w-28">不含税预算金额（元）</th>
+                              <th className="px-2 py-2 text-left">采购情况说明</th>
+                              <th className="px-2 py-2 text-center w-16">操作</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {details.length === 0 && (
+                              <tr><td colSpan={12} className="px-3 py-8 text-center text-slate-400">暂无物资明细，点击"+ 选择物资"开始录入</td></tr>
+                            )}
+                            {details.map((d, idx) => (
+                              <tr key={d.id} className="border-t border-slate-100 hover:bg-slate-50">
+                                <td className="px-2 py-1.5 text-slate-500">{idx + 1}</td>
+                                <td className="px-2 py-1.5 text-slate-600">{d.projectNo || '-'}</td>
+                                <td className="px-2 py-1.5 text-slate-600">{d.projectName || '-'}</td>
+                                <td className="px-2 py-1.5 text-slate-800 font-mono">{d.productCode || '-'}</td>
+                                <td className="px-2 py-1.5 text-slate-800">{d.productName}</td>
+                                <td className="px-2 py-1.5 text-slate-600">{d.specification || '-'}</td>
+                                <td className="px-2 py-1.5 text-slate-600">{d.unit || '-'}</td>
+                                <td className="px-2 py-1.5 text-right text-slate-800">{d.quantity}</td>
+                                <td className="px-2 py-1.5 text-right text-slate-800">{(d.unitPriceExcludingTax || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1.5 text-right text-slate-800 font-medium">{(d.amountExcludingTax || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1.5">
+                                  <input
+                                    className="w-full h-6 px-1 border border-slate-200 rounded text-xs"
+                                    value={d.procurementDescription || ''}
+                                    onChange={(e) => updateDetail(idx, 'procurementDescription', e.target.value)}
+                                  />
+                                </td>
+                                <td className="px-2 py-1.5 text-center">
+                                  <TextButton type="danger" size="small" onClick={() => removeDetail(idx)}>删除</TextButton>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          {details.length > 0 && (
+                            <tfoot className="bg-slate-50 border-t border-slate-200">
+                              <tr>
+                                <td colSpan={9} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
+                                <td className="px-2 py-2 text-right text-red-500 font-semibold">¥ {totalAmount.toFixed(2)}</td>
+                                <td colSpan={2}></td>
+                              </tr>
+                            </tfoot>
+                          )}
+                        </table>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // ========== 清单内：原完整宽表（不动） ==========
+                return (
+                  <div className="flex flex-col overflow-hidden" key="material">
+            
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-6">
                   <span className="text-[#606266] font-semibold">采购申请需求明细清单表</span>
@@ -1231,7 +1488,11 @@ export default function ProcurementDemandPage() {
                 </table>
               </div>
             </div>
-            ) : (
+            );
+              }
+
+              // 原有：项目多行表（implementation_project / service_project）
+              return (
             <div className="flex flex-col overflow-hidden" style={{ border: '1px solid #dcdfe6', borderRadius: '6px' }}>
               <div className="px-3 py-2 flex items-center justify-between bg-[#fafafa] border-b border-[#dcdfe6]">
                 <div className="flex items-center gap-3">
@@ -1313,7 +1574,8 @@ export default function ProcurementDemandPage() {
               </table>
               </div>
             </div>
-            )}
+            );
+              })()}
           </div>
         )}
       </Modal>
@@ -1639,11 +1901,14 @@ export default function ProcurementDemandPage() {
         open={productPickerOpen}
         onClose={() => setProductPickerOpen(false)}
         onConfirm={handleProductsSelected}
+        pickMode={editItem?.demandType === 'service_non_engineering' ? 'service' : 'product'}
         title={(() => {
-          if (editItem?.procurementType === 'within_framework') return '框架合同清单内 — 只能选择有有效合同的物资';
-          if (editItem?.procurementType === 'outside_framework') return '框架合同清单外 — 只能选择无有效合同的物资';
-          if (editItem?.procurementType === 'new_supplier') return '新增供应商目录 — 清单内+清单外物资全部可选';
-          return '从物资档案选择（支持多选）';
+          const svc = editItem?.demandType === 'service_non_engineering';
+          const unit = svc ? '服务' : '物资';
+          if (editItem?.procurementType === 'within_framework') return `框架合同清单内 — 只能选择有有效合同的${unit}`;
+          if (editItem?.procurementType === 'outside_framework') return `框架合同清单外 — 只能选择无有效合同的${unit}`;
+          if (editItem?.procurementType === 'new_supplier') return `新增供应商目录 — 清单内+清单外${unit}全部可选`;
+          return `从${svc ? '服务档案' : '物资档案'}选择（支持多选）`;
         })()}
         selectedIds={details.map((d) => (d as any).productId).filter(Boolean)}
         products={filteredProducts.length > 0 ? filteredProducts : undefined}

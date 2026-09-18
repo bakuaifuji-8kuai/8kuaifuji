@@ -360,14 +360,14 @@ function ContractNonProcurementForm({ form, update }: FormProps) {
             onChange={(e) => update({ contractNo: e.target.value })}
             placeholder="手工输入，如：HT-202609001"
           />
-          {/* 合同类型* */}
+          {/* 需求类型（非招采类：由经办人自行勾选）*/}
           <Select
-            label="合同类型 *"
+            label="需求类型 *"
             required
             options={contractTypeOptions}
             value={form.contractType as string || ''}
             onChange={(e) => update({ contractType: e.target.value as NonProcurementContractType })}
-            placeholder="工程类/非工程类"
+            placeholder="选择需求类型"
           />
           {/* 合同形成方式* */}
           <Select
@@ -378,16 +378,26 @@ function ContractNonProcurementForm({ form, update }: FormProps) {
             onChange={(e) => handleFormationChange(e.target.value as NonProcurementFormation)}
             placeholder="展览服务/展览展示/招商/其他"
           />
-          {/* 示范文本* */}
-          <div className="flex items-end">
+          {/* 示范文本* —— 两个 checkbox 实现单选语义（是/否二选一） */}
+          <div className="flex items-end gap-4">
+            <span className="text-sm text-slate-700 pb-2 mr-2">示范文本 *</span>
             <label className="flex items-center gap-2 cursor-pointer pb-2">
               <input
                 type="checkbox"
-                checked={form.isModelText ?? true}
-                onChange={(e) => update({ isModelText: e.target.checked })}
+                checked={form.isModelText === true}
+                onChange={() => update({ isModelText: true })}
                 className="w-4 h-4 rounded"
               />
-              <span className="text-sm text-slate-700">示范文本（是/否）*</span>
+              <span className="text-sm text-slate-700">是</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer pb-2">
+              <input
+                type="checkbox"
+                checked={form.isModelText === false}
+                onChange={() => update({ isModelText: false })}
+                className="w-4 h-4 rounded"
+              />
+              <span className="text-sm text-slate-700">否</span>
             </label>
           </div>
         </div>

@@ -132,6 +132,9 @@ const menuItems: MenuItem[] = [
       { title: '物资档案', path: '/basic/product' },
       { title: '物资申请审批', path: '/basic/product-application' },
       { title: '工单物资配置', path: '/basic/workorder-product-config' },
+      { title: '服务分类', path: '/basic/service-category' },
+      { title: '服务档案', path: '/basic/service-product' },
+      { title: '服务申请审批', path: '/basic/service-application' },
     ],
   },
   {

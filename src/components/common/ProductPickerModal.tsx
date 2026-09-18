@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { Search, Check } from 'lucide-react';
 import Modal from '@/components/common/Modal';
 import { PrimaryButton, DefaultButton } from '@/components/common/Button';
@@ -30,13 +30,15 @@ interface ProductPickerModalProps {
   onlyStocked?: boolean;
   /** 显示合同编码筛选条件（仅清单内采购场景） */
   showContractNoFilter?: boolean;
+  /** 选择模式：product=选择物资（默认），service=选择非工程类-服务 */
+  pickMode?: 'product' | 'service';
 }
 
 export default function ProductPickerModal({
   open,
   onClose,
   onConfirm,
-  title = '选择物资',
+  title,
   showStockQty = false,
   products: externalProducts,
   selectedIds: externalSelectedIds,
@@ -44,9 +46,16 @@ export default function ProductPickerModal({
   defaultAttributeFilter,
   onlyStocked = false,
   showContractNoFilter = false,
+  pickMode = 'product',
 }: ProductPickerModalProps) {
-  const { products: storeProducts, categories, batchInventories } = useStore();
-  const products = externalProducts || storeProducts;
+  const isService = pickMode === 'service';
+  const defaultTitle = isService ? '选择服务' : '选择物资';
+  const effectiveTitle = title || defaultTitle;
+
+  const { products: storeProducts, categories, services: storeServices, serviceCategories, batchInventories } = useStore();
+  const poolCategories = isService ? serviceCategories : categories;
+  const storePool = isService ? storeServices : storeProducts;
+  const products = externalProducts || storePool;
   const [codeFilter, setCodeFilter] = useState('');
   const [nameFilter, setNameFilter] = useState('');
   const [specFilter, setSpecFilter] = useState('');
@@ -57,8 +66,8 @@ export default function ProductPickerModal({
 
   // 只取一级分类
   const topCategories = useMemo(() => {
-    return categories.filter((c: any) => !c.parentId || c.parentId === '');
-  }, [categories]);
+    return poolCategories.filter((c: any) => !c.parentId || c.parentId === '');
+  }, [poolCategories]);
 
   // 递归收集选中分类及其所有子分类 ID
   const collectCategoryIds = (ids: string[]) => {
@@ -66,7 +75,7 @@ export default function ProductPickerModal({
     const queue = [...ids];
     while (queue.length > 0) {
       const cur = queue.shift()!;
-      categories.forEach((c: any) => {
+      poolCategories.forEach((c: any) => {
         if (c.parentId === cur && !result.has(c.id)) {
           result.add(c.id);
           queue.push(c.id);
@@ -108,7 +117,7 @@ export default function ProductPickerModal({
           // 匹配自身 categoryId，或匹配 categoryName（有些产品存的是名称）
           const catMatch = effectiveCategoryIds.includes(pCategoryId) ||
             (p.categoryName && effectiveCategoryIds.some(id => {
-              const cat = categories.find((c: any) => c.id === id);
+              const cat = poolCategories.find((c: any) => c.id === id);
               return cat && cat.name === p.categoryName;
             }));
           if (!catMatch) return false;
@@ -118,8 +127,8 @@ export default function ProductPickerModal({
   }, [products, codeFilter, nameFilter, specFilter, contractNoFilter, showContractNoFilter, onlyStocked, batchInventories, selectedCategoryIds, categories]);
 
   const columns: ColumnDef<any>[] = [
-    { key: 'code', title: '物资编码' },
-    { key: 'name', title: '物资名称' },
+    { key: 'code', title: isService ? '服务编码' : '物资编码' },
+    { key: 'name', title: isService ? '服务名称' : '物资名称' },
     { key: 'specification', title: '规格型号', render: (row: any) => row.specification || '-' },
     { key: 'unit', title: '单位' },
   ];
@@ -160,7 +169,7 @@ export default function ProductPickerModal({
         code: p.code,
         name: p.name,
         categoryId: p.categoryId,
-        categoryName: categories.find((c: any) => c?.id === p.categoryId)?.name,
+        categoryName: poolCategories.find((c: any) => c?.id === p.categoryId)?.name,
         unit: p.unit,
         specification: p.specification,
       }));
@@ -170,7 +179,7 @@ export default function ProductPickerModal({
   return (
     <Modal
       open={open}
-      title={title}
+      title={effectiveTitle}
       onClose={onClose}
       width="max-w-[1000px]"
     >
@@ -277,7 +286,7 @@ export default function ProductPickerModal({
       {selectedCategoryIds.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1">
           {selectedCategoryIds.map(id => {
-            const cat = categories.find((c: any) => c.id === id);
+            const cat = poolCategories.find((c: any) => c.id === id);
             return (
               <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-600 text-xs rounded-full">
                 {cat?.name || id}

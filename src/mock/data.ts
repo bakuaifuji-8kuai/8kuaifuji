@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   Warehouse, Position, ProductCategory, Product, Supplier, SupplierAssessment, Customer,
   Inventory, InboundOrder, InboundApplication, OutboundOrder, CheckOrder, TransferOrder, ReturnOrder, PendingReturn,
   AssetEquipment, ScrappedRecord, DamagedRecord, StockTransaction, Employee, PurchaseOrder,
@@ -9,6 +9,8 @@ import type {
   ApprovalFlowConfig, ApprovalFlowNode, ContractPurchaseOrder,
   // 履约评估
   EvaluationTemplate, EvaluationRecord,
+  // 非工程类-服务独立类型（B 方案）
+  ServiceCategory, Service, ServiceApplication,
 } from '@/types';
 
 // 仓库数据
@@ -4434,3 +4436,61 @@ if (_procurementDemo.procurementPlans) { (_oldProcurementPlans as any).length = 
 // ------- 2. 新增 data.ts 原来没有的数组（直接 re-export）-------
 export const biddings = _procurementDemo.biddings;
 export const supplierQuotes = _procurementDemo.supplierQuotes;
+
+// ============ 非工程类-服务 mock 数据（B 方案，物理隔离） ============
+
+export const serviceCategories: ServiceCategory[] = [
+  { id: 'SCAT001', code: 'S01', name: '保洁服务', codePrefix: 'BJ', sort: 1 },
+  { id: 'SCAT002', code: 'S02', name: '搭建租赁', codePrefix: 'DJ', sort: 2 },
+  { id: 'SCAT003', code: 'S03', name: '物流运输', codePrefix: 'WL', sort: 3 },
+  { id: 'SCAT004', code: 'S04', name: '音响灯光', codePrefix: 'YX', sort: 4 },
+  { id: 'SCAT005', code: 'S05', name: '摄影摄像', codePrefix: 'SY', sort: 5 },
+  { id: 'SCAT006', code: 'S06', name: '安保服务', codePrefix: 'AB', sort: 6 },
+];
+
+export const services: Service[] = [
+  { id: 'SRV001', code: 'S00001', codePrefix: 'BJ', name: '展馆日常保洁', categoryId: 'SCAT001', categoryName: '保洁服务', unit: '次', specification: '展馆内外日常保洁', origin: '', isContractItem: true, status: 'enabled' },
+  { id: 'SRV002', code: 'S00002', codePrefix: 'DJ', name: '展位搭建', categoryId: 'SCAT002', categoryName: '搭建租赁', unit: '㎡', specification: '标准展位搭建', origin: '', isContractItem: true, status: 'enabled' },
+  { id: 'SRV003', code: 'S00003', codePrefix: 'WL', name: '展品物流运输', categoryId: 'SCAT003', categoryName: '物流运输', unit: '车次', specification: '13米货车', origin: '', isContractItem: false, status: 'enabled' },
+  { id: 'SRV004', code: 'S00004', codePrefix: 'YX', name: '专业音响租赁', categoryId: 'SCAT004', categoryName: '音响灯光', unit: '套', specification: '线阵音响全套', origin: '', isContractItem: true, status: 'enabled' },
+  { id: 'SRV005', code: 'S00005', codePrefix: 'SY', name: '展会摄影', categoryId: 'SCAT005', categoryName: '摄影摄像', unit: '天', specification: '全天跟拍', origin: '', isContractItem: false, status: 'enabled' },
+  { id: 'SRV006', code: 'S00006', codePrefix: 'AB', name: '现场安保', categoryId: 'SCAT006', categoryName: '安保服务', unit: '人天', specification: '持证保安', origin: '', isContractItem: true, status: 'enabled' },
+  { id: 'SRV007', code: 'S00007', codePrefix: 'YX', name: '舞台灯光', categoryId: 'SCAT004', categoryName: '音响灯光', unit: '场', specification: 'LED帕灯+光束灯', origin: '', isContractItem: true, status: 'disabled' },
+];
+
+export const serviceApplications: ServiceApplication[] = [
+  {
+    id: 'SA001',
+    applicationNo: 'FW20250910001',
+    applicant: '刘十一',
+    applicantDept: '会展部',
+    status: 'approved',
+    applyDate: '2025-09-10',
+    expectedDate: '2025-09-20',
+    remark: 'XX展会搭建及保洁服务',
+    createTime: '2025-09-10 09:30:00',
+    details: [
+      { id: 'SAD001', applicationId: 'SA001', productName: '展位搭建', categoryName: '搭建租赁', specification: '3m*3m标准展位', unit: '个', reason: '展会需要20个标准展位' },
+      { id: 'SAD002', applicationId: 'SA001', productName: '展馆日常保洁', categoryName: '保洁服务', specification: '开展期间每日保洁', unit: '天', reason: '展期5天保洁' },
+    ],
+    approver: '负责人',
+    approveTime: '2025-09-10 11:20:00',
+    approveRemark: '同意执行',
+    approvalHistory: [{ approver: '负责人', approveTime: '2025-09-10 11:20:00', result: 'approved', comment: '同意执行' }],
+  },
+  {
+    id: 'SA002',
+    applicationNo: 'FW20250912001',
+    applicant: '张三',
+    applicantDept: '运维部',
+    status: 'pending',
+    applyDate: '2025-09-12',
+    expectedDate: '2025-09-25',
+    remark: '',
+    createTime: '2025-09-12 14:15:00',
+    details: [
+      { id: 'SAD003', applicationId: 'SA002', productName: '专业音响租赁', categoryName: '音响灯光', specification: '线阵音响全套', unit: '套', reason: '论坛活动使用' },
+      { id: 'SAD004', applicationId: 'SA002', productName: '现场安保', categoryName: '安保服务', specification: '持证保安', unit: '人天', reason: '论坛2天安保' },
+    ],
+  },
+];
