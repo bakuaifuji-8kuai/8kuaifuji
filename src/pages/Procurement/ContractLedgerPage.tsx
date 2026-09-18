@@ -823,6 +823,16 @@ export default function ContractLedgerPage() {
       render: (row) => (
         <div className="flex items-center gap-2 flex-wrap">
           <TextButton onClick={() => setViewItem(row)}>查看详情</TextButton>
+          {row.status === 'pending' && (
+            <TextButton
+              type="success"
+              onClick={() => {
+                if (!confirm(`确认审批通过合同 ${row.contractNo}？\n\n审批通过后合同将进入执行状态，并根据表单门控字段自动关联考核绑定。`)) return;
+                updateContractLedger(row.id, { status: 'active' });
+                alert('审批通过 ✅ 合同已进入执行状态，考核绑定已自动关联');
+              }}
+            >审批通过</TextButton>
+          )}
           <TextButton onClick={() => openEvalModal(row)}>考核绑定</TextButton>
           <TextButton
             onClick={() => {

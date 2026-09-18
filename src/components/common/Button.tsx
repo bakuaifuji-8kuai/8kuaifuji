@@ -69,6 +69,7 @@ export function TextButton({ children, onClick, type = 'default', disabled, ...r
   const colorClass =
     type === 'danger' ? 'text-[#ef4444] hover:text-[#dc2626] hover:bg-red-50 !border-transparent !bg-transparent' :
     type === 'warning' ? 'text-[#f59e0b] hover:text-[#d97706] hover:bg-amber-50 !border-transparent !bg-transparent' :
+    type === 'success' ? 'text-[#10b981] hover:text-[#059669] hover:bg-emerald-50 !border-transparent !bg-transparent' :
     'text-[#6366f1] hover:text-[#4f46e5] hover:bg-indigo-50 !border-transparent !bg-transparent';
   return (
     <Button onClick={disabled ? undefined : onClick} variant="text" className={colorClass} disabled={disabled} {...rest}>

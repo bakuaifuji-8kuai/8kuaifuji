@@ -566,9 +566,9 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
       {/* ========== 916文档 五、招采类独有设置 ========== */}
       <Section title="⭐ 招采类独有设置（916文档L17-18）" tone="amber">
         <div className="grid grid-cols-3 gap-4">
-          {/* 履约评价 */}
+          {/* 履约评价（是/否）— 审批通过后自动关联合同履约评价流程 */}
           <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-lg">
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-2 cursor-pointer pt-6">
               <input
                 type="checkbox"
                 checked={form.guaranteeEvaluation?.isOpen ?? false}
@@ -584,23 +584,6 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
               />
               <span className="text-sm font-medium text-amber-800">履约评价(保证金/质保金)</span>
             </label>
-            {form.guaranteeEvaluation?.isOpen && (
-              <div className="mt-2">
-                <Input
-                  label="类型"
-                  value={form.guaranteeEvaluation?.guaranteeType || ''}
-                  onChange={(e) =>
-                    update({
-                      guaranteeEvaluation: {
-                        ...(form.guaranteeEvaluation || { isOpen: true }),
-                        guaranteeType: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="如：履约保证金 / 质保金"
-                />
-              </div>
-            )}
           </div>
           {/* 考核管理 */}
           <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-lg">

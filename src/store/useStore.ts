@@ -9,7 +9,8 @@ import type {
   WorkOrderProductConfig, Project, StockTransfer,
   // 采购管理类型
   ProcurementPlan, ProcurementDemand, ProcurementDemandChange,
-  ContractLedger, ProcurementOrder, ProcurementOrderChange, ProcurementInspection,
+  ContractLedger, ContractStatus, ContractEvaluationBinding, EvaluationType,
+  ProcurementOrder, ProcurementOrderChange, ProcurementInspection,
   Bidding, SupplierQuote, WebsiteInfo, ContractTemplate, ContractWarning,
   ApprovalFlowConfig, SupplierQualification, SupplierChangeRequest,
   // 合同采购订单
@@ -24,6 +25,45 @@ import type {
   ServiceCategory, Service, ServiceApplication,
 } from '@/types';
 import * as mockData from '@/mock/data';
+
+/**
+ * 根据三个门控字段自动向合同台账注入考核绑定（审批通过时触发）。
+ * 规则：
+ *   guaranteeEvaluation.isOpen === true   → kind='contract_performance'
+ *   assessmentManagement === 'monthly'   → kind='monthly'
+ *   assessmentManagement === 'quarterly' → kind='quarterly'
+ *   assessmentManagement === 'single_project' → kind='project_single'
+ *   yearlyEvaluation === true            → kind='yearly'
+ * 去重：同 kind 已存在则不重复加。
+ */
+function autoInjectBindings(ledger: ContractLedger): ContractLedger {
+  const existing = ledger.contractEvaluations || [];
+  const existingKinds = new Set(existing.map((b) => b.kind));
+  const toAdd: EvaluationType[] = [];
+
+  if (ledger.guaranteeEvaluation?.isOpen) toAdd.push('contract_performance');
+  if (ledger.assessmentManagement === 'monthly') toAdd.push('monthly');
+  if (ledger.assessmentManagement === 'quarterly') toAdd.push('quarterly');
+  if (ledger.assessmentManagement === 'single_project') toAdd.push('project_single');
+  if (ledger.yearlyEvaluation) toAdd.push('yearly');
+
+  const newBindings: ContractEvaluationBinding[] = toAdd
+    .filter((kind) => !existingKinds.has(kind))
+    .map((kind) => ({
+      id: 'CEB' + Date.now() + Math.random().toString(36).slice(2, 7),
+      kind,
+      templateId: '', // 模板 ID 由用户后续在考核绑定弹窗里选
+      templateName: '',
+      frequency: kind === 'contract_performance' ? 'contract_end' : kind === 'yearly' ? 'yearly' : kind === 'monthly' ? 'monthly' : kind === 'quarterly' ? 'quarterly' : 'once',
+      nextRemindDate: '',
+      advanceDays: 7,
+      remark: '审批通过时自动注入（来自表单门控字段）',
+      createTime: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    }));
+
+  if (newBindings.length === 0) return ledger;
+  return { ...ledger, contractEvaluations: [...existing, ...newBindings] };
+}
 
 interface WarehouseState {
   // 当前登录账号
@@ -1139,10 +1179,33 @@ export const useStore = create<WarehouseState>()(
   // 合同台账
   contractLedgers: mockData.contractLedgers || [],
   setContractLedgers: (data) => set({ contractLedgers: data }),
-  addContractLedger: (ledger) => set((state) => ({ contractLedgers: [...state.contractLedgers, ledger] })),
-  updateContractLedger: (id, data) => set((state) => ({
-    contractLedgers: state.contractLedgers.map((l) => l.id === id ? { ...l, ...data } : l)
+  addContractLedger: (ledger) => set((state) => ({
+    contractLedgers: [
+      ...state.contractLedgers,
+      // 新建合同时如果状态已是 approved/active，自动注入考核绑定
+      autoInjectBindings(ledger.status === 'approved' || ledger.status === 'active' ? ledger : ledger),
+    ],
   })),
+  /**
+   * 更新合同台账。
+   * 额外逻辑：当合同状态从非 approved/active 变成 approved/active 时，
+   * 根据三个门控字段（履约评价/考核管理/年度评价）自动向 contractEvaluations 注入考核绑定。
+   */
+  updateContractLedger: (id, data) => set((state) => {
+    const oldLedger = state.contractLedgers.find((l) => l.id === id);
+    const newLedger = oldLedger ? { ...oldLedger, ...data } : ({ ...data, id } as ContractLedger);
+    const approvedStatuses: ContractStatus[] = ['approved', 'active'];
+    const oldStatus = oldLedger?.status;
+    const newStatus = (data.status ?? oldLedger?.status) as ContractStatus | undefined;
+    const justApproved =
+      newStatus && approvedStatuses.includes(newStatus) && !approvedStatuses.includes(oldStatus!);
+
+    const finalLedger = justApproved ? autoInjectBindings(newLedger) : newLedger;
+
+    return {
+      contractLedgers: state.contractLedgers.map((l) => (l.id === id ? (finalLedger as ContractLedger) : l)),
+    };
+  }),
   deleteContractLedger: (id) => set((state) => ({
     contractLedgers: state.contractLedgers.filter((l) => l.id !== id)
   })),
