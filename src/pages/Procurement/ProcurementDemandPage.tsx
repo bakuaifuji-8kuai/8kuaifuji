@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react';
+﻿import { useMemo, useState, useRef } from 'react';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
@@ -997,8 +997,6 @@ export default function ProcurementDemandPage() {
                       <th colSpan={6} className="px-2 py-2 text-left border border-[#dcdfe6]"></th>
                       <th className="px-2 py-2 text-left border border-[#dcdfe6]"></th>
                       <th colSpan={9} className="px-2 py-2 text-center border border-[#dcdfe6] font-semibold">采购申请</th>
-                      <th colSpan={4} className="px-2 py-2 text-center border border-[#dcdfe6] font-semibold">成本审核</th>
-                      <th className="px-2 py-2 text-left border border-[#dcdfe6]"></th>
                       <th className="px-2 py-2 text-left border border-[#dcdfe6]"></th>
                       <th className="px-2 py-2 text-left border border-[#dcdfe6]"></th>
                       <th className="px-2 py-2 text-left border border-[#dcdfe6] w-20">操作</th>
@@ -1023,10 +1021,6 @@ export default function ProcurementDemandPage() {
                       <th className="px-2 py-2 text-left border border-[#dcdfe6] w-20">税额</th>
                       <th className="px-2 py-2 text-left border border-[#dcdfe6] w-24">含税金额</th>
                       <th className="px-2 py-2 text-left border border-[#dcdfe6] bg-[#fff9c4] w-20">库存数量</th>
-                      <th className="px-2 py-2 text-left border border-[#dcdfe6] w-24">单价(不含税)</th>
-                      <th className="px-2 py-2 text-left border border-[#dcdfe6] w-24">单价(含税)</th>
-                      <th className="px-2 py-2 text-left border border-[#dcdfe6] w-24">含税金额</th>
-                      <th className="px-2 py-2 text-left border border-[#dcdfe6] w-24">备注</th>
                       <th className="px-2 py-2 text-left border border-[#dcdfe6] w-20">合同编号</th>
                       <th className="px-2 py-2 text-left border border-[#dcdfe6] w-32">合同有效期</th>
                       <th className="px-2 py-2 text-left border border-[#dcdfe6] w-36">采购情况说明</th>
@@ -1176,31 +1170,6 @@ export default function ProcurementDemandPage() {
                         <td className="px-2 py-1 border border-[#ebeef5] text-right pr-2" style={{ backgroundColor: '#fff9c4' }}>
                           <span className="text-[#ef4444] font-medium">{detail.stockQuantity ?? 0}</span>
                         </td>
-                        {/* 成本审核-单价(不含税) */}
-                        <td className="px-2 py-1 border border-[#ebeef5]">
-                          <input
-                            type="number" step="0.0001"
-                            className="w-full h-6 px-1 border border-[#dcdfe6] rounded"
-                            value={detail.costAuditUnitPriceExcludingTax ?? 0}
-                            onChange={(e) => updateDetail(index, 'costAuditUnitPriceExcludingTax', Number(e.target.value))}
-                          />
-                        </td>
-                        {/* 成本审核-单价(含税) */}
-                        <td className="px-2 py-1 border border-[#ebeef5]">
-                          <span className="text-[#606266]">{(detail.costAuditUnitPriceIncludingTax ?? 0).toFixed(4)}</span>
-                        </td>
-                        {/* 成本审核-含税金额 */}
-                        <td className="px-2 py-1 border border-[#ebeef5] text-[#606266] text-right pr-2">
-                          {(detail.costAuditAmountIncludingTax || 0).toFixed(2)}
-                        </td>
-                        {/* 成本审核-备注 */}
-                        <td className="px-2 py-1 border border-[#ebeef5]">
-                          <input
-                            className="w-full h-6 px-1 border border-[#dcdfe6] rounded"
-                            value={detail.remark || ''}
-                            onChange={(e) => updateDetail(index, 'remark', e.target.value)}
-                          />
-                        </td>
                         {/* 合同编号 */}
                         <td className="px-2 py-1 border border-[#ebeef5]">
                           <input
@@ -1237,7 +1206,7 @@ export default function ProcurementDemandPage() {
                     })}
                     {details.length === 0 && (
                       <tr>
-                        <td colSpan={24} className="px-3 py-6 text-center text-[#909399]">暂无明细，请点击"+ 选择物资"</td>
+                        <td colSpan={20} className="px-3 py-6 text-center text-[#909399]">暂无明细，请点击"+ 选择物资"</td>
                       </tr>
                     )}
                   </tbody>
@@ -1256,12 +1225,7 @@ export default function ProcurementDemandPage() {
                       <td className="px-2 py-2 border border-[#dcdfe6] text-right text-[#f56c6c]">
                         {details.reduce((s, d) => s + (d.amountIncludingTax || 0), 0).toFixed(2)}
                       </td>
-                      <td className="px-2 py-2 border border-[#dcdfe6]"></td>
-                      <td colSpan={2} className="px-2 py-2 border border-[#dcdfe6]"></td>
-                      <td className="px-2 py-2 border border-[#dcdfe6] text-right text-[#f56c6c]">
-                        {details.reduce((s, d) => s + (d.costAuditAmountIncludingTax || 0), 0).toFixed(2)}
-                      </td>
-                      <td colSpan={4} className="px-2 py-2 border border-[#dcdfe6]"></td>
+                      <td colSpan={5} className="px-2 py-2 border border-[#dcdfe6]"></td>
                     </tr>
                   </tfoot>
                 </table>
