@@ -237,8 +237,117 @@ export const procurementDemands: ProcurementDemand[] = [
     reason: '部分电脑老化需更换',
     status: 'rejected',
     createTime: '2026-09-14 11:00:00',
-        details: [
+    details: [
       { id: 'PD-008-D1', demandId: 'PD-008', productCode: 'IT-001', productName: '办公电脑', unit: '台', quantity: 20, unitPriceIncludingTax: 4000, taxRate: 0.13, amountIncludingTax: 80000 },
+    ],
+  },
+
+  // ===== 演示全状态覆盖（补缺失状态 approved / confirm_pending）=====
+  // ① material 物资 — 申请审批通过、待立项（approved）
+  {
+    id: 'PD-009', demandNo: 'PD-202609009', demandType: 'material',
+    businessCategory: 'engineering', subType: 'goods',
+    procurementType: 'outside_framework', procurementMode: 'meeting',
+    applicant: '张三', applicantDept: '展务部', applyDate: '2026-09-15',
+    projectName: '2026年秋季展主展厅物资采购',
+    estimatedAmount: 580000, requiredDeliveryDate: '2026-11-15',
+    reason: '秋季主展厅需要展板、展架、地毯等一批物资',
+    status: 'approved',
+    createTime: '2026-09-15 09:00:00',
+    details: [
+      { id: 'PD-009-D1', demandId: 'PD-009', productCode: 'ZC-001', productName: '标准展板(3m)', unit: '张', quantity: 120, unitPriceIncludingTax: 350, taxRate: 0.13, amountIncludingTax: 42000 },
+      { id: 'PD-009-D2', demandId: 'PD-009', productCode: 'ZJ-001', productName: '标准展架', unit: '套', quantity: 80, unitPriceIncludingTax: 1200, taxRate: 0.13, amountIncludingTax: 96000 },
+      { id: 'PD-009-D3', demandId: 'PD-009', productCode: 'DT-002', productName: '防火地毯', unit: '㎡', quantity: 1200, unitPriceIncludingTax: 180, taxRate: 0.13, amountIncludingTax: 216000 },
+    ],
+  },
+  // ② service_non_engineering 非工程-服务 — 立项审批中（confirm_pending）
+  {
+    id: 'PD-010', demandNo: 'PD-202609010', demandType: 'service_non_engineering',
+    businessCategory: 'non_engineering', subType: 'service',
+    procurementType: 'outside_framework', procurementMode: 'sign_report',
+    applicant: '李四', applicantDept: '市场部', applyDate: '2026-09-16',
+    projectName: '秋季展现场安保服务采购',
+    estimatedAmount: 120000, requiredDeliveryDate: '2026-11-10',
+    reason: '展期 7 天，需每天 20 名持证保安在岗',
+    status: 'confirm_pending',
+    createTime: '2026-09-16 10:30:00',
+    details: [
+      { id: 'PD-010-D1', demandId: 'PD-010', productCode: 'FW-SB-001', productName: '持证保安服务', unit: '人天', quantity: 140, unitPriceIncludingTax: 857, taxRate: 0.06, amountIncludingTax: 120000 },
+    ],
+  },
+  // ③ material_non_engineering 非工程-货物 — 申请审批中（pending）
+  {
+    id: 'PD-011', demandNo: 'PD-202609011', demandType: 'material_non_engineering',
+    businessCategory: 'non_engineering', subType: 'goods',
+    procurementType: 'outside_framework', procurementMode: 'application_form',
+    applicant: '王五', applicantDept: '行政部', applyDate: '2026-09-17',
+    projectName: '办公耗材季度采购',
+    estimatedAmount: 24000, requiredDeliveryDate: '2026-10-15',
+    reason: 'Q4 办公耗材集中采购',
+    status: 'pending',
+    createTime: '2026-09-17 14:00:00',
+    details: [
+      { id: 'PD-011-D1', demandId: 'PD-011', productCode: 'HC-001', productName: 'A4复印纸', unit: '包', quantity: 200, unitPriceIncludingTax: 25, taxRate: 0.13, amountIncludingTax: 5000 },
+    ],
+  },
+  // ④ implementation_project 实施项目 — 立项通过（confirm_approved）完整链路
+  {
+    id: 'PD-012', demandNo: 'PD-202609012', demandType: 'implementation_project',
+    businessCategory: 'engineering', subType: 'construction',
+    procurementType: 'outside_framework', procurementMode: 'meeting',
+    applicant: '赵六', applicantDept: '技术部', applyDate: '2026-09-10',
+    projectName: '展馆智能门禁系统建设项目',
+    estimatedAmount: 2800000, requiredDeliveryDate: '2027-03-31',
+    reason: '展馆升级改造，新增人脸识别门禁系统',
+    status: 'confirm_approved',
+    createTime: '2026-09-10 09:00:00',
+    details: [
+      { id: 'PD-012-D1', demandId: 'PD-012', productCode: 'GC-001', productName: '智能门禁建设', unit: '项', quantity: 1, unitPriceIncludingTax: 2800000, taxRate: 0.09, amountIncludingTax: 2800000 },
+    ],
+  },
+  // ⑤ service_project 服务项目 — 立项通过（confirm_approved）完整链路
+  {
+    id: 'PD-013', demandNo: 'PD-202609013', demandType: 'service_project',
+    businessCategory: 'engineering', subType: 'service',
+    procurementType: 'outside_framework', procurementMode: 'meeting',
+    applicant: '孙七', applicantDept: '展务部', applyDate: '2026-09-11',
+    projectName: '秋季展展馆搭建总承包',
+    estimatedAmount: 1560000, requiredDeliveryDate: '2026-11-08',
+    reason: '秋季展主展厅 20000㎡ 搭建总包',
+    status: 'confirm_approved',
+    createTime: '2026-09-11 10:00:00',
+    details: [
+      { id: 'PD-013-D1', demandId: 'PD-013', productCode: 'FW-DJ-001', productName: '展馆搭建总包', unit: '项', quantity: 1, unitPriceIncludingTax: 1560000, taxRate: 0.06, amountIncludingTax: 1560000 },
+    ],
+  },
+  // ⑥ service_non_engineering — 立项驳回（confirm_rejected）
+  {
+    id: 'PD-014', demandNo: 'PD-202609014', demandType: 'service_non_engineering',
+    businessCategory: 'non_engineering', subType: 'service',
+    procurementType: 'outside_framework', procurementMode: 'sign_report',
+    applicant: '周八', applicantDept: '行政部', applyDate: '2026-09-18',
+    projectName: '年度绿植租赁补充',
+    estimatedAmount: 36000, requiredDeliveryDate: '2026-10-01',
+    reason: '部分绿植到期需续租',
+    status: 'confirm_rejected',
+    createTime: '2026-09-18 11:00:00',
+    details: [
+      { id: 'PD-014-D1', demandId: 'PD-014', productCode: 'FW-LZ-001', productName: '绿植租赁', unit: '月', quantity: 12, unitPriceIncludingTax: 3000, taxRate: 0.06, amountIncludingTax: 36000 },
+    ],
+  },
+  // ⑦ material — 变更中（changed）
+  {
+    id: 'PD-015', demandNo: 'PD-202609015', demandType: 'material',
+    businessCategory: 'engineering', subType: 'goods',
+    procurementType: 'within_framework', procurementMode: 'application_form',
+    applicant: '吴九', applicantDept: '仓储部', applyDate: '2026-09-12',
+    projectName: '展具补充采购',
+    estimatedAmount: 150000, requiredDeliveryDate: '2026-10-20',
+    reason: '部分展具磨损需补充，现申请变更数量',
+    status: 'changed',
+    createTime: '2026-09-12 15:00:00',
+    details: [
+      { id: 'PD-015-D1', demandId: 'PD-015', productCode: 'ZJ-001', productName: '标准展架', unit: '套', quantity: 30, unitPriceIncludingTax: 5000, taxRate: 0.13, amountIncludingTax: 150000 },
     ],
   },
 ];
@@ -358,6 +467,74 @@ export const biddings: Bidding[] = [
     remark: '立项已驳回，工单同步终止',
     creator: '周九', createTime: '2026-09-14 15:00:00',
   },
+
+  // ===== 新链路：PD-009（approved/待立项）→ BID-009（draft，尚未提交审批）=====
+  {
+    id: 'BID-009', biddingNo: 'BP-202609009', biddingName: '秋季展主展厅物资采购工单',
+    projectName: '2026年秋季展主展厅物资采购',
+    procurementMethod: 'inquiry',
+    demandId: 'PD-009', demandNo: 'PD-202609009',
+    totalAmountIncludingTax: 580000, totalAmountExcludingTax: 513274, totalTaxAmount: 66726,
+    approvalStatus: 'draft', status: 'draft',
+    creator: '张三', createTime: '2026-09-15 14:00:00',
+  },
+  // ===== 新链路：PD-010（confirm_pending/立项审批中）→ BID-010（bidding/招标进行中）=====
+  {
+    id: 'BID-010', biddingNo: 'BP-202609010', biddingName: '秋季展现场安保服务采购工单',
+    projectName: '秋季展现场安保服务采购',
+    procurementMethod: 'negotiation_open',
+    demandId: 'PD-010', demandNo: 'PD-202609010',
+    startTime: '2026-09-18 09:00:00',
+    endTime: '2026-09-28 18:00:00',
+    inviteSupplierIds: ['SUP-001', 'SUP-004'],
+    approvalStatus: 'approved', status: 'bidding',
+    creator: '李四', createTime: '2026-09-16 15:30:00',
+  },
+  // ===== 新链路：PD-012（confirm_approved/立项通过）→ BID-011（evaluated/已评审）=====
+  {
+    id: 'BID-011', biddingNo: 'BP-202609011', biddingName: '展馆智能门禁系统建设项目工单',
+    projectName: '展馆智能门禁系统建设项目',
+    procurementMethod: 'competitive_bidding',
+    demandId: 'PD-012', demandNo: 'PD-202609012',
+    totalAmountIncludingTax: 2800000, totalAmountExcludingTax: 2568807, totalTaxAmount: 231193,
+    approvalStatus: 'approved', status: 'evaluated',
+    winningSupplierId: 'SUP-003', winningSupplierName: '华东物资供应有限公司',
+    losingSupplier1Name: 'XX智能科技', losingSupplier1LegalPerson: '钱某某', losingSupplier1Score: 88,
+    losingSupplier2Name: 'YY安防公司', losingSupplier2LegalPerson: '孙某某', losingSupplier2Score: 84,
+    announcementPublishTime: '2026-09-20 09:00:00',
+    bidOpeningTime: '2026-09-25 10:00:00',
+    awardTime: '2026-09-25 16:00:00',
+    contractAmount: 2800000,
+    judgeMethod: '综合评分法',
+    creator: '赵六', createTime: '2026-09-18 10:00:00',
+  },
+  // ===== 新链路：PD-013（confirm_approved/立项通过）→ BID-012（completed/已完成）=====
+  {
+    id: 'BID-012', biddingNo: 'BP-202609012', biddingName: '秋季展展馆搭建总承包工单',
+    projectName: '秋季展展馆搭建总承包',
+    procurementMethod: 'voluntary_bidding',
+    demandId: 'PD-013', demandNo: 'PD-202609013',
+    totalAmountIncludingTax: 1560000, totalAmountExcludingTax: 1471698, totalTaxAmount: 88302,
+    approvalStatus: 'approved', status: 'completed',
+    winningSupplierId: 'SUP-002', winningSupplierName: '华展展览服务有限公司',
+    losingSupplier1Name: 'ZZ展览工程', losingSupplier1LegalPerson: '李某某', losingSupplier1Score: 89,
+    announcementPublishTime: '2026-09-15 09:00:00',
+    bidOpeningTime: '2026-09-20 10:00:00',
+    awardTime: '2026-09-20 15:00:00',
+    contractAmount: 1560000,
+    judgeMethod: '综合评分法',
+    creator: '孙七', createTime: '2026-09-13 10:00:00',
+  },
+  // ===== 新链路：PD-015（changed/变更中）→ BID-013（submitted/已提交审批）=====
+  {
+    id: 'BID-013', biddingNo: 'BP-202609013', biddingName: '展具补充采购工单（变更）',
+    projectName: '展具补充采购',
+    procurementMethod: 'framework',
+    demandId: 'PD-015', demandNo: 'PD-202609015',
+    approvalStatus: 'submitted', status: 'submitted',
+    creator: '吴九', createTime: '2026-09-20 11:00:00',
+    remark: '对应需求正在变更审批中，工单暂挂',
+  },
 ];
 
 // ============================================================================
@@ -413,6 +590,56 @@ export const supplierQuotes: SupplierQuote[] = [
     status: 'submitted',
     details: [
       { productCode: 'WL-001', productName: '易拉宝', specification: '80*200cm', unit: '个', quantity: 200, unitPrice: 110, taxRate: 0.13, amount: 22000, taxAmount: 2513 },
+    ],
+  },
+  // ===== BID-010 安保服务招标中（2家已提交）=====
+  {
+    id: 'SQ-005', quoteNo: 'SQ-20260920001',
+    biddingId: 'BID-010', biddingNo: 'BP-202609010', biddingName: '秋季展现场安保服务采购工单',
+    supplierId: 'SUP-001', supplierName: '晨光办公用品有限公司',
+    contactPerson: '张经理', contactPhone: '0731-88881001',
+    totalAmount: 118000, taxRate: 0.06, taxAmount: 6679,
+    quoteDate: '2026-09-19', submittedAt: '2026-09-19 16:00:00',
+    status: 'submitted',
+    details: [
+      { productCode: 'FW-SB-001', productName: '持证保安服务', unit: '人天', quantity: 140, unitPrice: 843, taxRate: 0.06, amount: 118000, taxAmount: 6679 },
+    ],
+  },
+  {
+    id: 'SQ-006', quoteNo: 'SQ-20260920002',
+    biddingId: 'BID-010', biddingNo: 'BP-202609010', biddingName: '秋季展现场安保服务采购工单',
+    supplierId: 'SUP-004', supplierName: '新视觉广告制作有限公司',
+    contactPerson: '赵姐', contactPhone: '0731-88881004',
+    totalAmount: 122000, taxRate: 0.06, taxAmount: 6906,
+    quoteDate: '2026-09-20', submittedAt: '2026-09-20 10:30:00',
+    status: 'submitted',
+    details: [
+      { productCode: 'FW-SB-001', productName: '持证保安服务', unit: '人天', quantity: 140, unitPrice: 871, taxRate: 0.06, amount: 122000, taxAmount: 6906 },
+    ],
+  },
+  // ===== BID-012 展馆搭建总承包（1家中标、1家未中）=====
+  {
+    id: 'SQ-007', quoteNo: 'SQ-20260920003',
+    biddingId: 'BID-012', biddingNo: 'BP-202609012', biddingName: '秋季展展馆搭建总承包工单',
+    supplierId: 'SUP-002', supplierName: '华展展览服务有限公司',
+    contactPerson: '李总', contactPhone: '0731-88881002',
+    totalAmount: 1560000, taxRate: 0.06, taxAmount: 88302,
+    quoteDate: '2026-09-18', submittedAt: '2026-09-18 14:00:00',
+    status: 'accepted',
+    details: [
+      { productCode: 'FW-DJ-001', productName: '展馆搭建总包', unit: '项', quantity: 1, unitPrice: 1560000, taxRate: 0.06, amount: 1560000, taxAmount: 88302 },
+    ],
+  },
+  {
+    id: 'SQ-008', quoteNo: 'SQ-20260920004',
+    biddingId: 'BID-012', biddingNo: 'BP-202609012', biddingName: '秋季展展馆搭建总承包工单',
+    supplierId: 'SUP-003', supplierName: '华东物资供应有限公司',
+    contactPerson: '王总', contactPhone: '0731-88881003',
+    totalAmount: 1620000, taxRate: 0.06, taxAmount: 91510,
+    quoteDate: '2026-09-19', submittedAt: '2026-09-19 11:00:00',
+    status: 'rejected',
+    details: [
+      { productCode: 'FW-DJ-001', productName: '展馆搭建总包', unit: '项', quantity: 1, unitPrice: 1620000, taxRate: 0.06, amount: 1620000, taxAmount: 91510 },
     ],
   },
 ];
@@ -562,6 +789,76 @@ export const contractLedgers: ContractLedger[] = [
     archiveStatus: 'not_started',
     status: 'draft',
     biddingId: 'BID-007', biddingNo: 'BP-202609007',
+  },
+
+  // ===== 新链路：BID-010（安保服务招标中）→ HT-009（合同待审批 pending）=====
+  {
+    id: 'HT-009', contractId: 'HT-009', contractNo: 'HT-202609009',
+    contractName: '秋季展现场安保服务采购合同',
+    contractNature: 'procurement', category: 'procurement',
+    contractType: 'non_engineering', formation: 'state_owned_tanpan',
+    winningDate: '2026-09-28',
+    demandId: 'PD-010', demandNo: 'PD-202609010',
+    demandDepartment: '市场部', handlingDepartment: '采购部',
+    handler: '李四', handlerContact: '0731-88881002',
+    counterpartyName: '晨光办公用品有限公司', counterpartyContact: '张经理',
+    mainContent: '秋季展展期7天，每天20名持证保安在岗，覆盖主展厅、停车场、VIP通道',
+    signingDate: '2026-09-30', effectiveDate: '2026-09-30',
+    terminationDate: '2026-11-20', expireDate: '2026-11-20',
+    amount: 11.8,
+    archiveStatus: 'not_started', approvalMethod: '签报审批',
+    status: 'pending',
+    biddingId: 'BID-010', biddingNo: 'BP-202609010',
+    projectName: '秋季展现场安保服务采购',
+    guaranteeEvaluation: { isOpen: true, guaranteeType: '履约保证金' },
+  },
+  // ===== 新链路：BID-011（智能门禁已评审）→ HT-010（审批通过待签 approved，带3个考核开关）=====
+  {
+    id: 'HT-010', contractId: 'HT-010', contractNo: 'HT-202609010',
+    contractName: '展馆智能门禁系统建设合同',
+    contractNature: 'procurement', category: 'procurement',
+    contractType: 'engineering', formation: 'legal_bidding',
+    winningDate: '2026-09-25',
+    isModelText: true,
+    demandId: 'PD-012', demandNo: 'PD-202609012',
+    demandDepartment: '技术部', handlingDepartment: '采购部',
+    handler: '赵六', handlerContact: '0731-88881006',
+    counterpartyName: '华东物资供应有限公司', counterpartyContact: '王工',
+    mainContent: '展馆升级改造，新增人脸识别门禁系统（12个点位），含设备采购、安装调试、试运行、培训',
+    signingDate: '2026-09-30', effectiveDate: '2026-10-01',
+    terminationDate: '2027-03-31', expireDate: '2027-03-31',
+    amount: 280,
+    archiveStatus: 'not_started', approvalMethod: '会议审批',
+    status: 'approved',
+    biddingId: 'BID-011', biddingNo: 'BP-202609011',
+    projectName: '展馆智能门禁系统建设项目',
+    guaranteeEvaluation: { isOpen: true, guaranteeType: '质保金' },
+    assessmentManagement: 'single_project',
+    yearlyEvaluation: true,
+  },
+  // ===== 新链路：BID-012（展馆搭建已完成）→ HT-011（active执行中，带全部考核开关）=====
+  {
+    id: 'HT-011', contractId: 'HT-011', contractNo: 'HT-202609011',
+    contractName: '秋季展展馆搭建总承包合同',
+    contractNature: 'procurement', category: 'procurement',
+    contractType: 'engineering', formation: 'voluntary_bidding',
+    winningDate: '2026-09-20',
+    isModelText: true,
+    demandId: 'PD-013', demandNo: 'PD-202609013',
+    demandDepartment: '展务部', handlingDepartment: '采购部',
+    handler: '孙七', handlerContact: '0731-88881007',
+    counterpartyName: '华展展览服务有限公司', counterpartyContact: '李总',
+    mainContent: '秋季展主展厅20000㎡搭建总包，含展位搭建、通道布置、开幕式舞台、展后拆除清运',
+    signingDate: '2026-09-25', effectiveDate: '2026-09-25',
+    terminationDate: '2026-11-30', expireDate: '2026-11-30',
+    amount: 156, paidAmount: 46.8,
+    archiveStatus: 'not_started', approvalMethod: '会议审批',
+    status: 'active',
+    biddingId: 'BID-012', biddingNo: 'BP-202609012',
+    projectName: '秋季展展馆搭建总承包',
+    guaranteeEvaluation: { isOpen: true, guaranteeType: '履约保证金' },
+    assessmentManagement: 'quarterly',
+    yearlyEvaluation: true,
   },
 ];
 
