@@ -4449,13 +4449,13 @@ export const serviceCategories: ServiceCategory[] = [
 ];
 
 export const services: Service[] = [
-  { id: 'SRV001', code: 'S00001', codePrefix: 'BJ', name: '展馆日常保洁', categoryId: 'SCAT001', categoryName: '保洁服务', unit: '次', specification: '展馆内外日常保洁', origin: '', isContractItem: true, status: 'enabled' },
-  { id: 'SRV002', code: 'S00002', codePrefix: 'DJ', name: '展位搭建', categoryId: 'SCAT002', categoryName: '搭建租赁', unit: '㎡', specification: '标准展位搭建', origin: '', isContractItem: true, status: 'enabled' },
-  { id: 'SRV003', code: 'S00003', codePrefix: 'WL', name: '展品物流运输', categoryId: 'SCAT003', categoryName: '物流运输', unit: '车次', specification: '13米货车', origin: '', isContractItem: false, status: 'enabled' },
-  { id: 'SRV004', code: 'S00004', codePrefix: 'YX', name: '专业音响租赁', categoryId: 'SCAT004', categoryName: '音响灯光', unit: '套', specification: '线阵音响全套', origin: '', isContractItem: true, status: 'enabled' },
-  { id: 'SRV005', code: 'S00005', codePrefix: 'SY', name: '展会摄影', categoryId: 'SCAT005', categoryName: '摄影摄像', unit: '天', specification: '全天跟拍', origin: '', isContractItem: false, status: 'enabled' },
-  { id: 'SRV006', code: 'S00006', codePrefix: 'AB', name: '现场安保', categoryId: 'SCAT006', categoryName: '安保服务', unit: '人天', specification: '持证保安', origin: '', isContractItem: true, status: 'enabled' },
-  { id: 'SRV007', code: 'S00007', codePrefix: 'YX', name: '舞台灯光', categoryId: 'SCAT004', categoryName: '音响灯光', unit: '场', specification: 'LED帕灯+光束灯', origin: '', isContractItem: true, status: 'disabled' },
+  { id: 'SRV001', code: 'S00001', codePrefix: 'BJ', name: '展馆日常保洁', categoryId: 'SCAT001', categoryName: '保洁服务', unit: '次', specification: '展馆内外日常保洁', isContractItem: true, status: 'enabled' },
+  { id: 'SRV002', code: 'S00002', codePrefix: 'DJ', name: '展位搭建', categoryId: 'SCAT002', categoryName: '搭建租赁', unit: '㎡', specification: '标准展位搭建', isContractItem: true, status: 'enabled' },
+  { id: 'SRV003', code: 'S00003', codePrefix: 'WL', name: '展品物流运输', categoryId: 'SCAT003', categoryName: '物流运输', unit: '车次', specification: '13米货车', isContractItem: false, status: 'enabled' },
+  { id: 'SRV004', code: 'S00004', codePrefix: 'YX', name: '专业音响租赁', categoryId: 'SCAT004', categoryName: '音响灯光', unit: '套', specification: '线阵音响全套', isContractItem: true, status: 'enabled' },
+  { id: 'SRV005', code: 'S00005', codePrefix: 'SY', name: '展会摄影', categoryId: 'SCAT005', categoryName: '摄影摄像', unit: '天', specification: '全天跟拍', isContractItem: false, status: 'enabled' },
+  { id: 'SRV006', code: 'S00006', codePrefix: 'AB', name: '现场安保', categoryId: 'SCAT006', categoryName: '安保服务', unit: '人天', specification: '持证保安', isContractItem: true, status: 'enabled' },
+  { id: 'SRV007', code: 'S00007', codePrefix: 'YX', name: '舞台灯光', categoryId: 'SCAT004', categoryName: '音响灯光', unit: '场', specification: 'LED帕灯+光束灯', isContractItem: true, status: 'disabled' },
 ];
 
 export const serviceApplications: ServiceApplication[] = [

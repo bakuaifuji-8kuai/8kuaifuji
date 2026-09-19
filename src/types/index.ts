@@ -1,4 +1,4 @@
-﻿// 仓库类别
+// 仓库类别
 export type WarehouseCategory = 'exhibition' | 'consumable' | 'fixed_asset';
 
 // 仓库属性
@@ -84,14 +84,10 @@ export interface Service {
   categoryId?: string;
   categoryName?: string;
   unit: string;
-  specification?: string;
-  origin?: string;
-  brand?: string;
-  material?: string;
-  weight?: string;
-  dimensions?: string;
-  isContractItem?: boolean;
+  specification?: string;       // 规格型号/参数
+  isContractItem?: boolean;     // 是否合同清单内
   status: 'enabled' | 'disabled';
+  remark?: string;              // 备注
 }
 
 // 采购合同类型（采购订单模块用：买/服务/租）

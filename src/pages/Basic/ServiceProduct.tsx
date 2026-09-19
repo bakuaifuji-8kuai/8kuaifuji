@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+﻿import { useState, useRef, useMemo } from 'react';
 import { Plus, Upload, Download, FileSpreadsheet, Eye, X, FileText } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
@@ -135,12 +135,10 @@ export default function ServiceProductPage() {
     unit: string;
   }>({ productName: '', specification: '', unit: '' });
   const [statusFilter, setStatusFilter] = useState('');
-  const [brandFilter, setBrandFilter] = useState('');
   const [contractItemFilter, setContractItemFilter] = useState('');
   const [appliedFilter, setAppliedFilter] = useState({
     searchText: '',
     statusFilter: '',
-    brandFilter: '',
     contractItemFilter: '',
   });
   const [modalOpen, setModalOpen] = useState(false);
@@ -161,15 +159,11 @@ export default function ServiceProductPage() {
     name: string;
     unit: string;
     specification: string;
-    brand: string;
-    origin: string;
-    material: string;
-    weight: string;
-    dimensions: string;
     categoryId: string;
     categoryName: string;
     isContractItem: boolean;
     status: 'enabled' | 'disabled';
+    remark: string;
   }>({
     code: '',
     codePrefix: 'S',
@@ -177,21 +171,12 @@ export default function ServiceProductPage() {
     name: '',
     unit: '',
     specification: '',
-    brand: '',
-    origin: '',
-    material: '',
-    weight: '',
-    dimensions: '',
     categoryId: '',
     categoryName: '',
     isContractItem: false,
     status: 'enabled',
+    remark: '',
   });
-
-  const brandOptions: { value: string; label: string }[] = useMemo(() => {
-    const brands = [...new Set(services.map(p => p.brand).filter(Boolean))] as string[];
-    return brands.map(b => ({ value: b, label: b }));
-  }, [services]);
 
   const getValidContract = (productId: string): Contract | null => {
     const pc = productContracts.find(pc => pc.productId === productId);
@@ -253,11 +238,10 @@ export default function ServiceProductPage() {
           item.code.toLowerCase().includes(appliedFilter.searchText.toLowerCase()) ||
           item.name.toLowerCase().includes(appliedFilter.searchText.toLowerCase());
         const matchStatus = !appliedFilter.statusFilter || item.status === appliedFilter.statusFilter;
-        const matchBrand = !appliedFilter.brandFilter || (item.brand || '').toLowerCase().includes(appliedFilter.brandFilter.toLowerCase());
         const matchContractItem = !appliedFilter.contractItemFilter ||
           (appliedFilter.contractItemFilter === 'yes' && item.isContractItem) ||
           (appliedFilter.contractItemFilter === 'no' && !item.isContractItem);
-        return matchSearch && matchStatus && matchBrand && matchContractItem;
+        return matchSearch && matchStatus && matchContractItem;
       });
   }, [services, contracts, productContracts, appliedFilter]);
 
@@ -269,8 +253,7 @@ export default function ServiceProductPage() {
       header: '分类',
       cell: ({ row }) => row.original.categoryName || '-',
     },
-    { accessorKey: 'brand', header: '品牌', cell: ({ row }) => row.original.brand || '-' },
-    { accessorKey: 'specification', header: '规格型号' },
+    { accessorKey: 'specification', header: '规格型号/参数', cell: ({ row }) => row.original.specification || '-' },
     { accessorKey: 'unit', header: '单位' },
     {
       id: 'contractItem',
@@ -308,6 +291,7 @@ export default function ServiceProductPage() {
         </Badge>
       ),
     },
+    { accessorKey: 'remark', header: '备注', cell: ({ row }) => row.original.remark || '-' },
     {
       id: 'actions',
       header: '操作',
@@ -342,7 +326,6 @@ export default function ServiceProductPage() {
     setAppliedFilter({
       searchText,
       statusFilter,
-      brandFilter,
       contractItemFilter,
     });
   };
@@ -350,12 +333,10 @@ export default function ServiceProductPage() {
   const handleReset = () => {
     setSearchText('');
     setStatusFilter('');
-    setBrandFilter('');
     setContractItemFilter('');
     setAppliedFilter({
       searchText: '',
       statusFilter: '',
-      brandFilter: '',
       contractItemFilter: '',
     });
   };
@@ -370,15 +351,11 @@ export default function ServiceProductPage() {
       name: '',
       unit: '',
       specification: '',
-      brand: '',
-      origin: '',
-      material: '',
-      weight: '',
-      dimensions: '',
       categoryId: '',
       categoryName: '',
       isContractItem: false,
       status: 'enabled',
+      remark: '',
     });
     setModalOpen(true);
   };
@@ -427,15 +404,11 @@ export default function ServiceProductPage() {
       name: item.name,
       unit: item.unit,
       specification: item.specification || '',
-      brand: item.brand || '',
-      origin: item.origin || '',
-      material: item.material || '',
-      weight: item.weight || '',
-      dimensions: item.dimensions || '',
       categoryId: item.categoryId || '',
       categoryName: item.categoryName || '',
       isContractItem: item.isContractItem || false,
       status: item.status,
+      remark: item.remark || '',
     });
     setModalOpen(true);
   };
@@ -573,13 +546,8 @@ export default function ServiceProductPage() {
         jsonData.forEach((row, index) => {
           const rowNum = index + 2;
           const name = row['服务名称'];
-          const brand = row['品牌'];
           const specification = row['规格型号'];
           const unit = row['单位'];
-          const origin = row['产地'];
-          const material = row['材质'];
-          const weight = row['重量'];
-          const dimensions = row['尺寸'];
           const status = row['状态'];
 
           if (!name) {
@@ -609,13 +577,8 @@ export default function ServiceProductPage() {
             codePrefix: prefix,
             codeSuffix: suffix,
             name,
-            brand: brand || '',
             specification: specification || '',
             unit: unit || '',
-            origin: origin || '',
-            material: material || '',
-            weight: weight || '',
-            dimensions: dimensions || '',
             status: productStatus,
           });
         });
@@ -657,20 +620,17 @@ export default function ServiceProductPage() {
     const exportData = filteredData.map(item => ({
       '服务编码': item.code,
       '服务名称': item.name,
-      '品牌': item.brand || '-',
-      '规格型号': item.specification || '-',
+      '分类': item.categoryName || '-',
+      '规格型号/参数': item.specification || '-',
       '单位': item.unit,
-      '产地': item.origin || '-',
-      '材质': item.material || '-',
-      '重量': item.weight || '-',
-      '尺寸': item.dimensions || '-',
+      '状态': item.status === 'enabled' ? '启用' : '禁用',
       '合同清单': item.contractLabel,
       '合同编号': item.validContracts?.[0]?.contractNo || '-',
       '合同名称': item.validContracts?.[0]?.contractName || '-',
       '合同有效期': item.validContracts?.[0] ? `${item.validContracts[0].startDate} ~ ${item.validContracts[0].endDate}` : '-',
       '合同类型': item.validContracts?.[0]?.type === 'purchase' ? '采购合同' : '-',
       '采购金额': item.validContracts?.[0]?.amount ? item.validContracts[0].amount.toLocaleString() : '-',
-      '状态': item.status === 'enabled' ? '启用' : '禁用',
+      '备注': item.remark || '-',
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -720,13 +680,6 @@ export default function ServiceProductPage() {
           onChange={setSearchText}
           type="input"
           width="w-[260px]"
-        />
-        <SearchField
-          label="品牌"
-          value={brandFilter}
-          onChange={setBrandFilter}
-          options={brandOptions}
-          type="select"
         />
         <SearchField
           label="状态"
@@ -827,11 +780,6 @@ export default function ServiceProductPage() {
                 {editingItem ? '' : '前缀可修改，后缀系统自动生成'}
               </div>
             </div>
-            <Input
-              label="品牌"
-              value={formData.brand}
-              onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-            />
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">单位 <span className="text-red-500">*</span></label>
               <div className="flex gap-2">
@@ -861,42 +809,27 @@ export default function ServiceProductPage() {
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <Input
-              label="规格型号"
+              label="规格型号/参数"
               value={formData.specification}
               onChange={(e) => setFormData({ ...formData, specification: e.target.value })}
               placeholder="如: 10mm*1000mm*2000mm"
-            />
-            <Input
-              label="产地"
-              value={formData.origin}
-              onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
-            />
-            <Input
-              label="材质"
-              value={formData.material}
-              onChange={(e) => setFormData({ ...formData, material: e.target.value })}
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <Input
-              label="重量"
-              value={formData.weight}
-              onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-              placeholder="如: 50kg"
-            />
-            <Input
-              label="尺寸"
-              value={formData.dimensions}
-              onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })}
-              placeholder="如: 900*600*300mm"
             />
             <Select
               label="状态"
               options={statusOptions}
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as 'enabled' | 'disabled' })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">备注</label>
+            <textarea
+              className="w-full h-20 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              value={formData.remark || ''}
+              onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
+              placeholder="选填，备注说明"
             />
           </div>
           <div className="flex justify-end gap-3 pt-4">
@@ -972,38 +905,22 @@ export default function ServiceProductPage() {
                 <span className="font-medium">{viewingItem.name}</span>
               </div>
               <div>
-                <span className="text-slate-500">品牌：</span>
-                <span>{viewingItem.brand || '-'}</span>
-              </div>
-              <div>
                 <span className="text-slate-500">单位：</span>
                 <span>{viewingItem.unit}</span>
               </div>
               <div>
-                <span className="text-slate-500">规格型号：</span>
+                <span className="text-slate-500">规格型号/参数：</span>
                 <span>{viewingItem.specification || '-'}</span>
-              </div>
-              <div>
-                <span className="text-slate-500">产地：</span>
-                <span>{viewingItem.origin || '-'}</span>
-              </div>
-              <div>
-                <span className="text-slate-500">材质：</span>
-                <span>{viewingItem.material || '-'}</span>
-              </div>
-              <div>
-                <span className="text-slate-500">重量：</span>
-                <span>{viewingItem.weight || '-'}</span>
-              </div>
-              <div>
-                <span className="text-slate-500">尺寸：</span>
-                <span>{viewingItem.dimensions || '-'}</span>
               </div>
               <div>
                 <span className="text-slate-500">状态：</span>
                 <Badge variant={viewingItem.status === 'enabled' ? 'success' : 'default'}>
                   {viewingItem.status === 'enabled' ? '启用' : '禁用'}
                 </Badge>
+              </div>
+              <div>
+                <span className="text-slate-500">备注：</span>
+                <span>{viewingItem.remark || '-'}</span>
               </div>
             </div>
 
@@ -1437,15 +1354,11 @@ export default function ServiceProductPage() {
                   name: editingDetailForm.productName,
                   unit: editingDetailForm.unit || '',
                   specification: editingDetailForm.specification || '',
-                  brand: '',
-                  origin: '',
-                  material: '',
-                  weight: '',
-                  dimensions: '',
                   categoryId: '',
                   categoryName: '',
                   isContractItem: false,
                   status: 'enabled',
+                  remark: '',
                 });
                 setEditingItem(null);
                 setApplicationModalOpen(false);
