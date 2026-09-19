@@ -358,22 +358,49 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
   const handleDemandChange = (demandId: string) => {
     const demand = procurementDemands.find((d) => d.id === demandId);
     if (!demand) return;
-    // 需求关联的工单
+    // 需求关联的工单（同一需求可能已建工单）
     const bidding = biddings.find((b) => b.id === demand.relatedOrderId || b.demandId === demand.id);
     // 需求类型自动推导：从关联采购需求的 businessCategory 映射
     const autoContractType: ProcurementContractType =
       demand.businessCategory === 'engineering' ? 'engineering' : 'non_engineering';
-    update({
+
+    // ====== 自动回填规则：只有表单对应字段为空时才覆盖（保护用户已填的值）======
+    const patch: Partial<ContractLedger> = {
       biddingId: bidding?.id || '',
       biddingNo: bidding?.biddingNo || '',
       demandId: demand.id,
       demandNo: demand.demandNo,
-      projectName: bidding?.projectName || demand.projectName,
-      contractName: bidding?.projectName || demand.projectName || form.contractName,
-      counterpartyName: bidding?.winningSupplierName || form.counterpartyName,
-      winningDate: bidding?.awardTime || demand.approveTime || '',
       contractType: autoContractType,
-    });
+
+      // —— 已有（之前就带的）——
+      projectName: bidding?.projectName || demand.projectName,
+      // 合同名称：用户没填则从工单/需求带
+      contractName:
+        form.contractName || bidding?.projectName || demand.projectName || form.contractName,
+      // 对方单位：用户没填则从工单带
+      counterpartyName: form.counterpartyName || bidding?.winningSupplierName || form.counterpartyName,
+      // 中标时间：用户没填则从工单/需求带
+      winningDate: form.winningDate || bidding?.awardTime || demand.approveTime || '',
+
+      // —— 新增：从需求带的字段 ——
+      demandDepartment: form.demandDepartment || demand.applicantDept || '',
+      handler: form.handler || bidding?.procurementHandler || demand.applicant || '',
+      mainContent:
+        form.mainContent || demand.reason || demand.projectDescription || '',
+      terminationDate: form.terminationDate || demand.requiredDeliveryDate || '',
+
+      // —— 新增：从工单带的字段 ——
+      handlingDepartment: form.handlingDepartment || bidding?.implementationUnit || '',
+      counterpartyContact:
+        form.counterpartyContact || bidding?.winningSupplierLegalPerson || '',
+    };
+
+    // 合同金额：用户没填 && 需求有预估金额 → 元转万元
+    if (form.amount == null && demand.estimatedAmount != null && demand.estimatedAmount > 0) {
+      patch.amount = +(demand.estimatedAmount / 10000).toFixed(2);
+    }
+
+    update(patch);
   };
 
   /**
