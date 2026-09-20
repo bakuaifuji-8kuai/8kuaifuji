@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import type {
   ContractLedger,
@@ -92,7 +92,7 @@ export default function ContractProcurementPage() {
       guaranteeEvaluation: { isOpen: false },
       assessmentManagement: null,
       yearlyEvaluation: false,
-      businessCategory: 'expense',
+      businessCategory: undefined,
     });
     setModalOpen(true);
   };
@@ -139,7 +139,7 @@ export default function ContractProcurementPage() {
         counterpartyContact: finalForm.counterpartyContact,
         mainContent: finalForm.mainContent,
         amount: finalForm.amount,
-        businessCategory: finalForm.businessCategory ?? 'expense',
+        businessCategory: finalForm.businessCategory,
         archiveStatus: finalForm.archiveStatus ?? 'not_started',
         remark: finalForm.remark,
         status: finalForm.status as ContractLedger['status'],
@@ -557,13 +557,19 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
               onChange={(e) => update({ amount: e.target.value ? Number(e.target.value) : undefined })}
               placeholder="0.00"
             />
-            <Input
-              label="资金流向分类 *"
-              required
-              value={form.businessCategory || 'expense'}
-              onChange={(e) => update({ businessCategory: e.target.value as 'expense' | 'income' | 'other' })}
-              placeholder="expense支出 / income收入 / other其他"
-            />
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-700">资金流向分类 <span className="text-red-500">*</span></label>
+              <select
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                value={form.businessCategory || ''}
+                onChange={(e) => update({ businessCategory: (e.target.value || undefined) as 'expense' | 'income' | 'other' | undefined })}
+              >
+                <option value="">请选择</option>
+                <option value="expense">支出合同</option>
+                <option value="income">收入合同</option>
+                <option value="other">其他合同</option>
+              </select>
+            </div>
           </div>
         </div>
       </Section>
