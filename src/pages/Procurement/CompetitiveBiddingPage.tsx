@@ -41,6 +41,10 @@ const PROCUREMENT_OPTIONS: Array<{ value: BiddingProcurementMethod; label: strin
 /** 是否目录内比价（线上报价模式） */
 const isCatalogCompare = (m?: BiddingProcurementMethod) => m === 'framework';
 
+/** 线下流程模式（需要招采执行字段：公告/开标/评标/中标结果等） */
+const isOfflineExecution = (m?: BiddingProcurementMethod) =>
+  m === 'inquiry' || m === 'competitive_bidding' || m === 'negotiation_open' || m === 'negotiation_invited';
+
 export default function CompetitiveBiddingPage() {
   const biddings = useStore((s) => s.biddings || []) as Bidding[];
   const setBiddings = useStore((s) => s.setBiddings) as ((data: Bidding[]) => void) | undefined;
@@ -1225,6 +1229,67 @@ export default function CompetitiveBiddingPage() {
             )}
 
 
+            {/* ============ 线下流程专属：基础执行信息 ============ */}
+            {isOfflineExecution(editItem.procurementMethod) && (
+            <div className="space-y-3 pt-3 border-t border-slate-200">
+              <div className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
+                <span>📋</span> 基础执行信息
+                <span className="text-xs text-slate-400 font-normal">（916 L12-20）</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">采购方式审批方式 <span className="text-[#f56c6c]">*</span></div>
+                  <select className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.procurementApprovalMethod || ''}
+                    onChange={(e) => setEditItem({ ...editItem, procurementApprovalMethod: e.target.value })}>
+                    <option value="">请选择</option>
+                    <option value="meeting">会议审批</option>
+                    <option value="written">签报审批</option>
+                    <option value="form">采购项目申请表</option>
+                  </select>
+                </div>
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">采购方式审批日期 <span className="text-[#f56c6c]">*</span></div>
+                  <input type="date" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={(editItem.procurementApprovalDate || '').slice(0, 10)}
+                    onChange={(e) => setEditItem({ ...editItem, procurementApprovalDate: e.target.value })} />
+                </div>
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">招采实施单位 <span className="text-[#f56c6c]">*</span></div>
+                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.implementationUnit || ''}
+                    onChange={(e) => setEditItem({ ...editItem, implementationUnit: e.target.value })}
+                    placeholder="如：国金招标采购中心" />
+                </div>
+                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding') && (
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">项目实施单位</div>
+                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.projectImplementationUnit || ''}
+                    onChange={(e) => setEditItem({ ...editItem, projectImplementationUnit: e.target.value })}
+                    placeholder="如：会展运营部" />
+                </div>
+                )}
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">招采经办人 <span className="text-[#f56c6c]">*</span></div>
+                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.procurementHandler || ''}
+                    onChange={(e) => setEditItem({ ...editItem, procurementHandler: e.target.value })}
+                    placeholder="经办人姓名" />
+                </div>
+                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && (
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">招标人</div>
+                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.tenderer || ''}
+                    onChange={(e) => setEditItem({ ...editItem, tenderer: e.target.value })}
+                    placeholder="如：长沙国际会展中心" />
+                </div>
+                )}
+              </div>
+            </div>
+            )}
+
             {/* 受邀供应商（仅框架协议采购） */}
             {editItem?.procurementMethod === 'framework' && (
             <div>
@@ -1314,6 +1379,184 @@ export default function CompetitiveBiddingPage() {
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+            )}
+
+            {/* ============ 线下流程专属：招标公告与时间 ============ */}
+            {isOfflineExecution(editItem.procurementMethod) && (
+            <div className="space-y-3 pt-3 border-t border-slate-200">
+              <div className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
+                <span>📢</span> 招标公告与时间
+                <span className="text-xs text-slate-400 font-normal">（916 L21-30）</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && (
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">招标代理机构名称</div>
+                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.agentName || ''}
+                    onChange={(e) => setEditItem({ ...editItem, agentName: e.target.value })}
+                    placeholder="如：湖南招标代理公司" />
+                </div>
+                )}
+                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'negotiation_open') && (
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">招采公告发布时间</div>
+                  <input type="datetime-local" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={(editItem.announcementPublishTime || '').replace(' ', 'T').slice(0, 16)}
+                    onChange={(e) => setEditItem({ ...editItem, announcementPublishTime: e.target.value.replace('T', ' ') })} />
+                </div>
+                )}
+                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding') && (
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">开标时间</div>
+                  <input type="datetime-local" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={(editItem.bidOpeningTime || '').replace(' ', 'T').slice(0, 16)}
+                    onChange={(e) => setEditItem({ ...editItem, bidOpeningTime: e.target.value.replace('T', ' ') })} />
+                </div>
+                )}
+                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding') && (
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">评标办法</div>
+                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.judgeMethod || ''}
+                    onChange={(e) => setEditItem({ ...editItem, judgeMethod: e.target.value })}
+                    placeholder="如：综合评估法 / 最低价法" />
+                </div>
+                )}
+              </div>
+
+              {/* 是否委派业主评委 + 业主代表（询比/竞价） */}
+              {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding') && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">是否委派业主评委</div>
+                  <div className="flex gap-3 pt-1">
+                    <label className="flex items-center gap-1 text-xs cursor-pointer">
+                      <input type="radio" name="hasOwnerJudge" checked={!!editItem.hasOwnerJudge}
+                        onChange={() => setEditItem({ ...editItem, hasOwnerJudge: true })} /> 是
+                    </label>
+                    <label className="flex items-center gap-1 text-xs cursor-pointer">
+                      <input type="radio" name="hasOwnerJudge" checked={!editItem.hasOwnerJudge}
+                        onChange={() => setEditItem({ ...editItem, hasOwnerJudge: false })} /> 否
+                    </label>
+                  </div>
+                </div>
+                {editItem.procurementMethod === 'inquiry' && (
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">业主代表</div>
+                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.ownerRepresentative || ''}
+                    onChange={(e) => setEditItem({ ...editItem, ownerRepresentative: e.target.value })}
+                    placeholder="业主评委姓名" />
+                </div>
+                )}
+              </div>
+              )}
+            </div>
+            )}
+
+            {/* ============ 线下流程专属：中标结果 ============ */}
+            {isOfflineExecution(editItem.procurementMethod) && (
+            <div className="space-y-3 pt-3 border-t border-slate-200">
+              <div className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
+                <span>🏆</span> 中标结果
+                <span className="text-xs text-slate-400 font-normal">（916 L31-45）</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">中标供应商姓名</div>
+                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.winningSupplierName || ''}
+                    onChange={(e) => setEditItem({ ...editItem, winningSupplierName: e.target.value })}
+                    placeholder="中标单位全称" />
+                </div>
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">中标单位法人</div>
+                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.winningSupplierLegalPerson || ''}
+                    onChange={(e) => setEditItem({ ...editItem, winningSupplierLegalPerson: e.target.value })}
+                    placeholder="法人姓名" />
+                </div>
+                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding') && (
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">中标单位得分</div>
+                  <input type="number" step="0.01" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.winningSupplierScore ?? ''}
+                    onChange={(e) => setEditItem({ ...editItem, winningSupplierScore: e.target.value ? Number(e.target.value) : undefined })}
+                    placeholder="如：92.50" />
+                </div>
+                )}
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">中标/合同金额（元）</div>
+                  <input type="number" step="0.01" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.contractAmount ?? ''}
+                    onChange={(e) => setEditItem({ ...editItem, contractAmount: e.target.value ? Number(e.target.value) : undefined })}
+                    placeholder="0.00" />
+                </div>
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">中标时间</div>
+                  <input type="date" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={(editItem.awardTime || '').slice(0, 10)}
+                    onChange={(e) => setEditItem({ ...editItem, awardTime: e.target.value })} />
+                </div>
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">是否存在答疑/质疑/投诉</div>
+                  <div className="flex gap-3 pt-1">
+                    <label className="flex items-center gap-1 text-xs cursor-pointer">
+                      <input type="radio" name="hasDispute" value="是" checked={editItem.hasDispute === '是'}
+                        onChange={(e) => setEditItem({ ...editItem, hasDispute: e.target.value as '是' | '否' })} /> 是
+                    </label>
+                    <label className="flex items-center gap-1 text-xs cursor-pointer">
+                      <input type="radio" name="hasDispute" value="否" checked={editItem.hasDispute === '否'}
+                        onChange={(e) => setEditItem({ ...editItem, hasDispute: e.target.value as '是' | '否' })} /> 否
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* 未中标单位1 / 未中标单位2（询比/竞价） */}
+              {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding') && (
+              <>
+                <div className="text-xs text-slate-500 mt-2">未中标单位</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="border border-slate-200 rounded p-2.5 space-y-2">
+                    <div className="text-xs font-medium text-slate-600">未中标单位 1</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <input className="h-7 px-1.5 border border-slate-200 rounded text-xs"
+                        value={editItem.losingSupplier1Name || ''}
+                        onChange={(e) => setEditItem({ ...editItem, losingSupplier1Name: e.target.value })}
+                        placeholder="单位名称" />
+                      <input className="h-7 px-1.5 border border-slate-200 rounded text-xs"
+                        value={editItem.losingSupplier1LegalPerson || ''}
+                        onChange={(e) => setEditItem({ ...editItem, losingSupplier1LegalPerson: e.target.value })}
+                        placeholder="法人" />
+                      <input type="number" step="0.01" className="h-7 px-1.5 border border-slate-200 rounded text-xs"
+                        value={editItem.losingSupplier1Score ?? ''}
+                        onChange={(e) => setEditItem({ ...editItem, losingSupplier1Score: e.target.value ? Number(e.target.value) : undefined })}
+                        placeholder="得分" />
+                    </div>
+                  </div>
+                  <div className="border border-slate-200 rounded p-2.5 space-y-2">
+                    <div className="text-xs font-medium text-slate-600">未中标单位 2</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <input className="h-7 px-1.5 border border-slate-200 rounded text-xs"
+                        value={editItem.losingSupplier2Name || ''}
+                        onChange={(e) => setEditItem({ ...editItem, losingSupplier2Name: e.target.value })}
+                        placeholder="单位名称" />
+                      <input className="h-7 px-1.5 border border-slate-200 rounded text-xs"
+                        value={editItem.losingSupplier2LegalPerson || ''}
+                        onChange={(e) => setEditItem({ ...editItem, losingSupplier2LegalPerson: e.target.value })}
+                        placeholder="法人" />
+                      <input type="number" step="0.01" className="h-7 px-1.5 border border-slate-200 rounded text-xs"
+                        value={editItem.losingSupplier2Score ?? ''}
+                        onChange={(e) => setEditItem({ ...editItem, losingSupplier2Score: e.target.value ? Number(e.target.value) : undefined })}
+                        placeholder="得分" />
+                    </div>
+                  </div>
+                </div>
+              </>
               )}
             </div>
             )}
