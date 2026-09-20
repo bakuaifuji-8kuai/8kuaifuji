@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   Warehouse, Position, ProductCategory, Product, Supplier, SupplierAssessment, Customer,
   Inventory, InboundOrder, InboundApplication, OutboundOrder, CheckOrder, TransferOrder, ReturnOrder, PendingReturn,
   AssetEquipment, ScrappedRecord, DamagedRecord, StockTransaction, Employee, PurchaseOrder,
@@ -3809,7 +3809,7 @@ export const contractLedgers: ContractLedger[] = [
     contractName: '2024长沙国际车展展览服务合同',
     category: 'exhibition_service',
     contractType: 'non_engineering',
-    formation: 'exhibition_service',
+    formation: 'exhibition_host',
     isModelText: true,
     archiveStatus: 'not_started',
     handlerContact: '13800000000',

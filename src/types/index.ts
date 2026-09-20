@@ -1897,7 +1897,8 @@ export type ProcurementFormation =
 
 // 非招采类合同形成方式（Excel 非招采类备注2）
 export type NonProcurementFormation =
-  | 'exhibition_service'     // 展览服务
+  | 'exhibition_host'        // 展览服务-主办合同
+  | 'exhibition_venue'       // 展览服务-主场合同
   | 'exhibition_display'     // 展览展示服务
   | 'investment_contract'    // 招商合同
   | 'other';                 // 其他
@@ -2035,7 +2036,8 @@ export const PROCUREMENT_FORMATION_LABELS: Record<ProcurementFormation, string> 
 };
 
 export const NON_PROCUREMENT_FORMATION_LABELS: Record<NonProcurementFormation, string> = {
-  exhibition_service: '展览服务',
+  exhibition_host: '展览服务-主办合同',
+  exhibition_venue: '展览服务-主场合同',
   exhibition_display: '展览展示服务',
   investment_contract: '招商合同',
   other: '其他',

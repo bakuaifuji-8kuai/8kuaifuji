@@ -68,12 +68,16 @@ export default function ContractNonProcurementPage() {
   const [editing, setEditing] = useState<ContractLedger | null>(null);
   const [form, setForm] = useState<Partial<ContractLedger>>({});
 
+  // ========== 金额明细（主办/主场合同时使用） ==========
+  type AmountDetailItem = { id: string; label: string; value: number };
+  const [amountDetails, setAmountDetails] = useState<AmountDetailItem[]>([]);
+
   // ========== 打开新增 ==========
   const openAdd = () => {
     setEditing(null);
     setForm({
       contractNature: 'non_procurement',
-      formation: 'exhibition_service',
+      formation: 'exhibition_host',
       contractType: 'non_engineering_service',
       isModelText: true,
       archiveStatus: 'not_started',
@@ -81,6 +85,11 @@ export default function ContractNonProcurementPage() {
       businessCategory: 'expense',
       performanceBond: { gateByFormation: true, isEnabled: false },
     });
+    setAmountDetails([
+      { id: 'ad-1', label: '场租金额', value: 0 },
+      { id: 'ad-2', label: '管理费', value: 0 },
+      { id: 'ad-3', label: '履约保证金', value: 0 },
+    ]);
     setModalOpen(true);
   };
 
@@ -88,6 +97,27 @@ export default function ContractNonProcurementPage() {
   const openEdit = (row: ContractLedger) => {
     setEditing(row);
     setForm({ ...row });
+    // 兼容旧数据 exhibition_service → exhibition_host（运行时字符串比较，类型层已移除）
+    const rawFormation = row.formation as unknown as string;
+    const f: NonProcurementFormation = rawFormation === 'exhibition_service'
+      ? 'exhibition_host'
+      : (row.formation as NonProcurementFormation);
+    setForm((prev) => ({ ...prev, formation: f }));
+    // 初始化金额明细（仅主办/主场）
+    if (f === 'exhibition_host') {
+      setAmountDetails([
+        { id: 'ad-1', label: '场租金额', value: 0 },
+        { id: 'ad-2', label: '管理费', value: 0 },
+        { id: 'ad-3', label: '履约保证金', value: 0 },
+      ]);
+    } else if (f === 'exhibition_venue') {
+      setAmountDetails([
+        { id: 'ad-1', label: '安全清洁押金', value: 0 },
+        { id: 'ad-2', label: '搭建押金', value: 0 },
+      ]);
+    } else {
+      setAmountDetails([]);
+    }
     setModalOpen(true);
   };
 
@@ -99,12 +129,16 @@ export default function ContractNonProcurementPage() {
   // ========== 保存 ==========
   const save = (submit: boolean) => {
     const now = getNowString();
-    // 履约保证金门控自动同步：只有 formation === 'exhibition_service' 才允许 gateByFormation=true
-    const isExhibition = form.formation === 'exhibition_service';
+    // 履约保证金门控自动同步：只有展览服务类（主办/主场）才允许 gateByFormation=true
+    const isExhibition = form.formation === 'exhibition_host' || form.formation === 'exhibition_venue';
+    // 主办/主场合同时：合同金额 = 明细汇总（元），其他 formation 保持手填
+    const isDetailLedger = isExhibition;
+    const detailTotal = amountDetails.reduce((s, d) => s + (d.value || 0), 0);
     const finalForm: Partial<ContractLedger> = {
       ...form,
       contractNature: 'non_procurement', // 强制兜底
       status: submit ? 'pending' : 'draft',
+      amount: isDetailLedger ? detailTotal : form.amount, // 自动汇总
       performanceBond: {
         gateByFormation: isExhibition,
         isEnabled: isExhibition ? (form.performanceBond?.isEnabled ?? false) : false,
@@ -304,40 +338,74 @@ export default function ContractNonProcurementPage() {
           </div>
         }
       >
-        <ContractNonProcurementForm form={form} update={update} />
+        <ContractNonProcurementForm form={form} update={update}
+          amountDetails={amountDetails}
+          setAmountDetails={setAmountDetails}
+        />
       </Modal>
     </div>
   );
 }
 
 // ============== 表单子组件 ==============
+interface AmountDetailItem { id: string; label: string; value: number; }
 interface FormProps {
   form: Partial<ContractLedger>;
   update: (patch: Partial<ContractLedger>) => void;
+  amountDetails: AmountDetailItem[];
+  setAmountDetails: (v: AmountDetailItem[] | ((prev: AmountDetailItem[]) => AmountDetailItem[])) => void;
 }
 
-function ContractNonProcurementForm({ form, update }: FormProps) {
-  const formationOptions = Object.entries(NON_PROCUREMENT_FORMATION_LABELS).map(([v, l]) => ({
-    value: v,
-    label: l,
-  }));
+function ContractNonProcurementForm({ form, update, amountDetails, setAmountDetails }: FormProps) {
   const contractTypeOptions = Object.entries(NON_PROCUREMENT_CONTRACT_TYPE_LABELS).map(([v, l]) => ({
     value: v,
     label: l,
   }));
 
-  // formation 改变时，自动重置履约保证金门控
-  const handleFormationChange = (formation: NonProcurementFormation) => {
-    const isExhibition = formation === 'exhibition_service';
+  const formation = form.formation as NonProcurementFormation;
+  const isHost = formation === 'exhibition_host';
+  const isVenue = formation === 'exhibition_venue';
+  const isExhibitionLedger = isHost || isVenue;
+
+  // formation 改变时，自动重置履约保证金门控 + 金额明细初始化
+  const handleFormationChange = (newFormation: NonProcurementFormation) => {
+    const nowIsExhibition = newFormation === 'exhibition_host' || newFormation === 'exhibition_venue';
     update({
-      formation,
-      performanceBond: isExhibition
+      formation: newFormation,
+      performanceBond: nowIsExhibition
         ? { gateByFormation: true, isEnabled: false }
         : { gateByFormation: false, isEnabled: false },
     });
+    // 切换 formation 时重置金额明细
+    if (newFormation === 'exhibition_host') {
+      setAmountDetails([
+        { id: 'ad-1', label: '场租金额', value: 0 },
+        { id: 'ad-2', label: '管理费', value: 0 },
+        { id: 'ad-3', label: '履约保证金', value: 0 },
+      ]);
+    } else if (newFormation === 'exhibition_venue') {
+      setAmountDetails([
+        { id: 'ad-1', label: '安全清洁押金', value: 0 },
+        { id: 'ad-2', label: '搭建押金', value: 0 },
+      ]);
+    } else {
+      setAmountDetails([]);
+    }
   };
 
-  const isExhibitionService = form.formation === 'exhibition_service';
+  // 计算明细汇总
+  const detailTotal = amountDetails.reduce((s, d) => s + (d.value || 0), 0);
+
+  // 金额明细辅助函数
+  const addDetailRow = () => {
+    setAmountDetails((prev) => [...prev, { id: 'ad-' + Date.now() + Math.random().toString(36).slice(2, 5), label: '自定义项目', value: 0 }]);
+  };
+  const removeDetailRow = (id: string) => {
+    setAmountDetails((prev) => prev.filter((d) => d.id !== id));
+  };
+  const updateDetailRow = (id: string, patch: Partial<AmountDetailItem>) => {
+    setAmountDetails((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));
+  };
 
   return (
     <div className="max-h-[72vh] overflow-y-auto px-6 py-4 space-y-5">
@@ -369,15 +437,26 @@ function ContractNonProcurementForm({ form, update }: FormProps) {
             onChange={(e) => update({ contractType: e.target.value as NonProcurementContractType })}
             placeholder="选择需求类型"
           />
-          {/* 合同形成方式* */}
-          <Select
-            label="合同形成方式 *"
-            required
-            options={formationOptions}
-            value={form.formation as string || ''}
-            onChange={(e) => handleFormationChange(e.target.value as NonProcurementFormation)}
-            placeholder="展览服务/展览展示/招商/其他"
-          />
+          {/* 合同形成方式* —— 原生 select 带 optgroup 分组 */}
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700">合同形成方式 <span className="text-red-500">*</span></label>
+            <select
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              value={formation || ''}
+              onChange={(e) => handleFormationChange(e.target.value as NonProcurementFormation)}
+            >
+              <option value="">展览服务/展览展示/招商/其他</option>
+              <optgroup label="展览服务">
+                <option value="exhibition_host">主办合同</option>
+                <option value="exhibition_venue">主场合同</option>
+              </optgroup>
+              <optgroup label="其他">
+                <option value="exhibition_display">展览展示服务</option>
+                <option value="investment_contract">招商合同</option>
+                <option value="other">其他</option>
+              </optgroup>
+            </select>
+          </div>
           {/* 示范文本* —— 两个 checkbox 实现单选语义（是/否二选一） */}
           <div className="flex items-end gap-4">
             <span className="text-sm text-slate-700 pb-2 mr-2">示范文本 *</span>
@@ -457,15 +536,33 @@ function ContractNonProcurementForm({ form, update }: FormProps) {
               onChange={(e) => update({ status: e.target.value as ContractLedger['status'] })}
               placeholder="draft/pending/active/..."
             />
-            <Input
-              label="合同金额（万元）*"
-              required
-              type="number"
-              step="0.01"
-              value={form.amount ?? ''}
-              onChange={(e) => update({ amount: e.target.value ? Number(e.target.value) : undefined })}
-              placeholder="0.00"
-            />
+            {isExhibitionLedger ? (
+              // 主办/主场合同时：只读显示，自动汇总（单位：元）
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-slate-700">
+                  合同金额（元）<span className="text-red-500">*</span>
+                  <span className="ml-2 text-xs text-indigo-500">由下方明细自动汇总</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  disabled
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-100 text-slate-600 cursor-not-allowed"
+                  value={detailTotal.toFixed(2)}
+                  placeholder="明细自动汇总"
+                />
+              </div>
+            ) : (
+              <Input
+                label="合同金额（元）*"
+                required
+                type="number"
+                step="0.01"
+                value={form.amount ?? ''}
+                onChange={(e) => update({ amount: e.target.value ? Number(e.target.value) : undefined })}
+                placeholder="0.00"
+              />
+            )}
             <Input
               label="资金流向分类 *"
               required
@@ -475,6 +572,82 @@ function ContractNonProcurementForm({ form, update }: FormProps) {
             />
           </div>
         </div>
+
+        {/* ========== 主办/主场合同：金额明细区 ========== */}
+        {isExhibitionLedger && (
+          <div className="mt-4 border border-indigo-200 rounded-lg overflow-hidden">
+            <div className="bg-indigo-50 px-4 py-2 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-indigo-700 font-semibold text-sm">
+                  {isHost ? '主办合同金额明细' : '主场合同金额明细'}
+                </span>
+                <span className="text-xs text-indigo-500">
+                  合同总金额由以下明细自动汇总而成
+                </span>
+              </div>
+              <button
+                type="button"
+                className="px-3 py-1 text-xs text-indigo-600 border border-indigo-300 rounded hover:bg-indigo-100 transition-colors"
+                onClick={addDetailRow}
+              >
+                + 添加行
+              </button>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 text-slate-600 text-xs">
+                  <th className="px-3 py-2 text-left w-12">#</th>
+                  <th className="px-3 py-2 text-left">金额项名称</th>
+                  <th className="px-3 py-2 text-right w-48">金额（元）</th>
+                  <th className="px-3 py-2 text-center w-16">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {amountDetails.map((d, idx) => (
+                  <tr key={d.id} className="border-t border-slate-100 hover:bg-slate-50">
+                    <td className="px-3 py-2 text-slate-500">{idx + 1}</td>
+                    <td className="px-3 py-2">
+                      <input
+                        className="w-full px-2 py-1 border border-slate-200 rounded text-sm"
+                        value={d.label}
+                        onChange={(e) => updateDetailRow(d.id, { label: e.target.value })}
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full px-2 py-1 border border-slate-200 rounded text-sm text-right"
+                        value={d.value ?? 0}
+                        onChange={(e) => updateDetailRow(d.id, { value: e.target.value ? Number(e.target.value) : 0 })}
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <button
+                        type="button"
+                        className="text-rose-500 hover:underline text-xs"
+                        onClick={() => removeDetailRow(d.id)}
+                      >
+                        删除
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-slate-50 border-t border-slate-200">
+                <tr>
+                  <td colSpan={2} className="px-3 py-2 text-right text-slate-700 font-medium">
+                    合同总金额（元）
+                  </td>
+                  <td className="px-3 py-2 text-right text-red-500 font-semibold">
+                    {detailTotal.toFixed(2)}
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
       </Section>
 
       {/* ========== 916文档 四、附件 ========== */}
@@ -495,7 +668,7 @@ function ContractNonProcurementForm({ form, update }: FormProps) {
 
       {/* ========== 916文档 L23 第三条：门控履约保证金 ========== */}
       <Section title="🔒 履约保证金（门控 · 916文档L23）" tone="amber">
-        {isExhibitionService ? (
+        {isExhibitionLedger ? (
           <div className="border border-amber-200 rounded-lg p-4 bg-amber-50/60 space-y-3">
             <div className="text-xs text-amber-600 mb-1">💡 展览服务合同专属 — 门控生效中</div>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -560,7 +733,7 @@ function ContractNonProcurementForm({ form, update }: FormProps) {
         ) : (
           <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 text-slate-400 text-sm">
             <span className="mr-1">🔒</span>
-            仅当合同形成方式为「展览服务」时，履约保证金门控才会显示。
+            仅当合同形成方式为「展览服务」下的主办合同 / 主场合同时，履约保证金门控才会显示。
           </div>
         )}
       </Section>
