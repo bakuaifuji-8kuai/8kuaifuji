@@ -75,6 +75,10 @@ export default function ContractArchivePage() {
   const [rejectingArchive, setRejectingArchive] = useState<ContractArchive | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
+  // ===== 查看详情弹窗 =====
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewArchive, setViewArchive] = useState<ContractArchive | null>(null);
+
   const filteredContracts = useMemo(() => {
     return contractLedgers.filter((c) => {
       if (applied.no && !c.contractNo.includes(applied.no)) return false;
@@ -353,24 +357,36 @@ export default function ContractArchivePage() {
                     )}
                   </td>
                   <td className="px-3 py-2 text-center">
-                    <span className={'px-2 py-0.5 rounded text-xs ' + s.color + ' ' + s.bg}>{s.label}</span>
+                    <span
+                      className={'px-2 py-0.5 rounded text-xs ' + s.color + ' ' + s.bg}
+                      title={
+                        archive.status === 'rejected' && archive.approveRemark
+                          ? archive.approveRemark
+                          : archive.status === 'approved' && archive.approver
+                            ? `归档人：${archive.approver}｜归档时间：${archive.approveTime || '-'}`
+                            : undefined
+                      }
+                    >{s.label}</span>
                   </td>
                   <td className="px-3 py-2 text-center">
-                    {archive.status === 'draft' ? (
-                      <div className="flex items-center justify-center gap-1">
-                        <TextButton onClick={() => handleResubmitArchive(archive)}>提交审批</TextButton>
-                        <TextButton onClick={() => setEditArchive(archive)}>编辑</TextButton>
-                      </div>
-                    ) : archive.status === 'pending' ? (
-                      <div className="flex items-center justify-center gap-1">
-                        <TextButton type="danger" onClick={() => openRejectModal(archive)}>驳回</TextButton>
-                        <TextButton type="primary" onClick={() => openApproveModal(archive)}>审批通过</TextButton>
-                      </div>
-                    ) : (
-                      <span className="text-[#909399]">
-                        {archive.approver && <>{archive.approver} | {archive.approveTime}</>}
-                      </span>
-                    )}
+                    <div className="flex items-center justify-center gap-1">
+                      <TextButton onClick={() => { setViewArchive(archive); setViewModalOpen(true); }}>查看详情</TextButton>
+                      {archive.status === 'draft' ? (
+                        <>
+                          <TextButton onClick={() => handleResubmitArchive(archive)}>提交审批</TextButton>
+                          <TextButton onClick={() => setEditArchive(archive)}>编辑</TextButton>
+                        </>
+                      ) : archive.status === 'pending' ? (
+                        <>
+                          <TextButton type="danger" onClick={() => openRejectModal(archive)}>驳回</TextButton>
+                          <TextButton type="primary" onClick={() => openApproveModal(archive)}>审批通过</TextButton>
+                        </>
+                      ) : (
+                        <span className="text-[#909399]">
+                          {archive.approver && <>{archive.approver} | {archive.approveTime}</>}
+                        </span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -629,6 +645,138 @@ export default function ContractArchivePage() {
               />
               {rejectReason.trim().length > 0 && rejectReason.trim().length < 5 && (
                 <div className="mt-1 text-[11px] text-[#f56c6c]">驳回理由至少 5 个字</div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ============ 查看详情弹窗 ============ */}
+      <Modal
+        open={viewModalOpen}
+        title="归档详情"
+        onClose={() => { setViewModalOpen(false); setViewArchive(null); }}
+        footer={
+          <DefaultButton onClick={() => setViewModalOpen(false)}>关闭</DefaultButton>
+        }
+        width="600px"
+      >
+        {viewArchive && (
+          <div className="space-y-4">
+            {/* 1. 基本信息 */}
+            <div className="bg-[#f5f7fa] border border-[#ebeef5] rounded p-3">
+              <div className="mb-2 text-xs font-semibold text-[#303133]">基本信息</div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <div><span className="text-[#909399]">归档编号：</span>{viewArchive.archiveNo}</div>
+                <div><span className="text-[#909399]">申请人：</span>{viewArchive.applicant}</div>
+                <div><span className="text-[#909399]">申请时间：</span>{viewArchive.applyTime}</div>
+                <div>
+                  <span className="text-[#909399]">状态：</span>
+                  <span className={'px-1.5 py-0.5 rounded ' + statusMap[viewArchive.status].color + ' ' + statusMap[viewArchive.status].bg}>
+                    {statusMap[viewArchive.status].label}
+                  </span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-[#909399]">关联合同：</span>
+                  <span className="text-[#409eff]">{viewArchive.contractNos.join('、')}</span>
+                </div>
+                {viewArchive.approver && (
+                  <>
+                    <div><span className="text-[#909399]">归档/审批人：</span>{viewArchive.approver}</div>
+                    <div><span className="text-[#909399]">归档/审批时间：</span>{viewArchive.approveTime || '-'}</div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* 2. 合同日期 */}
+            <div>
+              <div className="mb-2 text-xs font-semibold text-[#303133]">合同日期</div>
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className="bg-white border border-[#ebeef5] rounded p-2">
+                  <div className="text-[#909399]">签订日期</div>
+                  <div className="text-[#303133] mt-1">{viewArchive.signingDate || '-'}</div>
+                </div>
+                <div className="bg-white border border-[#ebeef5] rounded p-2">
+                  <div className="text-[#909399]">生效日期</div>
+                  <div className="text-[#303133] mt-1">{viewArchive.effectiveDate || '-'}</div>
+                </div>
+                <div className="bg-white border border-[#ebeef5] rounded p-2">
+                  <div className="text-[#909399]">终止日期</div>
+                  <div className="text-[#303133] mt-1">{viewArchive.terminationDate || '-'}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. 审批面单（仅已归档显示） */}
+            {viewArchive.status === 'approved' && viewArchive.archiveChecklist && (
+              <div>
+                <div className="mb-2 text-xs font-semibold text-[#303133]">审批面单</div>
+                <div className="border border-[#ebeef5] rounded divide-y divide-[#ebeef5]">
+                  {[
+                    { key: 'hasApprovalSheet', label: '审批面单' },
+                    { key: 'hasReviewCopy', label: '呈阅件' },
+                    { key: 'hasLegalReview', label: '律审稿' },
+                    { key: 'hasApprovalDoc', label: '审批件' },
+                    { key: 'hasSealedCopy', label: '盖章件' },
+                  ].map((item) => (
+                    <div key={item.key} className="flex items-center justify-between px-3 py-1.5 text-xs">
+                      <span className="text-[#606266]">{item.label}</span>
+                      {viewArchive.archiveChecklist![item.key as keyof ArchiveChecklist] === true ? (
+                        <span className="text-green-600">✅ 是</span>
+                      ) : (
+                        <span className="text-gray-400">❌ 否</span>
+                      )}
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between px-3 py-1.5 text-xs">
+                    <span className="text-[#606266]">合同签订依据文件</span>
+                    {viewArchive.archiveChecklist.hasBasisFile === 'yes' ? (
+                      <span className="text-green-600">是</span>
+                    ) : viewArchive.archiveChecklist.hasBasisFile === 'no' ? (
+                      <span className="text-gray-400">否</span>
+                    ) : (
+                      <span className="text-[#e6a23c]">不涉及</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 4. 驳回信息（仅已驳回显示，红色） */}
+            {viewArchive.status === 'rejected' && (
+              <div className="bg-[#fef0f0] border border-[#fbc4c4] rounded p-3">
+                <div className="mb-1 text-xs font-semibold text-[#f56c6c]">驳回信息</div>
+                <div className="text-xs text-[#606266] space-y-1">
+                  <div>
+                    <span className="text-[#909399]">驳回人：</span>{viewArchive.approver || '-'}
+                    <span className="ml-4 text-[#909399]">驳回时间：</span>{viewArchive.approveTime || '-'}
+                  </div>
+                  <div>
+                    <span className="text-[#909399]">驳回理由：</span>
+                    <span className="text-[#f56c6c]">{viewArchive.approveRemark?.replace('驳回原因：', '') || '-'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 5. 附件 */}
+            <div>
+              <div className="mb-2 text-xs font-semibold text-[#303133]">申请人附件</div>
+              {viewArchive.attachments.length === 0 ? (
+                <div className="text-xs text-[#909399] bg-[#fafafa] border border-dashed border-[#dcdfe6] rounded p-3 text-center">
+                  未上传附件
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {viewArchive.attachments.map((file) => (
+                    <div key={file.id} className="flex items-center gap-2 text-xs bg-white border border-[#e4e7ed] rounded p-2">
+                      <span className="text-[#409eff]">📄</span>
+                      <span className="text-[#606266]">{file.fileName}</span>
+                      <span className="text-[#909399]">({(file.fileSize / 1024).toFixed(1)} KB)</span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>
