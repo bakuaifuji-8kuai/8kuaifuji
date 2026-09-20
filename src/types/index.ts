@@ -1973,8 +1973,38 @@ export type ContractStatus = 'draft' | 'pending' | 'approved' | 'active' | 'expi
 // ⚠️ framework 采购隔离规则（重要）：
 //   framework（框架协议/清单内比价）来源的采购数据，在合约管理只与"合同台账"关联（自动生成轻量记账台账），
 //   不进入合同审批流、不走归档、不走履约评估。只有非 framework 采购维持完整链路：
-//     招采工单 → 手工建合同 → 合同审批 → 合同台账 → 归档 → 履约评估 → 供应商考核
+//   招采工单 → 手工建合同 → 合同审批 → 合同台账 → 归档 → 履约评估 → 供应商考核
 // ====================================================================
+
+/** 合同归档审批面单勾选 */
+export interface ArchiveChecklist {
+  hasApprovalSheet: boolean;             // 审批面单
+  hasReviewCopy: boolean;                // 呈阅件
+  hasLegalReview: boolean;               // 律审稿
+  hasApprovalDoc: boolean;               // 审批件
+  hasSealedCopy: boolean;                // 盖章件
+  hasBasisFile: 'yes' | 'no' | 'n/a';    // 合同签订依据文件
+}
+
+/** 合同归档记录（跨台账/归档板块共享） */
+export interface ContractArchive {
+  id: string;
+  archiveNo: string;
+  contractIds: string[];
+  contractNos: string[];
+  applicant: string;
+  applyTime: string;
+  signingDate?: string;
+  effectiveDate?: string;
+  terminationDate?: string;
+  attachments: Attachment[];
+  status: 'draft' | 'pending' | 'approved' | 'rejected';
+  approver?: string;
+  approveTime?: string;
+  approveRemark?: string;
+  archiveChecklist?: ArchiveChecklist;
+}
+
 export interface ContractLedger {
   id: string;
   contractId: string;

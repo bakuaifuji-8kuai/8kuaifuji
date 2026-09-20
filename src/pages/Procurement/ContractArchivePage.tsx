@@ -5,35 +5,7 @@ import { SearchBar, SearchField } from '@/components/common/SearchField';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
-import type { Attachment } from '@/types';
-
-// 归档审批面单勾选
-interface ArchiveChecklist {
-  hasApprovalSheet: boolean;             // 审批面单
-  hasReviewCopy: boolean;                // 呈阅件
-  hasLegalReview: boolean;               // 律审稿
-  hasApprovalDoc: boolean;               // 审批件
-  hasSealedCopy: boolean;                // 盖章件
-  hasBasisFile: 'yes' | 'no' | 'n/a';    // 合同签订依据文件
-}
-
-interface ContractArchive {
-  id: string;
-  archiveNo: string;
-  contractIds: string[];
-  contractNos: string[];
-  applicant: string;
-  applyTime: string;
-  signingDate?: string;
-  effectiveDate?: string;
-  terminationDate?: string;
-  attachments: Attachment[];
-  status: 'draft' | 'pending' | 'approved' | 'rejected';
-  approver?: string;
-  approveTime?: string;
-  approveRemark?: string;
-  archiveChecklist?: ArchiveChecklist;
-}
+import type { Attachment, ContractArchive, ArchiveChecklist } from '@/types';
 
 const defaultChecklist: ArchiveChecklist = {
   hasApprovalSheet: false,
@@ -47,9 +19,9 @@ const defaultChecklist: ArchiveChecklist = {
 export default function ContractArchivePage() {
   const contractLedgers = useStore((s) => s.contractLedgers);
   const currentUser = useStore((s) => s.currentUser);
-
-  // 模拟归档记录数据
-  const [archives, setArchives] = useState<ContractArchive[]>([]);
+  const contractArchives = useStore((s) => s.contractArchives);
+  const addContractArchive = useStore((s) => s.addContractArchive);
+  const updateContractArchive = useStore((s) => s.updateContractArchive);
 
   // 筛选条件
   const [filterNo, setFilterNo] = useState('');
@@ -87,12 +59,12 @@ export default function ContractArchivePage() {
   }, [contractLedgers, applied]);
 
   const filteredArchives = useMemo(() => {
-    return archives.filter((a) => {
+    return contractArchives.filter((a) => {
       if (applied.no && !a.archiveNo.includes(applied.no)) return false;
       if (applied.status && a.status !== applied.status) return false;
       return true;
     });
-  }, [archives, applied]);
+  }, [contractArchives, applied]);
 
   // 文件上传处理
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -132,26 +104,19 @@ export default function ContractArchivePage() {
 
     const selectedContracts = contractLedgers.filter((c) => selectedContractIds.includes(c.id));
     if (editArchiveData) {
-      setArchives(
-        archives.map((a) =>
-          a.id === editArchiveData.id
-            ? {
-                ...a,
-                contractIds: selectedContractIds,
-                contractNos: selectedContracts.map((c) => c.contractNo),
-                signingDate,
-                effectiveDate,
-                terminationDate,
-                attachments: archiveFiles,
-              }
-            : a
-        )
-      );
+      updateContractArchive(editArchiveData.id, {
+        contractIds: selectedContractIds,
+        contractNos: selectedContracts.map((c) => c.contractNo),
+        signingDate,
+        effectiveDate,
+        terminationDate,
+        attachments: archiveFiles,
+      });
       alert('归档申请已更新');
     } else {
       const newArchive: ContractArchive = {
         id: 'ARC' + Date.now(),
-        archiveNo: genSerialNo(SERIAL_CONFIG.ARCHIVE, archives.map(a => a.archiveNo)),
+        archiveNo: genSerialNo(SERIAL_CONFIG.ARCHIVE, contractArchives.map(a => a.archiveNo)),
         contractIds: selectedContractIds,
         contractNos: selectedContracts.map((c) => c.contractNo),
         applicant: currentUser.name,
@@ -162,7 +127,7 @@ export default function ContractArchivePage() {
         attachments: archiveFiles,
         status: 'pending',
       };
-      setArchives([...archives, newArchive]);
+      addContractArchive(newArchive);
       alert('归档申请已提交');
     }
     setCreateModalOpen(false);
@@ -174,13 +139,12 @@ export default function ContractArchivePage() {
 
   // 重新提交归档申请（驳回后重新提交）
   const handleResubmitArchive = (archive: ContractArchive) => {
-    setArchives(
-      archives.map((a) =>
-        a.id === archive.id
-          ? { ...a, status: 'pending', approver: undefined, approveTime: undefined, approveRemark: undefined }
-          : a
-      )
-    );
+    updateContractArchive(archive.id, {
+      status: 'pending',
+      approver: undefined,
+      approveTime: undefined,
+      approveRemark: undefined,
+    });
   };
 
   // 编辑归档申请
@@ -205,20 +169,13 @@ export default function ContractArchivePage() {
   // ===== 审批通过：确认提交 =====
   const confirmApprove = () => {
     if (!approvingArchive) return;
-    setArchives(
-      archives.map((a) =>
-        a.id === approvingArchive.id
-          ? {
-              ...a,
-              status: 'approved',
-              approver: currentUser.name,
-              approveTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
-              approveRemark: '审批通过（归档面单已确认）',
-              archiveChecklist: { ...checklist },
-            }
-          : a
-      )
-    );
+    updateContractArchive(approvingArchive.id, {
+      status: 'approved',
+      approver: currentUser.name,
+      approveTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      approveRemark: '审批通过（归档面单已确认）',
+      archiveChecklist: { ...checklist },
+    });
     alert('已审批通过，归档完成');
     setApproveModalOpen(false);
     setApprovingArchive(null);
@@ -244,19 +201,12 @@ export default function ContractArchivePage() {
       alert('驳回理由不能超过 200 字');
       return;
     }
-    setArchives(
-      archives.map((a) =>
-        a.id === rejectingArchive.id
-          ? {
-              ...a,
-              status: 'rejected',
-              approver: currentUser.name,
-              approveTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
-              approveRemark: `驳回原因：${trimmed}`,
-            }
-          : a
-      )
-    );
+    updateContractArchive(rejectingArchive.id, {
+      status: 'rejected',
+      approver: currentUser.name,
+      approveTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      approveRemark: `驳回原因：${trimmed}`,
+    });
     alert('已驳回');
     setRejectModalOpen(false);
     setRejectingArchive(null);

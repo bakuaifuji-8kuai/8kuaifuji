@@ -70,6 +70,24 @@ export default function ContractLedgerPage() {
   const biddings = (useStore((s) => s.biddings) || []) as Bidding[];
   const procurementDemands = (useStore((s) => s.procurementDemands) || []) as ProcurementDemand[];
   const evaluationTemplates = useStore((s) => s.evaluationTemplates) || [];
+  const contractArchives = useStore((s) => s.contractArchives) || [];
+
+  // 归档状态反查表：contractNo → 归档信息
+  const archiveByContractNo = useMemo(() => {
+    const map = new Map<string, { status: string; archiveNo?: string; approveTime?: string }>();
+    for (const arc of contractArchives) {
+      for (const no of arc.contractNos) {
+        // 已归档优先覆盖，pending 其次，rejected/draft 最后
+        const existing = map.get(no);
+        if (!existing || existing.status === 'draft' || existing.status === 'rejected') {
+          map.set(no, { status: arc.status, archiveNo: arc.archiveNo, approveTime: arc.approveTime });
+        } else if (existing.status === 'pending' && arc.status === 'approved') {
+          map.set(no, { status: arc.status, archiveNo: arc.archiveNo, approveTime: arc.approveTime });
+        }
+      }
+    }
+    return map;
+  }, [contractArchives]);
 
   // 从 store 动态派生模板选项（内置 + 用户自定义克隆）
   const templateOptions = useMemo(() =>
@@ -137,7 +155,16 @@ export default function ContractLedgerPage() {
       if (applied.status && c.status !== applied.status) return false;
       if (applied.nature && c.contractNature !== applied.nature) return false;
       if (applied.formation && c.formation !== applied.formation) return false;
-      if (applied.archiveStatus && c.archiveStatus !== applied.archiveStatus) return false;
+      if (applied.archiveStatus) {
+        // 从归档板块反查归档状态
+        const arc = archiveByContractNo.get(c.contractNo);
+        const actual = arc?.status;
+        let match = false;
+        if (applied.archiveStatus === 'not_started') match = !actual || actual === 'rejected' || actual === 'draft';
+        else if (applied.archiveStatus === 'in_progress') match = actual === 'pending';
+        else if (applied.archiveStatus === 'archived') match = actual === 'approved';
+        if (!match) return false;
+      }
       if (applied.isModelText !== '' && applied.isModelText !== undefined) {
         const wantTrue = applied.isModelText === 'true';
         if (!!c.isModelText !== wantTrue) return false;
@@ -801,6 +828,33 @@ export default function ContractLedgerPage() {
         </div>
       );
     }, footer: '' },
+    // 23-2. 合同是否归档（从归档板块反查）
+    {
+      key: 'contractArchiveStatus', title: '合同是否归档', footer: '',
+      render: (row) => {
+        const arc = archiveByContractNo.get(row.contractNo);
+        if (!arc) return <span className="text-[#c0c4cc]">未归档</span>;
+        if (arc.status === 'approved') {
+          return (
+            <span
+              className="px-2 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200"
+              title={`归档编号：${arc.archiveNo}｜归档时间：${arc.approveTime || '-'}`}
+            >✅ 已归档</span>
+          );
+        }
+        if (arc.status === 'pending') {
+          return (
+            <span className="px-2 py-0.5 rounded text-xs bg-amber-50 text-amber-700 border border-amber-200">🟡 归档中</span>
+          );
+        }
+        if (arc.status === 'rejected') {
+          return (
+            <span className="px-2 py-0.5 rounded text-xs bg-red-50 text-red-600 border border-red-200">❌ 曾被驳回</span>
+          );
+        }
+        return <span className="text-[#c0c4cc]">未归档</span>;
+      },
+    },
     // 24. 合同状态
     {
       key: 'status', title: '合同状态', footer: '',
@@ -834,12 +888,6 @@ export default function ContractLedgerPage() {
             >审批通过</TextButton>
           )}
           <TextButton onClick={() => openEvalModal(row)}>考核绑定</TextButton>
-          <TextButton
-            onClick={() => {
-              const nextStatus = row.archiveStatus === 'archived' ? 'not_started' : 'archived';
-              updateContractLedger(row.id, { ...row, archiveStatus: nextStatus });
-            }}
-          >{row.archiveStatus === 'archived' ? '取消归档' : '归档'}</TextButton>
           {(row.status === 'active' || row.status === 'approved') && (
             <TextButton type="danger" onClick={() => { setTerminateItem(row); setTerminateReason(''); }}>终止</TextButton>
           )}

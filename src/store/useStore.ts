@@ -9,7 +9,7 @@ import type {
   WorkOrderProductConfig, Project, StockTransfer,
   // 采购管理类型
   ProcurementPlan, ProcurementDemand, ProcurementDemandChange,
-  ContractLedger, ContractStatus, ContractEvaluationBinding, EvaluationType,
+  ContractLedger, ContractArchive, ArchiveChecklist, ContractStatus, ContractEvaluationBinding, EvaluationType,
   ProcurementOrder, ProcurementOrderChange, ProcurementInspection,
   Bidding, SupplierQuote, WebsiteInfo, ContractTemplate, ContractWarning,
   ApprovalFlowConfig, SupplierQualification, SupplierChangeRequest,
@@ -347,6 +347,11 @@ interface WarehouseState {
   contractProcurementLedgers: ContractLedger[];
   /** 非招采类合同（contractNature='non_procurement'） */
   contractNonProcurementLedgers: ContractLedger[];
+
+  // 合同归档记录（跨台账/归档板块共享）
+  contractArchives: ContractArchive[];
+  addContractArchive: (archive: ContractArchive) => void;
+  updateContractArchive: (id: string, data: Partial<ContractArchive>) => void;
 
   // 采购订单
   procurementOrders: ProcurementOrder[];
@@ -1178,6 +1183,7 @@ export const useStore = create<WarehouseState>()(
 
   // 合同台账
   contractLedgers: mockData.contractLedgers || [],
+  contractArchives: [], // 合同归档记录（空数组初始化，归档板块提交后写入）
   setContractLedgers: (data) => set({ contractLedgers: data }),
   addContractLedger: (ledger) => set((state) => ({
     contractLedgers: [
@@ -1216,6 +1222,14 @@ export const useStore = create<WarehouseState>()(
   get contractNonProcurementLedgers() {
     return useStore.getState().contractLedgers.filter((l) => l.contractNature === 'non_procurement');
   },
+
+  // 合同归档 actions
+  addContractArchive: (archive) => set((state) => ({
+    contractArchives: [...state.contractArchives, archive],
+  })),
+  updateContractArchive: (id, data) => set((state) => ({
+    contractArchives: state.contractArchives.map((a) => (a.id === id ? { ...a, ...data } : a)),
+  })),
 
   // 采购订单
   procurementOrders: mockData.procurementOrders || [],
