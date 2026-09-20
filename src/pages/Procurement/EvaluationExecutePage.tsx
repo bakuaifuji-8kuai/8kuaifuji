@@ -19,7 +19,8 @@ export default function EvaluationExecutePage() {
   const [selectedTemplate, setSelectedTemplate] = useState<EvaluationTemplate | null>(null);
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
   const [selectedContractId, setSelectedContractId] = useState<string>('');
-  const [evaluationDate, setEvaluationDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [evaluationDateStart, setEvaluationDateStart] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [evaluationDateEnd, setEvaluationDateEnd] = useState<string>(new Date().toISOString().slice(0, 10));
   const [projectName, setProjectName] = useState<string>('');
   const [remark, setRemark] = useState<string>('');
   const [scores, setScores] = useState<Record<string, { score: number; comment: string }>>({});
@@ -125,6 +126,14 @@ export default function EvaluationExecutePage() {
       alert('请选择供应商');
       return;
     }
+    if (!evaluationDateStart || !evaluationDateEnd) {
+      alert('请填写评估时间区间（开始和结束日期）');
+      return;
+    }
+    if (evaluationDateStart > evaluationDateEnd) {
+      alert('开始日期不能晚于结束日期');
+      return;
+    }
     // 校验所有指标是否已评分
     const unscored = selectedTemplate.indicators.filter((ind) => !scores[ind.id] || scores[ind.id].score === 0);
     if (unscored.length > 0) {
@@ -164,7 +173,10 @@ export default function EvaluationExecutePage() {
       scores: scoreItems,
       totalScore,
       evaluator: currentUser.name,
-      evaluationDate,
+      evaluationDate: evaluationDateStart, // 兼容保留
+      evaluationDateStart,
+      evaluationDateEnd,
+      applyDept: currentUser.department || currentUser.deptName || '',
       status,
       attachments: attachments.length > 0 ? attachments : undefined,
       remark: remark || undefined,
@@ -187,7 +199,8 @@ export default function EvaluationExecutePage() {
     setSelectedSupplierId('');
     setSelectedContractId('');
     setProjectName('');
-    setEvaluationDate(new Date().toISOString().slice(0, 10));
+    setEvaluationDateStart(new Date().toISOString().slice(0, 10));
+    setEvaluationDateEnd(new Date().toISOString().slice(0, 10));
     setRemark('');
     setScores({});
     setAttachments([]);
@@ -273,13 +286,22 @@ export default function EvaluationExecutePage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">评估日期</label>
-                <input
-                  type="date"
-                  value={evaluationDate}
-                  onChange={(e) => setEvaluationDate(e.target.value)}
-                  className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                />
+                <label className="block text-xs font-medium text-slate-600 mb-1">评估时间区间</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={evaluationDateStart}
+                    onChange={(e) => setEvaluationDateStart(e.target.value)}
+                    className="flex-1 h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                  <span className="text-slate-400 text-sm">至</span>
+                  <input
+                    type="date"
+                    value={evaluationDateEnd}
+                    onChange={(e) => setEvaluationDateEnd(e.target.value)}
+                    className="flex-1 h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
               </div>
               <div className="col-span-2">
                 <label className="block text-xs font-medium text-slate-600 mb-1">项目名称</label>

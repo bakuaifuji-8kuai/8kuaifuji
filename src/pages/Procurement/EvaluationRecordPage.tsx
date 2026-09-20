@@ -154,7 +154,7 @@ export default function EvaluationRecordPage({ defaultType }: { defaultType?: st
       alert('暂无数据可导出');
       return;
     }
-    const headers = ['供应商', '模板名称', '考核类型', '总分', '状态', '评估人', '评估日期', '项目名称'];
+    const headers = ['供应商', '模板名称', '考核类型', '总分', '状态', '评估人', '申请部门', '评估时间区间', '项目名称'];
     const rows = filteredData.map((r) => [
       r.supplierName,
       r.templateName,
@@ -162,7 +162,8 @@ export default function EvaluationRecordPage({ defaultType }: { defaultType?: st
       r.totalScore,
       EVALUATION_STATUS_LABELS[r.status],
       r.evaluator,
-      r.evaluationDate,
+      r.applyDept || '',
+      r.evaluationDateStart && r.evaluationDateEnd ? `${r.evaluationDateStart}~${r.evaluationDateEnd}` : r.evaluationDate,
       r.projectName || '',
     ]);
     const csv = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
@@ -224,9 +225,20 @@ export default function EvaluationRecordPage({ defaultType }: { defaultType?: st
       cell: ({ row }) => <span className="text-slate-600">{row.original.evaluator}</span>,
     },
     {
-      header: '评估日期',
+      header: '申请部门',
+      accessorKey: 'applyDept',
+      cell: ({ row }) => <span className="text-slate-600">{row.original.applyDept || '-'}</span>,
+    },
+    {
+      header: '评估时间区间',
       accessorKey: 'evaluationDate',
-      cell: ({ row }) => <span className="text-slate-600">{row.original.evaluationDate}</span>,
+      cell: ({ row }) => {
+        const r = row.original;
+        if (r.evaluationDateStart && r.evaluationDateEnd) {
+          return <span className="text-slate-600">{r.evaluationDateStart} ~ {r.evaluationDateEnd}</span>;
+        }
+        return <span className="text-slate-600">{r.evaluationDate || '-'}</span>;
+      },
     },
     {
       header: '操作',
@@ -445,8 +457,16 @@ export default function EvaluationRecordPage({ defaultType }: { defaultType?: st
                 <span className="text-slate-800">{viewItem.evaluator}</span>
               </div>
               <div>
-                <span className="text-slate-500">评估日期：</span>
-                <span className="text-slate-800">{viewItem.evaluationDate}</span>
+                <span className="text-slate-500">申请部门：</span>
+                <span className="text-slate-800">{viewItem.applyDept || '-'}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">评估时间区间：</span>
+                <span className="text-slate-800">
+                  {viewItem.evaluationDateStart && viewItem.evaluationDateEnd
+                    ? `${viewItem.evaluationDateStart} ~ ${viewItem.evaluationDateEnd}`
+                    : viewItem.evaluationDate}
+                </span>
               </div>
               {viewItem.projectName && (
                 <div className="col-span-2">

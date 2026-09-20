@@ -2420,7 +2420,10 @@ export interface EvaluationRecord {
   scores: EvaluationScoreItem[];
   totalScore: number;
   evaluator: string;
-  evaluationDate: string;
+  evaluationDate: string;            // 兼容保留，取 start 或开始日期
+  evaluationDateStart?: string;      // 评估时间区间 - 开始
+  evaluationDateEnd?: string;        // 评估时间区间 - 结束
+  applyDept?: string;                // 申请部门（取创建人当前部门）
   status: EvaluationStatus;
   attachments?: Attachment[];
   approvalHistory?: Array<{
