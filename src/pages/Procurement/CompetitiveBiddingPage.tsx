@@ -289,6 +289,10 @@ export default function CompetitiveBiddingPage() {
   const [editAnnouncement, setEditAnnouncement] = useState<Attachment[]>([]);
   // 竞价文件附件
   const [editBiddingDocs, setEditBiddingDocs] = useState<Attachment[]>([]);
+  // 线下流程审批材料附件（9 种分类用 cat 字段区分）
+  type OfflineMaterial = Attachment & { cat: string };
+  const [offlineMaterials, setOfflineMaterials] = useState<OfflineMaterial[]>([]);
+  const offlineFileRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [previewAtt, setPreviewAtt] = useState<Attachment | null>(null);
   // offline 清单导入
   const offlineFileInputRef = useRef<HTMLInputElement>(null);
@@ -338,6 +342,66 @@ export default function CompetitiveBiddingPage() {
     }));
     setEditBiddingDocs([...editBiddingDocs, ...newAttachments]);
     e.target.value = '';
+  };
+
+  // ===== 线下审批材料附件：统一 upload / delete =====
+  const handleOfflineUpload = (cat: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const newOnes: OfflineMaterial[] = Array.from(e.target.files).map((file) => ({
+      id: 'OF' + cat + Date.now().toString() + Math.random().toString(36).slice(2, 6),
+      cat,
+      fileName: file.name,
+      filePath: URL.createObjectURL(file),
+      fileSize: file.size,
+      fileType: file.type,
+      uploadTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    }));
+    setOfflineMaterials((prev) => [...prev, ...newOnes]);
+    e.target.value = '';
+  };
+
+  const removeOfflineMaterial = (cat: string, id: string) => {
+    setOfflineMaterials((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  // 渲染一个附件 slot（标题 + 上传按钮 + 文件列表）
+  const renderMaterialSlot = (cat: string, title: string, required?: boolean) => {
+    const list = offlineMaterials.filter((a) => a.cat === cat);
+    return (
+      <div className="border border-slate-200 rounded p-3">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs font-medium text-slate-700">
+            {title} {required && <span className="text-red-500">（必须）</span>}
+            <span className="text-slate-400 ml-1">· 已传 {list.length} 个</span>
+          </div>
+          <label className="cursor-pointer text-xs text-indigo-600 hover:text-indigo-800 hover:underline">
+            <input
+              ref={(el) => (offlineFileRefs.current[cat] = el)}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleOfflineUpload(cat)}
+            />
+            + 上传
+          </label>
+        </div>
+        {list.length === 0 ? (
+          <div className="text-xs text-slate-400 text-center py-2 border border-dashed border-slate-200 rounded">暂无附件</div>
+        ) : (
+          <div className="space-y-1 max-h-32 overflow-auto">
+            {list.map((att) => (
+              <div key={att.id} className="flex items-center justify-between text-xs bg-slate-50 border border-slate-100 rounded px-2 py-1">
+                <span className="truncate text-slate-600 flex-1">📎 {att.fileName}</span>
+                <button
+                  className="text-rose-500 hover:underline flex-shrink-0 ml-2"
+                  onClick={() => removeOfflineMaterial(cat, att.id)}
+                >删除</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const removeAttachment = (id: string) => {
@@ -408,6 +472,19 @@ export default function CompetitiveBiddingPage() {
     setEditAttachments([...(bidding.attachments || [])]);
     setEditAnnouncement([...(bidding.biddingAnnouncement || [])]);
     setEditBiddingDocs([...(bidding.biddingDocuments || [])]);
+    // 回填线下审批材料
+    const om: OfflineMaterial[] = [
+      ...(bidding.meetingMinutes || []).map((a) => ({ ...a, cat: 'meetingMinutes' })),
+      ...(bidding.onMeetingMaterials || []).map((a) => ({ ...a, cat: 'onMeetingMaterials' })),
+      ...(bidding.demandMaterial || []).map((a) => ({ ...a, cat: 'demandMaterial' })),
+      ...(bidding.preContractReview || []).map((a) => ({ ...a, cat: 'preContractReview' })),
+      ...(bidding.agentDrawResult || []).map((a) => ({ ...a, cat: 'agentDrawResult' })),
+      ...(bidding.awardNotice || []).map((a) => ({ ...a, cat: 'awardNotice' })),
+      ...(bidding.processArchive || []).map((a) => ({ ...a, cat: 'processArchive' })),
+      ...(bidding.jointMeetingMinutes || []).map((a) => ({ ...a, cat: 'jointMeetingMinutes' })),
+      ...(bidding.jointOnMeetingMaterials || []).map((a) => ({ ...a, cat: 'jointOnMeetingMaterials' })),
+    ];
+    setOfflineMaterials(om);
     setIsNew(false);
     setEditItem(bidding);
   };
@@ -648,6 +725,17 @@ export default function CompetitiveBiddingPage() {
     saveBidding.attachments = [...editAttachments];
     saveBidding.biddingAnnouncement = [...editAnnouncement];
     saveBidding.biddingDocuments = [...editBiddingDocs];
+    // 线下审批材料附件：按 cat 分发到 Bidding 对应字段
+    const om = offlineMaterials;
+    saveBidding.meetingMinutes = om.filter((a) => a.cat === 'meetingMinutes');
+    saveBidding.onMeetingMaterials = om.filter((a) => a.cat === 'onMeetingMaterials');
+    saveBidding.demandMaterial = om.filter((a) => a.cat === 'demandMaterial');
+    saveBidding.preContractReview = om.filter((a) => a.cat === 'preContractReview');
+    saveBidding.agentDrawResult = om.filter((a) => a.cat === 'agentDrawResult');
+    saveBidding.awardNotice = om.filter((a) => a.cat === 'awardNotice');
+    saveBidding.processArchive = om.filter((a) => a.cat === 'processArchive');
+    saveBidding.jointMeetingMinutes = om.filter((a) => a.cat === 'jointMeetingMinutes');
+    saveBidding.jointOnMeetingMaterials = om.filter((a) => a.cat === 'jointOnMeetingMaterials');
 
     if (isNew) {
       addBidding?.(saveBidding);
@@ -660,6 +748,7 @@ export default function CompetitiveBiddingPage() {
     setEditAttachments([]);
     setEditAnnouncement([]);
     setEditBiddingDocs([]);
+    setOfflineMaterials([]);
   };
 
   const toggleSupplier = (supplierId: string) => {
@@ -909,10 +998,10 @@ export default function CompetitiveBiddingPage() {
       <Modal
         open={!!editItem}
         title={isNew ? '新增招采执行' : '编辑招采执行'}
-        onClose={() => { setEditItem(null); setSelectedSuppliers([]); setSelectedDemand(null); setEditAttachments([]); setEditAnnouncement([]); setEditBiddingDocs([]); }}
+        onClose={() => { setEditItem(null); setSelectedSuppliers([]); setSelectedDemand(null); setEditAttachments([]); setEditAnnouncement([]); setEditBiddingDocs([]); setOfflineMaterials([]); }}
         footer={
           <>
-            <DefaultButton onClick={() => { setEditItem(null); setSelectedSuppliers([]); setSelectedDemand(null); setEditAttachments([]); setEditAnnouncement([]); setEditBiddingDocs([]); }}>取消</DefaultButton>
+            <DefaultButton onClick={() => { setEditItem(null); setSelectedSuppliers([]); setSelectedDemand(null); setEditAttachments([]); setEditAnnouncement([]); setEditBiddingDocs([]); setOfflineMaterials([]); }}>取消</DefaultButton>
             <PrimaryButton onClick={handleSave}>保存</PrimaryButton>
           </>
         }
@@ -1558,6 +1647,33 @@ export default function CompetitiveBiddingPage() {
                 </div>
               </>
               )}
+            </div>
+            )}
+
+            {/* ============ 线下流程专属：审批材料附件 ============ */}
+            {isOfflineExecution(editItem.procurementMethod) && (
+            <div className="space-y-3 pt-3 border-t border-slate-200">
+              <div className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
+                <span>📎</span> 审批材料附件
+                <span className="text-xs text-slate-400 font-normal">（916 L46-55）</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {/* 必须项：询比 */}
+                {editItem.procurementMethod === 'inquiry' && renderMaterialSlot('meetingMinutes', '会议纪要', true)}
+                {editItem.procurementMethod === 'inquiry' && renderMaterialSlot('onMeetingMaterials', '上会材料', true)}
+                {/* 竞价 + 谈判 */}
+                {(editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && renderMaterialSlot('demandMaterial', '需求立项材料')}
+                {/* 谈判 */}
+                {editItem.procurementMethod?.startsWith('negotiation') && renderMaterialSlot('preContractReview', '前置审核合同文本')}
+                {/* 招标代理（询比/竞价/谈判） */}
+                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && renderMaterialSlot('agentDrawResult', '招标代理抽取结果表')}
+                {/* 成交通知书 + 过程备案：4 种都要 */}
+                {renderMaterialSlot('awardNotice', '成交通知书')}
+                {renderMaterialSlot('processArchive', '招采过程备案')}
+                {/* 合资公司相关（可选，4 种都显示） */}
+                {renderMaterialSlot('jointMeetingMinutes', '合资公司会议纪要')}
+                {renderMaterialSlot('jointOnMeetingMaterials', '合资公司上会材料')}
+              </div>
             </div>
             )}
 
