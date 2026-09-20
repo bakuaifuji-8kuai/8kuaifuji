@@ -2424,6 +2424,7 @@ export interface EvaluationRecord {
   evaluationDateStart?: string;      // 评估时间区间 - 开始
   evaluationDateEnd?: string;        // 评估时间区间 - 结束
   applyDept?: string;                // 申请部门（取创建人当前部门）
+  result?: 'pass' | 'fail';          // 合约履约评估简化后：pass=合格 fail=不合格
   status: EvaluationStatus;
   attachments?: Attachment[];
   approvalHistory?: Array<{

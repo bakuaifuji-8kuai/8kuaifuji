@@ -50,6 +50,8 @@ export default function EvaluationTemplatePage() {
 
   const filteredData = useMemo(() => {
     return evaluationTemplates.filter((t) => {
+      // 合约履约评估模板已废弃，不在列表展示
+      if (t.type === 'contract_performance') return false;
       // tab 类型筛选
       if (tabTypeFilter.length > 0 && !tabTypeFilter.includes(t.type)) return false;
       // 内置/自定义筛选
