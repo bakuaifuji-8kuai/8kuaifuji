@@ -1,10 +1,21 @@
 import { useMemo, useState } from 'react';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
+import Button from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
-import type { ContractLedger, Attachment } from '@/types';
+import type { Attachment } from '@/types';
+
+// 归档审批面单勾选
+interface ArchiveChecklist {
+  hasApprovalSheet: boolean;             // 审批面单
+  hasReviewCopy: boolean;                // 呈阅件
+  hasLegalReview: boolean;               // 律审稿
+  hasApprovalDoc: boolean;               // 审批件
+  hasSealedCopy: boolean;                // 盖章件
+  hasBasisFile: 'yes' | 'no' | 'n/a';    // 合同签订依据文件
+}
 
 interface ContractArchive {
   id: string;
@@ -13,15 +24,25 @@ interface ContractArchive {
   contractNos: string[];
   applicant: string;
   applyTime: string;
-  signingDate?: string;   // 合同签订日期（归档环节补填，批量写入合同台账）
-  effectiveDate?: string;  // 合同生效日期
-  terminationDate?: string;// 合同终止日期
+  signingDate?: string;
+  effectiveDate?: string;
+  terminationDate?: string;
   attachments: Attachment[];
   status: 'draft' | 'pending' | 'approved' | 'rejected';
   approver?: string;
   approveTime?: string;
   approveRemark?: string;
+  archiveChecklist?: ArchiveChecklist;
 }
+
+const defaultChecklist: ArchiveChecklist = {
+  hasApprovalSheet: false,
+  hasReviewCopy: false,
+  hasLegalReview: false,
+  hasApprovalDoc: false,
+  hasSealedCopy: false,
+  hasBasisFile: 'n/a',
+};
 
 export default function ContractArchivePage() {
   const contractLedgers = useStore((s) => s.contractLedgers);
@@ -43,6 +64,16 @@ export default function ContractArchivePage() {
   const [terminationDate, setTerminationDate] = useState('');
   const [archiveFiles, setArchiveFiles] = useState<Attachment[]>([]);
   const [editArchiveData, setEditArchiveData] = useState<ContractArchive | null>(null);
+
+  // ===== 审批通过弹窗 =====
+  const [approveModalOpen, setApproveModalOpen] = useState(false);
+  const [approvingArchive, setApprovingArchive] = useState<ContractArchive | null>(null);
+  const [checklist, setChecklist] = useState<ArchiveChecklist>(defaultChecklist);
+
+  // ===== 驳回弹窗 =====
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectingArchive, setRejectingArchive] = useState<ContractArchive | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const filteredContracts = useMemo(() => {
     return contractLedgers.filter((c) => {
@@ -142,7 +173,7 @@ export default function ContractArchivePage() {
     setArchives(
       archives.map((a) =>
         a.id === archive.id
-          ? { ...a, status: 'pending', approver: undefined, approveTime: undefined }
+          ? { ...a, status: 'pending', approver: undefined, approveTime: undefined, approveRemark: undefined }
           : a
       )
     );
@@ -159,23 +190,73 @@ export default function ContractArchivePage() {
     setCreateModalOpen(true);
   };
 
-  // 审批归档申请
-  const handleApprove = (archive: ContractArchive, approved: boolean) => {
-    if (!confirm(approved ? '确认审批通过此归档申请？' : '确认驳回此归档申请？')) return;
+  // ===== 审批通过：打开弹窗 =====
+  const openApproveModal = (archive: ContractArchive) => {
+    setApprovingArchive(archive);
+    // 回填已有勾选（如果二次打开），否则用默认
+    setChecklist(archive.archiveChecklist || defaultChecklist);
+    setApproveModalOpen(true);
+  };
+
+  // ===== 审批通过：确认提交 =====
+  const confirmApprove = () => {
+    if (!approvingArchive) return;
     setArchives(
       archives.map((a) =>
-        a.id === archive.id
+        a.id === approvingArchive.id
           ? {
               ...a,
-              status: approved ? 'approved' : 'draft',
+              status: 'approved',
               approver: currentUser.name,
               approveTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
-              approveRemark: approved ? '审批通过' : `驳回原因：${archive.approveRemark || '驳回后可编辑重新提交'}`,
+              approveRemark: '审批通过（归档面单已确认）',
+              archiveChecklist: { ...checklist },
             }
           : a
       )
     );
-    alert(approved ? '已审批通过' : '已驳回');
+    alert('已审批通过，归档完成');
+    setApproveModalOpen(false);
+    setApprovingArchive(null);
+    setChecklist(defaultChecklist);
+  };
+
+  // ===== 驳回：打开弹窗 =====
+  const openRejectModal = (archive: ContractArchive) => {
+    setRejectingArchive(archive);
+    setRejectReason('');
+    setRejectModalOpen(true);
+  };
+
+  // ===== 驳回：确认提交 =====
+  const confirmReject = () => {
+    if (!rejectingArchive) return;
+    const trimmed = rejectReason.trim();
+    if (trimmed.length < 5) {
+      alert('请填写驳回理由（至少 5 个字）');
+      return;
+    }
+    if (trimmed.length > 200) {
+      alert('驳回理由不能超过 200 字');
+      return;
+    }
+    setArchives(
+      archives.map((a) =>
+        a.id === rejectingArchive.id
+          ? {
+              ...a,
+              status: 'rejected',
+              approver: currentUser.name,
+              approveTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
+              approveRemark: `驳回原因：${trimmed}`,
+            }
+          : a
+      )
+    );
+    alert('已驳回');
+    setRejectModalOpen(false);
+    setRejectingArchive(null);
+    setRejectReason('');
   };
 
   const statusMap: Record<string, { label: string; color: string; bg: string }> = {
@@ -211,9 +292,9 @@ export default function ContractArchivePage() {
             options={[
               { value: '', label: '全部' },
               { value: 'draft', label: '草稿' },
-            { value: 'pending', label: '待审批' },
-            { value: 'approved', label: '已归档' },
-            { value: 'rejected', label: '已驳回' },
+              { value: 'pending', label: '待审批' },
+              { value: 'approved', label: '已归档' },
+              { value: 'rejected', label: '已驳回' },
             ]}
           />
         </SearchBar>
@@ -282,8 +363,8 @@ export default function ContractArchivePage() {
                       </div>
                     ) : archive.status === 'pending' ? (
                       <div className="flex items-center justify-center gap-1">
-                        <TextButton type="danger" onClick={() => handleApprove(archive, false)}>驳回</TextButton>
-                        <TextButton type="primary" onClick={() => handleApprove(archive, true)}>审批通过</TextButton>
+                        <TextButton type="danger" onClick={() => openRejectModal(archive)}>驳回</TextButton>
+                        <TextButton type="primary" onClick={() => openApproveModal(archive)}>审批通过</TextButton>
                       </div>
                     ) : (
                       <span className="text-[#909399]">
@@ -298,7 +379,7 @@ export default function ContractArchivePage() {
         </table>
       </div>
 
-      {/* 新增归档弹窗 */}
+      {/* ============ 新增归档弹窗 ============ */}
       <Modal
         open={createModalOpen}
         title="合同归档申请"
@@ -421,6 +502,159 @@ export default function ContractArchivePage() {
           </div>
         </div>
       </Modal>
+
+      {/* ============ 审批通过弹窗 ============ */}
+      <Modal
+        open={approveModalOpen}
+        title="归档审批通过"
+        onClose={() => { setApproveModalOpen(false); setApprovingArchive(null); setChecklist(defaultChecklist); }}
+        footer={
+          <>
+            <DefaultButton onClick={() => setApproveModalOpen(false)}>取消</DefaultButton>
+            <PrimaryButton onClick={confirmApprove}>确认归档通过</PrimaryButton>
+          </>
+        }
+        width="600px"
+      >
+        {approvingArchive && (
+          <div className="space-y-4">
+            {/* 合同基本信息 */}
+            <div className="bg-[#f5f7fa] border border-[#ebeef5] rounded p-3">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div><span className="text-[#909399]">归档编号：</span><span className="font-medium text-[#303133]">{approvingArchive.archiveNo}</span></div>
+                <div><span className="text-[#909399]">申请人：</span>{approvingArchive.applicant}</div>
+                <div className="col-span-2"><span className="text-[#909399]">关联合同：</span>
+                  <span className="text-[#409eff]">
+                    {approvingArchive.contractNos.join('、')}
+                  </span>
+                </div>
+                <div><span className="text-[#909399]">申请时间：</span>{approvingArchive.applyTime}</div>
+                <div><span className="text-[#909399]">申请人附件：</span>
+                  {approvingArchive.attachments.length > 0
+                    ? <span className="text-[#409eff]">{approvingArchive.attachments.length} 个文件</span>
+                    : <span className="text-[#c0c4cc]">无</span>}
+                </div>
+              </div>
+            </div>
+
+            {/* 审批面单勾选 */}
+            <div>
+              <div className="mb-2 text-sm font-semibold text-[#303133]">归档面单确认</div>
+              <div className="space-y-2 border border-[#ebeef5] rounded p-3">
+                <ChecklistRow label="审批面单"
+                  checked={checklist.hasApprovalSheet}
+                  onToggle={(v) => setChecklist({ ...checklist, hasApprovalSheet: v })} />
+                <ChecklistRow label="呈阅件"
+                  checked={checklist.hasReviewCopy}
+                  onToggle={(v) => setChecklist({ ...checklist, hasReviewCopy: v })} />
+                <ChecklistRow label="律审稿"
+                  checked={checklist.hasLegalReview}
+                  onToggle={(v) => setChecklist({ ...checklist, hasLegalReview: v })} />
+                <ChecklistRow label="审批件"
+                  checked={checklist.hasApprovalDoc}
+                  onToggle={(v) => setChecklist({ ...checklist, hasApprovalDoc: v })} />
+                <ChecklistRow label="盖章件"
+                  checked={checklist.hasSealedCopy}
+                  onToggle={(v) => setChecklist({ ...checklist, hasSealedCopy: v })} />
+                {/* 合同签订依据文件：三选一 */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#606266]">合同签订依据文件</span>
+                  <div className="flex items-center gap-3">
+                    {[
+                      { v: 'yes', label: '是' },
+                      { v: 'no', label: '否' },
+                      { v: 'n/a', label: '不涉及' },
+                    ].map((opt) => (
+                      <label key={opt.v} className="flex items-center gap-1 text-xs cursor-pointer">
+                        <input
+                          type="radio"
+                          name="basisFile"
+                          checked={checklist.hasBasisFile === opt.v}
+                          onChange={() => setChecklist({ ...checklist, hasBasisFile: opt.v as ArchiveChecklist['hasBasisFile'] })}
+                        />
+                        <span className={checklist.hasBasisFile === opt.v ? 'text-[#409eff]' : 'text-[#606266]'}>{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-1 text-[11px] text-[#909399]">
+                请逐一核实归档面单资料是否齐全，确认后点击"确认归档通过"
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ============ 驳回弹窗 ============ */}
+      <Modal
+        open={rejectModalOpen}
+        title="驳回归档申请"
+        onClose={() => { setRejectModalOpen(false); setRejectingArchive(null); setRejectReason(''); }}
+        footer={
+          <>
+            <DefaultButton onClick={() => setRejectModalOpen(false)}>取消</DefaultButton>
+            <Button variant="danger" onClick={confirmReject}>确认驳回</Button>
+          </>
+        }
+        width="500px"
+      >
+        {rejectingArchive && (
+          <div className="space-y-4">
+            {/* 合同基本信息 */}
+            <div className="bg-[#fef0f0] border border-[#fbc4c4] rounded p-3 text-xs">
+              <div className="mb-1 text-[#f56c6c] font-medium">即将驳回以下归档申请：</div>
+              <div className="grid grid-cols-2 gap-1 text-[#606266]">
+                <div><span className="text-[#909399]">归档编号：</span>{rejectingArchive.archiveNo}</div>
+                <div><span className="text-[#909399]">申请人：</span>{rejectingArchive.applicant}</div>
+                <div className="col-span-2"><span className="text-[#909399]">关联合同：</span>
+                  <span className="text-[#409eff]">{rejectingArchive.contractNos.join('、')}</span>
+                </div>
+                <div className="col-span-2"><span className="text-[#909399]">申请时间：</span>{rejectingArchive.applyTime}</div>
+              </div>
+            </div>
+
+            {/* 驳回理由 */}
+            <div>
+              <label className="block text-xs font-medium text-[#606266] mb-1">
+                驳回理由 <span className="text-[#f56c6c]">*</span>
+                <span className="text-[#909399] font-normal ml-1">({rejectReason.trim().length}/200)</span>
+              </label>
+              <textarea
+                className="w-full h-24 p-2 border border-[#dcdfe6] rounded text-xs resize-none focus:outline-none focus:border-[#409eff]"
+                placeholder="请说明驳回原因，申请人可据此修改后重新提交（至少 5 个字）"
+                value={rejectReason}
+                maxLength={200}
+                onChange={(e) => setRejectReason(e.target.value)}
+              />
+              {rejectReason.trim().length > 0 && rejectReason.trim().length < 5 && (
+                <div className="mt-1 text-[11px] text-[#f56c6c]">驳回理由至少 5 个字</div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+// ============ 审批面单 Checkbox 行组件 ============
+function ChecklistRow({
+  label, checked, onToggle,
+}: { label: string; checked: boolean; onToggle: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-[#606266]">{label}</span>
+      <div className="flex items-center gap-3">
+        <label className="flex items-center gap-1 text-xs cursor-pointer">
+          <input type="radio" checked={checked} onChange={() => onToggle(true)} />
+          <span className={checked ? 'text-[#409eff]' : 'text-[#606266]'}>是</span>
+        </label>
+        <label className="flex items-center gap-1 text-xs cursor-pointer">
+          <input type="radio" checked={!checked} onChange={() => onToggle(false)} />
+          <span className={!checked ? 'text-[#409eff]' : 'text-[#606266]'}>否</span>
+        </label>
+      </div>
     </div>
   );
 }
