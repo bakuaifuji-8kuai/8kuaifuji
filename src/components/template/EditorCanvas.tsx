@@ -6,7 +6,9 @@ import { createComponent } from '@/utils/componentConfig';
 interface Props {
   components: TemplateComponent[];
   selectedId: string | null;
+  selectedIds?: string[];
   onSelect: (id: string | null) => void;
+  onSelectIds?: (ids: string[]) => void;
   onAdd: (component: TemplateComponent) => void;
   onUpdate: (id: string, props: Record<string, any>) => void;
   onDelete: (id: string) => void;
@@ -26,7 +28,9 @@ interface Props {
 export function EditorCanvas({
   components,
   selectedId,
+  selectedIds: selectedIdsProp,
   onSelect,
+  onSelectIds,
   onAdd,
   onUpdate,
   onDelete,
@@ -42,6 +46,34 @@ export function EditorCanvas({
   getChildIds,
   isPreview = false,
 }: Props) {
+  // 多选集合：优先用传入的 selectedIds，否则用 selectedId 包一层
+  const selectedIds = selectedIdsProp ?? (selectedId ? [selectedId] : []);
+
+  const handleSelectComponent = (id: string, e?: React.MouseEvent) => {
+    const isMulti = e ? (e.ctrlKey || e.metaKey) : false;
+    if (isMulti && onSelectIds) {
+      // Ctrl+点击：切换选中状态
+      if (selectedIds.includes(id)) {
+        const next = selectedIds.filter((sid) => sid !== id);
+        onSelectIds(next);
+        onSelect(next.length > 0 ? next[next.length - 1] : null);
+      } else {
+        const next = [...selectedIds, id];
+        onSelectIds(next);
+        onSelect(id);
+      }
+    } else {
+      // 普通点击：单选
+      onSelect(id);
+      onSelectIds?.([id]);
+    }
+  };
+
+  const handleClearSelection = () => {
+    onSelect(null);
+    onSelectIds?.([]);
+  };
+
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [dragOverLayout, setDragOverLayout] = useState<{ parentId: string; slot?: string; tabIndex?: number } | null>(null);
@@ -155,6 +187,8 @@ export function EditorCanvas({
     }
   };
 
+  const isSelected = (id: string) => selectedIds.includes(id);
+
   const renderChildComponent = (childId: string) => {
     const child = getChildById(childId);
     if (!child) return null;
@@ -163,13 +197,13 @@ export function EditorCanvas({
       <div
         key={child.id}
         className={`relative bg-white rounded-lg border transition-all ${
-          selectedId === child.id
+          isSelected(child.id)
             ? 'border-indigo-500 shadow-md'
             : 'border-transparent hover:border-gray-300'
         } ${child.props.locked ? 'opacity-70' : ''}`}
         onClick={(e) => {
           e.stopPropagation();
-          onSelect(child.id);
+          handleSelectComponent(child.id, e);
         }}
       >
         {child.props.visible === false ? (
@@ -178,7 +212,7 @@ export function EditorCanvas({
           </div>
         ) : (
           <div className="p-3">
-            <InlineRenderer component={child} isEditing={true} components={components} getChildById={getChildById} onSelect={onSelect} />
+            <InlineRenderer component={child} isEditing={true} components={components} getChildById={getChildById} onSelect={handleSelectComponent} />
           </div>
         )}
       </div>
@@ -195,16 +229,16 @@ export function EditorCanvas({
       <div
         key={comp.id}
         className={`relative bg-white rounded-lg border-2 transition-all ${
-          selectedId === comp.id
+          isSelected(comp.id)
             ? 'border-indigo-500 shadow-lg'
             : 'border-dashed border-indigo-300 hover:border-indigo-400'
         } ${comp.props.locked ? 'opacity-70' : ''}`}
         onClick={(e) => {
           e.stopPropagation();
-          onSelect(comp.id);
+          handleSelectComponent(comp.id, e);
         }}
       >
-        {selectedId === comp.id && !isPreview && (
+        {isSelected(comp.id) && !isPreview && (
           <div className="absolute top-0 right-0 -mt-1 -mr-1 flex items-center gap-0.5 bg-indigo-600 rounded shadow-lg z-10">
             <button
               className="p-1 text-white hover:bg-indigo-700 rounded-l"
@@ -276,7 +310,7 @@ export function EditorCanvas({
                       onDragStart={(e) => handleDragStart(e, childId)}
                       className="group relative"
                     >
-                      {renderChildWithActions(child, comp.id, 'left', leftChildren, onMoveChildWithinLayout, onRemoveChildFromLayout, onSelect, selectedId, getChildById, components)}
+                      {renderChildWithActions(child, comp.id, 'left', leftChildren, onMoveChildWithinLayout, onRemoveChildFromLayout, handleSelectComponent, selectedIds, getChildById, components)}
                     </div>
                   );
                 })}
@@ -306,12 +340,145 @@ export function EditorCanvas({
                       onDragStart={(e) => handleDragStart(e, childId)}
                       className="group relative"
                     >
-                      {renderChildWithActions(child, comp.id, 'right', rightChildren, onMoveChildWithinLayout, onRemoveChildFromLayout, onSelect, selectedId, getChildById, components)}
+                      {renderChildWithActions(child, comp.id, 'right', rightChildren, onMoveChildWithinLayout, onRemoveChildFromLayout, handleSelectComponent, selectedIds, getChildById, components)}
                     </div>
                   );
                 })}
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCol3Component = (comp: TemplateComponent, index: number) => {
+    const leftChildren = comp.props.leftChildren || [];
+    const middleChildren = comp.props.middleChildren || [];
+    const rightChildren = comp.props.rightChildren || [];
+    const isOverLeft = dragOverLayout?.parentId === comp.id && dragOverLayout?.slot === 'left';
+    const isOverMiddle = dragOverLayout?.parentId === comp.id && dragOverLayout?.slot === 'middle';
+    const isOverRight = dragOverLayout?.parentId === comp.id && dragOverLayout?.slot === 'right';
+
+    return (
+      <div
+        key={comp.id}
+        className={`relative bg-white rounded-lg border-2 transition-all ${
+          isSelected(comp.id)
+            ? 'border-indigo-500 shadow-lg'
+            : 'border-dashed border-purple-300 hover:border-purple-400'
+        } ${comp.props.locked ? 'opacity-70' : ''}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleSelectComponent(comp.id, e);
+        }}
+      >
+        {isSelected(comp.id) && !isPreview && (
+          <div className="absolute top-0 right-0 -mt-1 -mr-1 flex items-center gap-0.5 bg-purple-600 rounded shadow-lg z-10">
+            <button
+              className="p-1 text-white hover:bg-purple-700 rounded-l"
+              onClick={(e) => { e.stopPropagation(); onMove(comp.id, 'up'); }}
+              title="上移"
+            >
+              <ArrowUp size={12} />
+            </button>
+            <button
+              className="p-1 text-white hover:bg-purple-700"
+              onClick={(e) => { e.stopPropagation(); onMove(comp.id, 'down'); }}
+              title="下移"
+            >
+              <ArrowDown size={12} />
+            </button>
+            <button
+              className="p-1 text-white hover:bg-purple-700"
+              onClick={(e) => { e.stopPropagation(); onDuplicate(comp.id); }}
+              title="复制"
+            >
+              <Copy size={12} />
+            </button>
+            <button
+              className="p-1 text-white hover:bg-purple-700"
+              onClick={(e) => { e.stopPropagation(); onToggleVisibility(comp.id); }}
+              title={comp.props.visible === false ? '显示' : '隐藏'}
+            >
+              {comp.props.visible === false ? <EyeOff size={12} /> : <Eye size={12} />}
+            </button>
+            <button
+              className="p-1 text-white hover:bg-purple-700"
+              onClick={(e) => { e.stopPropagation(); onLock(comp.id); }}
+              title={comp.props.locked ? '解锁' : '锁定'}
+            >
+              {comp.props.locked ? <Unlock size={12} /> : <Lock size={12} />}
+            </button>
+            <button
+              className="p-1 text-white hover:bg-red-500 rounded-r"
+              onClick={(e) => { e.stopPropagation(); if (confirm('确认删除此三列布局及其所有子组件？')) onDelete(comp.id); }}
+              title="删除"
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
+        )}
+
+        <div className="p-2">
+          <div className="flex gap-3">
+            <ColSlot
+              label="左栏"
+              children={leftChildren}
+              parentId={comp.id}
+              slot="left"
+              isOver={isOverLeft}
+              locked={comp.props.locked}
+              getChildById={getChildById}
+              handleDragStart={handleDragStart}
+              handleDragOverLayout={handleDragOverLayout}
+              handleDropOnLayout={handleDropOnLayout}
+              setDragOverLayout={setDragOverLayout}
+              renderChildWithActions={renderChildWithActions}
+              onMoveChildWithinLayout={onMoveChildWithinLayout}
+              onRemoveChildFromLayout={onRemoveChildFromLayout}
+              onSelect={handleSelectComponent}
+              selectedIds={selectedIds}
+              components={components}
+            />
+            <ColSlot
+              label="中栏"
+              children={middleChildren}
+              parentId={comp.id}
+              slot="middle"
+              isOver={isOverMiddle}
+              locked={comp.props.locked}
+              getChildById={getChildById}
+              handleDragStart={handleDragStart}
+              handleDragOverLayout={handleDragOverLayout}
+              handleDropOnLayout={handleDropOnLayout}
+              setDragOverLayout={setDragOverLayout}
+              renderChildWithActions={renderChildWithActions}
+              onMoveChildWithinLayout={onMoveChildWithinLayout}
+              onRemoveChildFromLayout={onRemoveChildFromLayout}
+              onSelect={handleSelectComponent}
+              selectedIds={selectedIds}
+              components={components}
+            />
+            <ColSlot
+              label="右栏"
+              children={rightChildren}
+              parentId={comp.id}
+              slot="right"
+              isOver={isOverRight}
+              locked={comp.props.locked}
+              getChildById={getChildById}
+              handleDragStart={handleDragStart}
+              handleDragOverLayout={handleDragOverLayout}
+              handleDropOnLayout={handleDropOnLayout}
+              setDragOverLayout={setDragOverLayout}
+              renderChildWithActions={renderChildWithActions}
+              onMoveChildWithinLayout={onMoveChildWithinLayout}
+              onRemoveChildFromLayout={onRemoveChildFromLayout}
+              onSelect={handleSelectComponent}
+              selectedIds={selectedIds}
+              components={components}
+            />
           </div>
         </div>
       </div>
@@ -326,16 +493,16 @@ export function EditorCanvas({
       <div
         key={comp.id}
         className={`relative bg-white rounded-lg border-2 transition-all overflow-hidden ${
-          selectedId === comp.id
+          isSelected(comp.id)
             ? 'border-indigo-500 shadow-lg'
             : 'border-dashed border-indigo-300 hover:border-indigo-400'
         } ${comp.props.locked ? 'opacity-70' : ''}`}
         onClick={(e) => {
           e.stopPropagation();
-          onSelect(comp.id);
+          handleSelectComponent(comp.id, e);
         }}
       >
-        {selectedId === comp.id && !isPreview && (
+        {isSelected(comp.id) && !isPreview && (
           <div className="absolute top-0 right-0 -mt-1 -mr-1 flex items-center gap-0.5 bg-indigo-600 rounded shadow-lg z-10">
             <button className="p-1 text-white hover:bg-indigo-700 rounded-l" onClick={(e) => { e.stopPropagation(); onMove(comp.id, 'up'); }} title="上移"><ArrowUp size={12} /></button>
             <button className="p-1 text-white hover:bg-indigo-700" onClick={(e) => { e.stopPropagation(); onMove(comp.id, 'down'); }} title="下移"><ArrowDown size={12} /></button>
@@ -375,7 +542,7 @@ export function EditorCanvas({
                   onDragStart={(e) => handleDragStart(e, childId)}
                   className="group relative"
                 >
-                  {renderChildWithActions(child, comp.id, undefined, children, onMoveChildWithinLayout, onRemoveChildFromLayout, onSelect, selectedId, getChildById, components)}
+                  {renderChildWithActions(child, comp.id, undefined, children, onMoveChildWithinLayout, onRemoveChildFromLayout, handleSelectComponent, selectedIds, getChildById, components)}
                 </div>
               );
             })}
@@ -395,16 +562,16 @@ export function EditorCanvas({
       <div
         key={comp.id}
         className={`relative bg-white rounded-lg border-2 transition-all ${
-          selectedId === comp.id
+          isSelected(comp.id)
             ? 'border-indigo-500 shadow-lg'
             : 'border-dashed border-indigo-300 hover:border-indigo-400'
         } ${comp.props.locked ? 'opacity-70' : ''}`}
         onClick={(e) => {
           e.stopPropagation();
-          onSelect(comp.id);
+          handleSelectComponent(comp.id, e);
         }}
       >
-        {selectedId === comp.id && !isPreview && (
+        {isSelected(comp.id) && !isPreview && (
           <div className="absolute top-0 right-0 -mt-1 -mr-1 flex items-center gap-0.5 bg-indigo-600 rounded shadow-lg z-10">
             <button className="p-1 text-white hover:bg-indigo-700 rounded-l" onClick={(e) => { e.stopPropagation(); onMove(comp.id, 'up'); }} title="上移"><ArrowUp size={12} /></button>
             <button className="p-1 text-white hover:bg-indigo-700" onClick={(e) => { e.stopPropagation(); onMove(comp.id, 'down'); }} title="下移"><ArrowDown size={12} /></button>
@@ -463,7 +630,7 @@ export function EditorCanvas({
                   className="group relative"
                 >
                   {renderChildWithActions(child, comp.id, undefined, tabs[activeTab]?.children || [], 
-                    onMoveChildWithinLayout, onRemoveChildFromLayout, onSelect, selectedId, getChildById, components, activeTab)}
+                    onMoveChildWithinLayout, onRemoveChildFromLayout, handleSelectComponent, selectedIds, getChildById, components, activeTab)}
                 </div>
               );
             })}
@@ -480,8 +647,8 @@ export function EditorCanvas({
     siblings: string[],
     onMoveChild: (parentId: string, childId: string, direction: 'up' | 'down', slot?: string, tabIndex?: number) => void,
     onRemoveChild: (parentId: string, childId: string, slot?: string, tabIndex?: number) => void,
-    onSelect: (id: string | null) => void,
-    selectedId: string | null,
+    onSelect: (id: string | null, e?: React.MouseEvent) => void,
+    selectedIds: string[],
     getChildById: (id: string) => TemplateComponent | undefined,
     components: TemplateComponent[],
     tabIndex?: number,
@@ -493,13 +660,13 @@ export function EditorCanvas({
     return (
       <div
         className={`relative bg-white rounded-lg border transition-all ${
-          selectedId === child.id
+          selectedIds.includes(child.id)
             ? 'border-indigo-500 shadow-sm'
             : 'border-transparent hover:border-gray-300'
         }`}
         onClick={(e) => {
           e.stopPropagation();
-          onSelect(child.id);
+          onSelect(child.id, e);
         }}
       >
         <div className="absolute -top-1 right-0 flex items-center gap-0.5 bg-indigo-500 rounded shadow-sm z-10 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -550,7 +717,7 @@ export function EditorCanvas({
                   isEditing={false}
                   components={components}
                   getChildById={getChildById}
-                  onSelect={onSelect}
+                  onSelect={handleSelectComponent}
                 />
               )
             )}
@@ -569,6 +736,12 @@ export function EditorCanvas({
         e.preventDefault();
         setDragOverIndex(components.length);
       }}
+      onClick={(e) => {
+        // 点击画布空白处：清空多选
+        if (e.target === canvasRef.current) {
+          handleClearSelection();
+        }
+      }}
     >
       <div className="max-w-3xl mx-auto">
         {components.length === 0 && (
@@ -585,6 +758,8 @@ export function EditorCanvas({
               )}
               {comp.type === 'col2' ? (
                 renderCol2Component(comp, index)
+              ) : comp.type === 'col3' ? (
+                renderCol3Component(comp, index)
               ) : comp.type === 'section' ? (
                 renderSectionComponent(comp, index)
               ) : comp.type === 'tab' ? (
@@ -592,13 +767,13 @@ export function EditorCanvas({
               ) : (
                 <div
                   className={`group relative bg-white rounded-lg border-2 transition-all ${
-                    selectedId === comp.id
+                    isSelected(comp.id)
                       ? 'border-indigo-500 shadow-lg'
                       : 'border-transparent hover:border-gray-300 hover:shadow-sm'
                   } ${comp.props.locked ? 'opacity-70' : ''}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    onSelect(comp.id);
+                    handleSelectComponent(comp.id, e);
                   }}
                   draggable={!comp.props.locked}
                   onDragStart={(e) => handleDragStart(e, comp.id)}
@@ -606,7 +781,7 @@ export function EditorCanvas({
                   onDragLeave={() => setDragOverIndex(null)}
                   onDrop={(e) => handleDropRoot(e, index)}
                 >
-                  {selectedId === comp.id && (
+                  {isSelected(comp.id) && (
                     <div className="absolute top-0 right-0 -mt-1 -mr-1 flex items-center gap-0.5 bg-indigo-600 rounded shadow-lg z-10">
                       <button className="p-1 text-white hover:bg-indigo-700 rounded-l" onClick={(e) => { e.stopPropagation(); onMove(comp.id, 'up'); }} title="上移"><ArrowUp size={12} /></button>
                       <button className="p-1 text-white hover:bg-indigo-700" onClick={(e) => { e.stopPropagation(); onMove(comp.id, 'down'); }} title="下移"><ArrowDown size={12} /></button>
@@ -626,7 +801,7 @@ export function EditorCanvas({
                     </div>
                   ) : (
                     <div className="p-4">
-                      <InlineRenderer component={comp} isEditing={true} components={components} getChildById={getChildById} onSelect={onSelect} />
+                      <InlineRenderer component={comp} isEditing={true} components={components} getChildById={getChildById} onSelect={handleSelectComponent} />
                     </div>
                   )}
                   <div className="absolute left-0 top-0 bottom-0 w-6 bg-gray-50 rounded-l-lg border-r border-gray-200 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab">
@@ -645,6 +820,66 @@ export function EditorCanvas({
   );
 }
 
+// 三列布局共用的子栏渲染组件（避免 renderCol3Component 里重复三次写相同逻辑）
+function ColSlot(props: {
+  label: string;
+  children: string[];
+  parentId: string;
+  slot: 'left' | 'middle' | 'right';
+  isOver: boolean;
+  locked: boolean;
+  getChildById: (id: string) => TemplateComponent | undefined;
+  handleDragStart: (e: React.DragEvent, id: string) => void;
+  handleDragOverLayout: (e: React.DragEvent, parentId: string, slot?: string, tabIndex?: number) => void;
+  handleDropOnLayout: (e: React.DragEvent, parentId: string, slot?: string, tabIndex?: number) => void;
+  setDragOverLayout: (v: { parentId: string; slot?: string; tabIndex?: number } | null) => void;
+  renderChildWithActions: (child: TemplateComponent, parentId: string, slot: string | undefined, siblings: string[], ...rest: any[]) => React.ReactNode;
+  onMoveChildWithinLayout: (parentId: string, childId: string, direction: 'up' | 'down', slot?: string, tabIndex?: number) => void;
+  onRemoveChildFromLayout: (parentId: string, childId: string, slot?: string, tabIndex?: number) => void;
+  onSelect: (id: string | null, e?: React.MouseEvent) => void;
+  selectedIds: string[];
+  components: TemplateComponent[];
+}) {
+  const {
+    label, children, parentId, slot, isOver, locked,
+    getChildById, handleDragStart, handleDragOverLayout, handleDropOnLayout, setDragOverLayout,
+    renderChildWithActions, onMoveChildWithinLayout, onRemoveChildFromLayout,
+    onSelect, selectedIds, components,
+  } = props;
+
+  return (
+    <div
+      className={`flex-1 min-h-[80px] rounded-lg transition-all ${
+        isOver ? 'bg-purple-50 ring-2 ring-purple-400' : 'bg-gray-50/50'
+      }`}
+      onDragOver={(e) => handleDragOverLayout(e, parentId, slot)}
+      onDragLeave={() => setDragOverLayout(null)}
+      onDrop={(e) => handleDropOnLayout(e, parentId, slot)}
+    >
+      <div className="px-2 py-1 text-xs text-gray-400 border-b border-dashed border-gray-200 mb-2">{label}</div>
+      <div className="space-y-1 p-1">
+        {children.length === 0 && (
+          <div className="text-center text-xs text-gray-400 py-4">拖拽到此</div>
+        )}
+        {children.map((childId: string) => {
+          const child = getChildById(childId);
+          if (!child) return null;
+          return (
+            <div
+              key={childId}
+              draggable={!locked}
+              onDragStart={(e) => handleDragStart(e, childId)}
+              className="group relative"
+            >
+              {renderChildWithActions(child, parentId, slot, children, onMoveChildWithinLayout, onRemoveChildFromLayout, onSelect, selectedIds, getChildById, components)}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function InlineRenderer({
   component,
   isEditing,
@@ -656,7 +891,7 @@ function InlineRenderer({
   isEditing: boolean;
   components: TemplateComponent[];
   getChildById: (id: string) => TemplateComponent | undefined;
-  onSelect: (id: string | null) => void;
+  onSelect: (id: string | null, e?: React.MouseEvent) => void;
 }) {
   const { type, props } = component;
 
@@ -876,6 +1111,46 @@ function InlineRenderer({
           <div style={{ width: rightWidth, minWidth: 0 }}>
             {rightChildren.length === 0 ? (
               <div className="text-xs text-gray-400 p-2 text-center bg-gray-50 rounded">右侧空区域</div>
+            ) : (
+              <div className="space-y-2">
+                {rightChildren.map((childId: string) => renderChild(childId))}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+    case 'col3': {
+      const leftChildren = props.leftChildren || [];
+      const middleChildren = props.middleChildren || [];
+      const rightChildren = props.rightChildren || [];
+      const leftWidth = props.leftWidth || '33.33%';
+      const middleWidth = props.middleWidth || '33.33%';
+      const rightWidth = props.rightWidth || '33.33%';
+      const gap = props.gap || '12px';
+      return (
+        <div className="flex" style={{ gap }}>
+          <div style={{ width: leftWidth, minWidth: 0 }}>
+            {leftChildren.length === 0 ? (
+              <div className="text-xs text-gray-400 p-2 text-center bg-gray-50 rounded">左栏空区域</div>
+            ) : (
+              <div className="space-y-2">
+                {leftChildren.map((childId: string) => renderChild(childId))}
+              </div>
+            )}
+          </div>
+          <div style={{ width: middleWidth, minWidth: 0 }}>
+            {middleChildren.length === 0 ? (
+              <div className="text-xs text-gray-400 p-2 text-center bg-gray-50 rounded">中栏空区域</div>
+            ) : (
+              <div className="space-y-2">
+                {middleChildren.map((childId: string) => renderChild(childId))}
+              </div>
+            )}
+          </div>
+          <div style={{ width: rightWidth, minWidth: 0 }}>
+            {rightChildren.length === 0 ? (
+              <div className="text-xs text-gray-400 p-2 text-center bg-gray-50 rounded">右栏空区域</div>
             ) : (
               <div className="space-y-2">
                 {rightChildren.map((childId: string) => renderChild(childId))}

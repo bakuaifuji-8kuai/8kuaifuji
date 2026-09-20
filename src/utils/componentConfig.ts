@@ -263,6 +263,22 @@ export const componentLibrary: ComponentMeta[] = [
     },
   },
   {
+    type: 'col3',
+    label: '三列布局',
+    category: 'layout',
+    icon: 'Columns',
+    description: '三栏并排布局，支持三个区域独立放置组件',
+    defaultProps: {
+      leftChildren: [],
+      middleChildren: [],
+      rightChildren: [],
+      leftWidth: '33.33%',
+      middleWidth: '33.33%',
+      rightWidth: '33.33%',
+      gap: '16px',
+    },
+  },
+  {
     type: 'section',
     label: '分节卡片',
     category: 'layout',

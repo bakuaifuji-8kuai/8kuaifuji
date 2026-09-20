@@ -56,6 +56,8 @@ export function ComponentRenderer({ component, isEditing = true, onChange, onSel
         return renderAlert(props, isEditing);
       case 'col2':
         return renderCol2(component, isEditing, onChange);
+      case 'col3':
+        return renderCol3(component, isEditing, onChange);
       case 'section':
         return renderSection(component, isEditing, onChange);
       case 'tab':
@@ -431,6 +433,22 @@ function renderCol2(component: TemplateComponent, isEditing: boolean, onChange?:
       </div>
       <div className="flex-1 min-h-[60px]">
         <span className="text-xs text-gray-400">右侧区域</span>
+      </div>
+    </div>
+  );
+}
+
+function renderCol3(component: TemplateComponent, isEditing: boolean, onChange?: (p: any) => void) {
+  return (
+    <div className="flex gap-3 mb-2 border border-dashed border-gray-200 rounded-lg p-3 bg-gray-50/30">
+      <div className="flex-1 min-h-[60px] border-r border-dashed border-gray-200 pr-2">
+        <span className="text-xs text-gray-400">左栏</span>
+      </div>
+      <div className="flex-1 min-h-[60px] border-r border-dashed border-gray-200 pr-2">
+        <span className="text-xs text-gray-400">中栏</span>
+      </div>
+      <div className="flex-1 min-h-[60px]">
+        <span className="text-xs text-gray-400">右栏</span>
       </div>
     </div>
   );

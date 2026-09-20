@@ -5,7 +5,7 @@ import { EditorCanvas } from './EditorCanvas';
 import { PropertyPanel } from './PropertyPanel';
 import {
   Undo2, Redo2, Eye, EyeOff, Save, Download, FileJson,
-  ZoomIn, ZoomOut
+  ZoomIn, ZoomOut, Columns3, Columns
 } from 'lucide-react';
 import { createComponent, generateId } from '@/utils/componentConfig';
 import { CONTRACT_CATEGORIES } from '@/constants/contractCategories';
@@ -34,6 +34,7 @@ export function TemplateEditor({
 }: Props) {
   const [components, setComponents] = useState<TemplateComponent[]>(initialComponents);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isPreview, setIsPreview] = useState(false);
   const [zoom, setZoom] = useState(100);
   const [name, setName] = useState(templateName);
@@ -97,6 +98,11 @@ export function TemplateEditor({
         const leftChildren = component.props.leftChildren || [];
         const rightChildren = component.props.rightChildren || [];
         idsToDelete = [...idsToDelete, ...leftChildren, ...rightChildren];
+      } else if (component.type === 'col3') {
+        const leftChildren = component.props.leftChildren || [];
+        const middleChildren = component.props.middleChildren || [];
+        const rightChildren = component.props.rightChildren || [];
+        idsToDelete = [...idsToDelete, ...leftChildren, ...middleChildren, ...rightChildren];
       } else if (component.type === 'section') {
         const children = component.props.children || [];
         idsToDelete = [...idsToDelete, ...children];
@@ -159,6 +165,15 @@ export function TemplateEditor({
           if (child) duplicates.push(deepDuplicate(child));
         }
         duplicates[0].props.leftChildren = (component.props.leftChildren || []).map((id: string) => oldToNewIds[id]).filter(Boolean);
+        duplicates[0].props.rightChildren = (component.props.rightChildren || []).map((id: string) => oldToNewIds[id]).filter(Boolean);
+      } else if (component.type === 'col3') {
+        const allChildren = [...(component.props.leftChildren || []), ...(component.props.middleChildren || []), ...(component.props.rightChildren || [])];
+        for (const childId of allChildren) {
+          const child = components.find((c) => c.id === childId);
+          if (child) duplicates.push(deepDuplicate(child));
+        }
+        duplicates[0].props.leftChildren = (component.props.leftChildren || []).map((id: string) => oldToNewIds[id]).filter(Boolean);
+        duplicates[0].props.middleChildren = (component.props.middleChildren || []).map((id: string) => oldToNewIds[id]).filter(Boolean);
         duplicates[0].props.rightChildren = (component.props.rightChildren || []).map((id: string) => oldToNewIds[id]).filter(Boolean);
       } else if (component.type === 'section') {
         const children = component.props.children || [];
@@ -224,6 +239,9 @@ export function TemplateEditor({
       if (parent.type === 'col2') {
         const targetSlot = slot === 'right' ? 'rightChildren' : 'leftChildren';
         updatedParent.props[targetSlot] = [...(updatedParent.props[targetSlot] || []), newComponent.id];
+      } else if (parent.type === 'col3') {
+        const targetSlot = slot === 'middle' ? 'middleChildren' : slot === 'right' ? 'rightChildren' : 'leftChildren';
+        updatedParent.props[targetSlot] = [...(updatedParent.props[targetSlot] || []), newComponent.id];
       } else if (parent.type === 'section') {
         updatedParent.props.children = [...(updatedParent.props.children || []), newComponent.id];
       } else if (parent.type === 'tab') {
@@ -252,6 +270,15 @@ export function TemplateEditor({
       let targetArray: string[] = [];
       if (parent.type === 'col2') {
         const key = slot === 'right' ? 'rightChildren' : 'leftChildren';
+        targetArray = [...(updatedParent.props[key] || [])];
+        const idx = targetArray.indexOf(childId);
+        if (idx === -1) return;
+        const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+        if (swapIdx < 0 || swapIdx >= targetArray.length) return;
+        [targetArray[idx], targetArray[swapIdx]] = [targetArray[swapIdx], targetArray[idx]];
+        updatedParent.props[key] = targetArray;
+      } else if (parent.type === 'col3') {
+        const key = slot === 'middle' ? 'middleChildren' : slot === 'right' ? 'rightChildren' : 'leftChildren';
         targetArray = [...(updatedParent.props[key] || [])];
         const idx = targetArray.indexOf(childId);
         if (idx === -1) return;
@@ -300,6 +327,13 @@ export function TemplateEditor({
         const rightChildren = (updatedParent.props.rightChildren || []).filter((id: string) => id !== childId);
         updatedParent.props.leftChildren = leftChildren;
         updatedParent.props.rightChildren = rightChildren;
+      } else if (parent.type === 'col3') {
+        const leftChildren = (updatedParent.props.leftChildren || []).filter((id: string) => id !== childId);
+        const middleChildren = (updatedParent.props.middleChildren || []).filter((id: string) => id !== childId);
+        const rightChildren = (updatedParent.props.rightChildren || []).filter((id: string) => id !== childId);
+        updatedParent.props.leftChildren = leftChildren;
+        updatedParent.props.middleChildren = middleChildren;
+        updatedParent.props.rightChildren = rightChildren;
       } else if (parent.type === 'section') {
         updatedParent.props.children = (updatedParent.props.children || []).filter((id: string) => id !== childId);
       } else if (parent.type === 'tab') {
@@ -335,6 +369,16 @@ export function TemplateEditor({
           if (left.length !== (comp.props.leftChildren || []).length || right.length !== (comp.props.rightChildren || []).length) {
             newComponents[i] = { ...comp, props: { ...comp.props, leftChildren: left, rightChildren: right } };
           }
+        } else if (comp.type === 'col3') {
+          const left = (comp.props.leftChildren || []).filter((id: string) => id !== sourceId);
+          const middle = (comp.props.middleChildren || []).filter((id: string) => id !== sourceId);
+          const right = (comp.props.rightChildren || []).filter((id: string) => id !== sourceId);
+          const origL = (comp.props.leftChildren || []).length;
+          const origM = (comp.props.middleChildren || []).length;
+          const origR = (comp.props.rightChildren || []).length;
+          if (left.length !== origL || middle.length !== origM || right.length !== origR) {
+            newComponents[i] = { ...comp, props: { ...comp.props, leftChildren: left, middleChildren: middle, rightChildren: right } };
+          }
         } else if (comp.type === 'section') {
           const children = (comp.props.children || []).filter((id: string) => id !== sourceId);
           if (children.length !== (comp.props.children || []).length) {
@@ -364,6 +408,9 @@ export function TemplateEditor({
 
       if (target.type === 'col2') {
         const key = slot === 'right' ? 'rightChildren' : 'leftChildren';
+        updatedTarget.props[key] = [...(updatedTarget.props[key] || []), sourceId];
+      } else if (target.type === 'col3') {
+        const key = slot === 'middle' ? 'middleChildren' : slot === 'right' ? 'rightChildren' : 'leftChildren';
         updatedTarget.props[key] = [...(updatedTarget.props[key] || []), sourceId];
       } else if (target.type === 'section') {
         updatedTarget.props.children = [...(updatedTarget.props.children || []), sourceId];
@@ -469,11 +516,117 @@ export function TemplateEditor({
   const handleZoomIn = () => setZoom((z) => Math.min(z + 10, 150));
   const handleZoomOut = () => setZoom((z) => Math.max(z - 10, 50));
 
+  // ===== 多选合并功能（方案 B 核心） =====
+
+  // 判断组件是否是顶层组件（直接在 components 数组里的，不是某个布局的子组件）
+  const isTopLevel = (id: string) => components.some((c) => c.id === id);
+
+  // 收集所有子组件 ID（递归展开）
+  const collectAllDescendants = (ids: string[]): string[] => {
+    const result = new Set<string>();
+    const stack = [...ids];
+    while (stack.length > 0) {
+      const id = stack.pop()!;
+      if (result.has(id)) continue;
+      result.add(id);
+      const comp = components.find((c) => c.id === id);
+      if (comp) {
+        getAllChildIds(comp).forEach((cid) => stack.push(cid));
+      }
+    }
+    return Array.from(result);
+  };
+
+  const mergeToCol2 = useCallback(() => {
+    // 取前 2 个选中的顶层组件
+    const topLevelSelected = selectedIds.filter(isTopLevel).slice(0, 2);
+    if (topLevelSelected.length !== 2) {
+      alert('请先选中 2 个顶层组件（按住 Ctrl 点击多选）');
+      return;
+    }
+
+    const [firstId, secondId] = topLevelSelected;
+    const firstIdx = components.findIndex((c) => c.id === firstId);
+    const secondIdx = components.findIndex((c) => c.id === secondId);
+    if (firstIdx === -1 || secondIdx === -1) return;
+
+    // 确定插入位置（取第一个组件的位置）
+    const insertIdx = Math.min(firstIdx, secondIdx);
+
+    // 创建 col2 容器
+    const col2Container: TemplateComponent = {
+      id: generateId(),
+      type: 'col2',
+      props: {
+        leftChildren: [firstId],
+        rightChildren: [secondId],
+        leftWidth: '50%',
+        rightWidth: '50%',
+        gap: '16px',
+      },
+      order: insertIdx,
+    };
+
+    // 构建新数组：先移除两个原组件，再在原位置插入 col2
+    const newComponents = components.filter((c) => c.id !== firstId && c.id !== secondId);
+    newComponents.splice(insertIdx, 0, col2Container);
+    newComponents.forEach((c, i) => (c.order = i));
+
+    updateComponents(newComponents);
+    setSelectedId(col2Container.id);
+    setSelectedIds([col2Container.id]);
+  }, [selectedIds, components, updateComponents]);
+
+  const mergeToCol3 = useCallback(() => {
+    // 取前 3 个选中的顶层组件
+    const topLevelSelected = selectedIds.filter(isTopLevel).slice(0, 3);
+    if (topLevelSelected.length < 2 || topLevelSelected.length > 3) {
+      alert('请先选中 2-3 个顶层组件（按住 Ctrl 点击多选）');
+      return;
+    }
+
+    const ids = topLevelSelected;
+    const indices = ids.map((id) => components.findIndex((c) => c.id === id));
+    if (indices.some((i) => i === -1)) return;
+
+    const insertIdx = Math.min(...indices);
+
+    // 分配到三栏
+    const leftChildren = [ids[0]];
+    const middleChildren = ids.length >= 3 ? [ids[1]] : [];
+    const rightChildren = ids.length >= 3 ? [ids[2]] : [ids[1]];
+
+    const col3Container: TemplateComponent = {
+      id: generateId(),
+      type: 'col3',
+      props: {
+        leftChildren,
+        middleChildren,
+        rightChildren,
+        leftWidth: ids.length === 3 ? '33.33%' : '50%',
+        middleWidth: ids.length === 3 ? '33.33%' : '0%',
+        rightWidth: ids.length === 3 ? '33.33%' : '50%',
+        gap: '12px',
+      },
+      order: insertIdx,
+    };
+
+    const newComponents = components.filter((c) => !ids.includes(c.id));
+    newComponents.splice(insertIdx, 0, col3Container);
+    newComponents.forEach((c, i) => (c.order = i));
+
+    updateComponents(newComponents);
+    setSelectedId(col3Container.id);
+    setSelectedIds([col3Container.id]);
+  }, [selectedIds, components, updateComponents]);
+
   const selectedComponent = components.find((c) => c.id === selectedId) || null;
 
   const getAllChildIds = useCallback((comp: TemplateComponent): string[] => {
     if (comp.type === 'col2') {
       return [...(comp.props.leftChildren || []), ...(comp.props.rightChildren || [])];
+    } else if (comp.type === 'col3') {
+      return [...(comp.props.leftChildren || []), ...(comp.props.middleChildren || []), ...(comp.props.rightChildren || [])];
     } else if (comp.type === 'section') {
       return comp.props.children || [];
     } else if (comp.type === 'tab') {
@@ -533,6 +686,42 @@ export function TemplateEditor({
             <Redo2 size={16} />
           </button>
         </div>
+
+        {/* 多选合并按钮组（方案 B） */}
+        {!isPreview && (
+          <>
+            <div className="w-px h-6 bg-gray-200 mx-1" />
+            <div className="flex items-center gap-1 mr-2">
+              <span className="text-xs text-gray-400 mr-1">
+                已选 {selectedIds.length} 项
+              </span>
+              <button
+                className={`px-2 py-1.5 rounded text-xs flex items-center gap-1 transition-colors ${
+                  selectedIds.length === 2
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-40'
+                }`}
+                onClick={mergeToCol2}
+                disabled={selectedIds.length !== 2}
+                title="合并选中组件为两列布局（需选中 2 个顶层组件，Ctrl+点击多选）"
+              >
+                <Columns size={14} /> 合并两列
+              </button>
+              <button
+                className={`px-2 py-1.5 rounded text-xs flex items-center gap-1 transition-colors ${
+                  selectedIds.length >= 2 && selectedIds.length <= 3
+                    ? 'bg-purple-600 text-white hover:bg-purple-700'
+                    : 'text-gray-500 hover:text-purple-600 hover:bg-purple-50 disabled:opacity-40'
+                }`}
+                onClick={mergeToCol3}
+                disabled={selectedIds.length < 2 || selectedIds.length > 3}
+                title="合并选中组件为三列布局（需选中 2-3 个顶层组件，Ctrl+点击多选）"
+              >
+                <Columns3 size={14} /> 合并三列
+              </button>
+            </div>
+          </>
+        )}
 
         <div className="flex items-center gap-1 mr-2">
           <button
@@ -627,7 +816,9 @@ export function TemplateEditor({
           <EditorCanvas
             components={components}
             selectedId={selectedId}
+            selectedIds={selectedIds}
             onSelect={handleSelect}
+            onSelectIds={setSelectedIds}
             onAdd={handleAdd}
             onUpdate={handleUpdate}
             onDelete={handleDelete}

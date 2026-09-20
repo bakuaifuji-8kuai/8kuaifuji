@@ -1600,7 +1600,7 @@ export type ComponentType =
   | 'date' | 'select' | 'checkbox' | 'radio' | 'checkboxGroup'
   | 'attachment' | 'image' | 'signature' | 'stamp' | 'table'
   | 'divider' | 'alert'
-  | 'col2' | 'section' | 'tab'
+  | 'col2' | 'col3' | 'section' | 'tab'
   | 'contractNo' | 'signDate' | 'partyA' | 'partyB'
   | 'contractAmount' | 'contractPeriod' | 'paymentTerms'
   | 'liquidatedDamages' | 'disputeResolution' | 'signArea';
