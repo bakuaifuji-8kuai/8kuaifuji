@@ -1342,6 +1342,17 @@ export interface CatalogCompareItem {
   costAuditUnitPriceExcludingTax?: number;
   /** @deprecated 旧字段，等同 unitPriceLimitIncludingTax，兼容历史数据 */
   singlePriceLimit?: number;
+
+  // ===== 框架协议采购专属字段（对齐 916 文档"框架协议采购-目录内项目内比价"）=====
+  projectName?: string;               // 项目名称（可覆盖 productName）
+  description?: string;               // 项目概况/物料名称
+  contractRatePerMonth?: number;      // 合同费率（元/月）
+  priceDescription?: string;          // 单价说明（固定单价 / 费率结算 / 按量结算 / 按次计费）
+  biddingFile?: Attachment;           // 竞价文件（附件，必填）
+  supplierUnitPriceExTax?: number;    // 供应商不含税单价
+  supplierAmountExTax?: number;       // 供应商不含税金额（自动算）
+  winningSupplierName?: string;       // 中标供应商名称
+  contractNo?: string;                // 关联合同编号
 }
 
 /**
@@ -1354,13 +1365,22 @@ export interface OfflineDetailItem {
   description?: string;               // 项目概况
   quantity: number;
   unit: string;
-  taxRate?: number;                   // 税率
+  taxRate?: number;                   // 税率（询比/竞价/谈判用）
   unitPriceExcludingTax?: number;     // 不含税单价
   unitPriceIncludingTax?: number;     // 含税单价（自动算或手填）
   amountExcludingTax?: number;        // 不含税金额
   amountIncludingTax?: number;         // 含税金额
   taxAmount?: number;                 // 税额
-  supplierName?: string;              // 供应商（直接采购/电子商城必填）
+  supplierName?: string;              // 供应商名称（直接/电子商城/询比）
+
+  // ===== 框架协议采购专属 =====
+  contractRatePerMonth?: number;      // 合同费率（元/月）
+  priceDescription?: string;          // 单价说明（固定单价 / 费率结算 / 按量结算 …）
+  biddingFile?: Attachment;           // 竞价文件（附件，必填）
+  supplierUnitPriceExTax?: number;    // 供应商不含税单价
+  supplierAmountExTax?: number;       // 供应商不含税金额（= supplierUnitPriceExTax × quantity，自动算）
+  winningSupplierName?: string;       // 中标供应商名称
+  contractNo?: string;                // 关联合同编号
 }
 
 // ============== 旧报价结构（兼容） ==============
@@ -1419,6 +1439,17 @@ export interface BiddingItem {
   demandUnitPriceExcludingTax?: number;
   costAuditUnitPriceIncludingTax?: number;
   costAuditUnitPriceExcludingTax?: number;
+
+  // ===== 框架协议采购专属字段（对齐 916 文档"框架协议采购-目录内项目内比价"）=====
+  projectName?: string;               // 项目名称（可覆盖 productName）
+  description?: string;               // 项目概况/物料名称
+  contractRatePerMonth?: number;      // 合同费率（元/月）
+  priceDescription?: string;          // 单价说明（固定单价 / 费率结算 / 按量结算 / 按次计费）
+  biddingFile?: Attachment;           // 竞价文件（附件，必填）
+  supplierUnitPriceExTax?: number;    // 供应商不含税单价
+  supplierAmountExTax?: number;       // 供应商不含税金额（= supplierUnitPriceExTax × quantity，自动算）
+  winningSupplierName?: string;       // 中标供应商名称
+  contractNo?: string;                // 关联合同编号
 }
 
 // ============== 主工单接口 ==============
