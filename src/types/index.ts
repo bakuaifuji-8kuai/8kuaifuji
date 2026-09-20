@@ -1829,6 +1829,7 @@ export interface ContractTemplate {
   versions?: ContractTemplateVersion[];
   annotations?: TemplateAnnotation[];
   dataSourceMappings?: DataSourceMapping[]; // 数据源映射配置
+  templateFile?: Attachment;   // 模板原件（.docx / .pdf / .doc），可选
 }
 
 // 历史记录状态

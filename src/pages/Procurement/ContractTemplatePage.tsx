@@ -5,7 +5,7 @@ import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { TemplateEditor } from '@/components/template/TemplateEditor';
 import { useStore } from '@/store/useStore';
-import type { ContractTemplate, ContractTemplateVersion, ContractCategory, TemplateComponent, TemplateAnnotation, DataSourceMapping } from '@/types';
+import type { ContractTemplate, ContractTemplateVersion, ContractCategory, TemplateComponent, TemplateAnnotation, DataSourceMapping, Attachment } from '@/types';
 import { CONTRACT_CATEGORIES, getCategoryLabel } from '@/constants/contractCategories';
 import { FileEdit, Eye, GitCompare, MessageSquare, Download, History, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -81,6 +81,56 @@ export default function ContractTemplatePage() {
       title: '历史版本',
       width: '80',
       render: (row) => (row.versions?.length || 0) + ' 个',
+    },
+    {
+      key: 'templateFile',
+      title: '模板原件',
+      width: '180',
+      render: (row) => (
+        <div className="flex items-center gap-1">
+          {row.templateFile ? (
+            <>
+              <a href={row.templateFile.filePath} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 hover:underline max-w-[110px] truncate">
+                📄 {row.templateFile.fileName}
+              </a>
+              <button
+                className="text-rose-400 hover:text-rose-600 text-xs ml-1"
+                title="移除原件"
+                onClick={() => {
+                  if (confirm('确认移除模板原件？')) {
+                    updateContractTemplate?.(row.id, { templateFile: undefined });
+                  }
+                }}
+              >✕</button>
+            </>
+          ) : (
+            <label className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-dashed border-slate-300 text-slate-500 cursor-pointer hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+              📎 上传
+              <input
+                type="file"
+                accept=".docx,.doc,.pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) {
+                    const att: Attachment = {
+                      id: 'TF' + Date.now() + row.id.slice(-4),
+                      fileName: f.name,
+                      filePath: URL.createObjectURL(f),
+                      fileSize: f.size,
+                      fileType: f.type,
+                      uploadTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
+                    };
+                    updateContractTemplate?.(row.id, { templateFile: att });
+                  }
+                  e.target.value = '';
+                }}
+              />
+            </label>
+          )}
+        </div>
+      ),
     },
     {
       key: 'annotations',
