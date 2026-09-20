@@ -445,7 +445,7 @@ function ContractNonProcurementForm({ form, update, amountDetails, setAmountDeta
               value={formation || ''}
               onChange={(e) => handleFormationChange(e.target.value as NonProcurementFormation)}
             >
-              <option value="">展览服务/展览展示/招商/其他</option>
+              <option value="">请选择合同形成方式</option>
               <optgroup label="展览服务">
                 <option value="exhibition_host">主办合同</option>
                 <option value="exhibition_venue">主场合同</option>
