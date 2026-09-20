@@ -9,13 +9,11 @@ import Modal from '@/components/common/Modal';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import { Plus, Edit2, Trash2, Eye, GripVertical, Save, Copy, Lock, Unlock } from 'lucide-react';
 
-type TabKey = 'all' | 'assessment' | 'yearly' | 'contract' | 'other';
+type TabKey = 'all' | 'assessment' | 'yearly';
 
 const TAB_CONFIG: { key: TabKey; label: string; desc: string }[] = [
   { key: 'assessment', label: '考核管理', desc: '单个项目考核 / 月度考核 / 季度考核' },
   { key: 'yearly', label: '年度评价', desc: '年度综合评价模板' },
-  { key: 'contract', label: '合同履约评价', desc: '合同执行过程履约评价' },
-  { key: 'other', label: '其他', desc: '质保履约等特殊类型' },
   { key: 'all', label: '全部模板', desc: '查看所有类型模板' },
 ];
 
@@ -219,10 +217,8 @@ export default function EvaluationTemplatePage() {
       cell: ({ row }) => (
         <Badge variant={
           row.original.type === 'yearly' ? 'success' :
-          row.original.type === 'contract_performance' ? 'warning' :
           row.original.type === 'monthly' ? 'info' :
-          row.original.type === 'quarterly' ? 'primary' :
-          row.original.type === 'warranty' ? 'warning' : 'default'
+          row.original.type === 'quarterly' ? 'primary' : 'default'
         }>
           {EVALUATION_TYPE_LABELS[row.original.type] || row.original.type}
         </Badge>
@@ -374,7 +370,7 @@ export default function EvaluationTemplatePage() {
                 onChange={(e) => setFormType(e.target.value as EvaluationType)}
                 className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
               >
-                {Object.entries(EVALUATION_TYPE_LABELS).filter(([k]) => k !== 'single').map(([key, label]) => (
+                {Object.entries(EVALUATION_TYPE_LABELS).filter(([k]) => k !== 'single' && k !== 'contract_performance' && k !== 'warranty').map(([key, label]) => (
                   <option key={key} value={key}>{label}</option>
                 ))}
               </select>
