@@ -13,6 +13,11 @@ import type {
   ProcurementOrderDetail,
   ProcurementOrderStatus,
   ProcurementInspection,
+  ContractLedger,
+  ContractPurchaseOrder,
+  ContractPurchaseOrderDetail,
+  ContractPurchaseOrderStatus,
+  Supplier,
 } from '@/types';
 
 // ======== 时间戳工具 ========
@@ -1553,3 +1558,401 @@ export const MOCK_PROCUREMENT_INSPECTIONS: ProcurementInspection[] = COMPLETED_O
   approveTime: mkTime(25 + i, 14),
   approver: '质量管理部',
 }));
+
+// =====================================================================
+//  MOCK_CONTRACT_LEDGERS —— 合同台账（只给 completed/evaluated 的 bidding 生成）
+// =====================================================================
+
+/** BiddingProcurementMethod → ContractFormation 映射（类型安全） */
+const METHOD_TO_FORMATION: Record<string, ContractLedger['formation']> = {
+  framework_catalog: 'state_owned_framework',
+  framework_random: 'state_owned_framework',
+  inquiry: 'state_owned_xunbi',
+  competitive_bidding: 'state_owned_jingjia',
+  negotiation_open: 'state_owned_tanpan',
+  negotiation_invited: 'state_owned_tanpan',
+  direct: 'state_owned_direct',
+  e_mall: 'state_owned_mall',
+  legal_bidding: 'legal_bidding',
+  voluntary_bidding: 'voluntary_bidding',
+};
+
+/** Bidding.status → ContractLedger.status 映射 */
+const BIDDING_TO_CONTRACT_STATUS: Record<string, ContractLedger['status']> = {
+  completed: 'completed',
+  evaluated: 'active',
+};
+
+/** 根据 bidding 信息判断 contractType（工程类 vs 非工程类） */
+const inferContractType = (b: Bidding): ContractLedger['contractType'] => {
+  const name = (b.biddingName || b.projectName || '').toLowerCase();
+  const method = b.procurementMethod || '';
+  // 法定/自愿招标通常是工程类
+  if (method === 'legal_bidding' || method === 'voluntary_bidding') return 'engineering';
+  // 名称含工程类关键词
+  if (/工程|布线|改造|搭建|装修|施工/.test(b.biddingName || '')) return 'engineering';
+  if (/工程|布线|改造|搭建|装修|施工/.test(b.projectName || '')) return 'engineering';
+  return 'non_engineering';
+};
+
+/** 生成合同编号：HT + YYMMDD + 3位序号 */
+const mkContractNo = (dateStr: string, seq: number): string => {
+  const d = (dateStr || ds).slice(2, 10).replace(/-/g, ''); // YYMMDD
+  return `HT${d}${String(seq).padStart(3, '0')}`;
+};
+
+/** 金额元 → 万元 */
+const yuanToWan = (yuan?: number): number | undefined => {
+  if (yuan == null) return undefined;
+  return Math.round((yuan / 10000) * 100) / 100;
+};
+
+const COMPLETED_BIDDINGS_FOR_LEDGER = MOCK_BIDDINGS.filter(
+  (b) => b.status === 'completed' || b.status === 'evaluated'
+);
+
+/** 根据合同状态推断归档/履行情况 */
+const ledgerArchiveStatus = (s: ContractLedger['status']): ContractLedger['archiveStatus'] => {
+  if (s === 'completed') return 'archived';
+  if (s === 'active') return 'in_progress';
+  return 'not_started';
+};
+
+/** 根据合同状态推断 paidAmount */
+const ledgerPaidAmount = (s: ContractLedger['status'], totalWan?: number): number | undefined => {
+  if (totalWan == null) return undefined;
+  if (s === 'completed') return totalWan; // 付清
+  if (s === 'active') return Math.round(totalWan * 0.6 * 100) / 100; // 60% 已付
+  return 0;
+};
+
+export const MOCK_CONTRACT_LEDGERS: ContractLedger[] = COMPLETED_BIDDINGS_FOR_LEDGER.map((b, i) => {
+  const awardDate = (b.awardTime || b.createTime || mkTime(0)).slice(0, 10);
+  const signingDate = mkTime(3 + i, 10).slice(0, 10); // awardTime 后 3+i 天签
+  const effectiveDate = signingDate;
+  const terminationDate = mkTime(365, 10).slice(0, 10); // 1 年后
+  const status: ContractLedger['status'] = BIDDING_TO_CONTRACT_STATUS[b.status!] || 'active';
+  const formation = METHOD_TO_FORMATION[b.procurementMethod || ''] || 'state_owned_direct';
+  const contractNo = mkContractNo(awardDate, i + 1);
+  const amountWan = yuanToWan(b.contractAmount || b.totalAmountIncludingTax);
+
+  return {
+    id: `HT-${b.id}`,
+    contractId: `HT-${b.id}`,
+    contractNo,
+    contractName: `${b.biddingName || b.projectName || '招采'}合同`,
+    contractNature: 'procurement',
+    category: 'procurement',
+    contractType: inferContractType(b),
+    formation,
+    winningDate: awardDate,
+    isModelText: true,
+    demandDepartment: b.procurementHandler ? '采购部' : '需求部门',
+    handlingDepartment: '采购部',
+    handler: b.procurementHandler || '刘明',
+    handlerContact: '0731-88880000',
+    counterpartyName: b.winningSupplierName,
+    counterpartyContact: '',
+    mainContent: `${b.biddingName || b.projectName}，按招采文件约定的技术标准和服务内容执行`,
+    signingDate,
+    effectiveDate,
+    terminationDate,
+    endDate: terminationDate,
+    expireDate: terminationDate,
+    amount: amountWan,
+    paidAmount: ledgerPaidAmount(status, amountWan),
+    paidAmountBase: ledgerPaidAmount(status, amountWan) || 0,
+    businessCategory: 'expense',
+    archiveStatus: ledgerArchiveStatus(status),
+    approvalMethod: b.procurementApprovalMethod || '采购项目申请表',
+    status,
+    biddingId: b.id,
+    biddingNo: b.biddingNo,
+    demandId: b.demandId,
+    demandNo: b.demandNo,
+    projectName: b.projectName || b.biddingName,
+    guaranteeEvaluation: { isOpen: !b.procurementMethod?.startsWith('framework'), guaranteeType: '履约保证金' },
+    assessmentManagement: 'single_project',
+    yearlyEvaluation: false,
+  };
+});
+
+// =====================================================================
+//  MOCK_CONTRACT_PURCHASE_ORDERS —— 合同采购订单（基于非 framework 且 active/completed 的台账生成）
+// =====================================================================
+
+/** 取台账对应的 contractType 枚举值 → 同时作为 CPO 的备注分类 */
+const SUPPORTED_CPO_STATUSES: ContractLedger['status'][] = ['active', 'completed'];
+
+const LEDGERS_FOR_CPO = MOCK_CONTRACT_LEDGERS.filter(
+  (l) => SUPPORTED_CPO_STATUSES.includes(l.status) && !l.formation.startsWith('state_owned_framework')
+);
+
+/** 生成 CPO 编号：CPO + YYMMDD + 3位序号 */
+const mkCPONo = (dateStr: string, seq: number): string => {
+  const d = (dateStr || ds).slice(2, 10).replace(/-/g, '');
+  return `CPO${d}${String(seq).padStart(3, '0')}`;
+};
+
+/** 从 bidding 的 offlineDetails 或 items 取前 N 条生成 CPO details */
+const mkCPODetails = (b: Bidding, cpoId: string): ContractPurchaseOrderDetail[] => {
+  const takeN = 3;
+  if (b.procurementMethod?.startsWith('framework')) {
+    // 目录内比价：从 items 取
+    return (b.items || []).slice(0, takeN).map((it, i) => {
+      const unitPrice = it.supplierUnitPriceExTax ?? it.unitPriceLimitExcludingTax ?? 0;
+      const qty = it.quantity || 0;
+      const amt = Math.round(unitPrice * qty * 100) / 100;
+      return {
+        id: `CPOD-${cpoId}-${i + 1}`,
+        orderId: cpoId,
+        productId: `P-${i + 1}`,
+        productCode: it.productCode || `SKU-${String(i + 1).padStart(4, '0')}`,
+        productName: it.productName || it.projectName || '框架协议商品',
+        specification: it.specification || it.description,
+        unit: it.unit || '个',
+        contractQuantity: qty,
+        deliveredQuantity: 0,
+        orderQuantity: qty,
+        unitPrice,
+        amount: amt,
+        deliveryDate: mkTime(30 + i, 10).slice(0, 10),
+      };
+    });
+  }
+  // 线下录入：从 offlineDetails 取
+  return (b.offlineDetails || []).slice(0, takeN).map((it, i) => {
+    const unitPrice = it.unitPriceIncludingTax || it.unitPriceExcludingTax || 0;
+    const qty = it.quantity || 0;
+    const amt = Math.round(unitPrice * qty * 100) / 100;
+    return {
+      id: `CPOD-${cpoId}-${i + 1}`,
+      orderId: cpoId,
+      productId: `P-${i + 1}`,
+      productCode: `SKU-${String(i + 1).padStart(4, '0')}`,
+      productName: it.itemName,
+      specification: '',
+      unit: it.unit || '个',
+      contractQuantity: qty,
+      deliveredQuantity: 0,
+      orderQuantity: qty,
+      unitPrice,
+      amount: amt,
+      deliveryDate: mkTime(30 + i, 10).slice(0, 10),
+    };
+  });
+};
+
+export const MOCK_CONTRACT_PURCHASE_ORDERS: ContractPurchaseOrder[] = LEDGERS_FOR_CPO.map((ledger, i) => {
+  const bidding = MOCK_BIDDINGS.find((b) => b.id === ledger.biddingId)!;
+  const cpoId = `CPO-${bidding.id}`;
+  const createTime = mkTime(5 + i, 10);
+  const cpoStatus: ContractPurchaseOrderStatus = ledger.status === 'completed' ? 'submitted' : 'submitted';
+
+  return {
+    id: cpoId,
+    orderNo: mkCPONo(ledger.signingDate || ds, i + 1),
+    contractId: ledger.id,
+    contractNo: ledger.contractNo,
+    contractName: ledger.contractName,
+    supplierId: bidding.winningSupplierId || '',
+    supplierName: bidding.winningSupplierName || '',
+    status: cpoStatus,
+    createTime,
+    creator: '采购部',
+    submitTime: createTime,
+    procurementDemandId: bidding.demandId,
+    procurementDemandNo: bidding.demandNo,
+    projectName: bidding.projectName || bidding.biddingName,
+    totalDuration: '按合同约定',
+    acceptanceStandard: '按国家及行业标准',
+    paymentTerms: '货到验收合格后 30 日内付款',
+    details: mkCPODetails(bidding, cpoId),
+  };
+});
+
+// =====================================================================
+//  MOCK_SUPPLIERS —— 12 条供应商数据，与 S.s1~S.s12 一一对应
+// =====================================================================
+
+const mkSupplierCode = (idx: number): string => `SUP-CG-${String(idx).padStart(3, '0')}`;
+const mkSupplierAddress = (idx: number): string => (
+  [
+    '江苏省南京市江宁区经济开发区 88 号',
+    '天津市滨海新区工业园区 12 号',
+    '广东省佛山市顺德区工业园 36 号',
+    '四川省成都市高新区科技园 58 号',
+    '上海市浦东新区张江高科技园区 101 号',
+    '北京市朝阳区建国路 77 号',
+    '浙江省杭州市余杭区良渚街道 22 号',
+    '安徽省合肥市蜀山区高新区 15 号',
+    '福建省厦门市思明区软件园 9 号',
+    '广东省深圳市南山区科技园 66 号',
+    '江苏省苏州市工业园区 42 号',
+    '辽宁省沈阳市铁西区装备制造园 7 号',
+  ][idx - 1] || '中国'
+);
+const mkSupplierBusinessScope = (idx: number): string => (
+  [
+    '钢材、金属制品生产与销售',
+    '铝材生产、加工、销售',
+    '建材、装饰材料批发零售',
+    '新材料研发、生产与销售',
+    '综合物资供应与配送',
+    '展览展示设计、搭建与服务',
+    '办公家具生产、销售与安装',
+    'LED 显示技术开发、产品销售',
+    '电脑硬件、网络设备销售',
+    '电子产品线上商城销售',
+    '装饰工程设计与施工',
+    '五金制品批发与零售',
+  ][idx - 1] || '一般经营项目'
+);
+
+export const MOCK_SUPPLIERS: Supplier[] = [
+  {
+    id: S.s1.id,
+    code: mkSupplierCode(1),
+    name: S.s1.name,
+    contact: S.s1.contact,
+    phone: S.s1.phone,
+    address: mkSupplierAddress(1),
+    status: 'enabled',
+    businessScope: mkSupplierBusinessScope(1),
+    createTime: '2024-06-15 10:00:00',
+    creator: '系统',
+  },
+  {
+    id: S.s2.id,
+    code: mkSupplierCode(2),
+    name: S.s2.name,
+    contact: S.s2.contact,
+    phone: S.s2.phone,
+    address: mkSupplierAddress(2),
+    status: 'enabled',
+    businessScope: mkSupplierBusinessScope(2),
+    createTime: '2024-07-20 10:00:00',
+    creator: '系统',
+  },
+  {
+    id: S.s3.id,
+    code: mkSupplierCode(3),
+    name: S.s3.name,
+    contact: S.s3.contact,
+    phone: S.s3.phone,
+    address: mkSupplierAddress(3),
+    status: 'enabled',
+    businessScope: mkSupplierBusinessScope(3),
+    createTime: '2024-08-10 10:00:00',
+    creator: '系统',
+  },
+  {
+    id: S.s4.id,
+    code: mkSupplierCode(4),
+    name: S.s4.name,
+    contact: S.s4.contact,
+    phone: S.s4.phone,
+    address: mkSupplierAddress(4),
+    status: 'enabled',
+    businessScope: mkSupplierBusinessScope(4),
+    createTime: '2024-09-05 10:00:00',
+    creator: '系统',
+  },
+  {
+    id: S.s5.id,
+    code: mkSupplierCode(5),
+    name: S.s5.name,
+    contact: S.s5.contact,
+    phone: S.s5.phone,
+    address: mkSupplierAddress(5),
+    status: 'enabled',
+    businessScope: mkSupplierBusinessScope(5),
+    createTime: '2024-10-01 10:00:00',
+    creator: '系统',
+  },
+  {
+    id: S.s6.id,
+    code: mkSupplierCode(6),
+    name: S.s6.name,
+    contact: S.s6.contact,
+    phone: S.s6.phone,
+    address: mkSupplierAddress(6),
+    status: 'enabled',
+    businessScope: mkSupplierBusinessScope(6),
+    createTime: '2024-04-18 10:00:00',
+    creator: '系统',
+  },
+  {
+    id: S.s7.id,
+    code: mkSupplierCode(7),
+    name: S.s7.name,
+    contact: S.s7.contact,
+    phone: S.s7.phone,
+    address: mkSupplierAddress(7),
+    status: 'enabled',
+    businessScope: mkSupplierBusinessScope(7),
+    createTime: '2024-05-22 10:00:00',
+    creator: '系统',
+  },
+  {
+    id: S.s8.id,
+    code: mkSupplierCode(8),
+    name: S.s8.name,
+    contact: S.s8.contact,
+    phone: S.s8.phone,
+    address: mkSupplierAddress(8),
+    status: 'enabled',
+    businessScope: mkSupplierBusinessScope(8),
+    createTime: '2024-03-11 10:00:00',
+    creator: '系统',
+  },
+  {
+    id: S.s9.id,
+    code: mkSupplierCode(9),
+    name: S.s9.name,
+    contact: S.s9.contact,
+    phone: S.s9.phone,
+    address: mkSupplierAddress(9),
+    status: 'enabled',
+    businessScope: mkSupplierBusinessScope(9),
+    createTime: '2024-02-28 10:00:00',
+    creator: '系统',
+  },
+  {
+    id: S.s10.id,
+    code: mkSupplierCode(10),
+    name: S.s10.name,
+    contact: S.s10.contact,
+    phone: S.s10.phone,
+    address: mkSupplierAddress(10),
+    status: 'enabled',
+    businessScope: mkSupplierBusinessScope(10),
+    createTime: '2024-11-08 10:00:00',
+    creator: '系统',
+  },
+  {
+    id: S.s11.id,
+    code: mkSupplierCode(11),
+    name: S.s11.name,
+    contact: S.s11.contact,
+    phone: S.s11.phone,
+    address: mkSupplierAddress(11),
+    status: 'enabled',
+    businessScope: mkSupplierBusinessScope(11),
+    createTime: '2024-12-12 10:00:00',
+    creator: '系统',
+  },
+  {
+    id: S.s12.id,
+    code: mkSupplierCode(12),
+    name: S.s12.name,
+    contact: S.s12.contact,
+    phone: S.s12.phone,
+    address: mkSupplierAddress(12),
+    status: 'enabled',
+    businessScope: mkSupplierBusinessScope(12),
+    createTime: '2025-01-20 10:00:00',
+    creator: '系统',
+  },
+];
+
