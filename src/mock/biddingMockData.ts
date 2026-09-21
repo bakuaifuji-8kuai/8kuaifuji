@@ -5,6 +5,14 @@ import type {
   OfflineDetailItem,
   CatalogCompareItem,
   Attachment,
+  ProcurementDemand,
+  ProcurementDemandDetail,
+  ProcurementDemandStatus,
+  ProcurementDemandType,
+  ProcurementOrder,
+  ProcurementOrderDetail,
+  ProcurementOrderStatus,
+  ProcurementInspection,
 } from '@/types';
 
 // ======== 时间戳工具 ========
@@ -96,7 +104,7 @@ const mkCatalogItem = (
   quantity: qty,
   specification: '标准',
   contractScope: 'in',
-  priceDesc,
+  priceDescription: priceDesc,
   contractRatePerMonth: contractRate,
   unitPriceLimitExcludingTax: limitExTax,
   unitPriceLimitIncludingTax: Math.round(limitExTax * 1.13 * 100) / 100,
@@ -197,6 +205,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   // 状态覆盖：approved/published/bidding/evaluated/completed/cancelled
   {
     id: 'FM-CAT-001',
+    demandId: 'DEM-FM-CAT-001',
     biddingNo: 'FM-CAT-001',
     biddingName: 'LED显示设备框架协议采购',
     procurementMethod: 'framework_catalog',
@@ -224,6 +233,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'FM-CAT-002',
+    demandId: 'DEM-FM-CAT-002',
     biddingNo: 'FM-CAT-002',
     biddingName: '办公家具框架协议采购',
     procurementMethod: 'framework_catalog',
@@ -253,6 +263,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'FM-CAT-003',
+    demandId: 'DEM-FM-CAT-003',
     biddingNo: 'FM-CAT-003',
     biddingName: '钢材框架协议采购（已完成）',
     procurementMethod: 'framework_catalog',
@@ -279,6 +290,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'FM-CAT-004',
+    demandId: 'DEM-FM-CAT-004',
     biddingNo: 'FM-CAT-004',
     biddingName: '投影仪框架协议采购（已取消）',
     procurementMethod: 'framework_catalog',
@@ -304,6 +316,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   // 状态覆盖：draft/submitted/approved/completed/rejected
   {
     id: 'FM-RND-001',
+    demandId: 'DEM-FM-RND-001',
     biddingNo: 'FM-RND-001',
     biddingName: '展会搭建材料框架协议采购（随机抽取-进行中）',
     procurementMethod: 'framework_random',
@@ -329,6 +342,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'FM-RND-002',
+    demandId: 'DEM-FM-RND-002',
     biddingNo: 'FM-RND-002',
     biddingName: '五金配件框架协议采购（随机抽取-已完成）',
     procurementMethod: 'framework_random',
@@ -358,6 +372,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'FM-RND-003',
+    demandId: 'DEM-FM-RND-003',
     biddingNo: 'FM-RND-003',
     biddingName: '空调设备框架协议采购（随机抽取-草稿）',
     procurementMethod: 'framework_random',
@@ -371,6 +386,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'FM-RND-004',
+    demandId: 'DEM-FM-RND-004',
     biddingNo: 'FM-RND-004',
     biddingName: '清洁用品框架协议采购（随机抽取-驳回）',
     procurementMethod: 'framework_random',
@@ -399,6 +415,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   // 状态覆盖：draft/submitted/approved/completed/cancelled/rejected
   {
     id: 'INQ-001',
+    demandId: 'DEM-INQ-001',
     biddingNo: 'INQ-001',
     biddingName: '2026秋季博览会展架搭建询比采购（已完成）',
     procurementMethod: 'inquiry',
@@ -440,6 +457,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'INQ-002',
+    demandId: 'DEM-INQ-002',
     biddingNo: 'INQ-002',
     biddingName: 'LED展示屏询比采购（已取消-流标）',
     procurementMethod: 'inquiry',
@@ -472,6 +490,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'INQ-003',
+    demandId: 'DEM-INQ-003',
     biddingNo: 'INQ-003',
     biddingName: '办公隔断询比采购（待审）',
     procurementMethod: 'inquiry',
@@ -502,6 +521,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'INQ-004',
+    demandId: 'DEM-INQ-004',
     biddingNo: 'INQ-004',
     biddingName: '打印机询比采购（草稿）',
     procurementMethod: 'inquiry',
@@ -522,6 +542,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'INQ-005',
+    demandId: 'DEM-INQ-005',
     biddingNo: 'INQ-005',
     biddingName: '投影仪询比采购（驳回）',
     procurementMethod: 'inquiry',
@@ -552,6 +573,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   // 状态覆盖：draft/approved/completed/bidding
   {
     id: 'BID-001',
+    demandId: 'DEM-BID-001',
     biddingNo: 'BID-001',
     biddingName: 'LED全彩屏竞价采购（竞价中）',
     procurementMethod: 'competitive_bidding',
@@ -586,6 +608,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'BID-002',
+    demandId: 'DEM-BID-002',
     biddingNo: 'BID-002',
     biddingName: '服务器竞价采购（已完成）',
     procurementMethod: 'competitive_bidding',
@@ -624,6 +647,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'BID-003',
+    demandId: 'DEM-BID-003',
     biddingNo: 'BID-003',
     biddingName: '笔记本电脑竞价采购（草稿）',
     procurementMethod: 'competitive_bidding',
@@ -645,6 +669,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   // 状态覆盖：approved/completed/rejected
   {
     id: 'NEG-O-001',
+    demandId: 'DEM-NEG-O-001',
     biddingNo: 'NEG-O-001',
     biddingName: '展厅装修材料谈判采购-公开（已完成）',
     procurementMethod: 'negotiation_open',
@@ -685,6 +710,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'NEG-O-002',
+    demandId: 'DEM-NEG-O-002',
     biddingNo: 'NEG-O-002',
     biddingName: '中央空调维修服务谈判采购-公开（驳回）',
     procurementMethod: 'negotiation_open',
@@ -715,6 +741,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'NEG-O-003',
+    demandId: 'DEM-NEG-O-003',
     biddingNo: 'NEG-O-003',
     biddingName: '弱电系统升级谈判采购-公开（流标）',
     procurementMethod: 'negotiation_open',
@@ -747,6 +774,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   // 状态覆盖：approved/completed/cancelled
   {
     id: 'NEG-I-001',
+    demandId: 'DEM-NEG-I-001',
     biddingNo: 'NEG-I-001',
     biddingName: '展架搭建服务谈判采购-邀请（已完成）',
     procurementMethod: 'negotiation_invited',
@@ -783,6 +811,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'NEG-I-002',
+    demandId: 'DEM-NEG-I-002',
     biddingNo: 'NEG-I-002',
     biddingName: '办公家具更换谈判采购-邀请（已取消）',
     procurementMethod: 'negotiation_invited',
@@ -815,6 +844,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   // 状态覆盖：draft/submitted/approved/completed/cancelled/rejected
   {
     id: 'DRT-001',
+    demandId: 'DEM-DRT-001',
     biddingNo: 'DRT-001',
     biddingName: 'LED屏配件紧急采购（已完成）',
     procurementMethod: 'direct',
@@ -847,6 +877,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'DRT-002',
+    demandId: 'DEM-DRT-002',
     biddingNo: 'DRT-002',
     biddingName: '办公耗材直接采购（已取消）',
     procurementMethod: 'direct',
@@ -875,6 +906,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'DRT-003',
+    demandId: 'DEM-DRT-003',
     biddingNo: 'DRT-003',
     biddingName: '消防器材补充采购（待审）',
     procurementMethod: 'direct',
@@ -903,6 +935,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'DRT-004',
+    demandId: 'DEM-DRT-004',
     biddingNo: 'DRT-004',
     biddingName: '门禁系统升级直接采购（草稿）',
     procurementMethod: 'direct',
@@ -919,6 +952,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'DRT-005',
+    demandId: 'DEM-DRT-005',
     biddingNo: 'DRT-005',
     biddingName: '空调配件采购（驳回）',
     procurementMethod: 'direct',
@@ -946,6 +980,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   // 状态覆盖：approved/completed/bidding
   {
     id: 'EML-001',
+    demandId: 'DEM-EML-001',
     biddingNo: 'EML-001',
     biddingName: '电脑及配件电子商城采购（已完成）',
     procurementMethod: 'e_mall',
@@ -980,6 +1015,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'EML-002',
+    demandId: 'DEM-EML-002',
     biddingNo: 'EML-002',
     biddingName: '打印耗材电子商城采购（已提交）',
     procurementMethod: 'e_mall',
@@ -1010,6 +1046,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   // 状态覆盖：submitted/bidding/completed
   {
     id: 'LEGAL-001',
+    demandId: 'DEM-LEGAL-001',
     biddingNo: 'LEGAL-001',
     biddingName: '2026秋季博览会主场搭建法定招标（已发布）',
     procurementMethod: 'legal_bidding',
@@ -1040,6 +1077,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'LEGAL-002',
+    demandId: 'DEM-LEGAL-002',
     biddingNo: 'LEGAL-002',
     biddingName: '新办公楼装修工程法定招标（已完成）',
     procurementMethod: 'legal_bidding',
@@ -1078,6 +1116,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   // 状态覆盖：draft/approved/rejected
   {
     id: 'VOL-001',
+    demandId: 'DEM-VOL-001',
     biddingNo: 'VOL-001',
     biddingName: '展厅改造自愿招标（已驳回）',
     procurementMethod: 'voluntary_bidding',
@@ -1106,6 +1145,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
   },
   {
     id: 'VOL-002',
+    demandId: 'DEM-VOL-002',
     biddingNo: 'VOL-002',
     biddingName: '2026国际消费电子展搭建自愿招标（已审批通过）',
     procurementMethod: 'voluntary_bidding',
@@ -1240,3 +1280,276 @@ export const MOCK_SUPPLIER_QUOTES: SupplierQuote[] = (() => {
 
   return result;
 })();
+
+
+// =====================================================================
+//  MOCK_PROCUREMENT_DEMANDS —— 与 MOCK_BIDDINGS 一一对应（32条）
+// =====================================================================
+
+const DEMAND_APPLICANTS = ['张三', '李四', '王五', '赵六'];
+const DEMAND_MODES: Array<'meeting' | 'sign_report' | 'application_form'> = ['meeting', 'sign_report', 'application_form'];
+const DEMAND_TYPES: ProcurementDemandType[] = ['material', 'service_project', 'material', 'implementation_project', 'service_non_engineering'];
+
+// 精简 biddingName 得到 projectName
+const mkSimpleProjectName = (name?: string): string => {
+  if (!name) return '未命名项目';
+  return name
+    .replace(/框架协议采购（随机抽取[^）]*）/g, '')
+    .replace(/框架协议采购/g, '采购')
+    .replace(/（已完成）|（已取消[^）]*）|（进行中）|（草稿）|（驳回）|（流标）/g, '')
+    .replace(/谈判采购-[^（]+/g, '')
+    .replace(/询比采购|竞价采购|直接采购|电子商城采购|法定招标|自愿招标/g, '')
+    .replace(/（[^）]*）/g, '')
+    .trim() || name;
+};
+
+// 采购方式 → 采购需求状态
+const biddingToDemandStatus = (bs?: string): ProcurementDemandStatus => {
+  switch (bs) {
+    case 'completed':
+    case 'evaluated':
+      return 'confirm_approved';
+    case 'published':
+    case 'bidding':
+      return 'confirm_approved';
+    case 'cancelled':
+      return 'confirm_rejected';
+    case 'approved':
+      return 'confirm_pending';
+    case 'submitted':
+      return 'pending';
+    case 'rejected':
+      return 'rejected';
+    case 'draft':
+      return 'draft';
+    default:
+      return 'pending';
+  }
+};
+
+// 从 bidding items 生成需求明细
+const mkDemandDetails = (b: Bidding): ProcurementDemandDetail[] => {
+  const out: ProcurementDemandDetail[] = [];
+  if (b.items && b.items.length > 0) {
+    b.items.slice(0, 3).forEach((it, i) => {
+      out.push({
+        id: `PDD-${b.id}-${i + 1}`,
+        demandId: `DEM-${b.id}`,
+        productCode: it.productCode,
+        productName: it.productName,
+        specification: it.specification,
+        unit: it.unit,
+        quantity: it.quantity || 0,
+        unitPriceExcludingTax: it.unitPriceLimitExcludingTax,
+        unitPriceIncludingTax: it.unitPriceLimitIncludingTax,
+        taxRate: it.taxRate,
+        amountExcludingTax: it.unitPriceLimitExcludingTax
+          ? Math.round(it.unitPriceLimitExcludingTax * (it.quantity || 0) * 100) / 100
+          : undefined,
+      });
+    });
+  } else if (b.offlineDetails && b.offlineDetails.length > 0) {
+    b.offlineDetails.slice(0, 3).forEach((it, i) => {
+      out.push({
+        id: `PDD-${b.id}-${i + 1}`,
+        demandId: `DEM-${b.id}`,
+        productCode: `OD-${b.id}-${i + 1}`,
+        productName: it.itemName,
+        specification: it.description,
+        unit: it.unit,
+        quantity: it.quantity,
+        unitPriceExcludingTax: it.unitPriceExcludingTax,
+        unitPriceIncludingTax: it.unitPriceIncludingTax,
+        taxRate: it.taxRate,
+        amountExcludingTax: it.amountExcludingTax,
+        taxAmount: it.taxAmount,
+        amountIncludingTax: it.amountIncludingTax,
+      });
+    });
+  }
+  return out;
+};
+
+// 采购方式 → 业务分类 + 采购类型
+const methodToBiz = (m?: string): { procurementType: 'within_framework' | 'outside_framework' | 'new_supplier'; isFramework: boolean } => {
+  if (!m) return { procurementType: 'outside_framework', isFramework: false };
+  if (m.startsWith('framework_')) return { procurementType: 'within_framework', isFramework: true };
+  if (m === 'legal_bidding' || m === 'voluntary_bidding' || m === 'inquiry' || m === 'competitive_bidding' || m === 'negotiation_open' || m === 'negotiation_invited') {
+    return { procurementType: 'outside_framework', isFramework: false };
+  }
+  return { procurementType: 'outside_framework', isFramework: false }; // direct / e_mall
+};
+
+// 生成一条 ProcurementDemand
+const mkDemand = (b: Bidding, idx: number): ProcurementDemand => {
+  const biz = methodToBiz(b.procurementMethod);
+  const applyOffset = -(15 + (idx % 15)); // createTime 前 15-30 天
+  const deliOffset = b.startTime ? -(7 + (idx % 5)) : -(10 + (idx % 8));
+  const projectName = mkSimpleProjectName(b.biddingName);
+  const amountBase = b.contractAmount || b.totalAmountExcludingTax || b.totalAmountIncludingTax || 50000;
+  const estAmount = Math.round(amountBase / 0.95 / 100) * 100; // 预算略高于中标金额
+  
+  return {
+    id: `DEM-${b.id}`,
+    demandNo: b.demandNo || `XQ${y}${m}${String(idx + 1).padStart(3, '0')}001`,
+    demandType: DEMAND_TYPES[idx % DEMAND_TYPES.length],
+    procurementType: biz.procurementType,
+    procurementMode: DEMAND_MODES[idx % DEMAND_MODES.length],
+    applicant: DEMAND_APPLICANTS[idx % DEMAND_APPLICANTS.length],
+    applicantDept: '采购部',
+    applyDate: mkTime(applyOffset).slice(0, 10),
+    projectName,
+    reason: `${projectName}物资采购需求`,
+    estimatedAmount: estAmount,
+    requiredDeliveryDate: mkTime(deliOffset).slice(0, 10),
+    status: biddingToDemandStatus(b.status),
+    createTime: mkTime(applyOffset, 9),
+    details: mkDemandDetails(b),
+    relatedOrderId: undefined,
+  };
+};
+
+export const MOCK_PROCUREMENT_DEMANDS: ProcurementDemand[] = MOCK_BIDDINGS.map((b, i) => mkDemand(b, i));
+
+// =====================================================================
+//  MOCK_PROCUREMENT_ORDERS —— 仅给 completed/evaluated 的 bidding 创建
+// =====================================================================
+
+const ORDER_STATUS_MAP: Record<string, ProcurementOrderStatus> = {
+  completed: 'completed',
+  evaluated: 'approved',
+};
+
+// 从 bidding.items 生成订单明细
+const mkOrderDetails = (b: Bidding): ProcurementOrderDetail[] => {
+  const out: ProcurementOrderDetail[] = [];
+  if (b.items && b.items.length > 0) {
+    b.items.slice(0, 3).forEach((it, i) => {
+      out.push({
+        id: `POD-${b.id}-${i + 1}`,
+        orderId: `PO-${b.id}`,
+        productId: `PROD-${it.productCode}`,
+        productCode: it.productCode,
+        productName: it.productName,
+        specification: it.specification,
+        unit: it.unit,
+        quantity: it.quantity || 0,
+        unitPrice: it.unitPriceLimitExcludingTax,
+        unitPriceIncludingTax: it.unitPriceLimitIncludingTax,
+        amount: it.unitPriceLimitExcludingTax
+          ? Math.round(it.unitPriceLimitExcludingTax * (it.quantity || 0) * 100) / 100
+          : undefined,
+        taxRate: it.taxRate,
+        winningSupplierId: b.winningSupplierId,
+        winningSupplierName: b.winningSupplierName,
+      });
+    });
+  } else if (b.offlineDetails && b.offlineDetails.length > 0) {
+    b.offlineDetails.slice(0, 3).forEach((it, i) => {
+      out.push({
+        id: `POD-${b.id}-${i + 1}`,
+        orderId: `PO-${b.id}`,
+        productId: `PROD-OD-${b.id}-${i + 1}`,
+        productCode: `OD-${b.id}-${i + 1}`,
+        productName: it.itemName,
+        specification: it.description,
+        unit: it.unit,
+        quantity: it.quantity,
+        unitPrice: it.unitPriceExcludingTax,
+        unitPriceIncludingTax: it.unitPriceIncludingTax,
+        amount: it.amountExcludingTax,
+        taxRate: it.taxRate,
+        taxAmount: it.taxAmount,
+        winningSupplierId: b.winningSupplierId,
+        winningSupplierName: b.winningSupplierName,
+      });
+    });
+  }
+  return out;
+};
+
+// 生成订单编号
+const mkOrderNo = (b: Bidding, seq: number): string => {
+  const baseDate = (b.awardTime || b.createTime || mkTime(0)).slice(0, 10).replace(/-/g, '');
+  return `CGDD${baseDate}${String(seq).padStart(3, '0')}`;
+};
+
+const COMPLETED_BIDDINGS = MOCK_BIDDINGS.filter(b => b.status === 'completed' || b.status === 'evaluated');
+
+export const MOCK_PROCUREMENT_ORDERS: ProcurementOrder[] = COMPLETED_BIDDINGS.map((b, i) => {
+  const finishTime = b.awardTime || b.createTime || mkTime(-10);
+  const createOffset = 1 + (i % 3); // awardTime 后 1-3 天
+  
+  const sourceType: ProcurementOrder['sourceType'] = b.procurementMethod?.startsWith('framework')
+    ? 'framework'
+    : 'one_time';
+
+  const status: ProcurementOrderStatus = b.status === 'completed' ? 'completed' : 'approved';
+  
+  const total = b.contractAmount || b.totalAmountIncludingTax || 50000;
+  
+  return {
+    id: `PO-${b.id}`,
+    orderNo: mkOrderNo(b, i + 1),
+    sourceType,
+    demandId: `DEM-${b.id}`,
+    demandNo: b.demandNo,
+    contractId: b.contractAmount ? `HT-${b.id}` : undefined,
+    contractNo: b.contractAmount ? `HT-${b.id}` : undefined,
+    supplierId: b.winningSupplierId || (b.inviteSupplierIds && b.inviteSupplierIds[0]),
+    supplierName: b.winningSupplierName,
+    status,
+    createTime: mkTime(createOffset, 10),
+    creator: '采购部',
+    creatorDept: '采购部',
+    handler: '刘明',
+    handlingDepartment: '采购部',
+    deliveryDate: mkTime(createOffset + 10).slice(0, 10),
+    contactPerson: b.winningSupplierId ? '' : undefined,
+    contactPhone: '',
+    completionTime: status === 'completed' ? mkTime(createOffset + 15, 18) : undefined,
+    details: mkOrderDetails(b),
+  };
+});
+
+// =====================================================================
+//  MOCK_PROCUREMENT_INSPECTIONS —— 仅给 completed 的订单创建
+// =====================================================================
+
+const COMPLETED_ORDERS = MOCK_PROCUREMENT_ORDERS.filter(o => o.status === 'completed');
+
+// 生成验收明细（从订单 details 复制）
+const mkInspectionDetails = (order: ProcurementOrder) => order.details.map((d, i) => ({
+  id: `INSPD-${order.id}-${i + 1}`,
+  productId: d.productId,
+  productCode: d.productCode,
+  productName: d.productName,
+  specification: d.specification,
+  unit: d.unit,
+  orderedQuantity: d.quantity,
+  inspectedQuantity: d.quantity,
+  passQuantity: d.quantity,
+  failQuantity: 0,
+  isQualified: true,
+}));
+
+const mkInspectionNo = (order: ProcurementOrder, seq: number): string => {
+  const baseDate = (order.createTime || mkTime(-5)).slice(0, 10).replace(/-/g, '');
+  return `YSSJ${baseDate}${String(seq).padStart(3, '0')}`;
+};
+
+export const MOCK_PROCUREMENT_INSPECTIONS: ProcurementInspection[] = COMPLETED_ORDERS.map((o, i) => ({
+  id: `INSP-${o.id}`,
+  inspectionNo: mkInspectionNo(o, i + 1),
+  orderId: o.id,
+  orderNo: o.orderNo,
+  supplierId: o.supplierId,
+  supplierName: o.supplierName,
+  inspectionDate: mkTime(25 + i, 10).slice(0, 10),
+  inspector: '质检员A',
+  status: 'approved',
+  remark: '验收合格，数量和质量均符合要求',
+  details: mkInspectionDetails(o),
+  approveTime: mkTime(25 + i, 14),
+  approver: '质量管理部',
+}));
