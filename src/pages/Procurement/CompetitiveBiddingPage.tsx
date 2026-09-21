@@ -715,8 +715,8 @@ export default function CompetitiveBiddingPage() {
       }
     }
 
-    // === 直接采购：6 个基础执行信息必填 ===
-    if (procurementMethod === 'direct') {
+    // === 直接采购/电子商城：6 个基础执行信息必填 ===
+    if (procurementMethod === 'direct' || procurementMethod === 'e_mall') {
       if (!editItem.procurementApprovalMethod) { alert('请选择采购方式审批方式！'); return; }
       if (!editItem.procurementApprovalDate) { alert('请选择采购方式审批日期！'); return; }
       if (!editItem.implementationUnit?.trim()) { alert('请填写招采实施单位！'); return; }
@@ -1816,7 +1816,7 @@ export default function CompetitiveBiddingPage() {
 
 
             {/* ============ 线下流程专属：基础执行信息 ============ */}
-            {(isOfflineExecution(editItem.procurementMethod) || editItem.procurementMethod === 'direct') && (
+            {(isOfflineExecution(editItem.procurementMethod) || editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') && (
             <div className="space-y-3 pt-3 border-t border-slate-200">
               <div className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
                 <span>📋</span> 基础执行信息
@@ -1847,9 +1847,9 @@ export default function CompetitiveBiddingPage() {
                     onChange={(e) => setEditItem({ ...editItem, implementationUnit: e.target.value })}
                     placeholder="如：国金招标采购中心" />
                 </div>
-                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'direct') && (
+                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') && (
                 <div>
-                  <div className="mb-1 text-xs text-[#606266]">项目实施单位 <span className={editItem.procurementMethod === 'direct' ? 'text-[#f56c6c]' : ''}>{editItem.procurementMethod === 'direct' ? '*' : ''}</span></div>
+                  <div className="mb-1 text-xs text-[#606266]">项目实施单位 <span className={(editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') ? 'text-[#f56c6c]' : ''}>{(editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') ? '*' : ''}</span></div>
                   <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
                     value={editItem.projectImplementationUnit || ''}
                     onChange={(e) => setEditItem({ ...editItem, projectImplementationUnit: e.target.value })}
@@ -1873,9 +1873,9 @@ export default function CompetitiveBiddingPage() {
                 </div>
                 )}
               </div>
-              {/* 采购方式审批文件资料（直接采购必填，其他方式可选） */}
-              {(isOfflineExecution(editItem.procurementMethod) || editItem.procurementMethod === 'direct') &&
-                renderMaterialSlot('procurementApprovalFile', '采购方式审批文件资料', editItem.procurementMethod === 'direct')}
+              {/* 采购方式审批文件资料（直接采购/电子商城必填，其他方式可选） */}
+              {(isOfflineExecution(editItem.procurementMethod) || editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') &&
+                renderMaterialSlot('procurementApprovalFile', '采购方式审批文件资料', editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall')}
             </div>
             )}
 
