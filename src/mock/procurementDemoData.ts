@@ -361,7 +361,7 @@ export const biddings: Bidding[] = [
   {
     id: 'BID-001', biddingNo: 'BP-202609001', biddingName: '2026年秋季办公用品集中采购工单',
     projectName: '2026年秋季办公用品集中采购',
-    procurementMethod: 'framework',
+    procurementMethod: 'framework_catalog',
     demandId: 'PD-001', demandNo: 'PD-202609001',
     totalAmountIncludingTax: 126100, totalAmountExcludingTax: 111593, totalTaxAmount: 14507,
     approvalStatus: 'approved', status: 'completed',
@@ -445,7 +445,7 @@ export const biddings: Bidding[] = [
   {
     id: 'BID-006', biddingNo: 'BP-202609006', biddingName: '员工餐厅食材框架采购工单',
     projectName: '员工餐厅食材框架采购',
-    procurementMethod: 'framework',
+    procurementMethod: 'framework_catalog',
     totalAmountIncludingTax: 800000,
     approvalStatus: 'submitted', status: 'submitted',
     creator: '周八', createTime: '2026-09-17 09:00:00',
@@ -529,7 +529,7 @@ export const biddings: Bidding[] = [
   {
     id: 'BID-013', biddingNo: 'BP-202609013', biddingName: '展具补充采购工单（变更）',
     projectName: '展具补充采购',
-    procurementMethod: 'framework',
+    procurementMethod: 'framework_catalog',
     demandId: 'PD-015', demandNo: 'PD-202609015',
     approvalStatus: 'submitted', status: 'submitted',
     creator: '吴九', createTime: '2026-09-20 11:00:00',

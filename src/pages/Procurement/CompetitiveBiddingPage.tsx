@@ -18,14 +18,14 @@ import type {
 import { BIDDING_METHOD_LABEL } from '@/types';
 
 /**
- * 采购方式下拉选项（9 种，对齐 916 文档 L18）
+ * 采购方式下拉选项（10 种，对齐 916 文档 L18）
  *
  * 排序规则：招标类在前（法定/自愿招标无专属表盘），国企采购在后
- * - framework（框架协议采购）= 唯一"目录内比价"线上报价模式（详见下方 isCatalogCompare）
+ * - framework_catalog（框架协议采购-目录内比价）= 唯一"线上报价"模式（详见下方 isCatalogCompare）
+ * - framework_random（框架协议采购-随机抽取）= 线下录入，单条记录（6 字段）
  * - legal_bidding / voluntary_bidding = 走线下录入，无专属表盘模板
  *
- * 需求背景：916 文档列 9 种，项目初始只有 7 种国企采购
- *          → 2026-09-17 用户反馈下拉要做全但选不中，补齐 legal_bidding + voluntary_bidding
+ * 需求背景：916 文档列 10 种，框架协议采购拆为目录内比价 / 随机抽取两种子模式
  */
 const PROCUREMENT_OPTIONS: Array<{ value: BiddingProcurementMethod; label: string }> = [
   { value: 'legal_bidding', label: '法定招标' },
@@ -35,12 +35,16 @@ const PROCUREMENT_OPTIONS: Array<{ value: BiddingProcurementMethod; label: strin
   { value: 'negotiation_open', label: '谈判采购-公开' },
   { value: 'negotiation_invited', label: '谈判采购-邀请' },
   { value: 'direct', label: '直接采购' },
-  { value: 'framework', label: '框架协议采购' },
+  { value: 'framework_catalog', label: '框架协议采购-目录内比价' },
+  { value: 'framework_random', label: '框架协议采购-随机抽取' },
   { value: 'e_mall', label: '电子商城采购' },
 ];
 
 /** 是否目录内比价（线上报价模式） */
-const isCatalogCompare = (m?: BiddingProcurementMethod) => m === 'framework';
+const isCatalogCompare = (m?: BiddingProcurementMethod) => m === 'framework_catalog';
+
+/** 是否框架协议采购-随机抽取 */
+const isFrameworkRandom = (m?: BiddingProcurementMethod) => m === 'framework_random';
 
 /** 线下流程模式（需要招采执行字段：公告/开标/评标/中标结果等） */
 const isOfflineExecution = (m?: BiddingProcurementMethod) =>
@@ -56,6 +60,7 @@ export default function CompetitiveBiddingPage() {
   const updateBidding = useStore((s) => s.updateBidding) as ((id: string, data: Partial<Bidding>) => void) | undefined;
   const deleteBidding = useStore((s) => s.deleteBidding) as ((id: string) => void) | undefined;
   const suppliers = useStore((s) => s.suppliers);
+  const contracts = useStore((s) => s.contracts) as any[];
   const procurementDemands = useStore((s) => s.procurementDemands);
   const currentUser = useStore((s) => s.currentUser);
 
@@ -102,7 +107,7 @@ export default function CompetitiveBiddingPage() {
       render: (row) => {
         if (row.procurementMethod) {
           let label = BIDDING_METHOD_LABEL[row.procurementMethod];
-          if (row.procurementMethod === 'framework') {
+          if (row.procurementMethod === 'framework_catalog') {
             label += '(目录内比价)';
           }
           return (
@@ -455,7 +460,7 @@ export default function CompetitiveBiddingPage() {
       biddingName: '',
       projectName: '',
       biddingType: 'market',              // 兼容旧数据
-      procurementMethod: 'framework',     // 默认框架协议采购
+      procurementMethod: 'framework_catalog',  // 默认框架协议采购-目录内比价
       approvalStatus: 'draft',
       status: 'draft',
       creator: currentUser.name,
@@ -673,7 +678,7 @@ export default function CompetitiveBiddingPage() {
   const handleSave = () => {
     if (!editItem) return;
     // 采购方式默认值
-    const procurementMethod = editItem.procurementMethod || 'framework';
+    const procurementMethod = editItem.procurementMethod || 'framework_catalog';
     const isCatalog = isCatalogCompare(procurementMethod);
 
     // 项目名称必填
@@ -699,8 +704,8 @@ export default function CompetitiveBiddingPage() {
         alert('请输入整单含税上限总价！');
         return;
       }
-    } else {
-      // === 线下录入类 ===
+    } else if (!isFrameworkRandom(procurementMethod)) {
+      // === 线下录入类（排除随机抽取，它不用物资明细） ===
       if (!editItem.offlineDetails || editItem.offlineDetails.length === 0) {
         alert('请先选择采购需求自动带入清单，或手动新增条目！');
         return;
@@ -719,6 +724,16 @@ export default function CompetitiveBiddingPage() {
       if (!editItem.procurementHandler?.trim()) { alert('请填写招采经办人！'); return; }
       const approvalFiles = offlineMaterials.filter((a) => a.cat === 'procurementApprovalFile');
       if (approvalFiles.length === 0) { alert('请上传采购方式审批文件资料！'); return; }
+    }
+
+    // === 框架协议采购-随机抽取：6 字段必填 ===
+    if (isFrameworkRandom(procurementMethod)) {
+      if (!editItem.drawTime) { alert('请选择抽取时间！'); return; }
+      if (!editItem.randomSupplierName?.trim()) { alert('请填写供应商！'); return; }
+      if (!editItem.randomSupplierContact?.trim()) { alert('请填写供应商单位联系人！'); return; }
+      if (!editItem.randomContractNo?.trim()) { alert('请填写关联合同编号！'); return; }
+      // linkDemand 打开时 demandId 必填
+      if (editItem.linkDemand !== false && !editItem.demandId) { alert('请选择关联采购需求（或关闭"是否关联采购需求"开关）！'); return; }
     }
 
     // 新增时才生成编号
@@ -881,7 +896,7 @@ export default function CompetitiveBiddingPage() {
     const list = [...editItem.offlineDetails];
     let row = { ...list[index], ...patch };
     const m = editItem.procurementMethod;
-    const isFw = m === 'framework';
+    const isFw = m === 'framework_catalog';
     const isSimple = isDirectOrMall(m);
     // ===== 不含税金额：所有方式都算 =====
     if (row.quantity && row.unitPriceExcludingTax != null && row.unitPriceExcludingTax !== '') {
@@ -915,7 +930,7 @@ export default function CompetitiveBiddingPage() {
     const list = editItem.offlineDetails || [];
     const nextNo = list.length + 1;
     const m = editItem.procurementMethod;
-    const isFw = m === 'framework';
+    const isFw = m === 'framework_catalog';
     const isSimple = isDirectOrMall(m);
     const base: OfflineDetailItem = {
       rowNo: nextNo, itemName: '', quantity: 1, unit: '个',
@@ -1499,12 +1514,12 @@ export default function CompetitiveBiddingPage() {
                 </div>
                 <select
                   className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-                  value={editItem.procurementMethod || 'framework'}
+                  value={editItem.procurementMethod || 'framework_catalog'}
                   onChange={(e) => {
                     const v = e.target.value as BiddingProcurementMethod;
                     const patch: Partial<Bidding> = { procurementMethod: v };
                     // 切换采购方式时清空旧明细，避免类型不匹配
-                    if (v !== 'framework') {
+                    if (v !== 'framework_catalog') {
                       patch.items = [];
                       patch.offlineDetails = [];
                     }
@@ -1535,21 +1550,26 @@ export default function CompetitiveBiddingPage() {
               <div className={`text-xs px-3 py-2 rounded border ${
                 isCatalogCompare(editItem.procurementMethod)
                   ? 'bg-blue-50 border-blue-200 text-blue-700'
-                  : 'bg-slate-50 border-slate-200 text-slate-600'
+                  : isFrameworkRandom(editItem.procurementMethod)
+                    ? 'bg-purple-50 border-purple-200 text-purple-700'
+                    : 'bg-slate-50 border-slate-200 text-slate-600'
               }`}>
                 {isCatalogCompare(editItem.procurementMethod) ? (
                   '📋 模式：目录内比价（线上报价）— 供应商在小程序报价，你只需设置单品上限和整单上限。'
+                ) : isFrameworkRandom(editItem.procurementMethod) ? (
+                  '🎲 模式：随机抽取（线下录入）— 系统仅记录抽取结果，抽取动作不在本系统进行。可选择是否关联采购需求。'
                 ) : (
                   '📝 模式：线下录入 — 你自己填写清单、单价、税率，走审批流程。'
                 )}
               </div>
             )}
 
-            {/* 关联采购需求 — 弹框选择 */}
+            {/* 关联采购需求 — 弹框选择（随机抽取时可通过 linkDemand 开关隐藏） */}
+            {(!isFrameworkRandom(editItem.procurementMethod) || editItem.linkDemand !== false) && (
             <div>
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-xs text-[#606266]">
-                  关联采购需求 <span className="text-[#f56c6c]">*</span>
+                  关联采购需求 {!isFrameworkRandom(editItem.procurementMethod) ? <span className="text-[#f56c6c]">*</span> : null}
                   <span className="text-slate-400 ml-1">（选择后将带入需求中的物资）</span>
                 </span>
                 <button
@@ -1571,6 +1591,97 @@ export default function CompetitiveBiddingPage() {
                 </div>
               )}
             </div>
+            )}
+
+            {/* ============ 框架协议采购-随机抽取 专属表单 ============ */}
+            {isFrameworkRandom(editItem.procurementMethod) && (
+            <div className="space-y-3 pt-3 border-t border-slate-200">
+              <div className="text-sm font-semibold text-purple-700 flex items-center gap-2">
+                <span>🎲</span> 随机抽取结果录入
+                <span className="text-xs text-slate-400 font-normal">（截图 L1-6 字段 + linkDemand 开关）</span>
+              </div>
+              {/* linkDemand 开关 */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[#606266]">是否关联采购需求</span>
+                <label className="inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" defaultChecked={editItem.linkDemand !== false}
+                    onChange={(e) => setEditItem({ ...editItem, linkDemand: e.target.checked })} />
+                  <div className="relative w-9 h-5 bg-slate-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-500"></div>
+                </label>
+                <span className="text-xs text-slate-500">关闭后下方"关联采购需求"将隐藏（展会现场相关需求通常不关联）</span>
+              </div>
+              {/* 抽取时间 + 供应商 + 联系人 */}
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">抽取时间 <span className="text-[#f56c6c]">*</span></div>
+                  <input type="date" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={(editItem.drawTime || '').slice(0, 10)}
+                    onChange={(e) => setEditItem({ ...editItem, drawTime: e.target.value })} />
+                </div>
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">供应商 <span className="text-[#f56c6c]">*</span></div>
+                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    list="_fwsup"
+                    value={editItem.randomSupplierName || ''}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      const sup = suppliers.find((s) => s.name === name);
+                      setEditItem({ ...editItem, randomSupplierName: name, randomSupplierId: sup?.id, randomSupplierContact: sup?.contact || editItem.randomSupplierContact });
+                      if (sup?.id) {
+                        // 供应商变化时清空合同
+                        setEditItem((prev: any) => ({ ...prev, randomContractId: undefined, randomContractNo: undefined }));
+                      }
+                    }}
+                    placeholder="输入关键字模糊匹配供应商" />
+                  <datalist id="_fwsup">
+                    {suppliers.map((s) => <option key={s.id} value={s.name} />)}
+                  </datalist>
+                </div>
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">供应商单位联系人 <span className="text-[#f56c6c]">*</span></div>
+                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.randomSupplierContact || ''}
+                    onChange={(e) => setEditItem({ ...editItem, randomSupplierContact: e.target.value })}
+                    placeholder="联系人姓名" />
+                </div>
+              </div>
+              {/* 关联合同编号（选了供应商后从该供应商的框架合同里拉，支持模糊匹配） */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">关联合同编号 <span className="text-[#f56c6c]">*</span></div>
+                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    list="_fwcontract"
+                    value={editItem.randomContractNo || ''}
+                    onChange={(e) => {
+                      const no = e.target.value;
+                      // 从 contracts 里找匹配（优先当前选的供应商）
+                      const candidates = editItem.randomSupplierId
+                        ? contracts.filter((c) => c.supplierId === editItem.randomSupplierId)
+                        : contracts;
+                      const matched = candidates.find((c) => c.contractNo === no);
+                      setEditItem({ ...editItem, randomContractNo: no, randomContractId: matched?.id });
+                    }}
+                    placeholder="输入关键字，从供应商框架合同中匹配" />
+                  <datalist id="_fwcontract">
+                    {(editItem.randomSupplierId
+                      ? contracts.filter((c) => c.supplierId === editItem.randomSupplierId)
+                      : contracts
+                    ).map((c) => <option key={c.id} value={c.contractNo}>{c.contractNo} · {c.contractName}</option>)}
+                  </datalist>
+                  {!editItem.randomSupplierId && (
+                    <div className="text-[11px] text-slate-400 mt-0.5">提示：先选择供应商，下拉将自动筛选该供应商的合同</div>
+                  )}
+                </div>
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">备注</div>
+                  <textarea className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm resize-none" rows={1}
+                    value={editItem.remark || ''}
+                    onChange={(e) => setEditItem({ ...editItem, remark: e.target.value })}
+                    placeholder="（选填）" />
+                </div>
+              </div>
+            </div>
+            )}
 
             {/* ============ 明细区域 - 摘要卡入口（点开进大弹窗分页编辑） ============ */}
             {isCatalogCompare(editItem.procurementMethod) ? (
@@ -1769,7 +1880,7 @@ export default function CompetitiveBiddingPage() {
             )}
 
             {/* 受邀供应商（仅框架协议采购） */}
-            {editItem?.procurementMethod === 'framework' && (
+            {editItem?.procurementMethod === 'framework_catalog' && (
             <div>
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-xs text-[#606266]">受邀供应商</span>
@@ -1809,7 +1920,7 @@ export default function CompetitiveBiddingPage() {
             )}
 
             {/* 竞价公告附件（仅框架协议采购） */}
-            {editItem?.procurementMethod === 'framework' && (
+            {editItem?.procurementMethod === 'framework_catalog' && (
             <div className="border border-[#409eff] rounded p-3 bg-[#ecf5ff]">
               <div className="flex items-center justify-between mb-2">
                 <div>
@@ -2067,7 +2178,7 @@ export default function CompetitiveBiddingPage() {
             )}
 
             {/* 竞价文件附件（仅框架协议采购） */}
-            {editItem?.procurementMethod === 'framework' && (
+            {editItem?.procurementMethod === 'framework_catalog' && (
             <div className="border border-[#e6a23c] rounded p-3 bg-[#fdf6ec]">
               <div className="flex items-center justify-between mb-2">
                 <div>
@@ -2120,7 +2231,7 @@ export default function CompetitiveBiddingPage() {
             )}
 
             {/* 竞价小组评定结果附件（仅框架协议采购） */}
-            {editItem?.procurementMethod === 'framework' && (
+            {editItem?.procurementMethod === 'framework_catalog' && (
             <div className="border border-[#67c23a] rounded p-3 bg-[#f0f9eb]">
               <div className="flex items-center justify-between mb-2">
                 <div>
@@ -2202,7 +2313,8 @@ export default function CompetitiveBiddingPage() {
               <div><span className="text-[#909399] text-xs">采购方式：</span>
                 {viewItem.procurementMethod
                   ? (BIDDING_METHOD_LABEL as any)[viewItem.procurementMethod] +
-                    (viewItem.procurementMethod === 'framework' ? '(目录内比价)' : '')
+                    (viewItem.procurementMethod === 'framework_catalog' ? '(目录内比价)' : '') +
+                    (viewItem.procurementMethod === 'framework_random' ? '(随机抽取)' : '')
                   : (viewItem.biddingType === 'market' ? '市场采购' : '库内采购')
                 }
               </div>
@@ -2346,6 +2458,23 @@ export default function CompetitiveBiddingPage() {
               </div>
             )}
 
+            {/* 随机抽取结果信息（仅 framework_random） */}
+            {isFrameworkRandom(viewItem.procurementMethod) && (
+              <div className="border border-purple-200 rounded p-3 bg-purple-50">
+                <div className="text-xs font-bold text-purple-700 mb-2 flex items-center gap-2">
+                  <span>🎲</span> 随机抽取结果
+                  {viewItem.linkDemand === false ? <span className="text-[10px] font-normal text-slate-500">（不关联采购需求）</span> : null}
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div><span className="text-slate-500">抽取时间：</span>{viewItem.drawTime || '-'}</div>
+                  <div><span className="text-slate-500">供应商：</span>{viewItem.randomSupplierName || '-'}</div>
+                  <div><span className="text-slate-500">联系人：</span>{viewItem.randomSupplierContact || '-'}</div>
+                  <div><span className="text-slate-500">关联合同编号：</span>{viewItem.randomContractNo || '-'}</div>
+                  <div><span className="text-slate-500">备注：</span>{viewItem.remark || '-'}</div>
+                </div>
+              </div>
+            )}
+
             {/* 物资明细与单品上限 */}
             {viewItem.items && viewItem.items.length > 0 && (
               <div>
@@ -2458,7 +2587,7 @@ export default function CompetitiveBiddingPage() {
             </div>
 
             {/* 竞价公告附件（仅框架协议采购） */}
-            {viewItem.procurementMethod === 'framework' && (
+            {viewItem.procurementMethod === 'framework_catalog' && (
               <div className="border border-[#409eff] rounded p-3 bg-[#ecf5ff]">
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-xs font-bold text-[#303133]">📎 竞价公告附件</div>
@@ -2496,7 +2625,7 @@ export default function CompetitiveBiddingPage() {
             )}
 
             {/* 竞价文件附件（仅框架协议采购） */}
-            {viewItem.procurementMethod === 'framework' && (
+            {viewItem.procurementMethod === 'framework_catalog' && (
               <div className="border border-[#e6a23c] rounded p-3 bg-[#fdf6ec]">
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-xs font-bold text-[#303133]">📎 竞价文件附件</div>
@@ -2534,7 +2663,7 @@ export default function CompetitiveBiddingPage() {
             )}
 
             {/* 竞价小组评定结果附件（仅框架协议采购） */}
-            {viewItem.procurementMethod === 'framework' && (
+            {viewItem.procurementMethod === 'framework_catalog' && (
             <div className="border border-[#67c23a] rounded p-3 bg-[#f0f9eb]">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-xs font-bold text-[#303133]">📎 竞价小组评定结果附件</div>

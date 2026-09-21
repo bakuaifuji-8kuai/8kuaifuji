@@ -1247,19 +1247,22 @@ export interface DemandChangeRecord {
 // ==================== 采购实施过程类型 ====================
 
 /**
- * 招采执行-采购方式（9 种，对齐 916 文档《招采管理系统表盘模版》L18）
+ * 招采执行-采购方式（10 种，对齐 916 文档《招采管理系统表盘模版》L18）
  *
  * 分两大体系：
- *   【国企采购 7 种】— 有对应表盘模板
- *     inquiry/competitive_bidding/negotiation_open/negotiation_invited/direct/framework/e_mall
+ *   【国企采购 8 种】— 有对应表盘模板
+ *     inquiry/competitive_bidding/negotiation_open/negotiation_invited/direct/framework_catalog/framework_random/e_mall
  *   【招标 2 种】— 无专属表盘，走线下录入模式
  *     legal_bidding（法定招标）/ voluntary_bidding（自愿招标）
  *
  * 线上 vs 线下：
- *   ✅ framework 是唯一"目录内比价（线上报价）"模式，其他 8 种全是线下录入
+ *   ✅ framework_catalog 是唯一"目录内比价（线上报价）"模式
+ *   ✅ framework_random 是框架协议采购-随机抽取（线下录入，6 字段单条记录模式）
+ *   其他 8 种全是线下录入
  *
  * 需求背景：916 文档 L18 列了 9 种采购方式枚举，项目初始版本只有 7 种国企采购
  *          → 2026-09-17 补齐法定招标+自愿招标，用户反馈下拉要做全但选不中
+ *          → 2026-09-21 框架协议采购拆为目录内比价 / 随机抽取两种子模式
  */
 export type BiddingProcurementMethod =
   | 'inquiry'               // 询比采购（线下录入）
@@ -1267,10 +1270,14 @@ export type BiddingProcurementMethod =
   | 'negotiation_open'      // 谈判采购-公开（线下录入）
   | 'negotiation_invited'   // 谈判采购-邀请（线下录入）
   | 'direct'                // 直接采购（线下录入，最简单）
-  | 'framework'             // 框架协议采购（目录内比价，唯一线上报价模式）
+  | 'framework_catalog'     // 框架协议采购-目录内比价（线上报价，唯一）
+  | 'framework_random'     // 框架协议采购-随机抽取（线下录入，单条记录）
   | 'e_mall'                // 电子商城采购（线下录入）
   | 'legal_bidding'         // 法定招标（线下录入，无专属表盘）
   | 'voluntary_bidding';    // 自愿招标（线下录入，无专属表盘）
+
+/** @deprecated 旧枚举，兼容历史数据（自动归为 framework_catalog） */
+type _DeprecatedFramework = 'framework';
 
 /** 采购方式中文名 */
 export const BIDDING_METHOD_LABEL: Record<BiddingProcurementMethod, string> = {
@@ -1279,7 +1286,8 @@ export const BIDDING_METHOD_LABEL: Record<BiddingProcurementMethod, string> = {
   negotiation_open: '谈判采购-公开',
   negotiation_invited: '谈判采购-邀请',
   direct: '直接采购',
-  framework: '框架协议采购',
+  framework_catalog: '框架协议采购-目录内比价',
+  framework_random: '框架协议采购-随机抽取',
   e_mall: '电子商城采购',
   legal_bidding: '法定招标',
   voluntary_bidding: '自愿招标',
@@ -1529,6 +1537,15 @@ export interface Bidding {
   processArchive?: Attachment[];        // 招采过程备案/资料
   awardNotice?: Attachment[];            // 成交通知书文件
   remark?: string;
+
+  // ====== 框架协议采购-随机抽取特有（6 字段 + 开关）======
+  drawTime?: string;                       // 抽取时间
+  randomSupplierId?: string;               // 随机抽取-供应商ID
+  randomSupplierName?: string;             // 随机抽取-供应商名称
+  randomSupplierContact?: string;          // 随机抽取-供应商单位联系人
+  randomContractId?: string;               // 随机抽取-关联合同ID
+  randomContractNo?: string;               // 随机抽取-关联合同编号
+  linkDemand?: boolean;                    // 是否关联采购需求（默认 true，关掉则不显示 demand 选择）
 
   // ====== 其他 ======
   creator: string;
