@@ -2174,6 +2174,23 @@ export default function CompetitiveBiddingPage() {
                 {renderMaterialSlot('jointMeetingMinutes', '合资公司会议纪要')}
                 {renderMaterialSlot('jointOnMeetingMaterials', '合资公司上会材料')}
               </div>
+
+              {/* 流标（仅询比/竞价/谈判-公开，放在最下方一行） */}
+              {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'negotiation_open') && (
+              <div className="pt-3 border-t border-slate-200 flex items-center gap-3">
+                <span className="text-xs text-[#606266] font-semibold">流标：</span>
+                <label className="inline-flex items-center gap-1 cursor-pointer">
+                  <input type="radio" name="isFailed" checked={!!editItem.isFailed}
+                    onChange={() => setEditItem({ ...editItem, isFailed: true })} />
+                  <span className="text-xs text-[#606266]">是</span>
+                </label>
+                <label className="inline-flex items-center gap-1 cursor-pointer">
+                  <input type="radio" name="isFailed" checked={!editItem.isFailed}
+                    onChange={() => setEditItem({ ...editItem, isFailed: false })} />
+                  <span className="text-xs text-[#606266]">否</span>
+                </label>
+              </div>
+              )}
             </div>
             )}
 

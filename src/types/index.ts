@@ -1518,6 +1518,7 @@ export interface Bidding {
   agentDrawResult?: Attachment[];      // 招标代理抽取结果表（询比/竞价/谈判）
   ownerRepresentative?: string;        // 业主代表（询比）
   hasDispute?: '是' | '否';            // 是否存在答疑/质疑/投诉
+  isFailed?: boolean;                  // 是否流标（询比/竞价/谈判-公开）
   hasOwnerJudge?: boolean;             // 是否委派业主评委（询比）
   judgeMethod?: string;                 // 评标办法
   winningSupplierId?: string;           // 中标供应商
