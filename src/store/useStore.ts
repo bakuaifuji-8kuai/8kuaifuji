@@ -25,7 +25,13 @@ import type {
   ServiceCategory, Service, ServiceApplication,
 } from '@/types';
 import * as mockData from '@/mock/data';
-import { MOCK_BIDDINGS, MOCK_SUPPLIER_QUOTES } from '@/mock/biddingMockData';
+import {
+  MOCK_BIDDINGS,
+  MOCK_SUPPLIER_QUOTES,
+  MOCK_PROCUREMENT_DEMANDS,
+  MOCK_PROCUREMENT_ORDERS,
+  MOCK_PROCUREMENT_INSPECTIONS,
+} from '@/mock/biddingMockData';
 
 /**
  * 根据三个门控字段自动向合同台账注入考核绑定（审批通过时触发）。
@@ -1495,10 +1501,11 @@ export const useStore = create<WarehouseState>()(
           // v2→v3：招采执行全量刷新（修复旧 localStorage 中 items/offlineDetails 为空的问题）
           persistedState.biddings = MOCK_BIDDINGS;
           persistedState.supplierQuotes = MOCK_SUPPLIER_QUOTES;
-          // 同步刷新招采上游/下游数据（避免关联断裂）
-          persistedState.procurementDemands = mockData.procurementDemands || [];
-          persistedState.procurementOrders = mockData.procurementOrders || [];
-          persistedState.procurementInspections = mockData.procurementInspections || [];
+          // 同步刷新招采上游/下游数据（全部来自 biddingMockData，保持 demandId → bidding → order → inspection 链路一致）
+          persistedState.procurementDemands = MOCK_PROCUREMENT_DEMANDS;
+          persistedState.procurementOrders = MOCK_PROCUREMENT_ORDERS;
+          persistedState.procurementInspections = MOCK_PROCUREMENT_INSPECTIONS;
+          // 合约数据暂时保持 data.ts 来源（合约模块关联多，暂不动）
           persistedState.contractLedgers = mockData.contractLedgers || [];
           persistedState.contractPurchaseOrders = mockData.contractPurchaseOrders || [];
         }
