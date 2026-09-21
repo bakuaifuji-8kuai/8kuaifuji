@@ -304,6 +304,10 @@ export default function CompetitiveBiddingPage() {
   const [supplierPickerOpen, setSupplierPickerOpen] = useState(false);
   const [demandPickerOpen, setDemandPickerOpen] = useState(false);
   const [timePickerTarget, setTimePickerTarget] = useState<Bidding | null>(null);
+  // 清单明细编辑大弹窗（明细可能达数百项，主弹窗只放摘要卡，明细进大弹窗分页编辑）
+  const [detailListOpen, setDetailListOpen] = useState(false);
+  const [detailSearch, setDetailSearch] = useState('');
+  const [detailPage, setDetailPage] = useState(1);
 
   // ===== 附件处理函数 =====
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -998,6 +1002,54 @@ export default function CompetitiveBiddingPage() {
     return { ex: Math.round(ex * 100) / 100, in: Math.round(inTax * 100) / 100, tax: Math.round(tax * 100) / 100 };
   }, [editItem?.offlineDetails]);
 
+  // ===== 清单明细大弹窗：关键字过滤（保留原数组索引，保证编辑/移除操作正确定位）+ 分页 =====
+  const DETAIL_PAGE_SIZE = 20;
+  const detailKeyword = detailSearch.trim().toLowerCase();
+  const offlineDetailRows = useMemo(() => {
+    const list = editItem?.offlineDetails || [];
+    return list
+      .map((row, i) => ({ row, i }))
+      .filter(({ row }) =>
+        !detailKeyword
+        || (row.itemName || '').toLowerCase().includes(detailKeyword)
+        || (row.supplierName || '').toLowerCase().includes(detailKeyword)
+        || ((row as any).description || '').toLowerCase().includes(detailKeyword)
+      );
+  }, [editItem?.offlineDetails, detailKeyword]);
+  const catalogDetailRows = useMemo(() => {
+    const list = editItem?.items || [];
+    return list
+      .map((row, i) => ({ row, i }))
+      .filter(({ row }) =>
+        !detailKeyword
+        || (row.projectName || '').toLowerCase().includes(detailKeyword)
+        || (row.productName || '').toLowerCase().includes(detailKeyword)
+        || (row.description || '').toLowerCase().includes(detailKeyword)
+        || (row.winningSupplierName || '').toLowerCase().includes(detailKeyword)
+      );
+  }, [editItem?.items, detailKeyword]);
+  // 当前方式对应的过滤结果与分页切片
+  const isCatalogMode = isCatalogCompare(editItem?.procurementMethod);
+  const activeDetailRows = isCatalogMode ? catalogDetailRows : offlineDetailRows;
+  const detailTotalCount = isCatalogMode ? (editItem?.items?.length || 0) : (editItem?.offlineDetails?.length || 0);
+  const detailPageCount = Math.max(1, Math.ceil(activeDetailRows.length / DETAIL_PAGE_SIZE));
+  const detailCurPage = Math.min(detailPage, detailPageCount);
+  const detailPageRows = activeDetailRows.slice((detailCurPage - 1) * DETAIL_PAGE_SIZE, detailCurPage * DETAIL_PAGE_SIZE);
+  // 分页页码按钮（最多 7 个）
+  const detailPageNums = useMemo(() => {
+    const total = detailPageCount;
+    if (total <= 7) return Array.from({ length: total }, (_, k) => k + 1);
+    const cur = detailCurPage;
+    const nums = new Set<number>([1, total, cur, cur - 1, cur + 1]);
+    if (cur <= 3) [2, 3, 4].forEach((n) => nums.add(n));
+    if (cur >= total - 2) [total - 3, total - 2, total - 1].forEach((n) => nums.add(n));
+    return Array.from(nums).filter((n) => n >= 1 && n <= total).sort((a, b) => a - b);
+  }, [detailPageCount, detailCurPage]);
+  // 摘要卡：已填不含税单价的条目数（线下）
+  const offlineFilledCount = useMemo(() => {
+    return (editItem?.offlineDetails || []).filter((r) => r.unitPriceExcludingTax != null && r.unitPriceExcludingTax !== 0).length;
+  }, [editItem?.offlineDetails]);
+
   return (
     <div className="p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -1034,132 +1086,52 @@ export default function CompetitiveBiddingPage() {
 
       <DataTable data={filteredData} columns={columns} />
 
-      {/* 编辑弹窗 */}
+      {/* ===== 清单明细编辑大弹窗：明细量大时分页编辑，主弹窗只保留摘要卡 ===== */}
       <Modal
-        open={!!editItem}
-        title={isNew ? '新增招采执行' : '编辑招采执行'}
-        onClose={() => { setEditItem(null); setSelectedSuppliers([]); setSelectedDemand(null); setEditAttachments([]); setEditAnnouncement([]); setEditBiddingDocs([]); setOfflineMaterials([]); }}
-        footer={
-          <>
-            <DefaultButton onClick={() => { setEditItem(null); setSelectedSuppliers([]); setSelectedDemand(null); setEditAttachments([]); setEditAnnouncement([]); setEditBiddingDocs([]); setOfflineMaterials([]); }}>取消</DefaultButton>
-            <PrimaryButton onClick={handleSave}>保存</PrimaryButton>
-          </>
-        }
-        width="960px"
+        open={detailListOpen && !!editItem}
+        title={`清单明细 · ${(BIDDING_METHOD_LABEL as any)[editItem?.procurementMethod || ''] || '线下录入'}（共 ${detailTotalCount} 项）`}
+        onClose={() => setDetailListOpen(false)}
+        width="1200px"
       >
         {editItem && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <div className="mb-1 text-xs text-[#606266]">工单编号</div>
-                <input
-                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa] text-sm"
-                  value={editItem.biddingNo || ''}
-                  placeholder={isNew ? '保存后自动生成' : undefined}
-                  disabled
-                />
-              </div>
-              <div>
-                <div className="mb-1 text-xs text-[#606266]">
-                  采购方式 <span className="text-[#f56c6c]">*</span>
-                </div>
-                <select
-                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-                  value={editItem.procurementMethod || 'framework'}
-                  onChange={(e) => {
-                    const v = e.target.value as BiddingProcurementMethod;
-                    const patch: Partial<Bidding> = { procurementMethod: v };
-                    // 切换采购方式时清空旧明细，避免类型不匹配
-                    if (v !== 'framework') {
-                      patch.items = [];
-                      patch.offlineDetails = [];
-                    }
-                    setEditItem({ ...editItem, ...patch });
-                  }}
-                >
-                  {PROCUREMENT_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <div className="mb-1 text-xs text-[#606266]">
-                  项目名称 <span className="text-[#f56c6c]">*</span>
-                  <span className="text-slate-400 ml-1">（从需求自动带出，可编辑）</span>
-                </div>
-                <input
-                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-                  value={editItem.projectName || editItem.biddingName || ''}
-                  onChange={(e) => setEditItem({ ...editItem, projectName: e.target.value, biddingName: e.target.value })}
-                  placeholder="请输入项目名称"
-                />
-              </div>
-            </div>
-
-            {/* 当前采购方式提示条 */}
-            {editItem.procurementMethod && (
-              <div className={`text-xs px-3 py-2 rounded border ${
-                isCatalogCompare(editItem.procurementMethod)
-                  ? 'bg-blue-50 border-blue-200 text-blue-700'
-                  : 'bg-slate-50 border-slate-200 text-slate-600'
-              }`}>
-                {isCatalogCompare(editItem.procurementMethod) ? (
-                  '📋 模式：目录内比价（线上报价）— 供应商在小程序报价，你只需设置单品上限和整单上限。'
-                ) : (
-                  '📝 模式：线下录入 — 你自己填写清单、单价、税率，走审批流程。'
-                )}
-              </div>
-            )}
-
-            {/* 关联采购需求 — 弹框选择 */}
-            <div>
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-xs text-[#606266]">
-                  关联采购需求 <span className="text-[#f56c6c]">*</span>
-                  <span className="text-slate-400 ml-1">（选择后将带入需求中的物资）</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setDemandPickerOpen(true)}
-                  className="text-xs text-indigo-500 hover:text-indigo-700 hover:underline"
-                >
-                  {editItem.demandId ? '更换' : '选择'}
-                </button>
-              </div>
-              {editItem.demandId ? (
-                <div className="border border-indigo-200 bg-indigo-50 rounded px-3 py-2 text-xs">
-                  <span className="font-mono text-indigo-600 mr-2">{selectedDemand?.demandNo || editItem.demandNo}</span>
-                  <span className="text-slate-700">{selectedDemand?.projectName || editItem.projectName}</span>
-                </div>
-              ) : (
-                <div className="border border-dashed border-[#dcdfe6] rounded px-3 py-2 text-xs text-slate-400 text-center">
-                  请点击上方"选择"按钮，从已审核通过的采购需求中选择
-                </div>
+          <div>
+            {/* 工具栏：搜索 + 线下模式导入/导出/新增 */}
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <input
+                value={detailSearch}
+                onChange={(e) => { setDetailSearch(e.target.value); setDetailPage(1); }}
+                placeholder="搜索项目 / 物料名称 / 供应商…"
+                className="flex-1 min-w-[220px] max-w-[360px] h-8 px-3 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-400"
+              />
+              {!isCatalogMode && (
+                <>
+                  <button type="button" onClick={handleOfflineImportClick}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-300 text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all duration-200">
+                    📥 导入清单
+                  </button>
+                  <button type="button" onClick={handleOfflineExport}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-300 text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all duration-200">
+                    📤 导出清单
+                  </button>
+                  <button type="button" onClick={addOfflineItem}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg hover:from-indigo-600 hover:to-purple-700 active:scale-[0.97] transition-all duration-200">
+                    + 新增条目
+                  </button>
+                </>
               )}
+              <span className="text-xs text-slate-400 ml-auto">
+                {detailKeyword ? `筛选出 ${activeDetailRows.length} / ${detailTotalCount} 项` : `共 ${detailTotalCount} 项`}
+              </span>
             </div>
 
-            {/* ============ 明细区域 - 按采购方式动态切换 ============ */}
-            {isCatalogCompare(editItem.procurementMethod) ? (
-              /* ===== 模式1: 目录内比价（线上报价）— 物资明细+单品上限 ===== */
-              <>
-                <div>
-                  <div className="mb-1 flex items-center justify-between">
-                    <span className="text-xs text-[#606266]">
-                      物资明细（{editItem.items?.length || 0}项）- 对每条物资设置「单品上限单价(含税)」
-                    </span>
-                    {editItem.items && editItem.items.length > 0 && (
-                      <span className="text-xs text-[#909399]">
-                        条目上限合计（仅供参考）：
-                        <span className="text-[#303133] font-semibold"> ¥{itemsTotalLimit.toLocaleString()}</span>
-                      </span>
-                    )}
-                  </div>
-                  {!editItem.items || editItem.items.length === 0 ? (
-                    <div className="border border-dashed border-[#dcdfe6] rounded p-6 text-center text-sm text-[#909399]">
-                      请先在上方选择一条已通过的采购需求，需求中的物资将自动带入。
-                    </div>
-                  ) : (
-                    <div className="border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            {/* 明细表格：按采购方式渲染，分页切片（每页20条，保留原索引定位编辑） */}
+            <div className="border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+              {(() => {
+                if (isCatalogMode) {
+                  /* ===== 目录内比价（framework）：物资明细+单品上限 ===== */
+                  const common = 'w-full h-7 px-2 border border-slate-200 rounded text-[12px] bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400';
+                  return (
+                    <div className="overflow-x-auto">
                       <table className="w-full border-collapse">
                         <thead>
                           <tr className="bg-gradient-to-r from-amber-50 to-orange-50/30">
@@ -1180,8 +1152,7 @@ export default function CompetitiveBiddingPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {editItem.items.map((item, idx) => {
-                            const common = 'w-full h-7 px-2 border border-slate-200 rounded text-[12px] bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400';
+                          {detailPageRows.map(({ row: item, i: idx }) => {
                             return (
                               <tr key={idx} className="border-t border-slate-100 hover:bg-amber-50/15 transition-colors">
                                 <td className="px-2 py-2 text-slate-400 text-[12px]">{idx + 1}</td>
@@ -1296,6 +1267,343 @@ export default function CompetitiveBiddingPage() {
                         </tfoot>
                       </table>
                     </div>
+                  );
+                }
+
+                const commonInput = 'w-full h-8 px-2.5 border border-slate-200 rounded-md text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-400 transition-all';
+
+                // ===== 直接采购 / 电子商城采购 简化表格 =====
+                if (isDirectOrMall(editItem.procurementMethod)) {
+                  return (
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-gradient-to-r from-emerald-50 to-teal-50/30">
+                            <th className="px-3 py-2.5 text-left w-10 text-[13px] text-slate-600 font-semibold">#</th>
+                            <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">项目名称</th>
+                            <th className="px-3 py-2.5 text-left text-[13px] text-slate-600 font-semibold">项目概况/物料名称</th>
+                            <th className="px-3 py-2.5 text-left w-16 text-[13px] text-slate-600 font-semibold">数量 *</th>
+                            <th className="px-3 py-2.5 text-left w-14 text-[13px] text-slate-600 font-semibold">单位 *</th>
+                            <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">不含税单价（元）</th>
+                            <th className="px-3 py-2.5 text-left w-28 text-[13px] text-indigo-600 font-semibold">不含税金额（元）</th>
+                            <th className="px-3 py-2.5 text-left w-32 text-[13px] text-slate-600 font-semibold">供应商名称</th>
+                            <th className="px-3 py-2.5 text-center w-14 text-[13px] text-slate-600 font-semibold">操作</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {detailPageRows.map(({ row, i: idx }) => (
+                            <tr key={idx} className="border-t border-slate-100 transition-colors hover:bg-emerald-50/20">
+                              <td className="px-3 py-2 text-slate-400 text-[13px]">{idx + 1}</td>
+                              <td className="px-3 py-2">
+                                <input className={commonInput} value={row.itemName}
+                                  onChange={(e) => updateOfflineItem(idx, { itemName: e.target.value })} />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input className={commonInput} value={row.description || ''}
+                                  placeholder="项目概况/物料名称"
+                                  onChange={(e) => updateOfflineItem(idx, { description: e.target.value })} />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input type="number" min={0} className={commonInput} value={row.quantity}
+                                  onChange={(e) => updateOfflineItem(idx, { quantity: Number(e.target.value) })} />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input className={commonInput} value={row.unit}
+                                  onChange={(e) => updateOfflineItem(idx, { unit: e.target.value })} />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input type="number" step="0.01" className={commonInput}
+                                  value={row.unitPriceExcludingTax ?? ''}
+                                  onChange={(e) => updateOfflineItem(idx, { unitPriceExcludingTax: Number(e.target.value) })} />
+                              </td>
+                              <td className="px-3 py-2 text-indigo-600 font-semibold text-[13px]">
+                                ¥{(row.amountExcludingTax ?? 0).toLocaleString()}
+                              </td>
+                              <td className="px-3 py-2">
+                                <input className={commonInput} value={row.supplierName || ''}
+                                  placeholder="供应商名称"
+                                  onChange={(e) => updateOfflineItem(idx, { supplierName: e.target.value })} />
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                <button onClick={() => removeOfflineItem(idx)}
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-[12px] text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors">移除</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-gradient-to-r from-emerald-50/40 to-teal-50/30 border-t border-slate-200">
+                            <td colSpan={6} className="px-3 py-2 text-right text-slate-600 font-semibold text-[13px]">不含税金额合计（元）：</td>
+                            <td className="px-3 py-2 text-indigo-600 font-bold text-[13px]">¥{offlineTotals.ex.toLocaleString()}</td>
+                            <td colSpan={2}></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  );
+                }
+
+                // ===== 询比 / 竞价 / 谈判 / 招标 完整表格 =====
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-gradient-to-r from-slate-50 to-indigo-50/30">
+                          <th className="px-3 py-2.5 text-left w-10 text-[13px] text-slate-600 font-semibold">#</th>
+                          <th className="px-3 py-2.5 text-left w-32 text-[13px] text-slate-600 font-semibold">供应商单位</th>
+                          <th className="px-3 py-2.5 text-left text-[13px] text-slate-600 font-semibold">项目/物料名称 <span className="text-rose-500">*</span></th>
+                          <th className="px-3 py-2.5 text-left w-20 text-[13px] text-slate-600 font-semibold">数量</th>
+                          <th className="px-3 py-2.5 text-left w-16 text-[13px] text-slate-600 font-semibold">单位</th>
+                          <th className="px-3 py-2.5 text-left w-20 text-[13px] text-slate-600 font-semibold">税率</th>
+                          <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">不含税单价</th>
+                          <th className="px-3 py-2.5 text-left w-28 text-[13px] text-indigo-600 font-semibold">含税单价 (自动)</th>
+                          <th className="px-3 py-2.5 text-left w-24 text-[13px] text-slate-600 font-semibold">不含税金额</th>
+                          <th className="px-3 py-2.5 text-left w-24 text-[13px] text-purple-600 font-semibold">含税金额</th>
+                          <th className="px-3 py-2.5 text-center w-16 text-[13px] text-slate-600 font-semibold">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {detailPageRows.map(({ row, i: idx }) => (
+                          <tr key={idx} className="border-t border-slate-100 transition-colors hover:bg-indigo-50/20">
+                            <td className="px-3 py-2.5 text-slate-400 text-[13px]">{idx + 1}</td>
+                            <td className="px-3 py-2.5">
+                              <input className={commonInput} value={row.supplierName || ''}
+                                placeholder="线下已确定的供应商"
+                                onChange={(e) => updateOfflineItem(idx, { supplierName: e.target.value })} />
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <input className={commonInput} value={row.itemName}
+                                onChange={(e) => updateOfflineItem(idx, { itemName: e.target.value })} />
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <input type="number" min={0} className={commonInput} value={row.quantity}
+                                onChange={(e) => updateOfflineItem(idx, { quantity: Number(e.target.value) })} />
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <input className={commonInput} value={row.unit}
+                                onChange={(e) => updateOfflineItem(idx, { unit: e.target.value })} />
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <select className={commonInput + ' cursor-pointer'}
+                                value={row.taxRate ?? 0.13}
+                                onChange={(e) => updateOfflineItem(idx, { taxRate: Number(e.target.value) })}>
+                                <option value={0.13}>13%</option>
+                                <option value={0.09}>9%</option>
+                                <option value={0.06}>6%</option>
+                                <option value={0.03}>3%</option>
+                                <option value={0}>0%</option>
+                              </select>
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <input type="number" step="0.01" className={commonInput}
+                                value={row.unitPriceExcludingTax ?? ''}
+                                onChange={(e) => updateOfflineItem(idx, { unitPriceExcludingTax: Number(e.target.value) })} />
+                            </td>
+                            <td className="px-3 py-2.5 text-indigo-600 font-semibold text-[13px]">
+                              ¥{(row.unitPriceIncludingTax ?? 0).toLocaleString()}
+                            </td>
+                            <td className="px-3 py-2.5 text-slate-700 text-[13px]">¥{(row.amountExcludingTax ?? 0).toLocaleString()}</td>
+                            <td className="px-3 py-2.5 text-purple-600 font-semibold text-[13px]">¥{(row.amountIncludingTax ?? 0).toLocaleString()}</td>
+                            <td className="px-3 py-2.5 text-center">
+                              <button onClick={() => removeOfflineItem(idx)}
+                                className="inline-flex items-center gap-1 px-2 py-1 text-[12px] text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors">移除</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="bg-gradient-to-r from-slate-100 to-indigo-50/40 border-t border-slate-200">
+                          <td colSpan={8} className="px-3 py-2.5 text-right text-slate-600 font-semibold text-[13px]">合计：</td>
+                          <td className="px-3 py-2.5 text-slate-700 font-semibold text-[13px]">¥{offlineTotals.ex.toLocaleString()}</td>
+                          <td className="px-3 py-2.5 text-purple-700 font-bold text-[13px]">¥{offlineTotals.in.toLocaleString()}</td>
+                          <td></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* 底部：合计 + 分页（每页20条） */}
+            <div className="flex items-center justify-between mt-3 flex-wrap gap-2">
+              <span className="text-xs text-slate-500">
+                {isCatalogMode
+                  ? `条目上限合计：¥${itemsTotalLimit.toLocaleString()} · 不含税金额合计：¥${(editItem.items?.reduce((s, i) => s + (i.supplierAmountExTax || 0), 0) || 0).toLocaleString()}`
+                  : `不含税合计：¥${offlineTotals.ex.toLocaleString()} · 含税合计：¥${offlineTotals.in.toLocaleString()} · 税额：¥${offlineTotals.tax.toLocaleString()}`}
+              </span>
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="text-xs text-slate-400 mr-1">每页 {DETAIL_PAGE_SIZE} 条 · 第 {detailCurPage} / {detailPageCount} 页</span>
+                <button type="button" disabled={detailCurPage <= 1} onClick={() => setDetailPage(detailCurPage - 1)}
+                  className="px-2.5 py-1 text-xs rounded-md border border-slate-300 bg-white text-slate-600 hover:border-indigo-400 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200">上一页</button>
+                {detailPageNums.map((n, k) => (
+                  <span key={n} className="inline-flex items-center">
+                    {k > 0 && n - detailPageNums[k - 1] > 1 && <span className="px-1 text-xs text-slate-400">…</span>}
+                    <button type="button" onClick={() => setDetailPage(n)}
+                      className={`min-w-[26px] h-[26px] px-1.5 text-xs rounded-md border transition-all duration-200 ${n === detailCurPage ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-transparent font-semibold shadow-sm' : 'bg-white border-slate-300 text-slate-600 hover:border-indigo-400 hover:text-indigo-600'}`}>
+                      {n}
+                    </button>
+                  </span>
+                ))}
+                <button type="button" disabled={detailCurPage >= detailPageCount} onClick={() => setDetailPage(detailCurPage + 1)}
+                  className="px-2.5 py-1 text-xs rounded-md border border-slate-300 bg-white text-slate-600 hover:border-indigo-400 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200">下一页</button>
+                <button type="button" onClick={() => setDetailListOpen(false)}
+                  className="ml-2 px-3 py-1 text-xs font-medium rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg hover:from-indigo-600 hover:to-purple-700 active:scale-[0.97] transition-all duration-200">✓ 完成编辑</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 编辑弹窗 */}
+      <Modal
+        open={!!editItem}
+        title={isNew ? '新增招采执行' : '编辑招采执行'}
+        onClose={() => { setEditItem(null); setDetailListOpen(false); setSelectedSuppliers([]); setSelectedDemand(null); setEditAttachments([]); setEditAnnouncement([]); setEditBiddingDocs([]); setOfflineMaterials([]); }}
+        footer={
+          <>
+            <DefaultButton onClick={() => { setEditItem(null); setDetailListOpen(false); setSelectedSuppliers([]); setSelectedDemand(null); setEditAttachments([]); setEditAnnouncement([]); setEditBiddingDocs([]); setOfflineMaterials([]); }}>取消</DefaultButton>
+            <PrimaryButton onClick={handleSave}>保存</PrimaryButton>
+          </>
+        }
+        width="960px"
+      >
+        {editItem && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <div className="mb-1 text-xs text-[#606266]">工单编号</div>
+                <input
+                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa] text-sm"
+                  value={editItem.biddingNo || ''}
+                  placeholder={isNew ? '保存后自动生成' : undefined}
+                  disabled
+                />
+              </div>
+              <div>
+                <div className="mb-1 text-xs text-[#606266]">
+                  采购方式 <span className="text-[#f56c6c]">*</span>
+                </div>
+                <select
+                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                  value={editItem.procurementMethod || 'framework'}
+                  onChange={(e) => {
+                    const v = e.target.value as BiddingProcurementMethod;
+                    const patch: Partial<Bidding> = { procurementMethod: v };
+                    // 切换采购方式时清空旧明细，避免类型不匹配
+                    if (v !== 'framework') {
+                      patch.items = [];
+                      patch.offlineDetails = [];
+                    }
+                    setEditItem({ ...editItem, ...patch });
+                  }}
+                >
+                  {PROCUREMENT_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <div className="mb-1 text-xs text-[#606266]">
+                  项目名称 <span className="text-[#f56c6c]">*</span>
+                  <span className="text-slate-400 ml-1">（从需求自动带出，可编辑）</span>
+                </div>
+                <input
+                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                  value={editItem.projectName || editItem.biddingName || ''}
+                  onChange={(e) => setEditItem({ ...editItem, projectName: e.target.value, biddingName: e.target.value })}
+                  placeholder="请输入项目名称"
+                />
+              </div>
+            </div>
+
+            {/* 当前采购方式提示条 */}
+            {editItem.procurementMethod && (
+              <div className={`text-xs px-3 py-2 rounded border ${
+                isCatalogCompare(editItem.procurementMethod)
+                  ? 'bg-blue-50 border-blue-200 text-blue-700'
+                  : 'bg-slate-50 border-slate-200 text-slate-600'
+              }`}>
+                {isCatalogCompare(editItem.procurementMethod) ? (
+                  '📋 模式：目录内比价（线上报价）— 供应商在小程序报价，你只需设置单品上限和整单上限。'
+                ) : (
+                  '📝 模式：线下录入 — 你自己填写清单、单价、税率，走审批流程。'
+                )}
+              </div>
+            )}
+
+            {/* 关联采购需求 — 弹框选择 */}
+            <div>
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-xs text-[#606266]">
+                  关联采购需求 <span className="text-[#f56c6c]">*</span>
+                  <span className="text-slate-400 ml-1">（选择后将带入需求中的物资）</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDemandPickerOpen(true)}
+                  className="text-xs text-indigo-500 hover:text-indigo-700 hover:underline"
+                >
+                  {editItem.demandId ? '更换' : '选择'}
+                </button>
+              </div>
+              {editItem.demandId ? (
+                <div className="border border-indigo-200 bg-indigo-50 rounded px-3 py-2 text-xs">
+                  <span className="font-mono text-indigo-600 mr-2">{selectedDemand?.demandNo || editItem.demandNo}</span>
+                  <span className="text-slate-700">{selectedDemand?.projectName || editItem.projectName}</span>
+                </div>
+              ) : (
+                <div className="border border-dashed border-[#dcdfe6] rounded px-3 py-2 text-xs text-slate-400 text-center">
+                  请点击上方"选择"按钮，从已审核通过的采购需求中选择
+                </div>
+              )}
+            </div>
+
+            {/* ============ 明细区域 - 摘要卡入口（点开进大弹窗分页编辑） ============ */}
+            {isCatalogCompare(editItem.procurementMethod) ? (
+              /* ===== 模式1: 目录内比价（线上报价）— 物资明细+单品上限 ===== */
+              <>
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="text-xs text-[#606266]">
+                      物资明细（{editItem.items?.length || 0}项）- 对每条物资设置「单品上限单价(含税)」
+                    </span>
+                    {editItem.items && editItem.items.length > 0 && (
+                      <span className="text-xs text-[#909399]">
+                        条目上限合计（仅供参考）：
+                        <span className="text-[#303133] font-semibold"> ¥{itemsTotalLimit.toLocaleString()}</span>
+                      </span>
+                    )}
+                  </div>
+                  {!editItem.items || editItem.items.length === 0 ? (
+                    <div className="border border-dashed border-[#dcdfe6] rounded p-6 text-center text-sm text-[#909399]">
+                      请先在上方选择一条已通过的采购需求，需求中的物资将自动带入。
+                    </div>
+                  ) : (
+                    <div className="border border-slate-200 rounded-xl p-4 bg-white">
+                      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                        <span className="text-sm font-semibold text-slate-700">
+                          物资明细 <span className="text-indigo-600">{editItem.items.length} 项</span>
+                        </span>
+                        <span className="text-xs text-slate-400">对每条物资设置「单品上限单价(含税)」</span>
+                      </div>
+                      <div className="flex gap-2 flex-wrap mb-3">
+                        <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md">
+                          <div className="text-[11px] text-slate-400">条目上限合计</div>
+                          <div className="text-sm font-semibold text-slate-800">¥{itemsTotalLimit.toLocaleString()}</div>
+                        </div>
+                        <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md">
+                          <div className="text-[11px] text-slate-400">不含税金额合计</div>
+                          <div className="text-sm font-semibold text-indigo-600">¥{(editItem.items.reduce((s, i) => s + (i.supplierAmountExTax || 0), 0) || 0).toLocaleString()}</div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        <button type="button" onClick={() => { setDetailSearch(''); setDetailPage(1); setDetailListOpen(true); }}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg hover:from-indigo-600 hover:to-purple-700 active:scale-[0.97] transition-all duration-200">
+                          📋 查看 / 编辑清单（{editItem.items.length}）
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -1315,7 +1623,7 @@ export default function CompetitiveBiddingPage() {
               </>
 
             ) : (
-              /* ===== 模式3: 线下录入类（询比/竞价/谈判/直接/电子商城）===== */
+              /* ===== 模式3: 线下录入类（询比/竞价/谈判/直接/电子商城）— 摘要卡入口 ===== */
               <>
                 <div>
                   <div className="mb-2 flex items-center justify-between">
@@ -1325,181 +1633,57 @@ export default function CompetitiveBiddingPage() {
                         （{editItem.offlineDetails?.length || 0} 项）· 填写不含税单价和税率，含税自动计算
                       </span>
                     </span>
-                    <div className="flex items-center gap-2">
-                      <button type="button" onClick={handleOfflineImportClick}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-300 text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all duration-200">
-                        📥 导入清单
-                      </button>
-                      <button type="button" onClick={handleOfflineExport}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-300 text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all duration-200">
-                        📤 导出清单
-                      </button>
-                      <button type="button" onClick={addOfflineItem}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg hover:from-indigo-600 hover:to-purple-700 active:scale-[0.97] transition-all duration-200">
-                        + 新增条目
-                      </button>
-                    </div>
                   </div>
                   {!editItem.offlineDetails || editItem.offlineDetails.length === 0 ? (
                     <div className="border border-dashed border-slate-300 bg-slate-50/50 rounded-xl p-8 text-center">
-                      <div className="text-slate-400 text-sm">
-                        请先在上方选择采购需求自动带入，或点击右侧「+ 新增条目」手动录入
+                      <div className="text-slate-400 text-sm mb-3">
+                        请先在上方选择采购需求自动带入，或点击下方按钮导入 / 录入清单
+                      </div>
+                      <div className="flex items-center justify-center gap-2">
+                        <button type="button" onClick={handleOfflineImportClick}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-300 text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all duration-200">
+                          📥 导入清单
+                        </button>
+                        <button type="button" onClick={() => { setDetailSearch(''); setDetailPage(1); setDetailListOpen(true); }}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg hover:from-indigo-600 hover:to-purple-700 active:scale-[0.97] transition-all duration-200">
+                          + 录入清单条目
+                        </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                      {(() => {
-                        const m = editItem.procurementMethod;
-                        const isSimple = isDirectOrMall(m);
-                        const commonInput = 'w-full h-8 px-2.5 border border-slate-200 rounded-md text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-400 transition-all';
-
-                        // ===== 直接采购 / 电子商城采购 简化表格 =====
-                        if (isSimple) {
-                          return (
-                            <table className="w-full border-collapse">
-                              <thead>
-                                <tr className="bg-gradient-to-r from-emerald-50 to-teal-50/30">
-                                  <th className="px-3 py-2.5 text-left w-10 text-[13px] text-slate-600 font-semibold">#</th>
-                                  <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">项目名称</th>
-                                  <th className="px-3 py-2.5 text-left text-[13px] text-slate-600 font-semibold">项目概况/物料名称</th>
-                                  <th className="px-3 py-2.5 text-left w-16 text-[13px] text-slate-600 font-semibold">数量 *</th>
-                                  <th className="px-3 py-2.5 text-left w-14 text-[13px] text-slate-600 font-semibold">单位 *</th>
-                                  <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">不含税单价（元）</th>
-                                  <th className="px-3 py-2.5 text-left w-28 text-[13px] text-indigo-600 font-semibold">不含税金额（元）</th>
-                                  <th className="px-3 py-2.5 text-left w-32 text-[13px] text-slate-600 font-semibold">供应商名称</th>
-                                  <th className="px-3 py-2.5 text-center w-14 text-[13px] text-slate-600 font-semibold">操作</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {editItem.offlineDetails.map((row, idx) => (
-                                  <tr key={idx} className="border-t border-slate-100 transition-colors hover:bg-emerald-50/20">
-                                    <td className="px-3 py-2 text-slate-400 text-[13px]">{idx + 1}</td>
-                                    <td className="px-3 py-2">
-                                      <input className={commonInput} value={row.itemName}
-                                        onChange={(e) => updateOfflineItem(idx, { itemName: e.target.value })} />
-                                    </td>
-                                    <td className="px-3 py-2">
-                                      <input className={commonInput} value={row.description || ''}
-                                        placeholder="项目概况/物料名称"
-                                        onChange={(e) => updateOfflineItem(idx, { description: e.target.value })} />
-                                    </td>
-                                    <td className="px-3 py-2">
-                                      <input type="number" min={0} className={commonInput} value={row.quantity}
-                                        onChange={(e) => updateOfflineItem(idx, { quantity: Number(e.target.value) })} />
-                                    </td>
-                                    <td className="px-3 py-2">
-                                      <input className={commonInput} value={row.unit}
-                                        onChange={(e) => updateOfflineItem(idx, { unit: e.target.value })} />
-                                    </td>
-                                    <td className="px-3 py-2">
-                                      <input type="number" step="0.01" className={commonInput}
-                                        value={row.unitPriceExcludingTax ?? ''}
-                                        onChange={(e) => updateOfflineItem(idx, { unitPriceExcludingTax: Number(e.target.value) })} />
-                                    </td>
-                                    <td className="px-3 py-2 text-indigo-600 font-semibold text-[13px]">
-                                      ¥{(row.amountExcludingTax ?? 0).toLocaleString()}
-                                    </td>
-                                    <td className="px-3 py-2">
-                                      <input className={commonInput} value={row.supplierName || ''}
-                                        placeholder="供应商名称"
-                                        onChange={(e) => updateOfflineItem(idx, { supplierName: e.target.value })} />
-                                    </td>
-                                    <td className="px-3 py-2 text-center">
-                                      <button onClick={() => removeOfflineItem(idx)}
-                                        className="inline-flex items-center gap-1 px-2 py-1 text-[12px] text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors">移除</button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                              <tfoot>
-                                <tr className="bg-gradient-to-r from-emerald-50/40 to-teal-50/30 border-t border-slate-200">
-                                  <td colSpan={6} className="px-3 py-2 text-right text-slate-600 font-semibold text-[13px]">不含税金额合计（元）：</td>
-                                  <td className="px-3 py-2 text-indigo-600 font-bold text-[13px]">¥{offlineTotals.ex.toLocaleString()}</td>
-                                  <td colSpan={2}></td>
-                                </tr>
-                              </tfoot>
-                            </table>
-                          );
-                        }
-
-                        // ===== 原有线下方式：询比 / 竞价 / 谈判 =====
-                        return (
-                          <table className="w-full border-collapse">
-                            <thead>
-                              <tr className="bg-gradient-to-r from-slate-50 to-indigo-50/30">
-                                <th className="px-3 py-2.5 text-left w-10 text-[13px] text-slate-600 font-semibold">#</th>
-                                <th className="px-3 py-2.5 text-left w-32 text-[13px] text-slate-600 font-semibold">供应商单位</th>
-                                <th className="px-3 py-2.5 text-left text-[13px] text-slate-600 font-semibold">项目/物料名称 <span className="text-rose-500">*</span></th>
-                                <th className="px-3 py-2.5 text-left w-20 text-[13px] text-slate-600 font-semibold">数量</th>
-                                <th className="px-3 py-2.5 text-left w-16 text-[13px] text-slate-600 font-semibold">单位</th>
-                                <th className="px-3 py-2.5 text-left w-20 text-[13px] text-slate-600 font-semibold">税率</th>
-                                <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">不含税单价</th>
-                                <th className="px-3 py-2.5 text-left w-28 text-[13px] text-indigo-600 font-semibold">含税单价 (自动)</th>
-                                <th className="px-3 py-2.5 text-left w-24 text-[13px] text-slate-600 font-semibold">不含税金额</th>
-                                <th className="px-3 py-2.5 text-left w-24 text-[13px] text-purple-600 font-semibold">含税金额</th>
-                                <th className="px-3 py-2.5 text-center w-16 text-[13px] text-slate-600 font-semibold">操作</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {editItem.offlineDetails.map((row, idx) => (
-                                <tr key={idx} className="border-t border-slate-100 transition-colors hover:bg-indigo-50/20">
-                                  <td className="px-3 py-2.5 text-slate-400 text-[13px]">{idx + 1}</td>
-                                  <td className="px-3 py-2.5">
-                                    <input className={commonInput} value={row.supplierName || ''}
-                                      placeholder="线下已确定的供应商"
-                                      onChange={(e) => updateOfflineItem(idx, { supplierName: e.target.value })} />
-                                  </td>
-                                  <td className="px-3 py-2.5">
-                                    <input className={commonInput} value={row.itemName}
-                                      onChange={(e) => updateOfflineItem(idx, { itemName: e.target.value })} />
-                                  </td>
-                                  <td className="px-3 py-2.5">
-                                    <input type="number" min={0} className={commonInput} value={row.quantity}
-                                      onChange={(e) => updateOfflineItem(idx, { quantity: Number(e.target.value) })} />
-                                  </td>
-                                  <td className="px-3 py-2.5">
-                                    <input className={commonInput} value={row.unit}
-                                      onChange={(e) => updateOfflineItem(idx, { unit: e.target.value })} />
-                                  </td>
-                                  <td className="px-3 py-2.5">
-                                    <select className={commonInput + ' cursor-pointer'}
-                                      value={row.taxRate ?? 0.13}
-                                      onChange={(e) => updateOfflineItem(idx, { taxRate: Number(e.target.value) })}>
-                                      <option value={0.13}>13%</option>
-                                      <option value={0.09}>9%</option>
-                                      <option value={0.06}>6%</option>
-                                      <option value={0.03}>3%</option>
-                                      <option value={0}>0%</option>
-                                    </select>
-                                  </td>
-                                  <td className="px-3 py-2.5">
-                                    <input type="number" step="0.01" className={commonInput}
-                                      value={row.unitPriceExcludingTax ?? ''}
-                                      onChange={(e) => updateOfflineItem(idx, { unitPriceExcludingTax: Number(e.target.value) })} />
-                                  </td>
-                                  <td className="px-3 py-2.5 text-indigo-600 font-semibold text-[13px]">
-                                    ¥{(row.unitPriceIncludingTax ?? 0).toLocaleString()}
-                                  </td>
-                                  <td className="px-3 py-2.5 text-slate-700 text-[13px]">¥{(row.amountExcludingTax ?? 0).toLocaleString()}</td>
-                                  <td className="px-3 py-2.5 text-purple-600 font-semibold text-[13px]">¥{(row.amountIncludingTax ?? 0).toLocaleString()}</td>
-                                  <td className="px-3 py-2.5 text-center">
-                                    <button onClick={() => removeOfflineItem(idx)}
-                                      className="inline-flex items-center gap-1 px-2 py-1 text-[12px] text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors">移除</button>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                            <tfoot>
-                              <tr className="bg-gradient-to-r from-slate-100 to-indigo-50/40 border-t border-slate-200">
-                                <td colSpan={8} className="px-3 py-2.5 text-right text-slate-600 font-semibold text-[13px]">合计：</td>
-                                <td className="px-3 py-2.5 text-slate-700 font-semibold text-[13px]">¥{offlineTotals.ex.toLocaleString()}</td>
-                                <td className="px-3 py-2.5 text-purple-700 font-bold text-[13px]">¥{offlineTotals.in.toLocaleString()}</td>
-                                <td></td>
-                              </tr>
-                            </tfoot>
-                          </table>
-                        );
-                      })()}
+                    <div className="border border-slate-200 rounded-xl p-4 bg-white">
+                      <div className="flex gap-2 flex-wrap mb-3">
+                        <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md">
+                          <div className="text-[11px] text-slate-400">不含税合计</div>
+                          <div className="text-sm font-semibold text-slate-800">¥{offlineTotals.ex.toLocaleString()}</div>
+                        </div>
+                        <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md">
+                          <div className="text-[11px] text-slate-400">含税合计</div>
+                          <div className="text-sm font-semibold text-purple-700">¥{offlineTotals.in.toLocaleString()}</div>
+                        </div>
+                        <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md">
+                          <div className="text-[11px] text-slate-400">税额</div>
+                          <div className="text-sm font-semibold text-slate-800">¥{offlineTotals.tax.toLocaleString()}</div>
+                        </div>
+                        <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md">
+                          <div className="text-[11px] text-slate-400">已填不含税单价</div>
+                          <div className="text-sm font-semibold text-slate-800">{offlineFilledCount} / {editItem.offlineDetails.length}</div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        <button type="button" onClick={handleOfflineImportClick}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-300 text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all duration-200">
+                          📥 导入清单
+                        </button>
+                        <button type="button" onClick={handleOfflineExport}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-300 text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all duration-200">
+                          📤 导出清单
+                        </button>
+                        <button type="button" onClick={() => { setDetailSearch(''); setDetailPage(1); setDetailListOpen(true); }}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg hover:from-indigo-600 hover:to-purple-700 active:scale-[0.97] transition-all duration-200">
+                          📋 查看 / 编辑清单（{editItem.offlineDetails.length}）
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
