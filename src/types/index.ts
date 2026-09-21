@@ -1495,6 +1495,7 @@ export interface Bidding {
   // ====== 非目录内比价-审批材料（Excel Row 13/25/38/42 附加字段）======
   procurementApprovalMethod?: string;   // 采购方式审批方式
   procurementApprovalDate?: string;    // 采购方式审批日期
+  procurementApprovalFile?: Attachment[]; // 采购方式审批文件资料（直接采购必填）
   meetingMinutes?: Attachment[];        // 会议纪要（询比必须）
   onMeetingMaterials?: Attachment[];   // 上会材料（询比必须）
   demandMaterial?: Attachment[];       // 需求立项材料（竞价/谈判/直接）

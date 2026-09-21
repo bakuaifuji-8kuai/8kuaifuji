@@ -482,6 +482,7 @@ export default function CompetitiveBiddingPage() {
     setEditBiddingDocs([...(bidding.biddingDocuments || [])]);
     // 回填线下审批材料
     const om: OfflineMaterial[] = [
+      ...(bidding.procurementApprovalFile || []).map((a) => ({ ...a, cat: 'procurementApprovalFile' })),
       ...(bidding.meetingMinutes || []).map((a) => ({ ...a, cat: 'meetingMinutes' })),
       ...(bidding.onMeetingMaterials || []).map((a) => ({ ...a, cat: 'onMeetingMaterials' })),
       ...(bidding.demandMaterial || []).map((a) => ({ ...a, cat: 'demandMaterial' })),
@@ -709,6 +710,17 @@ export default function CompetitiveBiddingPage() {
       }
     }
 
+    // === 直接采购：6 个基础执行信息必填 ===
+    if (procurementMethod === 'direct') {
+      if (!editItem.procurementApprovalMethod) { alert('请选择采购方式审批方式！'); return; }
+      if (!editItem.procurementApprovalDate) { alert('请选择采购方式审批日期！'); return; }
+      if (!editItem.implementationUnit?.trim()) { alert('请填写招采实施单位！'); return; }
+      if (!editItem.projectImplementationUnit?.trim()) { alert('请填写项目实施单位！'); return; }
+      if (!editItem.procurementHandler?.trim()) { alert('请填写招采经办人！'); return; }
+      const approvalFiles = offlineMaterials.filter((a) => a.cat === 'procurementApprovalFile');
+      if (approvalFiles.length === 0) { alert('请上传采购方式审批文件资料！'); return; }
+    }
+
     // 新增时才生成编号
     if (isNew && !editItem.biddingNo) {
       editItem.biddingNo = genSerialNo(SERIAL_CONFIG.BIDDING, biddings.map(b => b.biddingNo));
@@ -735,6 +747,7 @@ export default function CompetitiveBiddingPage() {
     saveBidding.biddingDocuments = [...editBiddingDocs];
     // 线下审批材料附件：按 cat 分发到 Bidding 对应字段
     const om = offlineMaterials;
+    saveBidding.procurementApprovalFile = om.filter((a) => a.cat === 'procurementApprovalFile');
     saveBidding.meetingMinutes = om.filter((a) => a.cat === 'meetingMinutes');
     saveBidding.onMeetingMaterials = om.filter((a) => a.cat === 'onMeetingMaterials');
     saveBidding.demandMaterial = om.filter((a) => a.cat === 'demandMaterial');
@@ -1692,7 +1705,7 @@ export default function CompetitiveBiddingPage() {
 
 
             {/* ============ 线下流程专属：基础执行信息 ============ */}
-            {isOfflineExecution(editItem.procurementMethod) && (
+            {(isOfflineExecution(editItem.procurementMethod) || editItem.procurementMethod === 'direct') && (
             <div className="space-y-3 pt-3 border-t border-slate-200">
               <div className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
                 <span>📋</span> 基础执行信息
@@ -1723,9 +1736,9 @@ export default function CompetitiveBiddingPage() {
                     onChange={(e) => setEditItem({ ...editItem, implementationUnit: e.target.value })}
                     placeholder="如：国金招标采购中心" />
                 </div>
-                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding') && (
+                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'direct') && (
                 <div>
-                  <div className="mb-1 text-xs text-[#606266]">项目实施单位</div>
+                  <div className="mb-1 text-xs text-[#606266]">项目实施单位 <span className={editItem.procurementMethod === 'direct' ? 'text-[#f56c6c]' : ''}>{editItem.procurementMethod === 'direct' ? '*' : ''}</span></div>
                   <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
                     value={editItem.projectImplementationUnit || ''}
                     onChange={(e) => setEditItem({ ...editItem, projectImplementationUnit: e.target.value })}
@@ -1749,6 +1762,9 @@ export default function CompetitiveBiddingPage() {
                 </div>
                 )}
               </div>
+              {/* 采购方式审批文件资料（直接采购必填，其他方式可选） */}
+              {(isOfflineExecution(editItem.procurementMethod) || editItem.procurementMethod === 'direct') &&
+                renderMaterialSlot('procurementApprovalFile', '采购方式审批文件资料', editItem.procurementMethod === 'direct')}
             </div>
             )}
 
