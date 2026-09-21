@@ -9,6 +9,7 @@ interface ModalProps {
   size?: string;
   footer?: ReactNode;
   maskClosable?: boolean;
+  zIndex?: string;
   [key: string]: any;
 }
 
@@ -21,6 +22,7 @@ export default function Modal({
   size,
   footer,
   maskClosable = true,
+  zIndex = 'z-50',
   ..._rest
 }: ModalProps) {
   const [isVisible, setIsVisible] = useState(false);
@@ -60,7 +62,7 @@ export default function Modal({
   if (!isMounted) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4`}>
       <div
         className={`absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-200 ease-out ${
           isVisible ? 'opacity-100' : 'opacity-0'

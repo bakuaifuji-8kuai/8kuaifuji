@@ -1120,6 +1120,7 @@ export default function CompetitiveBiddingPage() {
         title={`清单明细 · ${(BIDDING_METHOD_LABEL as any)[editItem?.procurementMethod || ''] || '线下录入'}（共 ${detailTotalCount} 项）`}
         onClose={() => setDetailListOpen(false)}
         width="1200px"
+        zIndex="z-[60]"
       >
         {editItem && (
           <div>
