@@ -25,6 +25,7 @@ import type {
   ServiceCategory, Service, ServiceApplication,
 } from '@/types';
 import * as mockData from '@/mock/data';
+import { MOCK_BIDDINGS, MOCK_SUPPLIER_QUOTES } from '@/mock/biddingMockData';
 
 /**
  * 根据三个门控字段自动向合同台账注入考核绑定（审批通过时触发）。
@@ -1482,13 +1483,24 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 2,
+      version: 3,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
           const builtin = (mockData.evaluationTemplates || []).filter((t: any) => t.isBuiltin);
           const custom = ((persistedState?.evaluationTemplates as any[]) || []).filter((t: any) => !t?.isBuiltin);
           persistedState.evaluationTemplates = [...builtin, ...custom];
+        }
+        if (version < 3) {
+          // v2→v3：招采执行全量刷新（修复旧 localStorage 中 items/offlineDetails 为空的问题）
+          persistedState.biddings = MOCK_BIDDINGS;
+          persistedState.supplierQuotes = MOCK_SUPPLIER_QUOTES;
+          // 同步刷新招采上游/下游数据（避免关联断裂）
+          persistedState.procurementDemands = mockData.procurementDemands || [];
+          persistedState.procurementOrders = mockData.procurementOrders || [];
+          persistedState.procurementInspections = mockData.procurementInspections || [];
+          persistedState.contractLedgers = mockData.contractLedgers || [];
+          persistedState.contractPurchaseOrders = mockData.contractPurchaseOrders || [];
         }
         return persistedState;
       },
