@@ -1482,7 +1482,16 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 1,
+      version: 2,
+      migrate: (persistedState: any, version: number) => {
+        if (version < 2) {
+          // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
+          const builtin = (mockData.evaluationTemplates || []).filter((t: any) => t.isBuiltin);
+          const custom = ((persistedState?.evaluationTemplates as any[]) || []).filter((t: any) => !t?.isBuiltin);
+          persistedState.evaluationTemplates = [...builtin, ...custom];
+        }
+        return persistedState;
+      },
     }
   )
 );
