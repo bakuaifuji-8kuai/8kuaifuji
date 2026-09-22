@@ -1510,7 +1510,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 5,
+      version: 6,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -1536,6 +1536,103 @@ export const useStore = create<WarehouseState>()(
         if (version < 5) {
           // v4→v5：新增合同提醒设置（按考核类型独立配置 + 持久化）
           persistedState.contractReminderSettings = DEFAULT_CONTRACT_REMINDER_SETTINGS;
+        }
+        if (version < 6) {
+          // v5→v6：全景预警 mock 数据补齐 — 注入关键字段让 6 种预警都能触发
+          // 注意：migrate 每次用户升级版本时只跑一次，所以用相对日期（基于今天）
+          const today = new Date();
+          const d = (days: number) => {
+            const t = new Date(today.getTime() + days * 86400000);
+            return t.toISOString().slice(0, 10);
+          };
+
+          // ========== 1) 合同台账 patch ==========
+          if (Array.isArray(persistedState.contractLedgers)) {
+            const cl: any[] = persistedState.contractLedgers;
+
+            // 按索引循环，把 terminationDate 设成相对今天的值（覆盖 30 天内到期 + 已过期）
+            cl.forEach((c, i) => {
+              // ① 合同到期预警：前 N 条 active/approved 合同设 terminationDate 在近 30 天内
+              if (i < 6 && (c.status === 'active' || c.status === 'approved' || c.status === 'draft')) {
+                c.terminationDate = d(2 + i * 5);   // +2, +7, +12, +17, +22, +27 天
+                c.endDate = c.terminationDate;
+                c.expireDate = c.terminationDate;
+              }
+              // ② 归档逾期预警：至少 1 条合同终止后超 30 天仍未归档
+              if (i === cl.length - 1) {
+                c.status = 'terminated';
+                c.terminationDate = d(-60);          // 60 天前终止
+                c.endDate = c.terminationDate;
+                c.archiveStatus = 'not_started';     // 未归档 → 触发归档逾期
+              }
+              // ③ 支付占比预警：至少 1 条合同 paidAmount 达到 96%
+              if (i === 1) {
+                if (typeof c.amount === 'number' && c.amount > 0) {
+                  c.paidAmount = Math.round(c.amount * 0.96 * 100) / 100;
+                }
+              }
+              // ④ 合同考核到期预警：给已有 contractEvaluations 的合同补 nextRemindDate
+              if (Array.isArray(c.contractEvaluations) && c.contractEvaluations.length > 0) {
+                c.contractEvaluations.forEach((ev: any, j: number) => {
+                  // 让不同考核类型分散在不同紧迫度
+                  const offsets = [0, 5, 12, 20];        // 今日、+5、+12、+20 天
+                  ev.nextRemindDate = d(offsets[j % offsets.length]);
+                });
+              } else if (i === 0) {
+                // 给第一条合同手动塞 3 条完整考核绑定（确保合同考核到期预警一定能触发）
+                c.contractEvaluations = [
+                  { id: 'ALERT-EV-1', kind: 'monthly',               templateId: '', templateName: '物业服务月度考核', frequency: 'monthly', nextRemindDate: d(0), advanceDays: 7, remark: 'v6 migrate mock' },
+                  { id: 'ALERT-EV-2', kind: 'quarterly',             templateId: '', templateName: '物业季度综合评估', frequency: 'quarterly', nextRemindDate: d(5), advanceDays: 10, remark: 'v6 migrate mock' },
+                  { id: 'ALERT-EV-3', kind: 'contract_performance',    templateId: '', templateName: '合同履约评价',   frequency: 'contract_end', nextRemindDate: d(15), advanceDays: 15, remark: 'v6 migrate mock' },
+                ];
+              }
+            });
+          }
+
+          // ========== 2) 供应商 patch — 补 qualificationExpiryDate ==========
+          if (Array.isArray(persistedState.suppliers)) {
+            const sp: any[] = persistedState.suppliers;
+            // 前 4 个供应商，2 个即将到期（+5、+18）+ 1 个今日到期 + 1 个已过期 20 天
+            const offsets = [5, 18, 0, -20];
+            sp.forEach((s, i) => {
+              if (i < offsets.length) {
+                s.qualificationExpiryDate = d(offsets[i]);
+              } else if (!s.qualificationExpiryDate) {
+                s.qualificationExpiryDate = d(90 + i * 30);  // 其余的设远期，不触发预警
+              }
+            });
+          }
+
+          // ========== 3) 招采执行 patch — 给 framework_catalog + approved 补 endTime ==========
+          if (Array.isArray(persistedState.biddings)) {
+            const bds: any[] = persistedState.biddings;
+            // 取前几条 framework_catalog + approved，补 startTime 和 endTime
+            let patched = 0;
+            for (const b of bds) {
+              if (patched >= 2) break;
+              if (b.procurementMethod === 'framework_catalog' && b.approvalStatus === 'approved') {
+                if (!b.startTime) b.startTime = d(-1);            // 昨天开始竞价
+                if (!b.endTime) b.endTime = d(patched === 0 ? 0 : 1); // 今日截止 / 明日截止
+                patched++;
+              }
+            }
+            // 兜底：如果上面没命中（catalog+approved 数不够），再给前 2 条 catalog（不管 status）补 endTime
+            if (patched < 2) {
+              for (const b of bds) {
+                if (patched >= 2) break;
+                if (b.procurementMethod === 'framework_catalog') {
+                  if (!b.endTime) b.endTime = d(patched === 0 ? 0 : 1);
+                  patched++;
+                }
+              }
+            }
+          }
+
+          // ========== 4) 合同归档 patch（可选） ==========
+          // 归档逾期预警已经靠合同台账 patch 的 terminated + archiveStatus='not_started' 能触发
+          // 这里不再额外 patch 归档记录
+
+          console.log('[store migrate v6] 全景预警 mock 数据已注入 — 6 种预警类型全部可触发');
         }
         return persistedState;
       },
