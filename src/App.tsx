@@ -60,6 +60,7 @@ import CompetitiveBiddingPage from "@/pages/Procurement/CompetitiveBiddingPage";
 import SupplierQuotePage from "@/pages/Procurement/SupplierQuotePage";
 import WebsiteInfoPage from "@/pages/Procurement/WebsiteInfoPage";
 import ContractTemplatePage from "@/pages/Procurement/ContractTemplatePage";
+import ProcurementAlertDashboard from "@/pages/Procurement/ProcurementAlertDashboard";
 import ProcurementFunctionDocs from "@/pages/Procurement/ProcurementFunctionDocs";
 import ApprovalFlowConfigPage from "@/pages/Procurement/ApprovalFlowConfigPage";
 import ContractPurchaseOrderPage from "@/pages/Procurement/ContractPurchaseOrderPage";
@@ -136,6 +137,7 @@ export default function App() {
           <Route path="procurement/bidding" element={<CompetitiveBiddingPage />} />
           <Route path="procurement/supplier-quote" element={<SupplierQuotePage />} />
           <Route path="procurement/website-info" element={<WebsiteInfoPage />} />
+          <Route path="alert/dashboard" element={<ProcurementAlertDashboard />} />
           <Route path="procurement/contract-template" element={<ContractTemplatePage />} />
           <Route path="procurement/function-docs" element={<ProcurementFunctionDocs />} />
           <Route path="procurement/approval-flow" element={<ApprovalFlowConfigPage />} />

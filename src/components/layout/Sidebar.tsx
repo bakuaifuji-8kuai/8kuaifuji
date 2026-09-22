@@ -27,6 +27,11 @@ const menuItems: MenuItem[] = [
     path: '/procurement/function-docs',
   },
   {
+    title: '全景预警',
+    icon: AlertTriangle,
+    path: '/alert/dashboard',
+  },
+  {
     title: '招采及合约管理',
     icon: ClipboardList,
     children: [
@@ -34,8 +39,10 @@ const menuItems: MenuItem[] = [
         { title: '招采计划', path: '/procurement/plan' },
         { title: '招采计划汇总', path: '/procurement/plan-summary' },
       ]},
-      { title: '招采需求申请管理', path: '/procurement/demand' },
-      { title: '招采需求确认管理', path: '/procurement/demand-confirm' },
+      { title: '招采需求管理', path: '/procurement/demand-group', children: [
+        { title: '招采需求申请管理', path: '/procurement/demand' },
+        { title: '招采需求确认管理', path: '/procurement/demand-confirm' },
+      ]},
       { title: '招采实施过程管理', path: '/procurement/process-group', children: [
         { title: '招采执行', path: '/procurement/bidding' },
         { title: '目录内供应商报价', path: '/procurement/supplier-quote' },
