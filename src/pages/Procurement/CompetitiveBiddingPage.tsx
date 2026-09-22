@@ -2550,6 +2550,67 @@ export default function CompetitiveBiddingPage() {
               </div>
             )}
 
+            {/* 线下录入类清单明细（只读）：询比/竞价/谈判/直接/电子商城 */}
+            {!isCatalogCompare(viewItem.procurementMethod) && !isFrameworkRandom(viewItem.procurementMethod) && (
+              <div>
+                <div className="text-[#606266] text-xs font-bold mb-2">物料明细清单（只读）</div>
+                <div className="border border-slate-200 rounded-lg bg-slate-50/50 p-2">
+                  {viewItem.offlineDetails && viewItem.offlineDetails.length > 0 ? (
+                    <div className="border border-slate-200 rounded bg-white overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th className="px-3 py-2 text-xs text-left text-slate-600 border-b border-slate-200">序号</th>
+                            <th className="px-3 py-2 text-xs text-left text-slate-600 border-b border-slate-200">项目名称</th>
+                            <th className="px-3 py-2 text-xs text-left text-slate-600 border-b border-slate-200">规格描述</th>
+                            <th className="px-3 py-2 text-xs text-left text-slate-600 border-b border-slate-200">供应商名称</th>
+                            <th className="px-3 py-2 text-xs text-right text-slate-600 border-b border-slate-200">不含税单价</th>
+                            <th className="px-3 py-2 text-xs text-right text-slate-600 border-b border-slate-200">数量</th>
+                            <th className="px-3 py-2 text-xs text-center text-slate-600 border-b border-slate-200">单位</th>
+                            <th className="px-3 py-2 text-xs text-center text-slate-600 border-b border-slate-200">税率</th>
+                            <th className="px-3 py-2 text-xs text-right text-slate-600 border-b border-slate-200">不含税金额</th>
+                            <th className="px-3 py-2 text-xs text-right text-slate-600 border-b border-slate-200">税额</th>
+                            <th className="px-3 py-2 text-xs text-right text-slate-600 border-b border-slate-200">价税合计</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {viewItem.offlineDetails.map((row: any, idx: number) => (
+                            <tr key={idx} className="border-t border-slate-200">
+                              <td className="px-3 py-2 text-xs text-slate-400">{idx + 1}</td>
+                              <td className="px-3 py-2 text-xs font-medium text-slate-800">{row.itemName || '-'}</td>
+                              <td className="px-3 py-2 text-xs text-slate-500">{row.description || '-'}</td>
+                              <td className="px-3 py-2 text-xs text-slate-700">{row.supplierName || '-'}</td>
+                              <td className="px-3 py-2 text-xs text-right text-slate-700">
+                                {row.unitPriceExcludingTax != null ? `¥${row.unitPriceExcludingTax.toLocaleString()}` : '-'}
+                              </td>
+                              <td className="px-3 py-2 text-xs text-right text-slate-700">{row.quantity ?? '-'}</td>
+                              <td className="px-3 py-2 text-xs text-center text-slate-700">{row.unit || '-'}</td>
+                              <td className="px-3 py-2 text-xs text-center text-slate-700">
+                                {row.taxRate != null ? (row.taxRate * 100).toFixed(0) + '%' : '-'}
+                              </td>
+                              <td className="px-3 py-2 text-xs text-right text-slate-700">
+                                {row.amountExcludingTax != null ? `¥${row.amountExcludingTax.toLocaleString()}` : '-'}
+                              </td>
+                              <td className="px-3 py-2 text-xs text-right text-slate-600">
+                                {row.taxAmount != null ? '¥' + row.taxAmount.toLocaleString() : '-'}
+                              </td>
+                              <td className="px-3 py-2 text-xs text-right font-semibold text-purple-700">
+                                {row.amountIncludingTax != null ? `¥${row.amountIncludingTax.toLocaleString()}` : '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="py-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded bg-white">
+                      暂无明细数据
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* 报价情况 */}
             <div>
               <div className="text-[#606266] text-xs font-bold mb-2">供应商报价（{viewItem.quotes?.length || 0}家）</div>
