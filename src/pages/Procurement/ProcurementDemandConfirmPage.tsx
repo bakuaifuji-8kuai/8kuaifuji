@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Button from '@/components/common/Button'; import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
@@ -95,6 +95,11 @@ export default function ProcurementDemandConfirmPage() {
   // 筛选条件
   const [keyword, setKeyword] = useState('');
   const [bizFilter, setBizFilter] = useState<string>('all');
+  // 成本审核明细大弹窗
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [auditKeyword, setAuditKeyword] = useState('');
+  const [auditPage, setAuditPage] = useState(1);
+  const AUDIT_PAGE_SIZE = 15;
 
   // ============ 左侧列表过滤 ============
   const filteredDemands = useMemo(() => {
@@ -124,6 +129,52 @@ export default function ProcurementDemandConfirmPage() {
   }, [procurementDemands, selectedId]);
 
   const formType = selected ? toFormType(selected) : null;
+
+  // ============ 成本审核明细：摘要指标 + 搜索过滤 + 分页 ============
+  const auditSummary = useMemo(() => {
+    const ds = selected?.details || [];
+    const exTotal = ds.reduce((s, d) => s + (d.amountExcludingTax || 0), 0);
+    const auditTotal = ds.reduce((s, d) => {
+      const locked = selected?.procurementType === 'within_framework' && d.isInContractList;
+      const unit = locked ? (d.unitPriceExcludingTax ?? 0) : (d.costAuditUnitPriceExcludingTax ?? 0);
+      const rate = Number(d.taxRate || 0) / 100;
+      return s + unit * (d.quantity || 0) * (1 + rate);
+    }, 0);
+    return { count: ds.length, exTotal, auditTotal };
+  }, [selected]);
+
+  const auditFiltered = useMemo(() => {
+    const kw = auditKeyword.trim().toLowerCase();
+    const ds = selected?.details || [];
+    if (!kw) return ds;
+    return ds.filter((d) =>
+      (d.productCode || '').toLowerCase().includes(kw) ||
+      (d.productName || '').toLowerCase().includes(kw) ||
+      (d.specification || '').toLowerCase().includes(kw)
+    );
+  }, [selected, auditKeyword]);
+
+  const auditTotalPages = Math.max(1, Math.ceil(auditFiltered.length / AUDIT_PAGE_SIZE));
+  const auditPaged = auditFiltered.slice((auditPage - 1) * AUDIT_PAGE_SIZE, auditPage * AUDIT_PAGE_SIZE);
+  // 页码数组（省略号逻辑，复用招采执行清单明细模式）
+  const auditPageNums = useMemo(() => {
+    const total = auditTotalPages;
+    if (total <= 7) return Array.from({ length: total }, (_, k) => k + 1);
+    const cur = auditPage;
+    const nums = new Set<number>([1, total, cur, cur - 1, cur + 1]);
+    if (cur <= 3) [2, 3, 4].forEach((n) => nums.add(n));
+    if (cur >= total - 2) [total - 3, total - 2, total - 1].forEach((n) => nums.add(n));
+    return Array.from(nums).filter((n) => n >= 1 && n <= total).sort((a, b) => a - b);
+  }, [auditTotalPages, auditPage]);
+
+  // ============ 编辑成本审核字段回调 ============
+  const handleDetailFieldChange = (detailId: string, patch: Partial<ProcurementDemandDetail>) => {
+    if (!selected) return;
+    const updatedDetails = (selected.details || []).map((d) =>
+      d.id === detailId ? { ...d, ...patch } : d
+    );
+    updateProcurementDemand(selected.id, { details: updatedDetails });
+  };
 
   // ============ 选中需求时初始化表单 ============
   const handleSelect = (d: ProcurementDemand) => {
@@ -652,11 +703,29 @@ export default function ProcurementDemandConfirmPage() {
                       : '清单外 / 新增供应商：请填写不含税预算审定单价'}
                   </div>
                 </div>
-                <DetailCostAuditTable
-                  details={selected.details}
-                  procurementType={selected.procurementType}
-                  readOnly={selected.status === 'confirm_approved'}
-                />
+                {/* 摘要卡 + 查看大弹窗按钮（对标招采执行清单明细模式） */}
+                <div className="border border-slate-200 rounded-lg bg-gradient-to-r from-slate-50 to-white p-4">
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                    <div className="bg-white rounded-lg border border-slate-200 p-3">
+                      <div className="text-xs text-slate-500 mb-1">条目数</div>
+                      <div className="text-xl font-bold text-slate-800">{auditSummary.count} <span className="text-xs text-slate-400 font-normal">项</span></div>
+                    </div>
+                    <div className="bg-white rounded-lg border border-slate-200 p-3">
+                      <div className="text-xs text-slate-500 mb-1">不含税金额合计（采购申请）</div>
+                      <div className="text-xl font-bold text-slate-700">¥{auditSummary.exTotal.toFixed(2)}</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg border border-amber-200 p-3">
+                      <div className="text-xs text-amber-700 mb-1">成本审核金额合计（自动）</div>
+                      <div className="text-xl font-bold text-amber-700">¥{auditSummary.auditTotal.toFixed(2)}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <PrimaryButton onClick={() => { setAuditKeyword(''); setAuditPage(1); setAuditModalOpen(true); }}>
+                      📋 查看明细清单（{selected.details.length}）
+                    </PrimaryButton>
+                    <span className="text-xs text-slate-400">共 {auditSummary.count} 条明细数据，点击查看全部</span>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -728,6 +797,60 @@ export default function ProcurementDemandConfirmPage() {
           />
         </div>
       </Modal>
+
+      {/* ============ 成本审核明细大弹窗（对标招采执行清单明细模式） ============ */}
+      <Modal
+        open={auditModalOpen}
+        onClose={() => setAuditModalOpen(false)}
+        title={`成本审核明细 — ${auditSummary.count} 项`}
+        width="1200px"
+        footer={<DefaultButton onClick={() => setAuditModalOpen(false)}>关闭</DefaultButton>}
+      >
+        <div className="space-y-3">
+          {/* 搜索 + 统计 + 分页控件 */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <input
+                value={auditKeyword}
+                onChange={(e) => { setAuditKeyword(e.target.value); setAuditPage(1); }}
+                placeholder="🔍 搜索商品编码 / 产品名称 / 规格"
+                className="w-72 px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+              {auditKeyword && (
+                <button
+                  onClick={() => { setAuditKeyword(''); setAuditPage(1); }}
+                  className="px-2 py-1 text-xs text-slate-500 hover:text-slate-700"
+                >✕ 清除</button>
+              )}
+            </div>
+            <div className="flex items-center gap-3 text-xs text-slate-500">
+              共 <span className="font-semibold text-slate-700">{auditFiltered.length}</span> 条
+              <span className="text-slate-300">|</span>
+              <span>不含税合计 ¥{auditSummary.exTotal.toFixed(2)}</span>
+              <span>成本审核合计 <span className="text-amber-700 font-semibold">¥{auditSummary.auditTotal.toFixed(2)}</span></span>
+            </div>
+          </div>
+
+          {/* 表格本体（分页后的数据） */}
+          {selected?.details && selected.details.length > 0 ? (
+            <DetailCostAuditTable
+              details={auditPaged}
+              procurementType={selected.procurementType}
+              readOnly={selected.status === 'confirm_approved'}
+              showPagination
+              totalFiltered={auditFiltered.length}
+              page={auditPage}
+              totalPages={auditTotalPages}
+              pageNums={auditPageNums}
+              onPageChange={setAuditPage}
+              pageSize={AUDIT_PAGE_SIZE}
+              onDetailChange={handleDetailFieldChange}
+            />
+          ) : (
+            <div className="text-center py-12 text-slate-400 border border-dashed rounded-lg">暂无明细数据</div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -737,121 +860,195 @@ interface DetailCostAuditTableProps {
   details: ProcurementDemandDetail[];
   procurementType: ProcurementType;
   readOnly?: boolean;
+  // 大弹窗内部分页参数
+  showPagination?: boolean;
+  totalFiltered?: number;
+  page?: number;
+  totalPages?: number;
+  pageSize?: number;
+  pageNums?: number[];
+  onPageChange?: (p: number) => void;
+  // 编辑回调（成本审核字段变更）
+  onDetailChange?: (detailId: string, patch: Partial<ProcurementDemandDetail>) => void;
 }
 
-function DetailCostAuditTable({ details, procurementType, readOnly }: DetailCostAuditTableProps) {
+function DetailCostAuditTable({
+  details, procurementType, readOnly,
+  showPagination, totalFiltered = 0, page = 1, totalPages = 1, pageSize = 15,
+  pageNums, onPageChange, onDetailChange,
+}: DetailCostAuditTableProps) {
   // 判断某行的成本审核是否应只读（清单内且 isInContractList）
   const isAuditLocked = (d: ProcurementDemandDetail) =>
     procurementType === 'within_framework' && d.isInContractList;
 
-  return (
-    <div className="overflow-auto border border-slate-200 rounded-lg">
-      <table className="w-full text-xs border-collapse">
-        <thead className="bg-slate-100 text-slate-700">
-          {/* 第一层：分组 */}
-          <tr>
-            <th colSpan={5} className="px-2 py-2 text-left border border-slate-300 font-semibold">项目 / 物资信息</th>
-            <th colSpan={5} className="px-2 py-2 text-center border border-slate-300 font-semibold">采购申请（只读）</th>
-            <th colSpan={3} className="px-2 py-2 text-center border border-slate-300 font-semibold bg-amber-50 text-amber-800">成本审核</th>
-            <th colSpan={2} className="px-2 py-2 text-left border border-slate-300 font-semibold">合同信息</th>
-          </tr>
-          {/* 第二层：列名 */}
-          <tr>
-            <th className="px-2 py-2 text-left border border-slate-300">商品编码</th>
-            <th className="px-2 py-2 text-left border border-slate-300">产品名称</th>
-            <th className="px-2 py-2 text-left border border-slate-300">规格</th>
-            <th className="px-2 py-2 text-left border border-slate-300">单位</th>
-            <th className="px-2 py-2 text-right border border-slate-300">数量</th>
-            <th className="px-2 py-2 text-right border border-slate-300">不含税单价</th>
-            <th className="px-2 py-2 text-right border border-slate-300">含税单价</th>
-            <th className="px-2 py-2 text-right border border-slate-300">税率</th>
-            <th className="px-2 py-2 text-right border border-slate-300">不含税金额</th>
-            <th className="px-2 py-2 text-right border border-slate-300">含税金额</th>
-            <th className="px-2 py-2 text-right border border-slate-300 bg-amber-50 text-amber-800 w-28">不含税预算审定单价(元)</th>
-            <th className="px-2 py-2 text-right border border-slate-300 bg-amber-50 text-amber-800">成本审核金额(自动)</th>
-            <th className="px-2 py-2 text-left border border-slate-300 bg-amber-50 text-amber-800">备注</th>
-            <th className="px-2 py-2 text-left border border-slate-300">合同编号</th>
-            <th className="px-2 py-2 text-left border border-slate-300">清单内/外</th>
-          </tr>
-        </thead>
-        <tbody>
-          {details.map((d: ProcurementDemandDetail, idx: number) => {
-            const auditLocked = isAuditLocked(d);
-            const lockCls = auditLocked ? 'bg-slate-100 text-slate-500' : '';
-            // 清单内：审定单价直接取合同的不含税单价
-            const auditUnitPrice = auditLocked
-              ? (d.unitPriceExcludingTax ?? 0)
-              : (d.costAuditUnitPriceExcludingTax ?? 0);
-            // 成本审核金额 = 审定单价 × 数量 × (1 + 税率%)
-            const rate = Number(d.taxRate || 0) / 100;
-            const auditAmount = +(auditUnitPrice * (d.quantity || 0) * (1 + rate)).toFixed(2);
+  const startIdx = (page - 1) * pageSize + 1;
+  const endIdx = Math.min(page * pageSize, totalFiltered);
 
-            return (
-              <tr key={d.id || idx} className="border-t border-slate-200 hover:bg-slate-50">
-                <td className="px-2 py-1.5 border border-slate-200 font-mono text-slate-600">{d.productCode}</td>
-                <td className="px-2 py-1.5 border border-slate-200 text-slate-700">{d.productName}</td>
-                <td className="px-2 py-1.5 border border-slate-200 text-slate-600 max-w-[160px] truncate" title={d.specification}>{d.specification || '-'}</td>
-                <td className="px-2 py-1.5 border border-slate-200 text-slate-500">{d.unit}</td>
-                <td className="px-2 py-1.5 border border-slate-200 text-right text-slate-700">{d.quantity}</td>
-                <td className="px-2 py-1.5 border border-slate-200 text-right text-slate-600">{(d.unitPriceExcludingTax ?? 0).toFixed(4)}</td>
-                <td className="px-2 py-1.5 border border-slate-200 text-right text-slate-600">{(d.unitPriceIncludingTax ?? 0).toFixed(4)}</td>
-                <td className="px-2 py-1.5 border border-slate-200 text-right text-slate-600">{d.taxRate}%</td>
-                <td className="px-2 py-1.5 border border-slate-200 text-right text-slate-600">{(d.amountExcludingTax || 0).toFixed(2)}</td>
-                <td className="px-2 py-1.5 border border-slate-200 text-right text-rose-600 font-medium">{(d.amountIncludingTax || 0).toFixed(2)}</td>
-                {/* 成本审核-不含税预算审定单价 */}
-                <td className={`px-2 py-1.5 border border-slate-200 bg-amber-50/40 ${lockCls}`}>
-                  {auditLocked || readOnly ? (
-                    <span className="block text-right">{auditUnitPrice.toFixed(4)}</span>
-                  ) : (
-                    <span className="block text-right text-amber-700 font-semibold">
-                      {d.costAuditUnitPriceExcludingTax ? d.costAuditUnitPriceExcludingTax.toFixed(4) : '—'}
-                    </span>
-                  )}
-                  {auditLocked && (
-                    <div className="text-[10px] text-slate-400 text-right mt-0.5">合同自动带出</div>
-                  )}
-                </td>
-                {/* 成本审核-金额自动 */}
-                <td className="px-2 py-1.5 border border-slate-200 bg-amber-50/40 text-right text-amber-800 font-semibold">{auditAmount.toFixed(2)}</td>
-                {/* 备注 */}
-                <td className="px-2 py-1.5 border border-slate-200 bg-amber-50/40 text-slate-600">
-                  {auditLocked
-                    ? (d.unitPriceRemark || '合同固定单价')
-                    : (d.unitPriceRemark || d.remark || '—')}
-                </td>
-                <td className="px-2 py-1.5 border border-slate-200 font-mono text-slate-600">{d.contractNo || '-'}</td>
-                <td className="px-2 py-1.5 border border-slate-200">
-                  {d.isInContractList
-                    ? <span className="text-emerald-600 font-medium">清单内</span>
-                    : <span className="text-slate-400">清单外</span>}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-        {/* 合计行 */}
-        <tfoot className="bg-slate-50 font-semibold text-slate-700">
-          <tr>
-            <td colSpan={5} className="px-2 py-2 border border-slate-300 text-right">合计（元）</td>
-            <td colSpan={4} className="px-2 py-2 border border-slate-300"></td>
-            <td className="px-2 py-2 border border-slate-300 text-right">
-              ¥{details.reduce((s, d) => s + (d.amountExcludingTax || 0), 0).toFixed(2)}
-            </td>
-            <td className="px-2 py-2 border border-slate-300 text-right text-rose-600">
-              ¥{details.reduce((s, d) => s + (d.amountIncludingTax || 0), 0).toFixed(2)}
-            </td>
-            <td colSpan={2} className="px-2 py-2 border border-slate-300 text-right text-amber-800 bg-amber-50 font-bold">
-              ¥{details.reduce((s, d) => {
-                const locked = isAuditLocked(d);
-                const unit = locked ? (d.unitPriceExcludingTax ?? 0) : (d.costAuditUnitPriceExcludingTax ?? 0);
-                const rate = Number(d.taxRate || 0) / 100;
-                return s + unit * (d.quantity || 0) * (1 + rate);
-              }, 0).toFixed(2)}
-            </td>
-            <td colSpan={3} className="px-2 py-2 border border-slate-300"></td>
-          </tr>
-        </tfoot>
-      </table>
+  return (
+    <div className="space-y-3">
+      <div className="overflow-auto border border-slate-200 rounded-lg">
+        <table className="w-full text-xs border-collapse">
+          <thead className="bg-slate-100 text-slate-700">
+            {/* 第一层：分组 */}
+            <tr>
+              <th colSpan={5} className="px-2 py-2 text-left border border-slate-300 font-semibold">项目 / 物资信息</th>
+              <th colSpan={5} className="px-2 py-2 text-center border border-slate-300 font-semibold">采购申请（只读）</th>
+              <th colSpan={3} className="px-2 py-2 text-center border border-slate-300 font-semibold bg-amber-50 text-amber-800">成本审核</th>
+              <th colSpan={2} className="px-2 py-2 text-left border border-slate-300 font-semibold">合同信息</th>
+            </tr>
+            {/* 第二层：列名 */}
+            <tr>
+              <th className="px-2 py-2 text-left border border-slate-300">商品编码</th>
+              <th className="px-2 py-2 text-left border border-slate-300">产品名称</th>
+              <th className="px-2 py-2 text-left border border-slate-300">规格</th>
+              <th className="px-2 py-2 text-left border border-slate-300">单位</th>
+              <th className="px-2 py-2 text-right border border-slate-300">数量</th>
+              <th className="px-2 py-2 text-right border border-slate-300">不含税单价</th>
+              <th className="px-2 py-2 text-right border border-slate-300">含税单价</th>
+              <th className="px-2 py-2 text-right border border-slate-300">税率</th>
+              <th className="px-2 py-2 text-right border border-slate-300">不含税金额</th>
+              <th className="px-2 py-2 text-right border border-slate-300">含税金额</th>
+              <th className="px-2 py-2 text-right border border-slate-300 bg-amber-50 text-amber-800 w-32">不含税预算审定单价(元)</th>
+              <th className="px-2 py-2 text-right border border-slate-300 bg-amber-50 text-amber-800">成本审核金额(自动)</th>
+              <th className="px-2 py-2 text-left border border-slate-300 bg-amber-50 text-amber-800">备注</th>
+              <th className="px-2 py-2 text-left border border-slate-300">合同编号</th>
+              <th className="px-2 py-2 text-left border border-slate-300">清单内/外</th>
+            </tr>
+          </thead>
+          <tbody>
+            {details.map((d: ProcurementDemandDetail, idx: number) => {
+              const auditLocked = isAuditLocked(d);
+              const lockCls = auditLocked ? 'bg-slate-100 text-slate-500' : '';
+              // 清单内：审定单价直接取合同的不含税单价
+              const auditUnitPrice = auditLocked
+                ? (d.unitPriceExcludingTax ?? 0)
+                : (d.costAuditUnitPriceExcludingTax ?? 0);
+              // 成本审核金额 = 审定单价 × 数量 × (1 + 税率%)
+              const rate = Number(d.taxRate || 0) / 100;
+              const auditAmount = +(auditUnitPrice * (d.quantity || 0) * (1 + rate)).toFixed(2);
+              // 是否可编辑审定单价（非只读、非合同锁定）
+              const canEditUnitPrice = !readOnly && !auditLocked && !!onDetailChange;
+
+              return (
+                <tr key={d.id || idx} className="border-t border-slate-200 hover:bg-slate-50">
+                  <td className="px-2 py-1.5 border border-slate-200 font-mono text-slate-600">{d.productCode}</td>
+                  <td className="px-2 py-1.5 border border-slate-200 text-slate-700">{d.productName}</td>
+                  <td className="px-2 py-1.5 border border-slate-200 text-slate-600 max-w-[160px] truncate" title={d.specification}>{d.specification || '-'}</td>
+                  <td className="px-2 py-1.5 border border-slate-200 text-slate-500">{d.unit}</td>
+                  <td className="px-2 py-1.5 border border-slate-200 text-right text-slate-700">{d.quantity}</td>
+                  <td className="px-2 py-1.5 border border-slate-200 text-right text-slate-600">{(d.unitPriceExcludingTax ?? 0).toFixed(4)}</td>
+                  <td className="px-2 py-1.5 border border-slate-200 text-right text-slate-600">{(d.unitPriceIncludingTax ?? 0).toFixed(4)}</td>
+                  <td className="px-2 py-1.5 border border-slate-200 text-right text-slate-600">{d.taxRate}%</td>
+                  <td className="px-2 py-1.5 border border-slate-200 text-right text-slate-600">{(d.amountExcludingTax || 0).toFixed(2)}</td>
+                  <td className="px-2 py-1.5 border border-slate-200 text-right text-rose-600 font-medium">{(d.amountIncludingTax || 0).toFixed(2)}</td>
+                  {/* 成本审核-不含税预算审定单价 */}
+                  <td className={`px-2 py-1.5 border border-slate-200 bg-amber-50/40 ${lockCls}`}>
+                    {canEditUnitPrice ? (
+                      <input
+                        type="number"
+                        step="0.0001"
+                        min="0"
+                        value={d.costAuditUnitPriceExcludingTax ?? ''}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          onDetailChange(d.id, {
+                            costAuditUnitPriceExcludingTax: v === '' ? undefined : Number(v),
+                          });
+                        }}
+                        placeholder="请输入"
+                        className="w-28 px-2 py-1 text-right text-amber-700 font-semibold border border-amber-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                      />
+                    ) : (
+                      <span className="block text-right">
+                        {auditUnitPrice.toFixed(4)}
+                      </span>
+                    )}
+                    {auditLocked && (
+                      <div className="text-[10px] text-slate-400 text-right mt-0.5">合同自动带出</div>
+                    )}
+                  </td>
+                  {/* 成本审核-金额自动 */}
+                  <td className="px-2 py-1.5 border border-slate-200 bg-amber-50/40 text-right text-amber-800 font-semibold">{auditAmount.toFixed(2)}</td>
+                  {/* 备注 */}
+                  <td className="px-2 py-1.5 border border-slate-200 bg-amber-50/40 text-slate-600">
+                    {auditLocked
+                      ? (d.unitPriceRemark || '合同固定单价')
+                      : (d.unitPriceRemark || d.remark || '—')}
+                  </td>
+                  <td className="px-2 py-1.5 border border-slate-200 font-mono text-slate-600">{d.contractNo || '-'}</td>
+                  <td className="px-2 py-1.5 border border-slate-200">
+                    {d.isInContractList
+                      ? <span className="text-emerald-600 font-medium">清单内</span>
+                      : <span className="text-slate-400">清单外</span>}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          {/* 合计行 */}
+          <tfoot className="bg-slate-50 font-semibold text-slate-700">
+            <tr>
+              <td colSpan={5} className="px-2 py-2 border border-slate-300 text-right">合计（元）</td>
+              <td colSpan={4} className="px-2 py-2 border border-slate-300"></td>
+              <td className="px-2 py-2 border border-slate-300 text-right">
+                ¥{details.reduce((s, d) => s + (d.amountExcludingTax || 0), 0).toFixed(2)}
+              </td>
+              <td className="px-2 py-2 border border-slate-300 text-right text-rose-600">
+                ¥{details.reduce((s, d) => s + (d.amountIncludingTax || 0), 0).toFixed(2)}
+              </td>
+              <td colSpan={2} className="px-2 py-2 border border-slate-300 text-right text-amber-800 bg-amber-50 font-bold">
+                ¥{details.reduce((s, d) => {
+                  const locked = isAuditLocked(d);
+                  const unit = locked ? (d.unitPriceExcludingTax ?? 0) : (d.costAuditUnitPriceExcludingTax ?? 0);
+                  const rate = Number(d.taxRate || 0) / 100;
+                  return s + unit * (d.quantity || 0) * (1 + rate);
+                }, 0).toFixed(2)}
+              </td>
+              <td colSpan={3} className="px-2 py-2 border border-slate-300"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {/* 分页控件（仅大弹窗内渲染） */}
+      {showPagination && totalPages > 1 && onPageChange && (
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <span className="text-xs text-slate-500">
+            显示 {startIdx} - {endIdx} 条，共 {totalFiltered} 条
+          </span>
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-xs text-slate-400 mr-1">第 {page} / {totalPages} 页</span>
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => onPageChange(page - 1)}
+              className="px-2.5 py-1 text-xs rounded-md border border-slate-300 bg-white text-slate-600 hover:border-indigo-400 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+            >上一页</button>
+            {pageNums?.map((n, k) => (
+              <span key={n} className="inline-flex items-center">
+                {k > 0 && n - pageNums[k - 1] > 1 && (
+                  <span className="px-1 text-xs text-slate-400">…</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onPageChange(n)}
+                  className={`min-w-[26px] h-[26px] px-1.5 text-xs rounded-md border transition-all duration-200 ${
+                    n === page
+                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-transparent font-semibold shadow-sm'
+                      : 'bg-white border-slate-300 text-slate-600 hover:border-indigo-400 hover:text-indigo-600'
+                  }`}
+                >{n}</button>
+              </span>
+            ))}
+            <button
+              type="button"
+              disabled={page >= totalPages}
+              onClick={() => onPageChange(page + 1)}
+              className="px-2.5 py-1 text-xs rounded-md border border-slate-300 bg-white text-slate-600 hover:border-indigo-400 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+            >下一页</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
