@@ -21,9 +21,12 @@ import type {
   ContractText, ContractTextVersion, TextAnnotation, TextSupplement, Attachment,
   // 履约评估
   EvaluationTemplate, EvaluationRecord, EvaluationIndicator,
+  // 合同提醒设置
+  ContractReminderSettings,
   // 非工程类-服务独立类型（B 方案）
   ServiceCategory, Service, ServiceApplication,
 } from '@/types';
+import { DEFAULT_CONTRACT_REMINDER_SETTINGS } from '@/types';
 import * as mockData from '@/mock/data';
 import {
   MOCK_BIDDINGS,
@@ -463,6 +466,9 @@ interface WarehouseState {
   addEvaluationRecord: (record: EvaluationRecord) => void;
   updateEvaluationRecord: (id: string, data: Partial<EvaluationRecord>) => void;
   deleteEvaluationRecord: (id: string) => void;
+  // 合同提醒设置
+  contractReminderSettings: ContractReminderSettings;
+  setContractReminderSettings: (settings: Partial<ContractReminderSettings>) => void;
 }
 
 export const useStore = create<WarehouseState>()(
@@ -1476,6 +1482,18 @@ export const useStore = create<WarehouseState>()(
   deleteEvaluationRecord: (id) => set((state) => ({
     evaluationRecords: state.evaluationRecords.filter((r) => r.id !== id)
   })),
+  // 合同提醒设置
+  contractReminderSettings: DEFAULT_CONTRACT_REMINDER_SETTINGS,
+  setContractReminderSettings: (settings) => set((state) => ({
+    contractReminderSettings: {
+      ...state.contractReminderSettings,
+      ...settings,
+      eval: {
+        ...state.contractReminderSettings.eval,
+        ...(settings.eval || {}),
+      },
+    },
+  })),
     }),
     {
       name: 'wms-store',
@@ -1492,7 +1510,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 4,
+      version: 5,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -1514,6 +1532,10 @@ export const useStore = create<WarehouseState>()(
           persistedState.contractLedgers = MOCK_CONTRACT_LEDGERS;
           persistedState.contractPurchaseOrders = MOCK_CONTRACT_PURCHASE_ORDERS;
           persistedState.suppliers = MOCK_SUPPLIERS;
+        }
+        if (version < 5) {
+          // v4→v5：新增合同提醒设置（按考核类型独立配置 + 持久化）
+          persistedState.contractReminderSettings = DEFAULT_CONTRACT_REMINDER_SETTINGS;
         }
         return persistedState;
       },

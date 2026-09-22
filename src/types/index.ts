@@ -2181,6 +2181,53 @@ export interface ContractEvaluationBinding {
   creator?: string;
 }
 
+// ==================== 合同提醒设置 ====================
+
+/** 单种考核类型的提醒配置 */
+export interface EvalReminderConfig {
+  enabled: boolean;
+  /** 提前多少天开始提醒 */
+  days: number;
+}
+
+/** 合同提醒设置（store 持久化） */
+export interface ContractReminderSettings {
+  /** 已支付金额占比预警阈值（%） */
+  paidThreshold: number;
+  /** 合同到期日提前提醒天数 */
+  expireDays: number;
+  /** 各考核类型独立提醒配置 */
+  eval: {
+    monthly: EvalReminderConfig;
+    quarterly: EvalReminderConfig;
+    yearly: EvalReminderConfig;
+    project_single: EvalReminderConfig;
+    contract_performance: EvalReminderConfig;
+  };
+}
+
+/** 合同提醒设置默认值 */
+export const DEFAULT_CONTRACT_REMINDER_SETTINGS: ContractReminderSettings = {
+  paidThreshold: 80,
+  expireDays: 30,
+  eval: {
+    monthly:            { enabled: true,  days: 7 },
+    quarterly:          { enabled: true,  days: 10 },
+    yearly:             { enabled: true,  days: 30 },
+    project_single:     { enabled: true,  days: 7 },
+    contract_performance: { enabled: true,  days: 15 },
+  },
+};
+
+/** 考核类型 → 提醒配置 key 映射（过滤掉 warranty/single 兼容类型） */
+export const EVAL_REMINDER_KINDS: EvaluationType[] = [
+  'monthly',
+  'quarterly',
+  'yearly',
+  'project_single',
+  'contract_performance',
+];
+
 // 采购订单状态
 export type ProcurementOrderStatus = 'draft' | 'pending' | 'approved' | 'sent' | 'completed' | 'cancelled';
 
