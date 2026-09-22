@@ -2178,18 +2178,32 @@ export default function CompetitiveBiddingPage() {
 
               {/* 流标（仅询比/竞价/谈判-公开，放在最下方一行） */}
               {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'negotiation_open') && (
-              <div className="pt-3 border-t border-slate-200 flex items-center gap-3">
-                <span className="text-xs text-[#606266] font-semibold">流标：</span>
-                <label className="inline-flex items-center gap-1 cursor-pointer">
-                  <input type="radio" name="isFailed" checked={!!editItem.isFailed}
-                    onChange={() => setEditItem({ ...editItem, isFailed: true })} />
-                  <span className="text-xs text-[#606266]">是</span>
-                </label>
-                <label className="inline-flex items-center gap-1 cursor-pointer">
-                  <input type="radio" name="isFailed" checked={!editItem.isFailed}
-                    onChange={() => setEditItem({ ...editItem, isFailed: false })} />
-                  <span className="text-xs text-[#606266]">否</span>
-                </label>
+              <div className="pt-3 border-t border-slate-200">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-[#606266] font-semibold">流标：</span>
+                  <label className="inline-flex items-center gap-1 cursor-pointer">
+                    <input type="radio" name="isFailed" checked={!!editItem.isFailed}
+                      onChange={() => setEditItem({ ...editItem, isFailed: true })} />
+                    <span className="text-xs text-[#606266]">是</span>
+                  </label>
+                  <label className="inline-flex items-center gap-1 cursor-pointer">
+                    <input type="radio" name="isFailed" checked={!editItem.isFailed}
+                      onChange={() => setEditItem({ ...editItem, isFailed: false, failedReason: '' })} />
+                    <span className="text-xs text-[#606266]">否</span>
+                  </label>
+                </div>
+                {!!editItem.isFailed && (
+                  <div className="mt-2">
+                    <label className="text-xs text-[#606266] font-semibold block mb-1">流标原因</label>
+                    <textarea
+                      value={editItem.failedReason || ''}
+                      onChange={(e) => setEditItem({ ...editItem, failedReason: e.target.value })}
+                      rows={3}
+                      placeholder="请填写流标原因（如：投标供应商不足3家、报价均超出预算、有效标不足等）"
+                      className="w-full text-xs px-2 py-1.5 border border-[#dcdfe6] rounded focus:outline-none focus:border-[#409eff] resize-none"
+                    />
+                  </div>
+                )}
               </div>
               )}
             </div>
