@@ -65,6 +65,17 @@ export default function ContractTemplatePage() {
   const [uploadSubmitting, setUploadSubmitting] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
+  // ===== 元信息编辑弹窗（Word 类型模板专用）=====
+  const [metaEditOpen, setMetaEditOpen] = useState(false);
+  const [metaEditTemplate, setMetaEditTemplate] = useState<ContractTemplate | null>(null);
+  const [metaEditName, setMetaEditName] = useState('');
+  const [metaEditCategory, setMetaEditCategory] = useState<ContractCategory>('exhibition_service');
+  const [metaEditRemark, setMetaEditRemark] = useState('');
+  const [metaEditFile, setMetaEditFile] = useState<File | null>(null);
+  const [metaEditErrors, setMetaEditErrors] = useState<Record<string, string>>({});
+  const [metaEditSubmitting, setMetaEditSubmitting] = useState(false);
+  const metaUploadInputRef = useRef<HTMLInputElement | null>(null);
+
   const filteredData = useMemo(() => {
     return contractTemplates.filter((t) => {
       if (applied.name && !t.name.includes(applied.name)) return false;
@@ -214,6 +225,21 @@ export default function ContractTemplatePage() {
   };
 
   const openEditor = (template: ContractTemplate) => {
+    // ===== 智能路由：Word 模板（有 templateFile 且无拖拽组件）→ 元信息编辑 =====
+    const hasWordFile = !!template.templateFile;
+    const hasStructure = (template.structure && template.structure.length > 0) || (template.content && template.content.trim().length > 0);
+    if (hasWordFile && !hasStructure) {
+      // Word 上传模板：弹出元信息编辑弹窗，不走拖拽设计器
+      setMetaEditTemplate(template);
+      setMetaEditName(template.name);
+      setMetaEditCategory(template.category);
+      setMetaEditRemark(template.remark || '');
+      setMetaEditFile(null);
+      setMetaEditErrors({});
+      setMetaEditOpen(true);
+      return;
+    }
+    // 拖拽设计模板：进入 TemplateEditor
     setIsNew(false);
     setEditItem(template);
     setEditorData({
@@ -224,6 +250,72 @@ export default function ContractTemplatePage() {
       dataSourceMappings: template.dataSourceMappings || [],
     });
     setShowEditor(true);
+  };
+
+  // ============ Word 模板元信息编辑 ============
+  const resetMetaEditForm = () => {
+    setMetaEditName('');
+    setMetaEditCategory('exhibition_service');
+    setMetaEditRemark('');
+    setMetaEditFile(null);
+    setMetaEditErrors({});
+    setMetaEditTemplate(null);
+    if (metaUploadInputRef.current) metaUploadInputRef.current.value = '';
+  };
+
+  const handleMetaEditSubmit = async () => {
+    if (!metaEditTemplate) return;
+    setMetaEditErrors({});
+    // zod 校验
+    const schema = z.object({
+      name: z.string().min(1, '请输入模板名称').max(50, '模板名称不超过 50 字'),
+      category: z.enum(['exhibition_service', 'exhibition_display', 'procurement', 'investment', 'other']),
+      remark: z.string().max(200, '备注不超过 200 字').optional(),
+    });
+    const result = schema.safeParse({ name: metaEditName, category: metaEditCategory, remark: metaEditRemark });
+    if (!result.success) {
+      const errs: Record<string, string> = {};
+      result.error.issues.forEach((i) => { errs[i.path[0] as string] = i.message; });
+      setMetaEditErrors(errs);
+      return;
+    }
+    // 新文件校验（如果有）
+    if (metaEditFile) {
+      const ext = metaEditFile.name.toLowerCase().split('.').pop();
+      if (!ext || !['doc', 'docx'].includes(ext)) {
+        setMetaEditErrors((e) => ({ ...e, templateFile: '仅支持 .doc / .docx 格式' }));
+        return;
+      }
+      if (metaEditFile.size > 20 * 1024 * 1024) {
+        setMetaEditErrors((e) => ({ ...e, templateFile: '文件大小不能超过 20MB' }));
+        return;
+      }
+    }
+
+    setMetaEditSubmitting(true);
+    await new Promise((r) => setTimeout(r, 300));
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const patch: Partial<ContractTemplate> = {
+      name: metaEditName.trim(),
+      category: metaEditCategory,
+      remark: metaEditRemark.trim() || undefined,
+      updateTime: now,
+      updater: currentUser.name,
+    };
+    if (metaEditFile) {
+      patch.templateFile = {
+        id: 'TF' + Date.now(),
+        fileName: metaEditFile.name,
+        filePath: URL.createObjectURL(metaEditFile),
+        fileSize: metaEditFile.size,
+        fileType: metaEditFile.type || 'application/msword',
+        uploadTime: now,
+      };
+    }
+    updateContractTemplate?.(metaEditTemplate.id, patch);
+    setMetaEditSubmitting(false);
+    setMetaEditOpen(false);
+    resetMetaEditForm();
   };
 
   const openPreview = (template: ContractTemplate) => {
@@ -1075,10 +1167,144 @@ export default function ContractTemplatePage() {
           </div>
 
           {/* 提示 */}
-          <div className="text-[11px] text-slate-400 bg-slate-50 rounded p-2">
-            💡 上传后模板会立即出现在列表中，模板原件可随时点击"下载"重新获取；如需进一步设计合同结构，可点击列表中的"编辑"进入拖拽设计模式。
+           <div className="text-[11px] text-slate-400 bg-slate-50 rounded p-2">
+             💡 上传后模板会立即出现在列表中，模板原件可随时点击"下载"重新获取；如需进一步设计合同结构，可点击列表中的"编辑"进入拖拽设计模式。
+           </div>
+         </div>
+       </Modal>
+
+      {/* ============ Word 模板元信息编辑弹窗 ============ */}
+      <Modal
+        open={metaEditOpen}
+        onClose={() => { if (!metaEditSubmitting) { setMetaEditOpen(false); resetMetaEditForm(); } }}
+        title="📝 编辑 Word 模板元信息"
+        width="560px"
+        footer={
+          <>
+            <DefaultButton disabled={metaEditSubmitting} onClick={() => { setMetaEditOpen(false); resetMetaEditForm(); }}>
+              取消
+            </DefaultButton>
+            <PrimaryButton loading={metaEditSubmitting} onClick={handleMetaEditSubmit}>
+              ✓ 保存修改
+            </PrimaryButton>
+          </>
+        }
+      >
+        {metaEditTemplate && (
+          <div className="space-y-4 py-2">
+            {/* 模板名称 */}
+            <div>
+              <label className="block text-xs text-slate-600 mb-1 font-medium">
+                模板名称 <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={metaEditName}
+                onChange={(e) => setMetaEditName(e.target.value)}
+                className={`w-full h-9 px-3 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${
+                  metaEditErrors.name ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
+                }`}
+                maxLength={50}
+              />
+              {metaEditErrors.name && <div className="text-xs text-rose-500 mt-1">{metaEditErrors.name}</div>}
+            </div>
+
+            {/* 分类 */}
+            <div>
+              <label className="block text-xs text-slate-600 mb-1 font-medium">
+                分类 <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={metaEditCategory}
+                onChange={(e) => setMetaEditCategory(e.target.value as ContractCategory)}
+                className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+              >
+                {CONTRACT_CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 当前文件 */}
+            {metaEditTemplate.templateFile && (
+              <div>
+                <label className="block text-xs text-slate-600 mb-1 font-medium">当前模板原件</label>
+                <div className="border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded bg-emerald-100 flex items-center justify-center">
+                    <span className="text-base">📄</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-slate-800 truncate">{metaEditTemplate.templateFile.fileName}</div>
+                    <div className="text-[11px] text-slate-400">
+                      {(metaEditTemplate.templateFile.fileSize / 1024).toFixed(1)} KB · 上传于 {metaEditTemplate.templateFile.uploadTime}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 替换文件 */}
+            <div>
+              <label className="block text-xs text-slate-600 mb-1 font-medium">替换 Word 文件（可选）</label>
+              <div
+                className={`relative border-2 border-dashed rounded-lg p-3 transition-colors cursor-pointer ${
+                  metaEditErrors.templateFile
+                    ? 'border-rose-400 bg-rose-50/50'
+                    : metaEditFile
+                    ? 'border-emerald-400 bg-emerald-50/50'
+                    : 'border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/50'
+                }`}
+                onClick={() => !metaEditFile && metaUploadInputRef.current?.click()}
+              >
+                <input
+                  ref={metaUploadInputRef}
+                  type="file"
+                  accept=".doc,.docx"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) {
+                      setMetaEditFile(f);
+                      setMetaEditErrors((prev) => { const { templateFile, ...rest } = prev; return rest; });
+                    }
+                  }}
+                />
+                {metaEditFile ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">📄</span>
+                    <span className="text-sm text-slate-700 flex-1 truncate">{metaEditFile.name}</span>
+                    <span className="text-xs text-slate-400">{(metaEditFile.size / 1024).toFixed(1)} KB</span>
+                    <button
+                      type="button"
+                      onClick={(ev) => { ev.stopPropagation(); setMetaEditFile(null); if (metaUploadInputRef.current) metaUploadInputRef.current.value = ''; }}
+                      className="text-xs text-rose-500 hover:underline"
+                    >✕</button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                    <Upload size={16} />
+                    <span>点击选择新 Word 文件替换（不换则保持原样）</span>
+                  </div>
+                )}
+              </div>
+              {metaEditErrors.templateFile && <div className="text-xs text-rose-500 mt-1">{metaEditErrors.templateFile}</div>}
+            </div>
+
+            {/* 备注 */}
+            <div>
+              <label className="block text-xs text-slate-600 mb-1 font-medium">备注</label>
+              <textarea
+                value={metaEditRemark}
+                onChange={(e) => setMetaEditRemark(e.target.value)}
+                rows={2}
+                maxLength={200}
+                placeholder="对该模板的补充说明"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+              />
+              <div className="text-right text-xs text-slate-400 mt-0.5">{metaEditRemark.length}/200</div>
+            </div>
           </div>
-        </div>
+        )}
       </Modal>
     </div>
   );
