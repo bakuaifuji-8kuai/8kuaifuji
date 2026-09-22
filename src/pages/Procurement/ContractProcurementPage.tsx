@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import type {
   ContractLedger,
@@ -6,6 +6,7 @@ import type {
   ProcurementContractType,
   Bidding,
   ProcurementDemand,
+  BiddingProcurementMethod,
 } from '@/types';
 import {
   PROCUREMENT_FORMATION_LABELS,
@@ -51,6 +52,20 @@ function getNowString(): string {
   return new Date().toISOString().replace('T', ' ').slice(0, 19);
 }
 
+// 招采执行工单采购方式 → 合同形成方式 映射
+const BIDDING_METHOD_TO_FORMATION: Record<BiddingProcurementMethod, ProcurementFormation> = {
+  legal_bidding: 'legal_bidding',
+  voluntary_bidding: 'voluntary_bidding',
+  inquiry: 'state_owned_xunbi',
+  competitive_bidding: 'state_owned_jingjia',
+  negotiation_open: 'state_owned_tanpan',
+  negotiation_invited: 'state_owned_tanpan',
+  direct: 'state_owned_direct',
+  framework_catalog: 'state_owned_framework',
+  framework_random: 'state_owned_framework',
+  e_mall: 'state_owned_mall',
+};
+
 // ============== 主组件 ==============
 export default function ContractProcurementPage() {
   const contractLedgers = useStore((s) => s.contractLedgers);
@@ -93,6 +108,7 @@ export default function ContractProcurementPage() {
       assessmentManagement: null,
       yearlyEvaluation: false,
       businessCategory: undefined,
+      isOnsite: undefined,
     });
     setModalOpen(true);
   };
@@ -149,6 +165,7 @@ export default function ContractProcurementPage() {
         guaranteeEvaluation: finalForm.guaranteeEvaluation ?? { isOpen: false },
         assessmentManagement: finalForm.assessmentManagement ?? null,
         yearlyEvaluation: finalForm.yearlyEvaluation ?? false,
+        isOnsite: finalForm.isOnsite,
       };
       addContractLedger(newLedger);
     }
@@ -363,6 +380,9 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
     // 需求类型自动推导：从关联采购需求的 businessCategory 映射
     const autoContractType: ProcurementContractType =
       demand.businessCategory === 'engineering' ? 'engineering' : 'non_engineering';
+    // 合同形成方式自动推导：从关联工单的采购方式映射
+    const autoFormation: ProcurementFormation | undefined =
+      bidding?.procurementMethod ? BIDDING_METHOD_TO_FORMATION[bidding.procurementMethod] : undefined;
 
     // ====== 自动回填规则：需求有值就覆盖（以需求为准） ======
     const patch: Partial<ContractLedger> = {
@@ -371,6 +391,7 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
       demandId: demand.id,
       demandNo: demand.demandNo,
       contractType: autoContractType,
+      ...(autoFormation ? { formation: autoFormation } : {}),
 
       // —— 已有（之前就带的）——
       projectName: bidding?.projectName || demand.projectName,
@@ -418,6 +439,16 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
       {/* ========== 916文档 一、基本信息 ========== */}
       <Section title="📋 基本信息（按916文档L14字段顺序）">
         <div className="grid grid-cols-2 gap-4">
+          {/* ===== 第一行：关联采购需求 + 合同名称 — 关联需求优先 ===== */}
+          {/* 关联采购需求（needContract='yes' 的已立项通过需求）*/}
+          {/* 需求背景：合同表单选关联采购需求后，自动从关联工单带入需求类型、合同形成方式、对方单位、中标时间等字段 */}
+          <Select
+            label="关联采购需求"
+            options={demandOptions}
+            value={form.demandId || ''}
+            onChange={(e) => handleDemandChange(e.target.value)}
+            placeholder="选了之后自动从工单带入类型/方式/对方单位/中标时间"
+          />
           {/* 合同名称* */}
           <Input
             label="合同名称 *"
@@ -426,15 +457,8 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
             onChange={(e) => update({ contractName: e.target.value })}
             placeholder="招采类合同名称"
           />
-          {/* 合同编号* */}
-          <Input
-            label="合同编号 *"
-            required
-            value={form.contractNo || ''}
-            onChange={(e) => update({ contractNo: e.target.value })}
-            placeholder="手工输入，如：HT-202609001"
-          />
-          {/* 需求类型（招采类：选了关联采购需求后自动带入并锁定）*/}
+
+          {/* ===== 第二行：需求类型 + 合同形成方式 — 选了关联采购需求后自动带出并锁定 ===== */}
           <Select
             label="需求类型 *"
             required
@@ -444,32 +468,32 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
             onChange={(e) => update({ contractType: e.target.value as ProcurementContractType })}
             placeholder={form.demandId ? '由关联采购需求自动带入' : '选择需求类型'}
           />
-          {/* 合同形成方式* */}
           <Select
             label="合同形成方式 *"
             required
+            disabled={!!form.demandId}
             options={formationOptions}
             value={form.formation as string || ''}
             onChange={(e) => update({ formation: e.target.value as ProcurementFormation })}
-            placeholder="选择合同形成方式"
+            placeholder={form.demandId ? '由关联采购需求自动带入' : '选择合同形成方式'}
           />
-          {/* 关联采购需求（needContract='yes' 的已立项通过需求）*/}
-          {/* 需求背景：合同表单选关联采购需求后，自动从关联工单带入对方单位、中标时间等字段 */}
-          <Select
-            label="关联采购需求"
-            options={demandOptions}
-            value={form.demandId || ''}
-            onChange={(e) => handleDemandChange(e.target.value)}
-            placeholder="选了之后自动从工单带入对方单位、中标时间"
+
+          {/* ===== 第三行：合同编号 + 中标时间 ===== */}
+          <Input
+            label="合同编号 *"
+            required
+            value={form.contractNo || ''}
+            onChange={(e) => update({ contractNo: e.target.value })}
+            placeholder="手工输入，如：HT-202609001"
           />
-          {/* 中标时间 */}
           <Input
             label="中标时间"
             type="date"
             value={form.winningDate || ''}
             onChange={(e) => update({ winningDate: e.target.value })}
           />
-          {/* 示范文本* —— 两个 checkbox 实现单选语义（是/否二选一） */}
+
+          {/* ===== 第四行：示范文本 + 是否展会现场相关 ===== */}
           <div className="flex items-end gap-4">
             <span className="text-sm text-slate-700 pb-2 mr-2">示范文本 *</span>
             <label className="flex items-center gap-2 cursor-pointer pb-2">
@@ -490,6 +514,26 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
               />
               <span className="text-sm text-slate-700">否</span>
             </label>
+          </div>
+          {/* 是否展会现场相关 */}
+          <div className="flex items-end gap-3 pb-2">
+            <span className="text-sm text-slate-700">是否展会现场相关</span>
+            <button
+              type="button"
+              onClick={() => update({ isOnsite: !form.isOnsite })}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
+                form.isOnsite ? 'bg-gradient-to-r from-indigo-500 to-purple-600' : 'bg-slate-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                  form.isOnsite ? 'translate-x-5' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
+            <span className={`text-xs ${form.isOnsite ? 'text-indigo-600' : 'text-slate-400'}`}>
+              {form.isOnsite ? '是' : '否'}
+            </span>
           </div>
         </div>
       </Section>

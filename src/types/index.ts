@@ -2073,6 +2073,8 @@ export interface ContractLedger {
   archivedAttachments?: string;  // 存档附件资料
   archiveStatus?: 'not_started' | 'in_progress' | 'archived'; // 合同归档情况 🆕
   remark?: string;
+  /** 是否展会现场相关（招采类合同专用）— 如：展会搭建合同、现场服务合同 */
+  isOnsite?: boolean;
   status: ContractStatus;
   // 关联采购工单（招采类合同常用）
   biddingId?: string;            // 关联采购工单ID
