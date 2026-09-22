@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
+import { z } from 'zod';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
@@ -7,7 +8,7 @@ import { TemplateEditor } from '@/components/template/TemplateEditor';
 import { useStore } from '@/store/useStore';
 import type { ContractTemplate, ContractTemplateVersion, ContractCategory, TemplateComponent, TemplateAnnotation, DataSourceMapping, Attachment } from '@/types';
 import { CONTRACT_CATEGORIES, getCategoryLabel } from '@/constants/contractCategories';
-import { FileEdit, Eye, GitCompare, MessageSquare, Download, History, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileEdit, Eye, GitCompare, MessageSquare, Download, History, RotateCcw, ChevronDown, ChevronUp, Upload } from 'lucide-react';
 
 export default function ContractTemplatePage() {
   const contractTemplates = useStore((s) => s.contractTemplates || []) as ContractTemplate[];
@@ -53,6 +54,16 @@ export default function ContractTemplatePage() {
 
   // 版本详情展开
   const [expandedVersion, setExpandedVersion] = useState<number | null>(null);
+
+  // ===== Word 文件上传弹窗 =====
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadName, setUploadName] = useState('');
+  const [uploadCategory, setUploadCategory] = useState<ContractCategory>('exhibition_service');
+  const [uploadRemark, setUploadRemark] = useState('');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({});
+  const [uploadSubmitting, setUploadSubmitting] = useState(false);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
   const filteredData = useMemo(() => {
     return contractTemplates.filter((t) => {
@@ -424,14 +435,126 @@ export default function ContractTemplatePage() {
     }
   };
 
+  // ============ Word 文件上传 ============
+  const WORD_UPLOAD_LIMIT_MB = 20;
+  const WORD_UPLOAD_SCHEMA = z.object({
+    name: z.string().min(1, '请输入模板名称').max(50, '模板名称不超过 50 字'),
+    category: z.enum(['exhibition_service', 'exhibition_display', 'procurement', 'investment', 'other']),
+    remark: z.string().max(200, '备注不超过 200 字').optional(),
+  });
+
+  const resetUploadForm = () => {
+    setUploadName('');
+    setUploadCategory('exhibition_service');
+    setUploadRemark('');
+    setUploadFile(null);
+    setUploadErrors({});
+    if (uploadInputRef.current) uploadInputRef.current.value = '';
+  };
+
+  const openUploadModal = () => {
+    resetUploadForm();
+    setUploadModalOpen(true);
+  };
+
+  const validateWordFile = (file: File): string | null => {
+    const ext = file.name.toLowerCase().split('.').pop();
+    if (!ext || !['doc', 'docx'].includes(ext)) {
+      return '仅支持 .doc / .docx 格式';
+    }
+    if (file.size > WORD_UPLOAD_LIMIT_MB * 1024 * 1024) {
+      return `文件大小不能超过 ${WORD_UPLOAD_LIMIT_MB}MB`;
+    }
+    return null;
+  };
+
+  const handleWordSubmit = async () => {
+    setUploadErrors({});
+    // 表单字段校验
+    const fieldResult = WORD_UPLOAD_SCHEMA.safeParse({
+      name: uploadName,
+      category: uploadCategory,
+      remark: uploadRemark,
+    });
+    if (!fieldResult.success) {
+      const errs: Record<string, string> = {};
+      fieldResult.error.issues.forEach((i) => {
+        errs[i.path[0] as string] = i.message;
+      });
+      setUploadErrors(errs);
+      return;
+    }
+    // 文件校验
+    if (!uploadFile) {
+      setUploadErrors((e) => ({ ...e, templateFile: '请选择要上传的 Word 文件' }));
+      return;
+    }
+    const fileErr = validateWordFile(uploadFile);
+    if (fileErr) {
+      setUploadErrors((e) => ({ ...e, templateFile: fileErr }));
+      return;
+    }
+    setUploadSubmitting(true);
+    // 模拟一点延迟让 loading 可见
+    await new Promise((r) => setTimeout(r, 400));
+
+    const now = new Date();
+    const timestamp = now.toISOString().replace('T', ' ').slice(0, 19);
+    const templateId = 'CTPL' + Date.now();
+    const newTemplate: ContractTemplate = {
+      id: templateId,
+      name: uploadName.trim(),
+      category: uploadCategory,
+      content: '',
+      structure: [],
+      version: 1,
+      isDefault: false,
+      createTime: timestamp,
+      creator: currentUser.name,
+      remark: uploadRemark.trim() || undefined,
+      versions: [
+        {
+          id: 'V' + Date.now(),
+          templateId,
+          version: 1,
+          content: '',
+          createTime: timestamp,
+          creator: currentUser.name,
+          changeLog: '初始版本（Word 导入）',
+        },
+      ],
+      annotations: [],
+      dataSourceMappings: [],
+      templateFile: {
+        id: 'TF' + Date.now() + templateId.slice(-4),
+        fileName: uploadFile.name,
+        filePath: URL.createObjectURL(uploadFile),
+        fileSize: uploadFile.size,
+        fileType: uploadFile.type || 'application/msword',
+        uploadTime: timestamp,
+      },
+    };
+
+    addContractTemplate?.(newTemplate);
+    setUploadSubmitting(false);
+    setUploadModalOpen(false);
+    resetUploadForm();
+  };
+
   return (
     <div className="p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-[#303133]">合同文本模板</h2>
-        <PrimaryButton onClick={openAdd}>
-          <FileEdit size={14} className="inline mr-1" />
-          + 新增模板（拖拽设计）
-        </PrimaryButton>
+        <div className="flex items-center gap-2">
+          <DefaultButton onClick={openUploadModal}>
+            <Upload size={14} className="inline mr-1" />
+            📎 上传 Word 模板
+          </DefaultButton>
+          <PrimaryButton onClick={openAdd}>
+            <FileEdit size={14} className="inline mr-1" />
+            + 新增模板（拖拽设计）
+          </PrimaryButton>
+        </div>
       </div>
 
       <SearchBar
@@ -810,6 +933,152 @@ export default function ContractTemplatePage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* ============ Word 文件上传弹窗 ============ */}
+      <Modal
+        open={uploadModalOpen}
+        onClose={() => { if (!uploadSubmitting) { setUploadModalOpen(false); resetUploadForm(); } }}
+        title="📎 上传合同示范文本 Word 模板"
+        width="560px"
+        footer={
+          <>
+            <DefaultButton disabled={uploadSubmitting} onClick={() => { setUploadModalOpen(false); resetUploadForm(); }}>
+              取消
+            </DefaultButton>
+            <PrimaryButton loading={uploadSubmitting} onClick={handleWordSubmit}>
+              ✓ 确认上传
+            </PrimaryButton>
+          </>
+        }
+      >
+        <div className="space-y-4 py-2">
+          {/* 模板名称 */}
+          <div>
+            <label className="block text-xs text-slate-600 mb-1 font-medium">
+              模板名称 <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={uploadName}
+              onChange={(e) => setUploadName(e.target.value)}
+              placeholder="请输入模板名称，如：展览服务合同示范文本 v1"
+              className={`w-full h-9 px-3 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${
+                uploadErrors.name ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
+              }`}
+              maxLength={50}
+            />
+            {uploadErrors.name && <div className="text-xs text-rose-500 mt-1">{uploadErrors.name}</div>}
+          </div>
+
+          {/* 分类 */}
+          <div>
+            <label className="block text-xs text-slate-600 mb-1 font-medium">
+              分类 <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={uploadCategory}
+              onChange={(e) => setUploadCategory(e.target.value as ContractCategory)}
+              className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+            >
+              {CONTRACT_CATEGORIES.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Word 文件上传 */}
+          <div>
+            <label className="block text-xs text-slate-600 mb-1 font-medium">
+              Word 文件 <span className="text-rose-500">*</span>
+            </label>
+            <div
+              className={`relative border-2 border-dashed rounded-lg p-4 transition-colors ${
+                uploadErrors.templateFile
+                  ? 'border-rose-400 bg-rose-50/50'
+                  : uploadFile
+                  ? 'border-emerald-400 bg-emerald-50/50'
+                  : 'border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/50 cursor-pointer'
+              }`}
+              onClick={() => !uploadFile && uploadInputRef.current?.click()}
+            >
+              <input
+                ref={uploadInputRef}
+                type="file"
+                accept=".doc,.docx"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) {
+                    // 即时校验
+                    const err = validateWordFile(f);
+                    if (err) {
+                      setUploadErrors((prev) => ({ ...prev, templateFile: err }));
+                      setUploadFile(null);
+                      e.target.value = '';
+                    } else {
+                      setUploadFile(f);
+                      setUploadErrors((prev) => {
+                        const { templateFile, ...rest } = prev;
+                        return rest;
+                      });
+                      // 如果没填名称，自动用文件名（去后缀）
+                      if (!uploadName.trim()) {
+                        const base = f.name.replace(/\.(doc|docx)$/i, '');
+                        setUploadName(base);
+                      }
+                    }
+                  }
+                }}
+              />
+
+              {uploadFile ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xl">📄</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-slate-800 truncate">{uploadFile.name}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">
+                      {(uploadFile.size / 1024).toFixed(1)} KB · 类型：{uploadFile.type || 'unknown'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setUploadFile(null); if (uploadInputRef.current) uploadInputRef.current.value = ''; }}
+                    className="text-xs text-rose-500 hover:text-rose-700 hover:underline"
+                  >✕ 移除</button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1">
+                  <Upload size={24} className="text-slate-400" />
+                  <div className="text-sm text-slate-600">点击选择 Word 文件</div>
+                  <div className="text-xs text-slate-400">支持 .doc / .docx，最大 {WORD_UPLOAD_LIMIT_MB}MB</div>
+                </div>
+              )}
+            </div>
+            {uploadErrors.templateFile && <div className="text-xs text-rose-500 mt-1">{uploadErrors.templateFile}</div>}
+          </div>
+
+          {/* 备注 */}
+          <div>
+            <label className="block text-xs text-slate-600 mb-1 font-medium">备注</label>
+            <textarea
+              value={uploadRemark}
+              onChange={(e) => setUploadRemark(e.target.value)}
+              placeholder="可选：对该模板的补充说明"
+              rows={2}
+              maxLength={200}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+            />
+            <div className="text-right text-xs text-slate-400 mt-0.5">{uploadRemark.length}/200</div>
+          </div>
+
+          {/* 提示 */}
+          <div className="text-[11px] text-slate-400 bg-slate-50 rounded p-2">
+            💡 上传后模板会立即出现在列表中，模板原件可随时点击"下载"重新获取；如需进一步设计合同结构，可点击列表中的"编辑"进入拖拽设计模式。
+          </div>
+        </div>
       </Modal>
     </div>
   );

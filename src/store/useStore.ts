@@ -1310,8 +1310,82 @@ export const useStore = create<WarehouseState>()(
     websiteInfos: state.websiteInfos.filter((w) => w.id !== id)
   })),
 
-  // 合同模板
-  contractTemplates: [],
+  // 合同模板（预置 2 条示例数据）
+  contractTemplates: [
+    {
+      id: 'CTPL-MOCK-001',
+      name: '展览服务合同示范文本 v1',
+      category: 'exhibition_service',
+      content: '',
+      structure: [],
+      version: 1,
+      isDefault: true,
+      createTime: '2026-08-15 09:30:00',
+      creator: '系统管理员',
+      updateTime: '2026-08-15 09:30:00',
+      updater: '系统管理员',
+      remark: '适用于展会策划、执行类服务合同',
+      versions: [
+        {
+          id: 'V-MOCK-001-1',
+          templateId: 'CTPL-MOCK-001',
+          version: 1,
+          content: '',
+          createTime: '2026-08-15 09:30:00',
+          creator: '系统管理员',
+          changeLog: '初始版本',
+        },
+      ],
+      annotations: [],
+      dataSourceMappings: [],
+      // 无 templateFile → 列表显示"📎 上传"空态
+    },
+    {
+      id: 'CTPL-MOCK-002',
+      name: '工程类货物采购合同示范文本 v1',
+      category: 'procurement',
+      content: '',
+      structure: [],
+      version: 1,
+      isDefault: false,
+      createTime: '2026-08-18 14:20:00',
+      creator: '张三',
+      updateTime: '2026-09-10 16:00:00',
+      updater: '李四',
+      remark: '适用于工程类-货物采购合同模板',
+      versions: [
+        {
+          id: 'V-MOCK-002-1',
+          templateId: 'CTPL-MOCK-002',
+          version: 1,
+          content: '',
+          createTime: '2026-08-18 14:20:00',
+          creator: '张三',
+          changeLog: '初始版本',
+        },
+        {
+          id: 'V-MOCK-002-2',
+          templateId: 'CTPL-MOCK-002',
+          version: 2,
+          content: '',
+          createTime: '2026-09-10 16:00:00',
+          creator: '李四',
+          changeLog: '补充货物验收条款',
+        },
+      ],
+      annotations: [],
+      dataSourceMappings: [],
+      // 带 mock templateFile → 列表显示下载/删除按钮
+      templateFile: {
+        id: 'TF-MOCK-002',
+        fileName: '工程类货物采购合同示范文本.docx',
+        filePath: '#mock-file', // mock 占位，实际无真实文件
+        fileSize: 245760, // 约 240KB
+        fileType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        uploadTime: '2026-09-10 16:00:00',
+      },
+    },
+  ],
   setContractTemplates: (data) => set({ contractTemplates: data }),
   addContractTemplate: (template) => set((state) => ({ contractTemplates: [...state.contractTemplates, template] })),
   updateContractTemplate: (id, data) => set((state) => ({
