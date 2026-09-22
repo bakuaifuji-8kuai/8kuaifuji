@@ -31,6 +31,9 @@ import {
   MOCK_PROCUREMENT_DEMANDS,
   MOCK_PROCUREMENT_ORDERS,
   MOCK_PROCUREMENT_INSPECTIONS,
+  MOCK_CONTRACT_LEDGERS,
+  MOCK_CONTRACT_PURCHASE_ORDERS,
+  MOCK_SUPPLIERS,
 } from '@/mock/biddingMockData';
 
 /**
@@ -1489,7 +1492,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 3,
+      version: 4,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -1505,9 +1508,12 @@ export const useStore = create<WarehouseState>()(
           persistedState.procurementDemands = MOCK_PROCUREMENT_DEMANDS;
           persistedState.procurementOrders = MOCK_PROCUREMENT_ORDERS;
           persistedState.procurementInspections = MOCK_PROCUREMENT_INSPECTIONS;
-          // 合约数据暂时保持 data.ts 来源（合约模块关联多，暂不动）
-          persistedState.contractLedgers = mockData.contractLedgers || [];
-          persistedState.contractPurchaseOrders = mockData.contractPurchaseOrders || [];
+        }
+        if (version < 4) {
+          // v3→v4：补齐合约台账 + 合约招采订单 + 供应商，全部关联新招采链路
+          persistedState.contractLedgers = MOCK_CONTRACT_LEDGERS;
+          persistedState.contractPurchaseOrders = MOCK_CONTRACT_PURCHASE_ORDERS;
+          persistedState.suppliers = MOCK_SUPPLIERS;
         }
         return persistedState;
       },
