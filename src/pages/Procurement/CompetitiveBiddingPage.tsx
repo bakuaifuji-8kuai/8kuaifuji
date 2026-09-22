@@ -2198,9 +2198,9 @@ export default function CompetitiveBiddingPage() {
                     <textarea
                       value={editItem.failedReason || ''}
                       onChange={(e) => setEditItem({ ...editItem, failedReason: e.target.value })}
-                      rows={3}
+                      rows={4}
                       placeholder="请填写流标原因（如：投标供应商不足3家、报价均超出预算、有效标不足等）"
-                      className="w-full text-xs px-2 py-1.5 border border-[#dcdfe6] rounded focus:outline-none focus:border-[#409eff] resize-none"
+                      className="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 resize-y min-h-[96px]"
                     />
                   </div>
                 )}
