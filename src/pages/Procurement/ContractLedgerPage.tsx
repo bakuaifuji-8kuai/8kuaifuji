@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
@@ -8,7 +9,7 @@ import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import { getAutoPaidAmount } from '@/utils/contractAggregate';
 import type { ContractLedger, Bidding, ContractEvaluationBinding, EvaluationType, ProcurementFormation, NonProcurementFormation, ProcurementContractType, NonProcurementContractType, ProcurementDemand } from '@/types';
 import { PROCUREMENT_FORMATION_LABELS, NON_PROCUREMENT_FORMATION_LABELS, PROCUREMENT_CONTRACT_TYPE_LABELS, NON_PROCUREMENT_CONTRACT_TYPE_LABELS, ARCHIVE_STATUS_LABELS, BUSINESS_CATEGORY_LABELS } from '@/types';
-import { Printer, FileSpreadsheet, FileDown, Bell } from 'lucide-react';
+import { Printer, FileSpreadsheet, FileDown, Bell, ExternalLink } from 'lucide-react';
 
 const categoryMap: Record<string, string> = {
   exhibition_service: '展览服务',
@@ -62,6 +63,7 @@ const isExpired = (date?: string) => {
 };
 
 export default function ContractLedgerPage() {
+  const navigate = useNavigate();
   const contractLedgers = useStore((s) => s.contractLedgers) || [];
   const addContractLedger = useStore((s) => s.addContractLedger);
   const updateContractLedger = useStore((s) => s.updateContractLedger);
@@ -1495,6 +1497,26 @@ export default function ContractLedgerPage() {
       } width="1000px">
         {viewItem && (
           <div className="text-xs space-y-3">
+            {/* 关联招采执行工单 - 紫色渐变卡片（仅招采类且有 biddingNo 时显示） */}
+            {viewItem.contractNature === 'procurement' && viewItem.biddingId && viewItem.biddingNo && (
+              <div className="flex items-center gap-4 p-3 rounded-lg bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500 text-white shadow-md">
+                <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm flex-shrink-0">
+                  <ExternalLink className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] text-white/70 leading-none mb-1">关联招采执行工单</div>
+                  <div className="text-sm font-bold truncate">{viewItem.biddingNo}</div>
+                </div>
+                <PrimaryButton
+                  size="small"
+                  onClick={() => { setViewItem(null); navigate('/procurement/bidding'); }}
+                  className="flex-shrink-0 !bg-white !text-purple-600 hover:!bg-white/90 !shadow-none"
+                >
+                  跳转查看 →
+                </PrimaryButton>
+              </div>
+            )}
+
             <div className="grid grid-cols-3 gap-y-2 gap-x-4 p-3 border border-[#ebeef5] rounded bg-[#f5f7fa]">
               <div><span className="text-[#909399]">合同编码：</span>{viewItem.contractNo}</div>
               <div><span className="text-[#909399]">状态：</span>
