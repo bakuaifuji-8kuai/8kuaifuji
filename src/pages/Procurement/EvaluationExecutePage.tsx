@@ -1,11 +1,33 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
-import type { EvaluationTemplate, EvaluationRecord, EvaluationScoreItem, EvaluationStatus, Attachment } from '@/types';
+import type {
+  EvaluationTemplate,
+  EvaluationRecord,
+  EvaluationScoreItem,
+  EvaluationStatus,
+  Attachment,
+  ContractLedger,
+  EvaluationType,
+} from '@/types';
 import { EVALUATION_TYPE_LABELS, EVALUATION_STATUS_LABELS } from '@/types';
 import Card from '@/components/common/Card';
 import { PrimaryButton, DefaultButton } from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import { Plus, Save, Send, FileUp, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
+
+// ===== 招采类合同 assessmentManagement → 模板 type 映射 =====
+const ASSESSMENT_TO_TEMPLATE_TYPE: Record<'single_project' | 'monthly' | 'quarterly', EvaluationType> = {
+  single_project: 'project_single',
+  monthly: 'monthly',
+  quarterly: 'quarterly',
+};
+
+// ===== 模板 type → 招采类合同 assessmentManagement 反向标签 =====
+const ASSESSMENT_LABEL_MAP: Record<string, string> = {
+  single_project: '单个项目考核',
+  monthly: '月度考核',
+  quarterly: '季度考核',
+};
 
 export default function EvaluationExecutePage() {
   const evaluationTemplates = (useStore((s) => s.evaluationTemplates) || []).filter((t) => t.type !== 'contract_performance');
@@ -39,13 +61,67 @@ export default function EvaluationExecutePage() {
     }
   }, [selectedTemplate]);
 
+  // 合同 / 供应商 lookup（必须放在 useEffect 之前，否则 TS 报 block-scoped before declaration）
+  const selectedContract = useMemo(() => {
+    return contractLedgers.find((c) => c.id === selectedContractId);
+  }, [contractLedgers, selectedContractId]);
+
   const selectedSupplier = useMemo(() => {
     return suppliers.find((s) => s.id === selectedSupplierId);
   }, [suppliers, selectedSupplierId]);
 
-  const selectedContract = useMemo(() => {
-    return contractLedgers.find((c) => c.id === selectedContractId);
-  }, [contractLedgers, selectedContractId]);
+  // 当合同变化时自动联动供应商、考核方式、模板过滤
+  useEffect(() => {
+    const contract = selectedContract;
+    if (!contract) {
+      setSelectedSupplierId('');
+      setProjectName('');
+      return;
+    }
+    // 自动带 supplierId
+    if (contract.supplierId) {
+      setSelectedSupplierId(contract.supplierId);
+    } else {
+      // 老数据没 supplierId 的，尝试从 counterpartyName 模糊匹配
+      const matched = suppliers.find((s) => s.name === contract.counterpartyName);
+      setSelectedSupplierId(matched?.id || '');
+    }
+    // 自动带项目名称
+    setProjectName(contract.projectName || contract.contractName || '');
+    // 如果当前模板 type 不匹配合同考核方式，清空模板让用户重新选
+    if (contract.assessmentManagement) {
+      const expectedType = ASSESSMENT_TO_TEMPLATE_TYPE[contract.assessmentManagement];
+      if (selectedTemplate && selectedTemplate.type !== expectedType) {
+        setSelectedTemplate(null);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedContractId]);
+
+  // 【核心过滤】合同下拉只显示：招采类 + 有考核设置 + 非草稿
+  const availableContracts = useMemo(() => {
+    return contractLedgers.filter((c: ContractLedger) =>
+      c.contractNature === 'procurement' &&
+      c.assessmentManagement &&
+      ['single_project', 'monthly', 'quarterly'].includes(c.assessmentManagement) &&
+      c.status !== 'draft'
+    );
+  }, [contractLedgers]);
+
+  // 从合同推导出来的考核方式（模板 type）
+  const derivedTemplateType: EvaluationType | null = useMemo(() => {
+    const am = selectedContract?.assessmentManagement;
+    if (!am) return null;
+    return ASSESSMENT_TO_TEMPLATE_TYPE[am as keyof typeof ASSESSMENT_TO_TEMPLATE_TYPE] || null;
+  }, [selectedContract]);
+
+  // 关联合同选了之后，模板下拉只显示匹配 type 的（或全部合同考核类型）
+  const availableTemplates = useMemo(() => {
+    if (derivedTemplateType) {
+      return evaluationTemplates.filter((t) => t.type === derivedTemplateType);
+    }
+    return evaluationTemplates;
+  }, [evaluationTemplates, derivedTemplateType]);
 
   const totalScore = useMemo(() => {
     if (!selectedTemplate) return 0;
@@ -106,8 +182,12 @@ export default function EvaluationExecutePage() {
   };
 
   const handleSaveDraft = () => {
+    if (!selectedContractId) {
+      alert('请先选择招采类合同');
+      return;
+    }
     if (!selectedTemplate) {
-      alert('请先选择评估模板');
+      alert('请先选择关联考核模板');
       return;
     }
     if (!selectedSupplierId) {
@@ -118,8 +198,12 @@ export default function EvaluationExecutePage() {
   };
 
   const handleSubmit = () => {
+    if (!selectedContractId) {
+      alert('请先选择招采类合同');
+      return;
+    }
     if (!selectedTemplate) {
-      alert('请先选择评估模板');
+      alert('请先选择关联考核模板');
       return;
     }
     if (!selectedSupplierId) {
@@ -221,8 +305,8 @@ export default function EvaluationExecutePage() {
     <div className="p-5">
       {/* 页面标题 */}
       <div className="mb-5">
-        <h1 className="text-xl font-bold text-slate-800">评估执行</h1>
-        <p className="text-sm text-slate-500 mt-1">选择模板和供应商，完成在线评分并提交审批</p>
+        <h1 className="text-xl font-bold text-slate-800">考核评价执行</h1>
+        <p className="text-sm text-slate-500 mt-1">选择招采类合同，从合同自动带出供应商和考核方式，在线评分并提交审批</p>
       </div>
 
       <div className="grid grid-cols-3 gap-5">
@@ -232,60 +316,106 @@ export default function EvaluationExecutePage() {
           <Card>
             <div className="text-sm font-medium text-slate-700 mb-4">基本信息</div>
             <div className="grid grid-cols-2 gap-4">
+              {/* ===== 招采类合同（下拉只显示有考核设置的招采类合同）===== */}
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">
-                  评估模板 <span className="text-red-500">*</span>
+                  招采类合同 <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={selectedTemplate?.id || ''}
+                  value={selectedContractId}
                   onChange={(e) => {
-                    const template = evaluationTemplates.find((t) => t.id === e.target.value);
-                    setSelectedTemplate(template || null);
+                    setSelectedContractId(e.target.value);
+                    setSelectedTemplate(null); // 换合同 → 模板重置（让用户重新从过滤后的列表选）
                     setScores({});
                   }}
                   className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                 >
-                  <option value="">请选择评估模板</option>
-                  {evaluationTemplates.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
+                  <option value="">请选择招采类合同</option>
+                  {availableContracts.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.contractNo || c.id.slice(-6)} - {c.contractName || '(未命名)'}
+                    </option>
                   ))}
                 </select>
+                {availableContracts.length === 0 && (
+                  <div className="text-[11px] text-amber-600 mt-1">
+                    ⚠️ 当前没有"招采类+已设置考核方式+非草稿"的合同，请先在招采类合同表单里设置考核管理
+                  </div>
+                )}
               </div>
+
+              {/* ===== 供应商（从合同自动带出，disabled）===== */}
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">
                   供应商 <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={selectedSupplierId}
+                  disabled={!!selectedContractId}
                   onChange={(e) => setSelectedSupplierId(e.target.value)}
-                  className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm bg-slate-50 text-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-100 disabled:text-slate-500"
                 >
-                  <option value="">请选择供应商</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
+                  <option value="">
+                    {selectedContractId ? '合同未关联供应商档案' : '请先选择合同'}
+                  </option>
+                  {selectedSupplier && (
+                    <option value={selectedSupplier.id}>{selectedSupplier.name}</option>
+                  )}
                 </select>
+                {selectedContractId && !selectedSupplierId && (
+                  <div className="text-[11px] text-amber-600 mt-1">
+                    ⚠️ 该合同未关联供应商档案（supplierId），请在合同台账编辑中补充关联
+                  </div>
+                )}
               </div>
+
+              {/* ===== 考核方式（从合同 assessmentManagement 自动带出，disabled）===== */}
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">关联合同（可选）</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">考核方式 <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  disabled
+                  value={
+                    selectedContract?.assessmentManagement
+                      ? ASSESSMENT_LABEL_MAP[selectedContract.assessmentManagement] || selectedContract.assessmentManagement
+                      : ''
+                  }
+                  placeholder="选择合同后自动带出"
+                  className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm bg-slate-100 text-slate-500 outline-none"
+                />
+              </div>
+
+              {/* ===== 关联考核模板（按合同考核方式过滤）===== */}
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  关联考核模板 <span className="text-red-500">*</span>
+                  {derivedTemplateType && (
+                    <span className="text-[11px] text-indigo-500 ml-2">
+                      （已按合同考核方式过滤：仅显示 {EVALUATION_TYPE_LABELS[derivedTemplateType] || derivedTemplateType} 类型）
+                    </span>
+                  )}
+                </label>
                 <select
-                  value={selectedContractId}
+                  value={selectedTemplate?.id || ''}
+                  disabled={!selectedContractId}
                   onChange={(e) => {
-                    setSelectedContractId(e.target.value);
-                    const contract = contractLedgers.find((c) => c.id === e.target.value);
-                    if (contract) {
-                      setProjectName(contract.projectName || '');
-                    }
+                    const template = evaluationTemplates.find((t) => t.id === e.target.value);
+                    setSelectedTemplate(template || null);
+                    setScores({});
                   }}
-                  className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-100 disabled:text-slate-500"
                 >
-                  <option value="">请选择关联合同</option>
-                  {contractLedgers.map((c) => (
-                    <option key={c.id} value={c.id}>{c.contractNo} - {c.contractName}</option>
+                  <option value="">
+                    {selectedContractId ? '请选择关联考核模板' : '请先选择合同'}
+                  </option>
+                  {availableTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </select>
               </div>
-              <div>
+
+              {/* ===== 评估时间区间 ===== */}
+              <div className="col-span-2">
                 <label className="block text-xs font-medium text-slate-600 mb-1">评估时间区间</label>
                 <div className="flex items-center gap-2">
                   <input
@@ -303,6 +433,8 @@ export default function EvaluationExecutePage() {
                   />
                 </div>
               </div>
+
+              {/* ===== 项目名称（从合同自动带）===== */}
               <div className="col-span-2">
                 <label className="block text-xs font-medium text-slate-600 mb-1">项目名称</label>
                 <input
@@ -310,7 +442,7 @@ export default function EvaluationExecutePage() {
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
                   className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  placeholder="请输入项目名称"
+                  placeholder="选择合同后自动带出，可手动修改"
                 />
               </div>
             </div>

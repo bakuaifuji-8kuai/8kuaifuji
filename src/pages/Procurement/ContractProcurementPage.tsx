@@ -408,6 +408,7 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
       // —— 新增：从工单带 ——
       handlingDepartment: bidding?.implementationUnit || '',
       counterpartyContact: bidding?.winningSupplierLegalPerson || '',
+      supplierId: bidding?.winningSupplierId || '',
     };
 
     // 合同金额：需求有预估金额 → 元转万元

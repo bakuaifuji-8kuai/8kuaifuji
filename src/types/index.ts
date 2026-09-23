@@ -2048,6 +2048,7 @@ export interface ContractLedger {
   handlerContact?: string;       // 我方单位-联系方式 🆕
   counterpartyName?: string;     // 对方单位-单位名称
   counterpartyContact?: string;  // 对方单位-负责人
+  supplierId?: string;           // 关联供应商档案 ID（招采类合同从工单自动带入，非招采类手动选）
   mainContent?: string;          // 合同主要内容
   signingDate?: string;          // 合同签订日期
   effectiveDate?: string;        // 合同约定生效日期
