@@ -15,19 +15,42 @@ import { PrimaryButton, DefaultButton } from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import { Plus, Save, Send, FileUp, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
 
-// ===== 招采类合同 assessmentManagement → 模板 type 映射 =====
-const ASSESSMENT_TO_TEMPLATE_TYPE: Record<'single_project' | 'monthly' | 'quarterly', EvaluationType> = {
+// ===== 合同可能的考核类型（assessmentManagement + yearlyEvaluation 合并视图）=====
+type ContractAssessmentMode =
+  | 'single_project'   // 单个项目考核
+  | 'monthly'          // 月度考核
+  | 'quarterly'        // 季度考核
+  | 'yearly';          // 年度评价
+
+// ===== 考核类型 → 模板 type =====
+const MODE_TO_TEMPLATE_TYPE: Record<ContractAssessmentMode, EvaluationType> = {
   single_project: 'project_single',
   monthly: 'monthly',
   quarterly: 'quarterly',
+  yearly: 'yearly',
 };
 
-// ===== 模板 type → 招采类合同 assessmentManagement 反向标签 =====
-const ASSESSMENT_LABEL_MAP: Record<string, string> = {
+// ===== 考核类型 → 中文标签 =====
+const MODE_LABEL_MAP: Record<ContractAssessmentMode, string> = {
   single_project: '单个项目考核',
   monthly: '月度考核',
   quarterly: '季度考核',
+  yearly: '年度评价',
 };
+
+// ===== 合同 → 可用的考核类型列表（核心逻辑：一份合同可能同时配月度+年度）=====
+function deriveAssessmentModes(contract: ContractLedger | null): ContractAssessmentMode[] {
+  if (!contract) return [];
+  const modes: ContractAssessmentMode[] = [];
+  const am = contract.assessmentManagement;
+  if (am && ['single_project', 'monthly', 'quarterly'].includes(am)) {
+    modes.push(am as ContractAssessmentMode);
+  }
+  if (contract.yearlyEvaluation === true) {
+    modes.push('yearly');
+  }
+  return modes;
+}
 
 export default function EvaluationExecutePage() {
   const evaluationTemplates = (useStore((s) => s.evaluationTemplates) || []).filter((t) => t.type !== 'contract_performance');
@@ -41,6 +64,7 @@ export default function EvaluationExecutePage() {
   const [selectedTemplate, setSelectedTemplate] = useState<EvaluationTemplate | null>(null);
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
   const [selectedContractId, setSelectedContractId] = useState<string>('');
+  const [selectedMode, setSelectedMode] = useState<ContractAssessmentMode | ''>('');
   const [evaluationDateStart, setEvaluationDateStart] = useState<string>(new Date().toISOString().slice(0, 10));
   const [evaluationDateEnd, setEvaluationDateEnd] = useState<string>(new Date().toISOString().slice(0, 10));
   const [projectName, setProjectName] = useState<string>('');
@@ -70,50 +94,76 @@ export default function EvaluationExecutePage() {
     return suppliers.find((s) => s.id === selectedSupplierId);
   }, [suppliers, selectedSupplierId]);
 
-  // 当合同变化时自动联动供应商、考核方式、模板过滤
+  // 当合同变化时自动联动供应商、考核方式(selectedMode)、模板过滤
   useEffect(() => {
     const contract = selectedContract;
     if (!contract) {
       setSelectedSupplierId('');
       setProjectName('');
+      setSelectedMode('');
       return;
     }
     // 自动带 supplierId
     if (contract.supplierId) {
       setSelectedSupplierId(contract.supplierId);
     } else {
-      // 老数据没 supplierId 的，尝试从 counterpartyName 模糊匹配
       const matched = suppliers.find((s) => s.name === contract.counterpartyName);
       setSelectedSupplierId(matched?.id || '');
     }
     // 自动带项目名称
     setProjectName(contract.projectName || contract.contractName || '');
-    // 如果当前模板 type 不匹配合同考核方式，清空模板让用户重新选
-    if (contract.assessmentManagement) {
-      const expectedType = ASSESSMENT_TO_TEMPLATE_TYPE[contract.assessmentManagement];
+    // 根据合同的考核模式列表自动设置 selectedMode
+    const availableModes = deriveAssessmentModes(contract);
+    if (availableModes.length === 1) {
+      // 只有一个考核方式 → 自动选中
+      setSelectedMode(availableModes[0]);
+    } else {
+      // 多个考核方式 → 清空让用户选
+      setSelectedMode('');
+    }
+    // 如果当前模板 type 不匹配新 selectedMode，清空模板让用户重新选
+    if (selectedMode) {
+      const expectedType = MODE_TO_TEMPLATE_TYPE[selectedMode];
       if (selectedTemplate && selectedTemplate.type !== expectedType) {
+        setSelectedTemplate(null);
+      }
+    } else if (selectedTemplate) {
+      // selectedMode 还没确定时，不清空模板（等用户选好 mode 再说）
+      // 但如果合同完全没考核模式，才清空
+      if (availableModes.length === 0) {
         setSelectedTemplate(null);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContractId]);
 
-  // 【核心过滤】合同下拉只显示：招采类 + 有考核设置 + 非草稿
+  // selectedMode 变化时，自动校验模板 type 是否匹配
+  useEffect(() => {
+    if (!selectedMode || !selectedTemplate) return;
+    const expectedType = MODE_TO_TEMPLATE_TYPE[selectedMode];
+    if (selectedTemplate.type !== expectedType) {
+      setSelectedTemplate(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMode]);
+
+  // 【核心过滤】合同下拉只显示：招采类 + 有考核设置（assessmentManagement 或 yearlyEvaluation）+ 非草稿
   const availableContracts = useMemo(() => {
-    return contractLedgers.filter((c: ContractLedger) =>
-      c.contractNature === 'procurement' &&
-      c.assessmentManagement &&
-      ['single_project', 'monthly', 'quarterly'].includes(c.assessmentManagement) &&
-      c.status !== 'draft'
-    );
+    return contractLedgers.filter((c: ContractLedger) => {
+      if (c.contractNature !== 'procurement') return false;
+      if (c.status === 'draft') return false;
+      // 有 assessmentManagement（single_project/monthly/quarterly）或 yearlyEvaluation=true
+      const hasAm = c.assessmentManagement && ['single_project', 'monthly', 'quarterly'].includes(c.assessmentManagement);
+      const hasYearly = c.yearlyEvaluation === true;
+      return hasAm || hasYearly;
+    });
   }, [contractLedgers]);
 
-  // 从合同推导出来的考核方式（模板 type）
+  // 从 selectedMode 推导模板 type（selectedMode 优先，无则 fallback 到 assessmentManagement）
   const derivedTemplateType: EvaluationType | null = useMemo(() => {
-    const am = selectedContract?.assessmentManagement;
-    if (!am) return null;
-    return ASSESSMENT_TO_TEMPLATE_TYPE[am as keyof typeof ASSESSMENT_TO_TEMPLATE_TYPE] || null;
-  }, [selectedContract]);
+    if (selectedMode) return MODE_TO_TEMPLATE_TYPE[selectedMode];
+    return null;
+  }, [selectedMode]);
 
   // 关联合同选了之后，模板下拉只显示匹配 type 的（或全部合同考核类型）
   const availableTemplates = useMemo(() => {
@@ -186,6 +236,10 @@ export default function EvaluationExecutePage() {
       alert('请先选择招采类合同');
       return;
     }
+    if (!selectedMode) {
+      alert('请选择考核方式');
+      return;
+    }
     if (!selectedTemplate) {
       alert('请先选择关联考核模板');
       return;
@@ -200,6 +254,10 @@ export default function EvaluationExecutePage() {
   const handleSubmit = () => {
     if (!selectedContractId) {
       alert('请先选择招采类合同');
+      return;
+    }
+    if (!selectedMode) {
+      alert('请选择考核方式');
       return;
     }
     if (!selectedTemplate) {
@@ -282,6 +340,7 @@ export default function EvaluationExecutePage() {
     setSelectedTemplate(null);
     setSelectedSupplierId('');
     setSelectedContractId('');
+    setSelectedMode('');
     setProjectName('');
     setEvaluationDateStart(new Date().toISOString().slice(0, 10));
     setEvaluationDateEnd(new Date().toISOString().slice(0, 10));
@@ -325,7 +384,8 @@ export default function EvaluationExecutePage() {
                   value={selectedContractId}
                   onChange={(e) => {
                     setSelectedContractId(e.target.value);
-                    setSelectedTemplate(null); // 换合同 → 模板重置（让用户重新从过滤后的列表选）
+                    setSelectedMode('');        // 换合同 → 清空考核方式（让 useEffect 自动重新推导）
+                    setSelectedTemplate(null);  // 换合同 → 模板重置（让用户重新从过滤后的列表选）
                     setScores({});
                   }}
                   className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -369,20 +429,61 @@ export default function EvaluationExecutePage() {
                 )}
               </div>
 
-              {/* ===== 考核方式（从合同 assessmentManagement 自动带出，disabled）===== */}
+              {/* ===== 考核方式（单模式→disabled展示；多模式→下拉选择 ===== */}
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">考核方式 <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  disabled
-                  value={
-                    selectedContract?.assessmentManagement
-                      ? ASSESSMENT_LABEL_MAP[selectedContract.assessmentManagement] || selectedContract.assessmentManagement
-                      : ''
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  考核方式 <span className="text-red-500">*</span>
+                  {(() => {
+                    const modes = deriveAssessmentModes(selectedContract);
+                    if (modes.length > 1) {
+                      return <span className="text-[11px] text-indigo-500 ml-2">（合同配置了多个考核方式，请选择）</span>;
+                    }
+                    return null;
+                  })()}
+                </label>
+                {(() => {
+                  const modes = deriveAssessmentModes(selectedContract);
+                  // 情况1：没有合同 → disabled
+                  if (!selectedContract) {
+                    return (
+                      <input
+                        type="text"
+                        disabled
+                        placeholder="选择合同后自动带出"
+                        className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm bg-slate-100 text-slate-500 outline-none"
+                      />
+                    );
                   }
-                  placeholder="选择合同后自动带出"
-                  className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm bg-slate-100 text-slate-500 outline-none"
-                />
+                  // 情况2：只有一个考核方式 → disabled 展示
+                  if (modes.length === 1) {
+                    return (
+                      <input
+                        type="text"
+                        disabled
+                        value={MODE_LABEL_MAP[modes[0]]}
+                        className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm bg-slate-100 text-slate-500 outline-none"
+                      />
+                    );
+                  }
+                  // 情况3：多个考核方式 → 下拉让用户选
+                  return (
+                    <select
+                      value={selectedMode}
+                      onChange={(e) => {
+                        const v = e.target.value as ContractAssessmentMode | '';
+                        setSelectedMode(v);
+                        setSelectedTemplate(null); // 换考核方式 → 重置模板
+                        setScores({});
+                      }}
+                      className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                    >
+                      <option value="">请选择考核方式</option>
+                      {modes.map((m) => (
+                        <option key={m} value={m}>{MODE_LABEL_MAP[m]}</option>
+                      ))}
+                    </select>
+                  );
+                })()}
               </div>
 
               {/* ===== 关联考核模板（按合同考核方式过滤）===== */}
