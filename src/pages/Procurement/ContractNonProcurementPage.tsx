@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import type {
   ContractLedger,
@@ -83,6 +83,7 @@ export default function ContractNonProcurementPage() {
       archiveStatus: 'not_started',
       status: 'draft',
       businessCategory: undefined,
+      enableExpireAlert: true,
       performanceBond: { gateByFormation: true, isEnabled: false },
     });
     setAmountDetails([
@@ -171,6 +172,7 @@ export default function ContractNonProcurementPage() {
         archiveStatus: finalForm.archiveStatus ?? 'not_started',
         remark: finalForm.remark,
         status: finalForm.status as ContractLedger['status'],
+        enableExpireAlert: finalForm.enableExpireAlert ?? true,
         performanceBond: finalForm.performanceBond,
       };
       addContractLedger(newLedger);
@@ -742,6 +744,24 @@ function ContractNonProcurementForm({ form, update, amountDetails, setAmountDeta
             仅当合同形成方式为「展览服务」下的主办合同 / 主场合同时，履约保证金门控才会显示。
           </div>
         )}
+      </Section>
+
+      {/* ========== 合同到期预警（合同通用） ========== */}
+      <Section title="🔔 合同到期预警设置" tone="amber">
+        <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-lg inline-block">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.enableExpireAlert ?? true}
+              onChange={(e) => update({ enableExpireAlert: e.target.checked })}
+              className="w-4 h-4 rounded"
+            />
+            <span className="text-sm font-medium text-amber-800">启用合同到期预警</span>
+          </label>
+        </div>
+        <p className="text-xs text-amber-600 mt-2">
+          💡 关闭后，合同台账顶部到期预警条和预警详情 Modal 将不再显示该合同的到期提醒。不影响支付预警和考核到期提醒。
+        </p>
       </Section>
 
       {/* ========== 916文档 五、备注 ========== */}

@@ -2055,6 +2055,8 @@ export interface ContractLedger {
   terminationDate?: string;      // 合同约定终止日期
   endDate?: string;              // 合同结束日期
   expireDate?: string;           // 合同到期日期
+  /** 合同到期预警开关 — 默认 true，为 false 时合同台账顶部到期预警条跳过该合同 */
+  enableExpireAlert?: boolean;
   amount?: number;               // 合同金额（万元）
   /** 合同已支付金额（万元）— ⚠️ 展示值 = paidAmountBase + Σ(linkedDemandIds 需求预估金额)，聚合函数在 utils/contractAggregate.ts */
   paidAmount?: number;

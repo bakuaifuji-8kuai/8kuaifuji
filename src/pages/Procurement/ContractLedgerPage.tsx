@@ -306,25 +306,29 @@ export default function ContractLedgerPage() {
           });
         }
       }
-      // 2) 到期日提前提醒
-      const expire = c.endDate || c.expireDate || c.terminationDate;
-      if (expire) {
-        const expireDate = new Date(expire);
-        const diffDays = Math.ceil((expireDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        if (diffDays >= 0 && diffDays <= (reminderSettings?.expireDays ?? 30)) {
-          result.push({
-            contract: c,
-            type: 'expire',
-            message: diffDays === 0 ? '今日到期' : `还有 ${diffDays} 天到期（${expire}）`,
-            level: diffDays <= 7 ? 'danger' : 'warning',
-          });
-        } else if (diffDays < 0) {
-          result.push({
-            contract: c,
-            type: 'expire',
-            message: `已过期 ${Math.abs(diffDays)} 天（${expire}）`,
-            level: 'danger',
-          });
+      // 2) 到期日提前提醒（合同级 enableExpireAlert === false 时跳过）
+      if (c.enableExpireAlert === false) {
+        // 不覆盖全局到期预警，仅本合同关闭
+      } else {
+        const expire = c.endDate || c.expireDate || c.terminationDate;
+        if (expire) {
+          const expireDate = new Date(expire);
+          const diffDays = Math.ceil((expireDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          if (diffDays >= 0 && diffDays <= (reminderSettings?.expireDays ?? 30)) {
+            result.push({
+              contract: c,
+              type: 'expire',
+              message: diffDays === 0 ? '今日到期' : `还有 ${diffDays} 天到期（${expire}）`,
+              level: diffDays <= 7 ? 'danger' : 'warning',
+            });
+          } else if (diffDays < 0) {
+            result.push({
+              contract: c,
+              type: 'expire',
+              message: `已过期 ${Math.abs(diffDays)} 天（${expire}）`,
+              level: 'danger',
+            });
+          }
         }
       }
       // 3) 合同考核到期提醒 —— 按考核类型独立判断（从 store.eval 读各自的 enabled + days）

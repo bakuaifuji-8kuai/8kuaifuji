@@ -107,6 +107,7 @@ export default function ContractProcurementPage() {
       guaranteeEvaluation: { isOpen: false },
       assessmentManagement: null,
       yearlyEvaluation: false,
+      enableExpireAlert: true,
       businessCategory: undefined,
       isOnsite: undefined,
     });
@@ -165,6 +166,7 @@ export default function ContractProcurementPage() {
         guaranteeEvaluation: finalForm.guaranteeEvaluation ?? { isOpen: false },
         assessmentManagement: finalForm.assessmentManagement ?? null,
         yearlyEvaluation: finalForm.yearlyEvaluation ?? false,
+        enableExpireAlert: finalForm.enableExpireAlert ?? true,
         isOnsite: finalForm.isOnsite,
       };
       addContractLedger(newLedger);
@@ -637,7 +639,7 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
 
       {/* ========== 916文档 五、招采类独有设置 ========== */}
       <Section title="⭐ 招采类独有设置（916文档L17-18）" tone="amber">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           {/* 履约评价（是/否）— 审批通过后自动关联合同履约评价流程 */}
           <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-lg">
             <label className="flex items-center gap-2 cursor-pointer pt-6">
@@ -684,9 +686,21 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
               <span className="text-sm font-medium text-amber-800">年度评价</span>
             </label>
           </div>
+          {/* 合同到期预警 */}
+          <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-lg">
+            <label className="flex items-center gap-2 cursor-pointer pt-6">
+              <input
+                type="checkbox"
+                checked={form.enableExpireAlert ?? true}
+                onChange={(e) => update({ enableExpireAlert: e.target.checked })}
+                className="w-4 h-4 rounded"
+              />
+              <span className="text-sm font-medium text-amber-800">🔔 合同到期预警</span>
+            </label>
+          </div>
         </div>
         <p className="text-xs text-amber-600 mt-2">
-          💡 勾选后自动关联后续履约评价/考核/年度评价流程。
+          💡 勾选履约评价/考核/年度评价后自动关联后续流程；关闭"合同到期预警"则合同台账顶部到期预警条不显示该合同。
         </p>
       </Section>
 
