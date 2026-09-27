@@ -7,7 +7,7 @@ import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import { getAutoPaidAmount } from '@/utils/contractAggregate';
-import type { ContractLedger, Bidding, ContractEvaluationBinding, EvaluationType, ProcurementFormation, NonProcurementFormation, ProcurementContractType, NonProcurementContractType, ProcurementDemand } from '@/types';
+import type { ContractLedger, Bidding, ContractEvaluationBinding, EvaluationType, ProcurementFormation, NonProcurementFormation, ProcurementContractType, NonProcurementContractType, ProcurementDemand, AlertOverride } from '@/types';
 import { PROCUREMENT_FORMATION_LABELS, NON_PROCUREMENT_FORMATION_LABELS, PROCUREMENT_CONTRACT_TYPE_LABELS, NON_PROCUREMENT_CONTRACT_TYPE_LABELS, ARCHIVE_STATUS_LABELS, BUSINESS_CATEGORY_LABELS } from '@/types';
 import { Printer, FileSpreadsheet, FileDown, Bell, ExternalLink } from 'lucide-react';
 
@@ -148,6 +148,71 @@ export default function ContractLedgerPage() {
 
   // 合同提醒设置弹窗（临时草稿，保存时才写 store）
   const [reminderSettingsOpen, setReminderSettingsOpen] = useState(false);
+  // ========== 预警忽略弹窗 ==========
+  const [ignoreModalOpen, setIgnoreModalOpen] = useState(false);
+  const [ignoreTarget, setIgnoreTarget] = useState<{ contract: ContractLedger; type: 'paid' | 'expire' | 'eval' } | null>(null);
+  const [ignoreDays, setIgnoreDays] = useState<string>('15'); // 7/15/30/custom
+  const [ignoreCustomDate, setIgnoreCustomDate] = useState<string>('');
+  const [ignoreReason, setIgnoreReason] = useState<string>('');
+
+  // 类型中文标签
+  const ALERT_TYPE_LABEL: Record<'paid' | 'expire' | 'eval', string> = {
+    paid: '支付占比预警',
+    expire: '合同到期预警',
+    eval: '考核到期提醒',
+  };
+
+  // 打开忽略弹窗
+  const openIgnoreModal = (contract: ContractLedger, type: 'paid' | 'expire' | 'eval') => {
+    setIgnoreTarget({ contract, type });
+    setIgnoreDays('15');
+    const d = new Date(); d.setDate(d.getDate() + 15);
+    setIgnoreCustomDate(d.toISOString().slice(0, 10));
+    setIgnoreReason('');
+    setIgnoreModalOpen(true);
+  };
+
+  // 确认忽略
+  const confirmIgnore = () => {
+    if (!ignoreTarget) return;
+    let untilStr: string;
+    if (ignoreDays === 'custom') {
+      if (!ignoreCustomDate) { alert('请选择自定义截止日期'); return; }
+      untilStr = ignoreCustomDate;
+    } else {
+      const d = new Date();
+      d.setDate(d.getDate() + Number(ignoreDays));
+      untilStr = d.toISOString().slice(0, 10);
+    }
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const existingOverrides = ignoreTarget.contract.ignoredAlerts || [];
+    // 替换同类型的旧 override（如果有）
+    const filtered = existingOverrides.filter((o) => o.type !== ignoreTarget.type);
+    const newOverride: AlertOverride = {
+      type: ignoreTarget.type,
+      ignoredUntil: untilStr,
+      reason: ignoreReason.trim() || undefined,
+      ignoredBy: currentUser?.name,
+      ignoredAt: now,
+    };
+    updateContractLedger(ignoreTarget.contract.id, {
+      ignoredAlerts: [...filtered, newOverride],
+    });
+    setIgnoreModalOpen(false);
+    setIgnoreTarget(null);
+    alert(`已临时忽略 ${ALERT_TYPE_LABEL[ignoreTarget.type]} 至 ${untilStr}`);
+  };
+
+  // 手动恢复（清除 override）
+  const manualRestoreOverride = (contractId: string, type: 'paid' | 'expire' | 'eval') => {
+    const c = (contractLedgers || []).find((x) => x.id === contractId);
+    if (!c) return;
+    if (!confirm(`确认提前恢复该合同的 ${ALERT_TYPE_LABEL[type]}？`)) return;
+    const overrides = c.ignoredAlerts || [];
+    updateContractLedger(contractId, {
+      ignoredAlerts: overrides.filter((o) => o.type !== type),
+    });
+  };
   const [draftPaidThreshold, setDraftPaidThreshold] = useState(80);
   const [draftExpireDays, setDraftExpireDays] = useState(30);
   const [draftEval, setDraftEval] = useState<Record<string, { enabled: boolean; days: number }>>({});
@@ -284,8 +349,20 @@ export default function ContractLedgerPage() {
     return Array.from(deps).sort();
   }, [contractLedgers]);
 
-  // ========== 提醒规则：已支付金额占比 + 到期日提前提醒 ==========
-  // 提醒合同列表
+  // ========== 工具：判断某合同某类型预警是否在临时忽略期内 ==========
+  function isAlertPermanentlyOff(c: ContractLedger, type: 'paid' | 'expire' | 'eval'): boolean {
+    if (type === 'paid') return c.enablePaidAlert === false;
+    if (type === 'expire') return c.enableExpireAlert === false;
+    if (type === 'eval') return c.enableEvalAlert === false;
+    return false;
+  }
+  function findActiveOverride(c: ContractLedger, type: 'paid' | 'expire' | 'eval', today: Date): AlertOverride | null {
+    const ov = c.ignoredAlerts?.find((a) => a.type === type);
+    if (ov && new Date(ov.ignoredUntil) > today) return ov;
+    return null;
+  }
+
+  // ========== 提醒规则：已支付金额占比 + 到期日提前提醒 + 考核到期提醒 ==========
   const reminderContracts = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -293,23 +370,23 @@ export default function ContractLedgerPage() {
     filteredData.forEach((c) => {
       if (c.status === 'terminated' || c.status === 'completed') return;
       // 1) 已支付金额占比提醒
-      const total = Number((c as any).contractAmount || (c as any).totalAmount || c.amount || 0);
-      const paid = Number((c as any).paidAmount || c.paidAmount || 0);
-      if (total > 0) {
-        const ratio = (paid / total) * 100;
-        if (ratio >= (reminderSettings?.paidThreshold ?? 80)) {
-          result.push({
-            contract: c,
-            type: 'paid',
-            message: `已支付 ${ratio.toFixed(1)}%（¥${paid.toLocaleString()} / ¥${total.toLocaleString()}）`,
-            level: ratio >= 95 ? 'danger' : 'warning',
-          });
+      if (!isAlertPermanentlyOff(c, 'paid') && !findActiveOverride(c, 'paid', today)) {
+        const total = Number((c as any).contractAmount || (c as any).totalAmount || c.amount || 0);
+        const paid = Number((c as any).paidAmount || c.paidAmount || 0);
+        if (total > 0) {
+          const ratio = (paid / total) * 100;
+          if (ratio >= (reminderSettings?.paidThreshold ?? 80)) {
+            result.push({
+              contract: c,
+              type: 'paid',
+              message: `已支付 ${ratio.toFixed(1)}%（¥${paid.toLocaleString()} / ¥${total.toLocaleString()}）`,
+              level: ratio >= 95 ? 'danger' : 'warning',
+            });
+          }
         }
       }
-      // 2) 到期日提前提醒（合同级 enableExpireAlert === false 时跳过）
-      if (c.enableExpireAlert === false) {
-        // 不覆盖全局到期预警，仅本合同关闭
-      } else {
+      // 2) 到期日提前提醒
+      if (!isAlertPermanentlyOff(c, 'expire') && !findActiveOverride(c, 'expire', today)) {
         const expire = c.endDate || c.expireDate || c.terminationDate;
         if (expire) {
           const expireDate = new Date(expire);
@@ -331,37 +408,55 @@ export default function ContractLedgerPage() {
           }
         }
       }
-      // 3) 合同考核到期提醒 —— 按考核类型独立判断（从 store.eval 读各自的 enabled + days）
-      if (c.contractEvaluations && c.contractEvaluations.length > 0) {
-        c.contractEvaluations.forEach((ev) => {
-          if (!ev.nextRemindDate) return;
-          const kindKey = (reminderSettings?.eval as any)?.[ev.kind];
-          if (!kindKey || !kindKey.enabled) return;
-          const days = kindKey.days ?? 7;
-          const remindDate = new Date(ev.nextRemindDate);
-          const diffDays = Math.ceil((remindDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-          const labelMap: Record<string, string> = { monthly: '月度考核', quarterly: '季度考核', yearly: '年度评价', contract_performance: '履约评价', project_single: '项目考核', single: '项目考核', warranty: '履约评价' };
-          const label = labelMap[ev.kind] || '考核';
-          if (diffDays >= 0 && diffDays <= days) {
-            result.push({
-              contract: c,
-              type: 'eval',
-              message: `${label}${diffDays === 0 ? '今日到期' : diffDays + ' 天后到期'}（${ev.templateName || ev.kind}）`,
-              level: diffDays <= 3 ? 'danger' : 'warning',
-            });
-          } else if (diffDays < 0 && diffDays >= -30) {
-            result.push({
-              contract: c,
-              type: 'eval',
-              message: `${label}已过期 ${Math.abs(diffDays)} 天，待执行`,
-              level: 'danger',
-            });
-          }
-        });
+      // 3) 合同考核到期提醒
+      if (!isAlertPermanentlyOff(c, 'eval') && !findActiveOverride(c, 'eval', today)) {
+        if (c.contractEvaluations && c.contractEvaluations.length > 0) {
+          c.contractEvaluations.forEach((ev) => {
+            if (!ev.nextRemindDate) return;
+            const kindKey = (reminderSettings?.eval as any)?.[ev.kind];
+            if (!kindKey || !kindKey.enabled) return;
+            const days = kindKey.days ?? 7;
+            const remindDate = new Date(ev.nextRemindDate);
+            const diffDays = Math.ceil((remindDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            const labelMap: Record<string, string> = { monthly: '月度考核', quarterly: '季度考核', yearly: '年度评价', contract_performance: '履约评价', project_single: '项目考核', single: '项目考核', warranty: '履约评价' };
+            const label = labelMap[ev.kind] || '考核';
+            if (diffDays >= 0 && diffDays <= days) {
+              result.push({
+                contract: c,
+                type: 'eval',
+                message: `${label}${diffDays === 0 ? '今日到期' : diffDays + ' 天后到期'}（${ev.templateName || ev.kind}）`,
+                level: diffDays <= 3 ? 'danger' : 'warning',
+              });
+            } else if (diffDays < 0 && diffDays >= -30) {
+              result.push({
+                contract: c,
+                type: 'eval',
+                message: `${label}已过期 ${Math.abs(diffDays)} 天，待执行`,
+                level: 'danger',
+              });
+            }
+          });
+        }
       }
     });
     return result;
   }, [filteredData, reminderSettings]);
+
+  // ========== 当前被临时忽略的预警列表（用于 Modal 展示"已忽略"分组）==========
+  const ignoredAlertsActive = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const items: Array<{ contract: ContractLedger; type: 'paid' | 'expire' | 'eval'; override: AlertOverride }> = [];
+    filteredData.forEach((c) => {
+      c.ignoredAlerts?.forEach((ov) => {
+        if (new Date(ov.ignoredUntil) > today) {
+          items.push({ contract: c, type: ov.type, override: ov });
+        }
+      });
+    });
+    // 按忽略到期时间升序（最早恢复的排前面）
+    return items.sort((a, b) => new Date(a.override.ignoredUntil).getTime() - new Date(b.override.ignoredUntil).getTime());
+  }, [filteredData]);
 
   // ========== 导出 Excel (CSV) ==========
   const handleExportExcel = () => {
@@ -1043,6 +1138,7 @@ export default function ContractLedgerPage() {
                         <th className="text-left py-2 px-3 font-medium">合同名称</th>
                         <th className="text-left py-2 px-3 font-medium">对方单位</th>
                         <th className="text-left py-2 px-3 font-medium">详情</th>
+                        <th className="text-center py-2 px-3 font-medium w-24">操作</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1066,12 +1162,75 @@ export default function ContractLedgerPage() {
                           <td className="py-2 px-3 text-slate-800">{r.contract.contractName}</td>
                           <td className="py-2 px-3 text-slate-600">{r.contract.counterpartyName || '-'}</td>
                           <td className={`py-2 px-3 ${r.level === 'danger' ? 'text-rose-600 font-medium' : 'text-amber-700'}`}>{r.message}</td>
+                          <td className="py-2 px-3 text-center">
+                            <button
+                              onClick={() => openIgnoreModal(r.contract, r.type)}
+                              className="text-[11px] text-slate-500 hover:text-amber-600 hover:underline"
+                              title="临时忽略该预警 N 天"
+                            >
+                              🔕 忽略
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 )}
               </div>
+
+              {/* Section C：已临时忽略的预警（合约管理员手动恢复入口） */}
+              {ignoredAlertsActive.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                    <span className="w-1 h-4 bg-slate-400 rounded"></span>
+                    已临时忽略（{ignoredAlertsActive.length}）
+                    <span className="text-[11px] text-slate-400 font-normal">到期自动恢复</span>
+                  </h4>
+                  <table className="w-full text-xs border border-slate-200 rounded-lg overflow-hidden bg-slate-50/60">
+                    <thead className="bg-slate-100 text-slate-500">
+                      <tr>
+                        <th className="text-left py-2 px-3 font-medium">类型</th>
+                        <th className="text-left py-2 px-3 font-medium">合同编号</th>
+                        <th className="text-left py-2 px-3 font-medium">合同名称</th>
+                        <th className="text-left py-2 px-3 font-medium">忽略截止</th>
+                        <th className="text-left py-2 px-3 font-medium">剩余</th>
+                        <th className="text-left py-2 px-3 font-medium">忽略人 / 原因</th>
+                        <th className="text-center py-2 px-3 font-medium w-24">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ignoredAlertsActive.map((item, idx) => {
+                        const today = new Date(); today.setHours(0, 0, 0, 0);
+                        const until = new Date(item.override.ignoredUntil);
+                        const remainingDays = Math.ceil((until.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                        return (
+                          <tr key={idx} className="border-t border-slate-200">
+                            <td className="py-2 px-3">
+                              <span className="px-2 py-0.5 rounded text-white text-[11px] bg-slate-500">{ALERT_TYPE_LABEL[item.type]}</span>
+                            </td>
+                            <td className="py-2 px-3 text-slate-700 font-mono">{item.contract.contractNo}</td>
+                            <td className="py-2 px-3 text-slate-800">{item.contract.contractName}</td>
+                            <td className="py-2 px-3 text-slate-700">{item.override.ignoredUntil}</td>
+                            <td className="py-2 px-3 text-slate-600">{remainingDays} 天</td>
+                            <td className="py-2 px-3 text-slate-600">
+                              {item.override.ignoredBy || '-'}
+                              {item.override.reason && <span className="ml-1 text-slate-400">· {item.override.reason}</span>}
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              <button
+                                onClick={() => manualRestoreOverride(item.contract.id, item.type)}
+                                className="text-[11px] text-indigo-600 hover:text-indigo-800 hover:underline"
+                              >
+                                恢复
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
               {/* Section B：统计汇总 */}
               <div>
@@ -1865,6 +2024,100 @@ export default function ContractLedgerPage() {
           </div>
         </div>
       </Modal>
+
+      {/* ========== 预警临时忽略弹窗 ========== */}
+      {ignoreModalOpen && ignoreTarget && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span>🔕</span>
+                <h3 className="font-semibold text-slate-800">临时忽略预警</h3>
+              </div>
+              <button
+                onClick={() => setIgnoreModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 text-2xl leading-none px-2"
+              >×</button>
+            </div>
+            <div className="p-5 space-y-4">
+              {/* 目标信息 */}
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs">
+                <div className="text-amber-700 font-medium mb-1">将忽略：{ALERT_TYPE_LABEL[ignoreTarget.type]}</div>
+                <div className="text-slate-700">
+                  <span className="font-mono">{ignoreTarget.contract.contractNo}</span>
+                  <span className="mx-1">·</span>
+                  {ignoreTarget.contract.contractName}
+                </div>
+              </div>
+
+              {/* 忽略时长 */}
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-2">忽略时长（到期自动恢复）</label>
+                <div className="flex gap-2 flex-wrap">
+                  {[
+                    { v: '7', label: '7 天' },
+                    { v: '15', label: '15 天' },
+                    { v: '30', label: '30 天' },
+                    { v: 'custom', label: '自定义' },
+                  ].map((o) => (
+                    <button
+                      key={o.v}
+                      onClick={() => {
+                        setIgnoreDays(o.v);
+                        if (o.v !== 'custom') {
+                          const d = new Date(); d.setDate(d.getDate() + Number(o.v));
+                          setIgnoreCustomDate(d.toISOString().slice(0, 10));
+                        }
+                      }}
+                      className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                        ignoreDays === o.v
+                          ? 'bg-indigo-500 text-white border-indigo-500'
+                          : 'bg-white text-slate-600 border-slate-300 hover:border-indigo-400'
+                      }`}
+                    >{o.label}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 自定义日期（条件渲染） */}
+              {ignoreDays === 'custom' && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">截止日期</label>
+                  <input
+                    type="date"
+                    className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                    value={ignoreCustomDate}
+                    min={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => setIgnoreCustomDate(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {/* 预计恢复日期 */}
+              {ignoreCustomDate && (
+                <div className="text-xs text-slate-500">
+                  📅 预计恢复日期：<span className="text-indigo-600 font-medium">{ignoreCustomDate}</span>
+                </div>
+              )}
+
+              {/* 忽略原因 */}
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">忽略原因（可选）</label>
+                <textarea
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm min-h-[60px] focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+                  placeholder="如：已在新招选中，预计 2 周内落地"
+                  value={ignoreReason}
+                  onChange={(e) => setIgnoreReason(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-slate-200 flex justify-end gap-2">
+              <DefaultButton onClick={() => setIgnoreModalOpen(false)}>取消</DefaultButton>
+              <PrimaryButton onClick={confirmIgnore}>确认忽略</PrimaryButton>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ========== 考核绑定管理弹窗 ========== */}
       <Modal

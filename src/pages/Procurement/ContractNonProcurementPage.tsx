@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import type {
   ContractLedger,
@@ -173,6 +173,8 @@ export default function ContractNonProcurementPage() {
         remark: finalForm.remark,
         status: finalForm.status as ContractLedger['status'],
         enableExpireAlert: finalForm.enableExpireAlert ?? true,
+        enablePaidAlert: finalForm.enablePaidAlert ?? true,
+        enableEvalAlert: finalForm.enableEvalAlert ?? true,
         performanceBond: finalForm.performanceBond,
       };
       addContractLedger(newLedger);

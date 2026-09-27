@@ -1,4 +1,4 @@
-// 仓库类别
+﻿// 仓库类别
 export type WarehouseCategory = 'exhibition' | 'consumable' | 'fixed_asset';
 
 // 仓库属性
@@ -2025,6 +2025,20 @@ export interface ContractArchive {
   archiveChecklist?: ArchiveChecklist;
 }
 
+/** 合同预警临时忽略记录 — 合约管理员对某类预警手动忽略 N 天 */
+export interface AlertOverride {
+  /** 预警类型：支付占比 / 到期 / 考核 */
+  type: 'paid' | 'expire' | 'eval';
+  /** 忽略截止时间（ISO 日期字符串）— 过期后自动恢复预警 */
+  ignoredUntil: string;
+  /** 忽略原因（可选）— 合约管理员备注：如"新招选中，预计2周内落地" */
+  reason?: string;
+  /** 忽略人 */
+  ignoredBy?: string;
+  /** 忽略时间 */
+  ignoredAt?: string;
+}
+
 export interface ContractLedger {
   id: string;
   contractId: string;
@@ -2057,6 +2071,12 @@ export interface ContractLedger {
   expireDate?: string;           // 合同到期日期
   /** 合同到期预警开关 — 默认 true，为 false 时合同台账顶部到期预警条跳过该合同 */
   enableExpireAlert?: boolean;
+  /** 合同已支付占比预警开关 — 默认 true */
+  enablePaidAlert?: boolean;
+  /** 合同考核到期提醒开关 — 默认 true */
+  enableEvalAlert?: boolean;
+  /** 合约管理员临时忽略的预警记录 — 过期自动恢复 */
+  ignoredAlerts?: AlertOverride[];
   amount?: number;               // 合同金额（万元）
   /** 合同已支付金额（万元）— ⚠️ 展示值 = paidAmountBase + Σ(linkedDemandIds 需求预估金额)，聚合函数在 utils/contractAggregate.ts */
   paidAmount?: number;
