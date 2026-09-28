@@ -146,8 +146,8 @@ export default function ProcurementBiddingLedgerPage() {
   // ========== 导出 Excel ==========
   const handleExport = () => {
     const HEADERS = [
-      '工单编号', '项目名称', '采购方式',
-      '需求类型', '三重大', '申请部门', '申请人', '申请日期', '立项审批方式', '立项审批日期', '不含税审定金额(元)',
+      '编号', '项目名称', '采购方式',
+      '需求类型', '三重一大', '申请部门', '申请人', '申请日期', '立项审批方式', '立项审批日期', '不含税审定金额(元)',
       '采购方式审批', '方式审批日期', '招标人', '招采实施单位', '项目实施单位', '招标代理', '业务代表',
       '答疑/质疑', '流标', '委派业主评委',
       '中标单位', '中标法人', '中标得分',
@@ -230,7 +230,7 @@ export default function ProcurementBiddingLedgerPage() {
 
       {/* ========== 筛选区（12 维）========== */}
       <SearchBar>
-        <SearchField label="关键字" placeholder="工单编号/项目名称/中标单位" value={keyword} onChange={setKeyword} />
+        <SearchField label="关键字" placeholder="编号/项目名称/中标单位" value={keyword} onChange={setKeyword} />
         <SearchField
           label="需求类型"
           type="select"
@@ -324,15 +324,15 @@ export default function ProcurementBiddingLedgerPage() {
             <span>共 {filteredData.length} 条（全量 {biddings.length} 条）· 横向滚动查看全部 30 列</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-[12px] border-collapse" style={{ minWidth: 2900 }}>
+            <table className="w-full text-[12px] border-collapse" style={{ minWidth: 2920 }}>
               <colgroup>
                 {/* sticky 左侧 3 列 — 总宽 460px */}
-                <col style={{ width: 110 }} />  {/* 工单编号 */}
+                <col style={{ width: 110 }} />  {/* 编号 */}
                 <col style={{ width: 200 }} />  {/* 项目名称 */}
                 <col style={{ width: 150 }} />  {/* 采购方式 */}
                 {/* 需求字段 8 列 — 总宽 720px */}
                 <col style={{ width: 90 }} />   {/* 需求类型 */}
-                <col style={{ width: 60 }} />   {/* 三重大 */}
+                <col style={{ width: 80 }} />   {/* 三重一大 */}
                 <col style={{ width: 100 }} />  {/* 申请部门 */}
                 <col style={{ width: 80 }} />   {/* 申请人 */}
                 <col style={{ width: 90 }} />   {/* 申请日期 */}
@@ -363,13 +363,13 @@ export default function ProcurementBiddingLedgerPage() {
               <thead className="bg-slate-100 text-slate-700 sticky top-0 z-10">
                 <tr>
                   {/* ===== Sticky 左侧关键列（shadow 分隔线）===== */}
-                  <Th className="sticky left-0 bg-slate-100 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">工单编号</Th>
+                  <Th className="sticky left-0 bg-slate-100 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">编号</Th>
                   <Th className="sticky left-[110px] bg-slate-100 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">项目名称</Th>
                   <Th className="sticky left-[310px] bg-slate-100 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">采购方式</Th>
 
                   {/* ===== 需求字段（9 列）===== */}
                   <Th>需求类型</Th>
-                  <Th className="text-center">三重大</Th>
+                  <Th className="text-center">三重一大</Th>
                   <Th>申请部门</Th>
                   <Th>申请人</Th>
                   <Th>申请日期</Th>
@@ -531,7 +531,7 @@ function BiddingDetailContent({ row }: { row: JoinedRow }) {
       <section>
         <h3 className="text-sm font-semibold text-slate-700 mb-3 pb-2 border-b border-slate-200">📋 执行工单基本信息</h3>
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-          <DetailRow label="工单编号" value={row.biddingNo} />
+          <DetailRow label="编号" value={row.biddingNo} />
           <DetailRow label="审批状态" value={<span className={`px-2 py-0.5 rounded text-[11px] ${ss.color}`}>{ss.label}</span>} />
           <DetailRow label="项目名称" value={row.projectName} full />
           <DetailRow label="采购方式" value={row.procurementMethod ? BIDDING_METHOD_LABEL[row.procurementMethod] : '-'} />
@@ -591,7 +591,7 @@ function BiddingDetailContent({ row }: { row: JoinedRow }) {
             <DetailRow label="需求编号" value={d.demandNo} />
             <DetailRow label="需求类型" value={catLabel(d.businessCategory, d.subType)} />
             <DetailRow label="项目名称" value={d.projectName} full />
-            <DetailRow label="三重大" value={d.isThreeImportant ? '是' : '否'} />
+            <DetailRow label="三重一大" value={d.isThreeImportant ? '是' : '否'} />
             <DetailRow label="申请部门" value={d.applicantDept} />
             <DetailRow label="申请人" value={d.applicant} />
             <DetailRow label="申请日期" value={d.applyDate} />
