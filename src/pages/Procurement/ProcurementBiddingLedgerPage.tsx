@@ -246,115 +246,151 @@ export default function ProcurementBiddingLedgerPage() {
         </div>
       </SearchBar>
 
-      {/* ========== 27 列表格（原生 table + 横向滚动 + sticky 左侧列）========== */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-xs text-slate-600 flex items-center justify-between">
-          <span>共 {filteredData.length} 条（全量 {biddings.length} 条）· 横向滚动查看全部 27 列</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-[2800px] w-full text-[12px] border-collapse">
-            <thead className="bg-slate-100 text-slate-700 sticky top-0 z-10">
-              <tr>
-                {/* ===== Sticky 左侧关键列 ===== */}
-                <Th className="sticky left-0 bg-slate-100 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">工单编号</Th>
-                <Th className="sticky left-[80px] bg-slate-100 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">项目名称</Th>
-                <Th className="sticky left-[240px] bg-slate-100 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">采购方式</Th>
-
-                {/* ===== 需求字段（9 列）===== */}
-                <Th>需求类型</Th>
-                <Th>三重大</Th>
-                <Th>申请部门</Th>
-                <Th>申请人</Th>
-                <Th>申请日期</Th>
-                <Th>立项审批方式</Th>
-                <Th>立项审批日期</Th>
-                <Th align="right">不含税审定(元)</Th>
-
-                {/* ===== 执行字段（18 列）===== */}
-                <Th>采购方式审批</Th>
-                <Th>方式审批日期</Th>
-                <Th>招标人</Th>
-                <Th>招采实施单位</Th>
-                <Th>项目实施单位</Th>
-                <Th>招标代理</Th>
-                <Th>业务代表</Th>
-                <Th>答疑/质疑</Th>
-                <Th>流标</Th>
-                <Th>委派业主评委</Th>
-                <Th>中标单位</Th>
-                <Th>中标法人</Th>
-                <Th align="right">中标得分</Th>
-                <Th>未中标1/法人</Th>
-                <Th align="right">未中1得分</Th>
-                <Th>未中标2/法人</Th>
-                <Th align="right">未中2得分</Th>
-                <Th>审批状态</Th>
-                <Th className="text-center sticky right-0 bg-slate-100 z-20 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)] w-16">操作</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.length === 0 && (
+        {/* ========== 27 列表格：colgroup 控宽 + sticky 左侧/右侧关键列 ========== */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-xs text-slate-600 flex items-center justify-between">
+            <span>共 {filteredData.length} 条（全量 {biddings.length} 条）· 横向滚动查看全部 27 列</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[12px] border-collapse" style={{ minWidth: 2260 }}>
+              <colgroup>
+                {/* sticky 左侧 3 列 — 总宽 360px */}
+                <col style={{ width: 120 }} />  {/* 工单编号 sticky-left-0 */}
+                <col style={{ width: 160 }} />  {/* 项目名称 sticky-left-120 */}
+                <col style={{ width: 140 }} />  {/* 采购方式 sticky-left-280 */}
+                {/* 需求字段 9 列 */}
+                <col style={{ width: 120 }} />  {/* 需求类型 */}
+                <col style={{ width: 70 }} />   {/* 三重大 */}
+                <col style={{ width: 120 }} />  {/* 申请部门 */}
+                <col style={{ width: 90 }} />   {/* 申请人 */}
+                <col style={{ width: 100 }} />  {/* 申请日期 */}
+                <col style={{ width: 110 }} />  {/* 立项审批方式 */}
+                <col style={{ width: 110 }} />  {/* 立项审批日期 */}
+                <col style={{ width: 130 }} />  {/* 不含税审定 */}
+                {/* 执行字段 18 列 */}
+                <col style={{ width: 120 }} />  {/* 采购方式审批 */}
+                <col style={{ width: 110 }} />  {/* 方式审批日期 */}
+                <col style={{ width: 110 }} />  {/* 招标人 */}
+                <col style={{ width: 130 }} />  {/* 招采实施单位 */}
+                <col style={{ width: 130 }} />  {/* 项目实施单位 */}
+                <col style={{ width: 130 }} />  {/* 招标代理 */}
+                <col style={{ width: 100 }} />  {/* 业务代表 */}
+                <col style={{ width: 100 }} />  {/* 答疑/质疑 */}
+                <col style={{ width: 70 }} />   {/* 流标 */}
+                <col style={{ width: 100 }} />  {/* 委派业主评委 */}
+                <col style={{ width: 160 }} />  {/* 中标单位 */}
+                <col style={{ width: 110 }} />  {/* 中标法人 */}
+                <col style={{ width: 80 }} />   {/* 中标得分 */}
+                <col style={{ width: 180 }} />  {/* 未中标1/法人 */}
+                <col style={{ width: 80 }} />   {/* 未中1得分 */}
+                <col style={{ width: 180 }} />  {/* 未中标2/法人 */}
+                <col style={{ width: 80 }} />   {/* 未中2得分 */}
+                <col style={{ width: 90 }} />   {/* 审批状态 */}
+                <col style={{ width: 60 }} />   {/* 操作 sticky-right */}
+              </colgroup>
+              <thead className="bg-slate-100 text-slate-700 sticky top-0 z-10">
                 <tr>
-                  <td colSpan={29} className="py-10 text-center text-slate-400">暂无数据</td>
+                  {/* ===== Sticky 左侧关键列（shadow 分隔线）===== */}
+                  <Th className="sticky left-0 bg-slate-100 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">工单编号</Th>
+                  <Th className="sticky left-[120px] bg-slate-100 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">项目名称</Th>
+                  <Th className="sticky left-[280px] bg-slate-100 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">采购方式</Th>
+
+                  {/* ===== 需求字段（9 列）===== */}
+                  <Th>需求类型</Th>
+                  <Th className="text-center">三重大</Th>
+                  <Th>申请部门</Th>
+                  <Th>申请人</Th>
+                  <Th>申请日期</Th>
+                  <Th>立项审批方式</Th>
+                  <Th>立项审批日期</Th>
+                  <Th align="right">不含税审定(元)</Th>
+
+                  {/* ===== 执行字段（18 列）===== */}
+                  <Th>采购方式审批</Th>
+                  <Th>方式审批日期</Th>
+                  <Th>招标人</Th>
+                  <Th>招采实施单位</Th>
+                  <Th>项目实施单位</Th>
+                  <Th>招标代理</Th>
+                  <Th>业务代表</Th>
+                  <Th className="text-center">答疑/质疑</Th>
+                  <Th className="text-center">流标</Th>
+                  <Th className="text-center">委派业主评委</Th>
+                  <Th>中标单位</Th>
+                  <Th>中标法人</Th>
+                  <Th align="right">中标得分</Th>
+                  <Th>未中标1/法人</Th>
+                  <Th align="right">未中1得分</Th>
+                  <Th>未中标2/法人</Th>
+                  <Th align="right">未中2得分</Th>
+                  <Th className="text-center">审批状态</Th>
+                  <Th className="text-center sticky right-0 bg-slate-100 z-20 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]">操作</Th>
                 </tr>
-              )}
-              {filteredData.map((r) => {
-                const d = r.demand;
-                const ss = statusLabel(r.approvalStatus);
-                return (
-                  <tr key={r.id} className="border-t border-slate-100 hover:bg-indigo-50/40 transition-colors">
-                    {/* Sticky 左侧 */}
-                    <Td className="sticky left-0 bg-white z-10 font-mono text-slate-700">{r.biddingNo}</Td>
-                    <Td className="sticky left-[80px] bg-white z-10 min-w-[160px]">{r.projectName || '-'}</Td>
-                    <Td className="sticky left-[240px] bg-white z-10 min-w-[140px]">{r.procurementMethod ? BIDDING_METHOD_LABEL[r.procurementMethod] : '-'}</Td>
-
-                    {/* 需求字段 */}
-                    <Td>{catLabel(d?.businessCategory, d?.subType)}</Td>
-                    <Td>{d?.isThreeImportant ? <Tag c="rose">是</Tag> : <span className="text-slate-300">—</span>}</Td>
-                    <Td>{d?.applicantDept || '-'}</Td>
-                    <Td>{d?.applicant || '-'}</Td>
-                    <Td>{d?.applyDate || '-'}</Td>
-                    <Td>{modeLabel(d?.procurementMode)}</Td>
-                    <Td>{d?.confirmApproveTime?.slice(0, 10) || '-'}</Td>
-                    <Td align="right" className="font-mono">{d?.budgetAudit?.auditAmount != null ? `¥${d.budgetAudit.auditAmount.toLocaleString()}` : '-'}</Td>
-
-                    {/* 执行字段 */}
-                    <Td>{r.procurementApprovalMethod || '-'}</Td>
-                    <Td>{r.procurementApprovalDate?.slice(0, 10) || '-'}</Td>
-                    <Td>{r.tenderer || '-'}</Td>
-                    <Td>{r.implementationUnit || '-'}</Td>
-                    <Td>{r.projectImplementationUnit || '-'}</Td>
-                    <Td>{r.agentName || '-'}</Td>
-                    <Td>{r.ownerRepresentative || '-'}</Td>
-                    <Td>{r.hasDispute || '-'}</Td>
-                    <Td>{r.isFailed ? <Tag c="rose">是</Tag> : <span className="text-slate-300">—</span>}</Td>
-                    <Td>{r.hasOwnerJudge ? <Tag c="indigo">是</Tag> : <span className="text-slate-300">—</span>}</Td>
-                    <Td>{r.winningSupplierName || '-'}</Td>
-                    <Td>{r.winningSupplierLegalPerson || '-'}</Td>
-                    <Td align="right" className="font-mono">{r.winningSupplierScore != null ? r.winningSupplierScore : '-'}</Td>
-                    <Td>
-                      {r.losingSupplier1Name
-                        ? <span>{r.losingSupplier1Name}{r.losingSupplier1LegalPerson ? ` / ${r.losingSupplier1LegalPerson}` : ''}</span>
-                        : '-'}
-                    </Td>
-                    <Td align="right" className="font-mono">{r.losingSupplier1Score != null ? r.losingSupplier1Score : '-'}</Td>
-                    <Td>
-                      {r.losingSupplier2Name
-                        ? <span>{r.losingSupplier2Name}{r.losingSupplier2LegalPerson ? ` / ${r.losingSupplier2LegalPerson}` : ''}</span>
-                        : '-'}
-                    </Td>
-                    <Td align="right" className="font-mono">{r.losingSupplier2Score != null ? r.losingSupplier2Score : '-'}</Td>
-                    <Td><span className={`px-1.5 py-0.5 rounded text-[11px] ${ss.color}`}>{ss.label}</span></Td>
-                    <Td className="text-center sticky right-0 bg-white z-10">
-                      <TextButton onClick={() => setViewItem(r)}>详情</TextButton>
-                    </Td>
+              </thead>
+              <tbody>
+                {filteredData.length === 0 && (
+                  <tr>
+                    <td colSpan={29} className="py-10 text-center text-slate-400">暂无数据</td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                )}
+                {filteredData.map((r) => {
+                  const d = r.demand;
+                  const ss = statusLabel(r.approvalStatus);
+                  return (
+                    <tr key={r.id} className="border-t border-slate-100 hover:bg-indigo-50/40 transition-colors">
+                      {/* Sticky 左侧 */}
+                      <Td className="sticky left-0 bg-white z-10 font-mono text-slate-700">{r.biddingNo}</Td>
+                      <Td className="sticky left-[120px] bg-white z-10">{r.projectName || '-'}</Td>
+                      <Td className="sticky left-[280px] bg-white z-10">{r.procurementMethod ? BIDDING_METHOD_LABEL[r.procurementMethod] : '-'}</Td>
+
+                      {/* 需求字段 */}
+                      <Td>{catLabel(d?.businessCategory, d?.subType)}</Td>
+                      <Td className="text-center">{d?.isThreeImportant ? <Tag c="rose">是</Tag> : <span className="text-slate-300">—</span>}</Td>
+                      <Td>{d?.applicantDept || '-'}</Td>
+                      <Td>{d?.applicant || '-'}</Td>
+                      <Td className="font-mono">{d?.applyDate || '-'}</Td>
+                      <Td>{modeLabel(d?.procurementMode)}</Td>
+                      <Td className="font-mono">{d?.confirmApproveTime?.slice(0, 10) || '-'}</Td>
+                      <Td align="right" className="font-mono">{d?.budgetAudit?.auditAmount != null ? `¥${d.budgetAudit.auditAmount.toLocaleString()}` : '-'}</Td>
+
+                      {/* 执行字段 */}
+                      <Td>{r.procurementApprovalMethod || '-'}</Td>
+                      <Td className="font-mono">{r.procurementApprovalDate?.slice(0, 10) || '-'}</Td>
+                      <Td>{r.tenderer || '-'}</Td>
+                      <Td>{r.implementationUnit || '-'}</Td>
+                      <Td>{r.projectImplementationUnit || '-'}</Td>
+                      <Td>{r.agentName || '-'}</Td>
+                      <Td>{r.ownerRepresentative || '-'}</Td>
+                      <Td className="text-center">{r.hasDispute || '-'}</Td>
+                      <Td className="text-center">{r.isFailed ? <Tag c="rose">是</Tag> : <span className="text-slate-300">—</span>}</Td>
+                      <Td className="text-center">{r.hasOwnerJudge ? <Tag c="indigo">是</Tag> : <span className="text-slate-300">—</span>}</Td>
+                      <Td>{r.winningSupplierName || '-'}</Td>
+                      <Td>{r.winningSupplierLegalPerson || '-'}</Td>
+                      <Td align="right" className="font-mono">{r.winningSupplierScore != null ? r.winningSupplierScore : '-'}</Td>
+                      <Td>
+                        {r.losingSupplier1Name
+                          ? <span>{r.losingSupplier1Name}{r.losingSupplier1LegalPerson ? <span className="text-slate-400"> / </span> : ''}{r.losingSupplier1LegalPerson}</span>
+                          : '-'}
+                      </Td>
+                      <Td align="right" className="font-mono">{r.losingSupplier1Score != null ? r.losingSupplier1Score : '-'}</Td>
+                      <Td>
+                        {r.losingSupplier2Name
+                          ? <span>{r.losingSupplier2Name}{r.losingSupplier2LegalPerson ? <span className="text-slate-400"> / </span> : ''}{r.losingSupplier2LegalPerson}</span>
+                          : '-'}
+                      </Td>
+                      <Td align="right" className="font-mono">{r.losingSupplier2Score != null ? r.losingSupplier2Score : '-'}</Td>
+                      <Td className="text-center"><span className={`px-1.5 py-0.5 rounded text-[11px] ${ss.color}`}>{ss.label}</span></Td>
+                      {/* sticky 右侧 */}
+                      <Td className="text-center sticky right-0 bg-white z-10 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]">
+                        <TextButton onClick={() => setViewItem(r)}>详情</TextButton>
+                      </Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
       {/* ========== 详情 Modal ========== */}
       {viewItem && (
