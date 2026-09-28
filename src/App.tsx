@@ -47,6 +47,7 @@ import BusinessFlowChart from "@/pages/Report/BusinessFlowChart";
 import ProcurementPlanPage from "@/pages/Procurement/ProcurementPlanPage";
 import ProcurementDemandPage from "@/pages/Procurement/ProcurementDemandPage";
 import ProcurementDemandConfirmPage from "@/pages/Procurement/ProcurementDemandConfirmPage";
+import ProcurementDemandLedgerPage from "@/pages/Procurement/ProcurementDemandLedgerPage";
 import ContractLedgerPage from "@/pages/Procurement/ContractLedgerPage";
 import ContractProcurementPage from "@/pages/Procurement/ContractProcurementPage";
 import ContractNonProcurementPage from "@/pages/Procurement/ContractNonProcurementPage";
@@ -124,6 +125,7 @@ export default function App() {
           <Route path="procurement/plan-summary" element={<ProcurementPlanSummaryPage />} />
           <Route path="procurement/demand" element={<ProcurementDemandPage />} />
           <Route path="procurement/demand-confirm" element={<ProcurementDemandConfirmPage />} />
+          <Route path="procurement/demand-ledger" element={<ProcurementDemandLedgerPage />} />
           <Route path="procurement/contract" element={<ContractLedgerPage />} />
           <Route path="procurement/contract-procurement" element={<ContractProcurementPage />} />
           <Route path="procurement/contract-non-procurement" element={<ContractNonProcurementPage />} />
