@@ -4,6 +4,7 @@ import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
+import * as XLSX from 'xlsx';
 import type { ProcurementDemand } from '@/types';
 
 // ========== 标签辅助函数 ==========
@@ -132,6 +133,36 @@ export default function ProcurementDemandLedgerPage() {
     }).sort((a, b) => (b.createTime || '').localeCompare(a.createTime || ''));
   }, [procurementDemands, applied]);
 
+  // ========== 导出 Excel ==========
+  const handleExport = () => {
+    const HEADERS = ['需求编号', '需求类型', '项目名称', '三重大', '申请部门', '申请人', '申请日期',
+      '立项审批方式', '立项审批日期', '不含税审定金额(元)', '清单内/外', '状态', '备注'];
+    const rows = filteredData.map((d) => [
+      d.demandNo || '',
+      getCategoryLabel(d.businessCategory, d.subType, d.demandType),
+      d.projectName || '',
+      d.isThreeImportant ? '是' : '否',
+      d.applicantDept || '',
+      d.applicant || '',
+      d.applyDate || '',
+      getModeLabel(d.procurementMode),
+      d.confirmApproveTime?.slice(0, 10) || '',
+      d.budgetAudit?.auditAmount ?? '',
+      getProcurementTypeLabel(d.procurementType).label,
+      getStatusLabel(d.status).label,
+      d.remark || '',
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([HEADERS, ...rows]);
+    ws['!cols'] = [
+      { wch: 18 }, { wch: 14 }, { wch: 28 }, { wch: 8 }, { wch: 16 }, { wch: 10 }, { wch: 12 },
+      { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 24 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '招采需求台账');
+    const ts = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `招采需求台账_${ts}.xlsx`);
+  };
+
   // ========== 表格列（13 列）==========
   const columns: ColumnDef<ProcurementDemand>[] = [
     { key: 'demandNo', title: '需求编号', width: 'w-32' },
@@ -225,6 +256,7 @@ export default function ProcurementDemandLedgerPage() {
             )}
           </p>
         </div>
+        <PrimaryButton onClick={handleExport}>📥 导出 Excel（当前筛选结果 {filteredData.length} 条）</PrimaryButton>
       </div>
 
       {/* ========== 筛选区（10 维）========== */}

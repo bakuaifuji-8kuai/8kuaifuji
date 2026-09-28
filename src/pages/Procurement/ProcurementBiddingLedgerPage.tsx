@@ -3,6 +3,7 @@ import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Bu
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
+import * as XLSX from 'xlsx';
 import type { Bidding } from '@/types';
 import { BIDDING_METHOD_LABEL } from '@/types';
 
@@ -142,6 +143,74 @@ export default function ProcurementBiddingLedgerPage() {
     }).sort((a, b) => (b.createTime || '').localeCompare(a.createTime || ''));
   }, [joined, applied]);
 
+  // ========== 导出 Excel ==========
+  const handleExport = () => {
+    const HEADERS = [
+      '工单编号', '项目名称', '采购方式',
+      '需求类型', '三重大', '申请部门', '申请人', '申请日期', '立项审批方式', '立项审批日期', '不含税审定金额(元)',
+      '采购方式审批', '方式审批日期', '招标人', '招采实施单位', '项目实施单位', '招标代理', '业务代表',
+      '答疑/质疑', '流标', '委派业主评委',
+      '中标单位', '中标法人', '中标得分',
+      '未中标单位1', '未中标法人1', '未中1得分',
+      '未中标单位2', '未中标法人2', '未中2得分',
+      '审批状态',
+    ];
+    const rows = filteredData.map((r) => {
+      const d = r.demand;
+      const ss = statusLabel(r.approvalStatus);
+      return [
+        r.biddingNo,
+        r.projectName || '',
+        r.procurementMethod ? BIDDING_METHOD_LABEL[r.procurementMethod] : '',
+        catLabel(d?.businessCategory, d?.subType),
+        d?.isThreeImportant ? '是' : '否',
+        d?.applicantDept || '',
+        d?.applicant || '',
+        d?.applyDate || '',
+        modeLabel(d?.procurementMode),
+        d?.confirmApproveTime?.slice(0, 10) || '',
+        d?.budgetAudit?.auditAmount ?? '',
+        r.procurementApprovalMethod || '',
+        r.procurementApprovalDate?.slice(0, 10) || '',
+        r.tenderer || '',
+        r.implementationUnit || '',
+        r.projectImplementationUnit || '',
+        r.agentName || '',
+        r.ownerRepresentative || '',
+        r.hasDispute || '',
+        r.isFailed ? '是' : '否',
+        r.hasOwnerJudge ? '是' : '否',
+        r.winningSupplierName || '',
+        r.winningSupplierLegalPerson || '',
+        r.winningSupplierScore ?? '',
+        r.losingSupplier1Name || '',
+        r.losingSupplier1LegalPerson || '',
+        r.losingSupplier1Score ?? '',
+        r.losingSupplier2Name || '',
+        r.losingSupplier2LegalPerson || '',
+        r.losingSupplier2Score ?? '',
+        ss.label,
+      ];
+    });
+    const aoa = [HEADERS, ...rows];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    // 列宽
+    ws['!cols'] = [
+      { wch: 14 }, { wch: 24 }, { wch: 18 },
+      { wch: 14 }, { wch: 8 }, { wch: 16 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 16 },
+      { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 12 },
+      { wch: 10 }, { wch: 8 }, { wch: 12 },
+      { wch: 20 }, { wch: 14 }, { wch: 10 },
+      { wch: 20 }, { wch: 14 }, { wch: 10 },
+      { wch: 20 }, { wch: 14 }, { wch: 10 },
+      { wch: 12 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '招采执行台账');
+    const ts = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `招采执行台账_${ts}.xlsx`);
+  };
+
   // ========== 详情 ==========
   const [viewItem, setViewItem] = useState<JoinedRow | null>(null);
 
@@ -149,11 +218,14 @@ export default function ProcurementBiddingLedgerPage() {
   return (
     <div className="p-5 space-y-4">
       {/* 头部 */}
-      <div>
-        <h1 className="text-xl font-semibold text-slate-800">招采执行台账</h1>
-        <p className="text-xs text-slate-500 mt-1">
-          以招采执行工单为主表，关联采购需求信息，全链路展示 {biddings.length} 条记录
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-800">招采执行台账</h1>
+          <p className="text-xs text-slate-500 mt-1">
+            以招采执行工单为主表，关联采购需求信息，全链路展示 {biddings.length} 条记录
+          </p>
+        </div>
+        <PrimaryButton onClick={handleExport}>📥 导出 Excel（当前筛选结果 {filteredData.length} 条）</PrimaryButton>
       </div>
 
       {/* ========== 筛选区（12 维）========== */}
