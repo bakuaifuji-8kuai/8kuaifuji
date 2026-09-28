@@ -324,48 +324,48 @@ export default function ProcurementBiddingLedgerPage() {
             <span>共 {filteredData.length} 条（全量 {biddings.length} 条）· 横向滚动查看全部 30 列</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-[12px] border-collapse" style={{ minWidth: 3390 }}>
+            <table className="w-full text-[12px] border-collapse" style={{ minWidth: 2900 }}>
               <colgroup>
-                {/* sticky 左侧 3 列 — 总宽 360px */}
-                <col style={{ width: 120 }} />  {/* 工单编号 sticky-left-0 */}
-                <col style={{ width: 160 }} />  {/* 项目名称 sticky-left-120 */}
-                <col style={{ width: 140 }} />  {/* 采购方式 sticky-left-280 */}
-                {/* 需求字段 9 列 */}
-                <col style={{ width: 120 }} />  {/* 需求类型 */}
-                <col style={{ width: 70 }} />   {/* 三重大 */}
-                <col style={{ width: 120 }} />  {/* 申请部门 */}
-                <col style={{ width: 90 }} />   {/* 申请人 */}
-                <col style={{ width: 100 }} />  {/* 申请日期 */}
-                <col style={{ width: 110 }} />  {/* 立项审批方式 */}
-                <col style={{ width: 110 }} />  {/* 立项审批日期 */}
-                <col style={{ width: 130 }} />  {/* 不含税审定 */}
-                {/* 执行字段 18 列 */}
-                <col style={{ width: 120 }} />  {/* 采购方式审批 */}
-                <col style={{ width: 110 }} />  {/* 方式审批日期 */}
-                <col style={{ width: 110 }} />  {/* 招标人 */}
-                <col style={{ width: 130 }} />  {/* 招采实施单位 */}
-                <col style={{ width: 130 }} />  {/* 项目实施单位 */}
-                <col style={{ width: 130 }} />  {/* 招标代理 */}
-                <col style={{ width: 100 }} />  {/* 业务代表 */}
-                <col style={{ width: 100 }} />  {/* 答疑/质疑 */}
-                <col style={{ width: 70 }} />   {/* 流标 */}
-                <col style={{ width: 100 }} />  {/* 委派业主评委 */}
-                <col style={{ width: 160 }} />  {/* 中标单位 */}
-                <col style={{ width: 110 }} />  {/* 中标法人 */}
-                <col style={{ width: 80 }} />   {/* 中标得分 */}
-                <col style={{ width: 180 }} />  {/* 未中标1/法人 */}
-                <col style={{ width: 80 }} />   {/* 未中1得分 */}
-                <col style={{ width: 180 }} />  {/* 未中标2/法人 */}
-                <col style={{ width: 80 }} />   {/* 未中2得分 */}
-                <col style={{ width: 90 }} />   {/* 审批状态 */}
-                <col style={{ width: 60 }} />   {/* 操作 sticky-right */}
+                {/* sticky 左侧 3 列 — 总宽 460px */}
+                <col style={{ width: 110 }} />  {/* 工单编号 */}
+                <col style={{ width: 200 }} />  {/* 项目名称 */}
+                <col style={{ width: 150 }} />  {/* 采购方式 */}
+                {/* 需求字段 8 列 — 总宽 720px */}
+                <col style={{ width: 90 }} />   {/* 需求类型 */}
+                <col style={{ width: 60 }} />   {/* 三重大 */}
+                <col style={{ width: 100 }} />  {/* 申请部门 */}
+                <col style={{ width: 80 }} />   {/* 申请人 */}
+                <col style={{ width: 90 }} />   {/* 申请日期 */}
+                <col style={{ width: 100 }} />  {/* 立项审批方式 */}
+                <col style={{ width: 90 }} />   {/* 立项审批日期 */}
+                <col style={{ width: 110 }} />  {/* 不含税审定 */}
+                {/* 执行字段 19 列 — 总宽 1720px */}
+                <col style={{ width: 100 }} />  {/* 采购方式审批 */}
+                <col style={{ width: 90 }} />   {/* 方式审批日期 */}
+                <col style={{ width: 90 }} />   {/* 招标人 */}
+                <col style={{ width: 110 }} />  {/* 招采实施单位 */}
+                <col style={{ width: 110 }} />  {/* 项目实施单位 */}
+                <col style={{ width: 100 }} />  {/* 招标代理 */}
+                <col style={{ width: 80 }} />   {/* 业务代表 */}
+                <col style={{ width: 70 }} />   {/* 答疑/质疑 */}
+                <col style={{ width: 60 }} />   {/* 流标 */}
+                <col style={{ width: 80 }} />   {/* 委派业主评委 */}
+                <col style={{ width: 150 }} />  {/* 中标单位 */}
+                <col style={{ width: 100 }} />  {/* 中标法人 */}
+                <col style={{ width: 70 }} />   {/* 中标得分 */}
+                <col style={{ width: 130 }} />  {/* 未中标1/法人 */}
+                <col style={{ width: 70 }} />   {/* 未中1得分 */}
+                <col style={{ width: 110 }} />  {/* 未中标2/法人 */}
+                <col style={{ width: 70 }} />   {/* 未中2得分 */}
+                <col style={{ width: 80 }} />   {/* 审批状态 */}
+                <col style={{ width: 60 }} />   {/* 操作 */}
               </colgroup>
               <thead className="bg-slate-100 text-slate-700 sticky top-0 z-10">
                 <tr>
                   {/* ===== Sticky 左侧关键列（shadow 分隔线）===== */}
                   <Th className="sticky left-0 bg-slate-100 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">工单编号</Th>
-                  <Th className="sticky left-[120px] bg-slate-100 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">项目名称</Th>
-                  <Th className="sticky left-[280px] bg-slate-100 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">采购方式</Th>
+                  <Th className="sticky left-[110px] bg-slate-100 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">项目名称</Th>
+                  <Th className="sticky left-[310px] bg-slate-100 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">采购方式</Th>
 
                   {/* ===== 需求字段（9 列）===== */}
                   <Th>需求类型</Th>
@@ -412,8 +412,8 @@ export default function ProcurementBiddingLedgerPage() {
                     <tr key={r.id} className="border-t border-slate-100 hover:bg-indigo-50/40 transition-colors">
                       {/* Sticky 左侧 */}
                       <Td className="sticky left-0 bg-white z-10 font-mono text-slate-700">{r.biddingNo}</Td>
-                      <Td className="sticky left-[120px] bg-white z-10">{r.projectName || '-'}</Td>
-                      <Td className="sticky left-[280px] bg-white z-10">{r.procurementMethod ? BIDDING_METHOD_LABEL[r.procurementMethod] : '-'}</Td>
+                      <Td className="sticky left-[110px] bg-white z-10">{r.projectName || '-'}</Td>
+                      <Td className="sticky left-[310px] bg-white z-10">{r.procurementMethod ? BIDDING_METHOD_LABEL[r.procurementMethod] : '-'}</Td>
 
                       {/* 需求字段 */}
                       <Td>{catLabel(d?.businessCategory, d?.subType)}</Td>
