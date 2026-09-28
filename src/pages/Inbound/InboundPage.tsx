@@ -1387,6 +1387,7 @@ export default function InboundPage({ type = 'purchase' }: Props) {
                   <th className="px-3 py-2 text-center">物料数</th>
                   <th className="px-3 py-2 text-right">剩余可入库</th>
                   <th className="px-3 py-2 text-right">订单总金额</th>
+                  <th className="px-3 py-2 text-left">交货日期</th>
                   <th className="px-3 py-2 text-left">创建时间</th>
                   <th className="px-3 py-2 text-center w-20">操作</th>
                 </tr>
@@ -1412,6 +1413,7 @@ export default function InboundPage({ type = 'purchase' }: Props) {
                         <td className="px-3 py-2 text-right text-[#303133]">
                           ¥{total.toLocaleString()}
                         </td>
+                        <td className="px-3 py-2 text-[#303133]">{po.deliveryDate || '-'}</td>
                         <td className="px-3 py-2 text-[#303133]">{po.createTime}</td>
                         <td className="px-3 py-2 text-center">
                           <TextButton onClick={() => handleSelectPurchaseOrder(po)}>选择</TextButton>
@@ -1421,7 +1423,7 @@ export default function InboundPage({ type = 'purchase' }: Props) {
                   })}
                 {contractPurchaseOrders.filter(po => po.status === 'submitted' && hasRemainingInventory(po)).length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-3 py-8 text-center text-[#909399]">
+                    <td colSpan={8} className="px-3 py-8 text-center text-[#909399]">
                       暂无可用的采购订单。请先在&quot;招采及合约管理 &gt; 招采订单管理&quot;中创建并提交采购订单。
                     </td>
                   </tr>
