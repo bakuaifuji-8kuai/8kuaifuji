@@ -321,10 +321,10 @@ export default function ProcurementBiddingLedgerPage() {
         {/* ========== 27 列表格：colgroup 控宽 + sticky 左侧/右侧关键列 ========== */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-xs text-slate-600 flex items-center justify-between">
-            <span>共 {filteredData.length} 条（全量 {biddings.length} 条）· 横向滚动查看全部 27 列</span>
+            <span>共 {filteredData.length} 条（全量 {biddings.length} 条）· 横向滚动查看全部 30 列</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-[12px] border-collapse" style={{ minWidth: 2260 }}>
+            <table className="w-full text-[12px] border-collapse" style={{ minWidth: 3390 }}>
               <colgroup>
                 {/* sticky 左侧 3 列 — 总宽 360px */}
                 <col style={{ width: 120 }} />  {/* 工单编号 sticky-left-0 */}
@@ -402,7 +402,7 @@ export default function ProcurementBiddingLedgerPage() {
               <tbody>
                 {filteredData.length === 0 && (
                   <tr>
-                    <td colSpan={29} className="py-10 text-center text-slate-400">暂无数据</td>
+                    <td colSpan={30} className="py-10 text-center text-slate-400">暂无数据</td>
                   </tr>
                 )}
                 {filteredData.map((r) => {
