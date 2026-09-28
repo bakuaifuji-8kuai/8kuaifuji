@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react';
+﻿import { useMemo, useState, useRef } from 'react';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
@@ -378,7 +378,7 @@ export default function ProcurementPlanPage() {
   const handleExport = (plan: ProcurementPlan) => {
     const isAnnual = plan.planType === 'annual';
     const headers = [
-      '序号', '需求部门', '项目名称', '项目类别', '项目概况', '项目估（预）算（万元）',
+      '序号', '需求部门', '项目名称', '需求类型', '项目概况', '项目估（预）算（万元）',
       '用户需求书编制计划完成时间', '预算编制审批计划完成时间', '合同前置审核计划完成时间',
       '计划采购启动时间', '计划采购完成时间'
     ];
@@ -407,7 +407,7 @@ export default function ProcurementPlanPage() {
   const handleDownloadTemplate = () => {
     const isAnnual = editItem?.planType === 'annual';
     const headers = [
-      '序号', '需求部门', '项目名称', '项目类别', '项目概况', '项目估（预）算（万元）',
+      '序号', '需求部门', '项目名称', '需求类型', '项目概况', '项目估（预）算（万元）',
       '用户需求书编制计划完成时间', '预算编制审批计划完成时间', '合同前置审核计划完成时间',
       '计划采购启动时间', '计划采购完成时间'
     ];
@@ -679,7 +679,7 @@ export default function ProcurementPlanPage() {
             </div>
             <div className="mb-2 p-2 bg-[#fef3c7]/30 border border-[#fef3c7] rounded text-xs text-[#92400e]">
               <div className="mb-1"><span className="text-[#ef4444]">*</span> 标红字段为必填项</div>
-              <div>• "项目名称、项目类别、项目概况、项目估（预）算、招标采购前置阶段"由需求部门填写</div>
+              <div>• "项目名称、需求类型、项目概况、项目估（预）算、招标采购前置阶段"由需求部门填写</div>
               <div>• "招标采购阶段"由综合管理部填写</div>
             </div>
             <div className="border border-[#dcdfe6] rounded max-h-96 overflow-auto">
@@ -695,7 +695,7 @@ export default function ProcurementPlanPage() {
                     <th className="px-2 py-2 text-xs text-left w-12 whitespace-nowrap">序号</th>
                     <th className="px-2 py-2 text-xs text-left w-32 whitespace-nowrap"><span className="text-[#ef4444]">*</span>需求部门</th>
                     <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap"><span className="text-[#ef4444]">*</span>项目名称</th>
-                    <th className="px-2 py-2 text-xs text-left w-20 whitespace-nowrap"><span className="text-[#ef4444]">*</span>项目类别</th>
+                    <th className="px-2 py-2 text-xs text-left w-20 whitespace-nowrap"><span className="text-[#ef4444]">*</span>需求类型</th>
                     <th className="px-2 py-2 text-xs text-left w-40 whitespace-nowrap"><span className="text-[#ef4444]">*</span>项目概况</th>
                     <th className="px-2 py-2 text-xs text-left w-28 whitespace-nowrap"><span className="text-[#ef4444]">*</span>项目估（预）算（万元）</th>
                     <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap bg-[#fef3c7]"><span className="text-[#ef4444]">*</span>用户需求书编制计划完成时间</th>

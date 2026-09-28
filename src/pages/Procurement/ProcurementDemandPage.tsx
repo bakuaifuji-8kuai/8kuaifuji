@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react';
+﻿import { useMemo, useState, useRef } from 'react';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
@@ -153,10 +153,10 @@ export default function ProcurementDemandPage() {
   }, [procurementDemands, applied]);
 
   const columns: ColumnDef<ProcurementDemand>[] = [
-    { key: 'demandNo', title: '采购编号' },
+    { key: 'demandNo', title: '需求编号' },
     {
       key: 'demandType',
-      title: '业务分类',
+      title: '需求类型',
       render: (row) => {
         return getCategoryLabel(row.businessCategory, row.subType, row.demandType);
       },
@@ -793,7 +793,7 @@ export default function ProcurementDemandPage() {
           setApplied({ no: '', department: '', status: '', procurementType: '' });
         }}
       >
-        <SearchField label="采购编号" placeholder="请输入" value={filterNo} onChange={setFilterNo} />
+        <SearchField label="需求编号" placeholder="请输入" value={filterNo} onChange={setFilterNo} />
         <SearchField label="申请部门" placeholder="请输入" value={filterDepartment} onChange={setFilterDepartment} />
         <SearchField
           label="状态"
@@ -883,7 +883,7 @@ export default function ProcurementDemandPage() {
               {/* 第二排：采购编号 | 申请人 | 申请部门 | 项目名称* — 4 列等宽，项目名称稍宽 */}
               <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr 1fr 2fr' }}>
                 <div>
-                  <div className="mb-1 text-xs text-[#606266]">采购编号</div>
+                  <div className="mb-1 text-xs text-[#606266]">需求编号</div>
                   {isNew ? (
                     <input
                       disabled
@@ -1983,8 +1983,8 @@ export default function ProcurementDemandPage() {
         {viewItem && (
           <div className="space-y-4 text-sm">
             <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-              <div><span className="text-[#909399]">采购编号：</span>{viewItem.demandNo}</div>
-              <div><span className="text-[#909399]">业务分类：</span>{getCategoryLabel(viewItem.businessCategory, viewItem.subType, viewItem.demandType)}</div>
+              <div><span className="text-[#909399]">需求编号：</span>{viewItem.demandNo}</div>
+              <div><span className="text-[#909399]">需求类型：</span>{getCategoryLabel(viewItem.businessCategory, viewItem.subType, viewItem.demandType)}</div>
               <div><span className="text-[#909399]">项目名称：</span>{viewItem.projectName}</div>
               <div><span className="text-[#909399]">申请人：</span>{viewItem.applicant}</div>
               <div><span className="text-[#909399]">申请部门：</span>{viewItem.applicantDept}</div>
