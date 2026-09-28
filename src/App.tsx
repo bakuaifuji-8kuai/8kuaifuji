@@ -48,6 +48,7 @@ import ProcurementPlanPage from "@/pages/Procurement/ProcurementPlanPage";
 import ProcurementDemandPage from "@/pages/Procurement/ProcurementDemandPage";
 import ProcurementDemandConfirmPage from "@/pages/Procurement/ProcurementDemandConfirmPage";
 import ProcurementDemandLedgerPage from "@/pages/Procurement/ProcurementDemandLedgerPage";
+import ProcurementBiddingLedgerPage from "@/pages/Procurement/ProcurementBiddingLedgerPage";
 import ContractLedgerPage from "@/pages/Procurement/ContractLedgerPage";
 import ContractProcurementPage from "@/pages/Procurement/ContractProcurementPage";
 import ContractNonProcurementPage from "@/pages/Procurement/ContractNonProcurementPage";
@@ -138,6 +139,7 @@ export default function App() {
           <Route path="procurement/inspection" element={<ProcurementInspectionPage />} />
           <Route path="procurement/bidding" element={<CompetitiveBiddingPage />} />
           <Route path="procurement/supplier-quote" element={<SupplierQuotePage />} />
+          <Route path="procurement/bidding-ledger" element={<ProcurementBiddingLedgerPage />} />
           <Route path="procurement/website-info" element={<WebsiteInfoPage />} />
           <Route path="alert/dashboard" element={<ProcurementAlertDashboard />} />
           <Route path="procurement/contract-template" element={<ContractTemplatePage />} />
