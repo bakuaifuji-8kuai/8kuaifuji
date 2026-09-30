@@ -37,6 +37,11 @@ export default function ContractArchivePage() {
   const [archiveFiles, setArchiveFiles] = useState<Attachment[]>([]);
   const [editArchiveData, setEditArchiveData] = useState<ContractArchive | null>(null);
 
+  // 选择合同弹窗内搜索条件
+  const [pickerKeyword, setPickerKeyword] = useState('');
+  const [pickerNature, setPickerNature] = useState('');
+  const [pickerStatus, setPickerStatus] = useState('');
+
   // ===== 审批通过弹窗 =====
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [approvingArchive, setApprovingArchive] = useState<ContractArchive | null>(null);
@@ -51,12 +56,28 @@ export default function ContractArchivePage() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewArchive, setViewArchive] = useState<ContractArchive | null>(null);
 
+  // 主列表筛选 + 弹窗内选择器筛选（合并为一个函数）
   const filteredContracts = useMemo(() => {
+    const kw = pickerKeyword.trim().toLowerCase();
     return contractLedgers.filter((c) => {
-      if (applied.no && !c.contractNo.includes(applied.no)) return false;
+      // 主列表归档编号筛选（不影响选择器）
+      if (applied.no && !c.contractNo.toLowerCase().includes(applied.no.toLowerCase())) return false;
+      // 弹窗内关键字：合同编号 / 合同名称 / 对方单位 三字段模糊
+      if (kw) {
+        const hitNo = c.contractNo.toLowerCase().includes(kw);
+        const hitName = (c.contractName || '').toLowerCase().includes(kw);
+        const hitCp = (c.counterpartyName || '').toLowerCase().includes(kw);
+        if (!hitNo && !hitName && !hitCp) return false;
+      }
+      // 弹窗内合同性质
+      if (pickerNature && c.contractNature !== pickerNature) return false;
+      // 弹窗内合同状态：只允许选择"有效中的"避免选到已归档/已终止的
+      if (pickerStatus && c.status !== pickerStatus) return false;
+      // 默认排除已归档的合同（归档了就没必要再归档一次）
+      if (c.archiveStatus === 'archived') return false;
       return true;
     });
-  }, [contractLedgers, applied]);
+  }, [contractLedgers, applied, pickerKeyword, pickerNature, pickerStatus]);
 
   const filteredArchives = useMemo(() => {
     return contractArchives.filter((a) => {
@@ -349,7 +370,7 @@ export default function ContractArchivePage() {
       <Modal
         open={createModalOpen}
         title="合同归档申请"
-        onClose={() => { setCreateModalOpen(false); setEditArchiveData(null); setSigningDate(''); setEffectiveDate(''); setTerminationDate(''); setArchiveFiles([]); setSelectedContractIds([]); }}
+        onClose={() => { setCreateModalOpen(false); setEditArchiveData(null); setSigningDate(''); setEffectiveDate(''); setTerminationDate(''); setArchiveFiles([]); setSelectedContractIds([]); setPickerKeyword(''); setPickerNature(''); setPickerStatus(''); }}
         footer={
           <>
             <DefaultButton onClick={() => setCreateModalOpen(false)}>取消</DefaultButton>
@@ -387,7 +408,56 @@ export default function ContractArchivePage() {
               选择合同（可多选） <span className="text-[#f56c6c]">*</span>
               <span className="text-[#909399] font-normal ml-2">已选择 {selectedContractIds.length} 份合同</span>
             </div>
-            <div className="border border-[#ebeef5] rounded max-h-[250px] overflow-auto">
+            {/* 弹窗内搜索筛选区（紧凑 inline 布局） */}
+            <div className="flex flex-wrap items-center gap-2 mb-2 px-1">
+              <div className="flex items-center gap-1">
+                <label className="text-[11px] text-[#909399] shrink-0">关键字</label>
+                <input
+                  type="text"
+                  className="h-7 px-2 text-xs border border-[#dcdfe6] rounded w-[180px] focus:outline-none focus:border-[#409eff]"
+                  placeholder="合同编号/名称/对方单位"
+                  value={pickerKeyword}
+                  onChange={(e) => setPickerKeyword(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <label className="text-[11px] text-[#909399] shrink-0">性质</label>
+                <select
+                  className="h-7 px-2 text-xs border border-[#dcdfe6] rounded w-[100px] focus:outline-none focus:border-[#409eff]"
+                  value={pickerNature}
+                  onChange={(e) => setPickerNature(e.target.value)}
+                >
+                  <option value="">全部</option>
+                  <option value="procurement">招采类</option>
+                  <option value="non_procurement">非招采类</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-1">
+                <label className="text-[11px] text-[#909399] shrink-0">状态</label>
+                <select
+                  className="h-7 px-2 text-xs border border-[#dcdfe6] rounded w-[110px] focus:outline-none focus:border-[#409eff]"
+                  value={pickerStatus}
+                  onChange={(e) => setPickerStatus(e.target.value)}
+                >
+                  <option value="">全部</option>
+                  <option value="active">执行中</option>
+                  <option value="approved">已审批</option>
+                  <option value="pending">审批中</option>
+                  <option value="expired">已到期</option>
+                  <option value="terminated">已终止</option>
+                </select>
+              </div>
+              {(pickerKeyword || pickerNature || pickerStatus) && (
+                <button
+                  className="text-[11px] text-[#409eff] hover:underline"
+                  onClick={() => { setPickerKeyword(''); setPickerNature(''); setPickerStatus(''); }}
+                >
+                  清除筛选
+                </button>
+              )}
+              <span className="text-[11px] text-[#909399] ml-auto">找到 {filteredContracts.length} 份</span>
+            </div>
+            <div className="border border-[#ebeef5] rounded max-h-[220px] overflow-auto">
               <table className="w-full text-xs">
                 <thead className="bg-[#f5f7fa] sticky top-0">
                   <tr>
@@ -399,7 +469,13 @@ export default function ContractArchivePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredContracts.map((contract) => (
+                  {filteredContracts.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-2 py-6 text-center text-[#c0c4cc]">
+                        暂无匹配的合同 {pickerKeyword && `（关键字：${pickerKeyword}）`}
+                      </td>
+                    </tr>
+                  ) : filteredContracts.map((contract) => (
                     <tr key={contract.id} className="border-t border-[#ebeef5] hover:bg-[#f5f7fa]">
                       <td className="px-2 py-1.5">
                         <input
