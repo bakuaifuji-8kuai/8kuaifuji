@@ -50,6 +50,7 @@ import ProcurementDemandConfirmPage from "@/pages/Procurement/ProcurementDemandC
 import ProcurementDemandLedgerPage from "@/pages/Procurement/ProcurementDemandLedgerPage";
 import ProcurementBiddingLedgerPage from "@/pages/Procurement/ProcurementBiddingLedgerPage";
 import ContractLedgerPage from "@/pages/Procurement/ContractLedgerPage";
+import ContractExpenseLedgerPage from "@/pages/Procurement/ContractExpenseLedgerPage";
 import ContractProcurementPage from "@/pages/Procurement/ContractProcurementPage";
 import ContractNonProcurementPage from "@/pages/Procurement/ContractNonProcurementPage";
 import ContractArchivePage from "@/pages/Procurement/ContractArchivePage";
@@ -128,6 +129,7 @@ export default function App() {
           <Route path="procurement/demand-confirm" element={<ProcurementDemandConfirmPage />} />
           <Route path="procurement/demand-ledger" element={<ProcurementDemandLedgerPage />} />
           <Route path="procurement/contract" element={<ContractLedgerPage />} />
+          <Route path="procurement/contract-expense" element={<ContractExpenseLedgerPage />} />
           <Route path="procurement/contract-procurement" element={<ContractProcurementPage />} />
           <Route path="procurement/contract-non-procurement" element={<ContractNonProcurementPage />} />
           <Route path="procurement/contract-performance" element={<ContractPerformancePage />} />
