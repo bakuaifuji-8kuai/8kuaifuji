@@ -229,8 +229,8 @@ export default function ContractLedgerPage() {
 
   const filteredData = useMemo(() => {
     return contractLedgers.filter((c) => {
-      // 收入/其他台账：排除支出合同（支出合同独立展示在 ContractExpenseLedgerPage）
-      if (c.businessCategory === 'expense') return false;
+      // 合同台账（支出+其他）：排除收入合同（收入合同独立展示在 ContractIncomeLedgerPage）
+      if (c.businessCategory === 'income') return false;
       if (applied.no && !c.contractNo.includes(applied.no)) return false;
       if (applied.name && !c.contractName.includes(applied.name)) return false;
       if (applied.status && c.status !== applied.status) return false;
@@ -468,7 +468,7 @@ export default function ContractLedgerPage() {
       alert('当前无数据可导出');
       return;
     }
-    const headers = ['合同编码', '合同名称', '分类', '类型', '签订主体', '经办部门', '需求部门', '经办人', '客户单位', '项目名称', '合同金额(万元)', '已支付(万元)', '结算金额(万元)', '签订日期', '生效日期', '终止日期', '状态', '履行情况', '备注'];
+    const headers = ['合同编码', '合同名称', '分类', '类型', '签订主体', '经办部门', '需求部门', '经办人', '对方单位', '项目名称', '合同金额(万元)', '已支付(万元)', '结算金额(万元)', '签订日期', '生效日期', '终止日期', '状态', '履行情况', '备注'];
     const rows = filteredData.map((c) => [
       c.contractNo,
       c.contractName,
@@ -586,7 +586,7 @@ export default function ContractLedgerPage() {
           <thead>
             <tr>
               <th>序号</th><th>合同编码</th><th>合同名称</th><th>分类</th><th>类型</th>
-              <th>客户单位</th><th>经办部门</th><th>金额(万元)</th><th>已支付(万元)</th>
+              <th>对方单位</th><th>经办部门</th><th>金额(万元)</th><th>已支付(万元)</th>
               <th>结算金额(万元)</th><th>签订日期</th><th>状态</th>
             </tr>
           </thead>
@@ -639,7 +639,7 @@ export default function ContractLedgerPage() {
       biddingId: bidding.id,
       biddingNo: bidding.biddingNo,
       projectName: bidding.projectName || bidding.biddingName,
-      // 如果工单有确认供应商，自动带入客户单位
+      // 如果工单有确认供应商，自动带入对方单位
       counterpartyName: bidding.quotes?.find(q => q.confirmedSupplierId)?.confirmedSupplierName || bidding.winningSupplierName || editItem?.counterpartyName,
     });
     setBiddingPickerOpen(false);
@@ -795,8 +795,8 @@ export default function ContractLedgerPage() {
   //   7   经办部门          → 916L50 我方-经办部门
   //   8   经办人            → 916L50 我方-经办人
   //   9   联系方式          → 916L50 我方-联系方式
-  //   10  客户单位          → 916L50 对方-单位名称
-  //   11  客户负责人        → 916L50 对方-负责人
+  //   10  对方单位          → 916L50 对方-单位名称
+  //   11  对方负责人        → 916L50 对方-负责人
   //   12  合同主要内容      → 916L50 —— 原项目缺失，2026-09-17 补齐
   //   13  签订日期          → 916L50
   //   14  生效日期          → 916L50 合同约定生效日期
@@ -856,8 +856,8 @@ export default function ContractLedgerPage() {
     { key: 'handlingDepartment', title: '经办部门', render: (row) => row.handlingDepartment || '-', footer: '' },
     { key: 'handler', title: '经办人', render: (row) => row.handler || '-', footer: '' },
     { key: 'handlerContact', title: '联系方式', render: (row) => row.handlerContact || '-', footer: '' },
-    { key: 'counterpartyName', title: '客户单位', render: (row) => row.counterpartyName || '-', footer: '' },
-    { key: 'counterpartyContact', title: '客户负责人', render: (row) => row.counterpartyContact || '-', footer: '' },
+    { key: 'counterpartyName', title: '对方单位', render: (row) => row.counterpartyName || '-', footer: '' },
+    { key: 'counterpartyContact', title: '对方负责人', render: (row) => row.counterpartyContact || '-', footer: '' },
     // 12. 合同主要内容（916L50字段，原缺失）
     { key: 'mainContent', title: '合同主要内容', width: '200', render: (row) => {
       const text = row.mainContent || '-';
@@ -1140,7 +1140,7 @@ export default function ContractLedgerPage() {
                         <th className="text-left py-2 px-3 font-medium">严重度</th>
                         <th className="text-left py-2 px-3 font-medium">合同编号</th>
                         <th className="text-left py-2 px-3 font-medium">合同名称</th>
-                        <th className="text-left py-2 px-3 font-medium">客户单位</th>
+                        <th className="text-left py-2 px-3 font-medium">对方单位</th>
                         <th className="text-left py-2 px-3 font-medium">详情</th>
                         <th className="text-center py-2 px-3 font-medium w-24">操作</th>
                       </tr>
@@ -1417,7 +1417,7 @@ export default function ContractLedgerPage() {
             { value: 'terminated', label: '已终止' },
           ]}
         />
-        <SearchField label="客户单位" placeholder="客户单位名称" value={filterCounterparty} onChange={setFilterCounterparty} />
+        <SearchField label="对方单位" placeholder="对方单位名称" value={filterCounterparty} onChange={setFilterCounterparty} />
         <SearchField label="经办部门" placeholder="部门关键字" value={filterDepartment} onChange={setFilterDepartment} />
         <SearchField
           label="资金流向"
@@ -1608,14 +1608,14 @@ export default function ContractLedgerPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <div className="mb-1 text-[#606266]">客户单位名称</div>
+                <div className="mb-1 text-[#606266]">对方单位名称</div>
                 <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
                   value={editItem.counterpartyName || ''}
                   onChange={(e) => setEditItem({ ...editItem, counterpartyName: e.target.value })}
                 />
               </div>
               <div>
-                <div className="mb-1 text-[#606266]">客户单位负责人</div>
+                <div className="mb-1 text-[#606266]">对方单位负责人</div>
                 <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
                   value={editItem.counterpartyContact || ''}
                   onChange={(e) => setEditItem({ ...editItem, counterpartyContact: e.target.value })}
@@ -1731,8 +1731,8 @@ export default function ContractLedgerPage() {
               <div><span className="text-[#909399]">经办部门：</span>{viewItem.handlingDepartment || '-'}</div>
               <div><span className="text-[#909399]">需求部门：</span>{viewItem.demandDepartment || '-'}</div>
               <div><span className="text-[#909399]">经办人：</span>{viewItem.handler || '-'}</div>
-              <div><span className="text-[#909399]">客户单位：</span>{viewItem.counterpartyName || '-'}</div>
-              <div><span className="text-[#909399]">客户负责人：</span>{viewItem.counterpartyContact || '-'}</div>
+              <div><span className="text-[#909399]">对方单位：</span>{viewItem.counterpartyName || '-'}</div>
+              <div><span className="text-[#909399]">对方负责人：</span>{viewItem.counterpartyContact || '-'}</div>
               <div><span className="text-[#909399]">项目名称：</span>{(viewItem as any).projectName || '-'}</div>
               <div><span className="text-[#909399]">立项方式：</span>{viewItem.approvalMethod || '-'}</div>
               <div><span className="text-[#909399]">合同金额：</span><span className="text-[#409eff] font-medium">{viewItem.amount?.toFixed(2)} 万元</span></div>
