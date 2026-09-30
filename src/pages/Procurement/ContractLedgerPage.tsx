@@ -112,6 +112,7 @@ export default function ContractLedgerPage() {
   const [filterIsModelText, setFilterIsModelText] = useState('');
   const [filterCounterparty, setFilterCounterparty] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('');
+  const [filterBusinessCategory, setFilterBusinessCategory] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
   const [filterWinningDateFrom, setFilterWinningDateFrom] = useState('');
@@ -120,7 +121,7 @@ export default function ContractLedgerPage() {
   const [applied, setApplied] = useState({
     no: '', name: '', status: '', nature: '', formation: '',
     archiveStatus: '', isModelText: '',
-    counterparty: '', department: '',
+    counterparty: '', department: '', businessCategory: '',
     dateFrom: '', dateTo: '',
     winningDateFrom: '', winningDateTo: '',
   });
@@ -249,6 +250,7 @@ export default function ContractLedgerPage() {
       }
       if (applied.counterparty && !c.counterpartyName?.includes(applied.counterparty)) return false;
       if (applied.department && !c.handlingDepartment?.includes(applied.department) && !c.demandDepartment?.includes(applied.department)) return false;
+      if (applied.businessCategory && c.businessCategory !== applied.businessCategory) return false;
       if (applied.dateFrom && (!c.signingDate || c.signingDate < applied.dateFrom)) return false;
       if (applied.dateTo && (!c.signingDate || c.signingDate > applied.dateTo)) return false;
       if (applied.winningDateFrom && (!c.winningDate || c.winningDate < applied.winningDateFrom)) return false;
@@ -1328,6 +1330,7 @@ export default function ContractLedgerPage() {
           nature: filterNature, formation: filterFormation,
           archiveStatus: filterArchiveStatus, isModelText: filterIsModelText,
           counterparty: filterCounterparty, department: filterDepartment,
+          businessCategory: filterBusinessCategory,
           dateFrom: filterDateFrom, dateTo: filterDateTo,
           winningDateFrom: filterWinningDateFrom, winningDateTo: filterWinningDateTo,
         })}
@@ -1336,12 +1339,13 @@ export default function ContractLedgerPage() {
           setFilterNature(''); setFilterFormation('');
           setFilterArchiveStatus(''); setFilterIsModelText('');
           setFilterCounterparty(''); setFilterDepartment('');
+          setFilterBusinessCategory('');
           setFilterDateFrom(''); setFilterDateTo('');
           setFilterWinningDateFrom(''); setFilterWinningDateTo('');
           setApplied({
             no: '', name: '', status: '', nature: '', formation: '',
             archiveStatus: '', isModelText: '',
-            counterparty: '', department: '',
+            counterparty: '', department: '', businessCategory: '',
             dateFrom: '', dateTo: '',
             winningDateFrom: '', winningDateTo: '',
           });
@@ -1413,6 +1417,18 @@ export default function ContractLedgerPage() {
         />
         <SearchField label="对方单位" placeholder="对方单位名称" value={filterCounterparty} onChange={setFilterCounterparty} />
         <SearchField label="经办部门" placeholder="部门关键字" value={filterDepartment} onChange={setFilterDepartment} />
+        <SearchField
+          label="资金流向"
+          type="select"
+          value={filterBusinessCategory}
+          onChange={setFilterBusinessCategory}
+          options={[
+            { value: '', label: '全部' },
+            { value: 'expense', label: '支出合同' },
+            { value: 'income', label: '收入合同' },
+            { value: 'other', label: '其他合同' },
+          ]}
+        />
         <SearchField label="签订日期起" type="date" value={filterDateFrom} onChange={setFilterDateFrom} />
         <SearchField label="签订日期止" type="date" value={filterDateTo} onChange={setFilterDateTo} />
         <SearchField label="中标时间起" type="date" value={filterWinningDateFrom} onChange={setFilterWinningDateFrom} />
