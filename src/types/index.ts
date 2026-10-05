@@ -1951,6 +1951,7 @@ export type ProcurementFormation =
 export type NonProcurementFormation =
   | 'exhibition_host'        // 展览服务-主办合同
   | 'exhibition_venue'       // 展览服务-主场合同
+  | 'exhibitor_contract'     // 展览服务-参展商合同
   | 'exhibition_display'     // 展览展示服务
   | 'investment_contract'    // 招商合同
   | 'other';                 // 其他
@@ -2147,6 +2148,7 @@ export const PROCUREMENT_FORMATION_LABELS: Record<ProcurementFormation, string> 
 export const NON_PROCUREMENT_FORMATION_LABELS: Record<NonProcurementFormation, string> = {
   exhibition_host: '展览服务-主办合同',
   exhibition_venue: '展览服务-主场合同',
+  exhibitor_contract: '展览服务-参展商合同',
   exhibition_display: '展览展示服务',
   investment_contract: '招商合同',
   other: '其他',

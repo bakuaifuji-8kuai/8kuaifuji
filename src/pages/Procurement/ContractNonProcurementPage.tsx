@@ -104,7 +104,7 @@ export default function ContractNonProcurementPage() {
       ? 'exhibition_host'
       : (row.formation as NonProcurementFormation);
     setForm((prev) => ({ ...prev, formation: f }));
-    // 初始化金额明细（仅主办/主场）
+    // 初始化金额明细（展览服务类专属）
     if (f === 'exhibition_host') {
       setAmountDetails([
         { id: 'ad-1', label: '场租金额', value: 0 },
@@ -115,6 +115,12 @@ export default function ContractNonProcurementPage() {
       setAmountDetails([
         { id: 'ad-1', label: '安全清洁押金', value: 0 },
         { id: 'ad-2', label: '搭建押金', value: 0 },
+      ]);
+    } else if (f === 'exhibitor_contract') {
+      setAmountDetails([
+        { id: 'ad-1', label: '展位费', value: 0 },
+        { id: 'ad-2', label: '参展服务费', value: 0 },
+        { id: 'ad-3', label: '展品运输及搭建费', value: 0 },
       ]);
     } else {
       setAmountDetails([]);
@@ -130,8 +136,8 @@ export default function ContractNonProcurementPage() {
   // ========== 保存 ==========
   const save = (submit: boolean) => {
     const now = getNowString();
-    // 履约保证金门控自动同步：只有展览服务类（主办/主场）才允许 gateByFormation=true
-    const isExhibition = form.formation === 'exhibition_host' || form.formation === 'exhibition_venue';
+    // 履约保证金门控自动同步：展览服务类（主办/主场/参展商）才允许 gateByFormation=true
+    const isExhibition = form.formation === 'exhibition_host' || form.formation === 'exhibition_venue' || form.formation === 'exhibitor_contract';
     // 主办/主场合同时：合同金额 = 明细汇总（元），其他 formation 保持手填
     const isDetailLedger = isExhibition;
     const detailTotal = amountDetails.reduce((s, d) => s + (d.value || 0), 0);
@@ -392,11 +398,12 @@ function ContractNonProcurementForm({ form, update, amountDetails, setAmountDeta
   const formation = form.formation as NonProcurementFormation;
   const isHost = formation === 'exhibition_host';
   const isVenue = formation === 'exhibition_venue';
-  const isExhibitionLedger = isHost || isVenue;
+  const isExhibitor = formation === 'exhibitor_contract';
+  const isExhibitionLedger = isHost || isVenue || isExhibitor;
 
   // formation 改变时，自动重置履约保证金门控 + 金额明细初始化
   const handleFormationChange = (newFormation: NonProcurementFormation) => {
-    const nowIsExhibition = newFormation === 'exhibition_host' || newFormation === 'exhibition_venue';
+    const nowIsExhibition = newFormation === 'exhibition_host' || newFormation === 'exhibition_venue' || newFormation === 'exhibitor_contract';
     update({
       formation: newFormation,
       performanceBond: nowIsExhibition
@@ -414,6 +421,12 @@ function ContractNonProcurementForm({ form, update, amountDetails, setAmountDeta
       setAmountDetails([
         { id: 'ad-1', label: '安全清洁押金', value: 0 },
         { id: 'ad-2', label: '搭建押金', value: 0 },
+      ]);
+    } else if (newFormation === 'exhibitor_contract') {
+      setAmountDetails([
+        { id: 'ad-1', label: '展位费', value: 0 },
+        { id: 'ad-2', label: '参展服务费', value: 0 },
+        { id: 'ad-3', label: '展品运输及搭建费', value: 0 },
       ]);
     } else {
       setAmountDetails([]);
@@ -476,6 +489,7 @@ function ContractNonProcurementForm({ form, update, amountDetails, setAmountDeta
               <optgroup label="展览服务">
                 <option value="exhibition_host">主办合同</option>
                 <option value="exhibition_venue">主场合同</option>
+                <option value="exhibitor_contract">参展商合同</option>
               </optgroup>
               <optgroup label="其他">
                 <option value="exhibition_display">展览展示服务</option>
@@ -612,7 +626,7 @@ function ContractNonProcurementForm({ form, update, amountDetails, setAmountDeta
             <div className="bg-indigo-50 px-4 py-2 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="text-indigo-700 font-semibold text-sm">
-                  {isHost ? '主办合同金额明细' : '主场合同金额明细'}
+                  {isHost ? '主办合同金额明细' : isVenue ? '主场合同金额明细' : '参展商合同金额明细'}
                 </span>
                 <span className="text-xs text-indigo-500">
                   合同总金额由以下明细自动汇总而成
