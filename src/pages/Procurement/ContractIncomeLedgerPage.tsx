@@ -23,6 +23,7 @@ import {
   PROCUREMENT_FORMATION_LABELS, NON_PROCUREMENT_FORMATION_LABELS,
   PROCUREMENT_CONTRACT_TYPE_LABELS, NON_PROCUREMENT_CONTRACT_TYPE_LABELS,
 } from '@/types';
+import { splitContracts, attachAccumulated, type ContractLedgerWithAccumulated } from '@/utils/contractSupplement';
 import { FileSpreadsheet } from 'lucide-react';
 
 // ============ 标签映射 ============
@@ -68,7 +69,7 @@ export default function ContractIncomeLedgerPage() {
   });
 
   // ============ 详情 Modal ============
-  const [viewItem, setViewItem] = useState<ContractLedger | null>(null);
+  const [viewItem, setViewItem] = useState<LedgerRow | null>(null);
 
   // ============ 核心过滤：只留收入合同 ============
   const filteredData = useMemo(() => {
@@ -90,42 +91,45 @@ export default function ContractIncomeLedgerPage() {
     });
   }, [contractLedgers, applied]);
 
-  // ============ 派生指标 ============
-  const withDerived = useMemo(() => {
-    return filteredData.map((c) => {
+  // ============ 台账展示数据：过滤补充协议 + 挂累计值 + 派生已收/未收 ============
+  const ledgerData = useMemo(() => {
+    const { primaryList, supplementMap } = splitContracts(filteredData);
+    return attachAccumulated(primaryList, supplementMap).map((c) => {
       const paid = c.paidAmount || 0;
-      const uncollected = (c.amount || 0) - paid;
+      const uncollected = (c.accumulatedAmount || 0) - paid;
       return { ...c, paid, uncollected };
     });
   }, [filteredData]);
 
-  // ============ 顶部汇总（收入专属）============
+  type LedgerRow = (typeof ledgerData)[number];
+
+  // ============ 顶部汇总（收入专属，基于主合同累计值）============
   const summary = useMemo(() => {
-    const total = withDerived.length;
-    const totalAmount = withDerived.reduce((s, c) => s + (c.amount || 0), 0);
-    const totalPaid = withDerived.reduce((s, c) => s + c.paid, 0);
-    const totalUncollected = withDerived.reduce((s, c) => s + c.uncollected, 0);
-    const expiringCount = withDerived.filter(
-      (c) => c.status === 'active' && isExpiringSoon(c.terminationDate),
+    const total = ledgerData.length;
+    const totalAmount = ledgerData.reduce((s, c) => s + (c.accumulatedAmount || 0), 0);
+    const totalPaid = ledgerData.reduce((s, c) => s + c.paid, 0);
+    const totalUncollected = ledgerData.reduce((s, c) => s + c.uncollected, 0);
+    const expiringCount = ledgerData.filter(
+      (c) => c.status === 'active' && isExpiringSoon(c.accumulatedTerminationDate || c.terminationDate),
     ).length;
     return { total, totalAmount, totalPaid, totalUncollected, expiringCount };
-  }, [withDerived]);
+  }, [ledgerData]);
 
-  // ============ 收入专属预警：未收金额 TOP5 ============
+  // ============ 收入专属预警：未收金额 TOP5（基于累计额）============
   const uncollectedTop5 = useMemo(() => {
-    return [...withDerived]
+    return [...ledgerData]
       .filter((c) => c.uncollected > 0)
       .sort((a, b) => b.uncollected - a.uncollected)
       .slice(0, 5);
-  }, [withDerived]);
+  }, [ledgerData]);
 
-  // ============ 收入专属预警：即将到期 TOP5 ============
+  // ============ 收入专属预警：即将到期 TOP5（基于累计终止日期）============
   const expiringTop5 = useMemo(() => {
-    return [...withDerived]
-      .filter((c) => c.status === 'active' && c.terminationDate && !isExpired(c.terminationDate))
-      .sort((a, b) => (a.terminationDate || '').localeCompare(b.terminationDate || ''))
+    return [...ledgerData]
+      .filter((c) => c.status === 'active' && (c.accumulatedTerminationDate || c.terminationDate) && !isExpired(c.accumulatedTerminationDate || c.terminationDate))
+      .sort((a, b) => (a.accumulatedTerminationDate || a.terminationDate || '').localeCompare(b.accumulatedTerminationDate || b.terminationDate || ''))
       .slice(0, 5);
-  }, [withDerived]);
+  }, [ledgerData]);
 
   // ============ 辅助 label ============
   const getFormationLabel = (row: ContractLedger) =>
@@ -140,8 +144,8 @@ export default function ContractIncomeLedgerPage() {
     return NON_PROCUREMENT_CONTRACT_TYPE_LABELS[row.contractType as keyof typeof NON_PROCUREMENT_CONTRACT_TYPE_LABELS] || row.contractType;
   };
 
-  // ============ 列定义（收入视角，19 列）============
-  const columns: ColumnDef<(typeof withDerived)[number]>[] = [
+  // ============ 列定义（收入视角，基于主合同累计值）============
+  const columns: ColumnDef<LedgerRow>[] = [
     {
       key: 'contractNature', title: '合同性质', width: '72px',
       render: (row) => (
@@ -164,20 +168,35 @@ export default function ContractIncomeLedgerPage() {
     { key: 'signingDate', title: '签订日期', width: '100px', render: (row) => row.signingDate || '-' },
     { key: 'effectiveDate', title: '生效日期', width: '100px', render: (row) => row.effectiveDate || '-' },
     {
-      key: 'terminationDate', title: '终止日期', width: '100px',
+      key: 'accumulatedTerminationDate', title: '累计终止日期', width: '120px',
       render: (row) => {
-        if (!row.terminationDate) return '-';
+        const term = row.accumulatedTerminationDate || row.terminationDate;
+        if (!term) return '-';
         const classes: string[] = [];
-        if (row.status === 'active' && isExpiringSoon(row.terminationDate)) classes.push('text-amber-600 font-medium');
-        if (row.status === 'active' && isExpired(row.terminationDate)) classes.push('text-rose-600 font-medium');
-        return <span className={classes.join(' ')}>{row.terminationDate}</span>;
+        if (row.status === 'active' && isExpiringSoon(term)) classes.push('text-amber-600 font-medium');
+        if (row.status === 'active' && isExpired(term)) classes.push('text-rose-600 font-medium');
+        const isAccumulated = !!row.accumulatedTerminationDate && row.accumulatedTerminationDate !== row.terminationDate;
+        return (
+          <span className={classes.join(' ')} title={isAccumulated ? `补充协议延期至 ${term}` : undefined}>
+            {term}
+            {isAccumulated && <span className="ml-1 text-[10px] text-purple-500">累计</span>}
+          </span>
+        );
       },
     },
     {
-      key: 'amount', title: '合同金额(元)', width: '110px', align: 'right',
-      render: (row) => (row.amount || 0).toLocaleString(),
+      key: 'accumulatedAmount', title: '合同金额(累计)(元)', width: '140px', align: 'right',
+      render: (row) => (row.accumulatedAmount ?? row.amount ?? 0).toLocaleString(),
       footer: (data) => {
-        const sum = data.reduce((s, c) => s + (c.amount || 0), 0);
+        const sum = data.reduce((s, c) => s + (c.accumulatedAmount ?? c.amount ?? 0), 0);
+        return sum > 0 ? `合计 ${sum.toLocaleString()}` : '-';
+      },
+    },
+    {
+      key: 'amount', title: '合同金额(原始)(元)', width: '140px', align: 'right',
+      render: (row) => (row.amount ?? 0).toLocaleString(),
+      footer: (data) => {
+        const sum = data.reduce((s, c) => s + (c.amount ?? 0), 0);
         return sum > 0 ? `合计 ${sum.toLocaleString()}` : '-';
       },
     },
@@ -218,7 +237,7 @@ export default function ContractIncomeLedgerPage() {
     {
       key: 'action', title: '操作', width: '120px',
       render: (row) => (
-        <button onClick={() => setViewItem(row as ContractLedger)}
+        <button onClick={() => setViewItem(row)}
           className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
         >查看详情</button>
       ),
@@ -231,17 +250,18 @@ export default function ContractIncomeLedgerPage() {
     const headers = [
       '合同性质', '合同编号', '合同名称', '我方-经办部门', '我方-经办人',
       '客户单位', '客户负责人', '合同类型', '合同形成方式',
-      '签订日期', '生效日期', '终止日期',
-      '合同金额(元)', '已收金额(元)', '未收金额(元)',
+      '签订日期', '生效日期', '累计终止日期', '原始终止日期',
+      '合同金额(累计)(元)', '合同金额(原始)(元)', '已收金额(元)', '未收金额(元)',
       '示范文本', '合同状态',
     ];
-    const rows = withDerived.map((c) => [
+    const rows = ledgerData.map((c) => [
       c.contractNature === 'procurement' ? '招采类' : '非招采类',
       c.contractNo, c.contractName, c.handlingDepartment || '', c.handler || '',
       c.counterpartyName || '', c.counterpartyContact || '',
       getContractTypeLabel(c as ContractLedger), getFormationLabel(c as ContractLedger),
-      c.signingDate || '', c.effectiveDate || '', c.terminationDate || '',
-      c.amount ?? '', c.paid, c.uncollected,
+      c.signingDate || '', c.effectiveDate || '',
+      c.accumulatedTerminationDate || c.terminationDate || '', c.terminationDate || '',
+      c.accumulatedAmount ?? c.amount ?? '', c.amount ?? '', c.paid, c.uncollected,
       c.isModelText ? '是' : '否',
       STATUS_MAP[c.status]?.label || c.status,
     ]);
@@ -393,9 +413,9 @@ export default function ContractIncomeLedgerPage() {
 
       {/* ===== 数据表格 ===== */}
       <DataTable
-        data={withDerived}
-        columns={columns as ColumnDef<(typeof withDerived)[number]>[]}
-        rowKey={(row: (typeof withDerived)[number]) => row.id}
+        data={ledgerData}
+        columns={columns}
+        rowKey={(row: LedgerRow) => row.id}
         showFooter
       />
 
@@ -422,16 +442,29 @@ export default function ContractIncomeLedgerPage() {
             <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-100">
               <div className="text-indigo-700 font-semibold mb-2">💰 金额（收入专属）</div>
               <div className="grid grid-cols-3 gap-3 text-center">
-                <div><div className="text-lg font-bold text-slate-800">¥{(viewItem.amount || 0).toLocaleString()}</div><div className="text-[11px] text-slate-400">合同金额(元)</div></div>
-                <div><div className="text-lg font-bold text-emerald-600">¥{(viewItem.paidAmount || 0).toLocaleString()}</div><div className="text-[11px] text-slate-400">已收金额(元)</div></div>
-                <div><div className={`text-lg font-bold ${(viewItem.amount || 0) - (viewItem.paidAmount || 0) > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>¥{((viewItem.amount || 0) - (viewItem.paidAmount || 0)).toLocaleString()}</div><div className="text-[11px] text-slate-400">未收金额(元)</div></div>
+                <div>
+                  <div className="text-lg font-bold text-slate-800">¥{(viewItem.accumulatedAmount ?? viewItem.amount ?? 0).toLocaleString()}</div>
+                  <div className="text-[11px] text-slate-400">合同金额(累计)(元)
+                    {viewItem.supplementAmountSum !== undefined && viewItem.supplementAmountSum !== 0 && (
+                      <span className="ml-1 text-purple-500">原始 ¥{(viewItem.amount ?? 0).toLocaleString()}</span>
+                    )}
+                  </div>
+                </div>
+                <div><div className="text-lg font-bold text-emerald-600">¥{viewItem.paid.toLocaleString()}</div><div className="text-[11px] text-slate-400">已收金额(元)</div></div>
+                <div><div className={`text-lg font-bold ${viewItem.uncollected > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>¥{viewItem.uncollected.toLocaleString()}</div><div className="text-[11px] text-slate-400">未收金额(元)</div></div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-x-6 gap-y-2">
               <div><span className="text-slate-400">签订日期：</span>{viewItem.signingDate || '-'}</div>
               <div><span className="text-slate-400">生效日期：</span>{viewItem.effectiveDate || '-'}</div>
-              <div><span className="text-slate-400">终止日期：</span>{viewItem.terminationDate || '-'}</div>
+              <div>
+                <span className="text-slate-400">终止日期：</span>
+                <span>{viewItem.accumulatedTerminationDate || viewItem.terminationDate || '-'}</span>
+                {viewItem.accumulatedTerminationDate && viewItem.accumulatedTerminationDate !== viewItem.terminationDate && (
+                  <span className="ml-1 text-[11px] text-purple-500">（主 {viewItem.terminationDate || '-'}）</span>
+                )}
+              </div>
               <div><span className="text-slate-400">合同状态：</span>{STATUS_MAP[viewItem.status]?.label || viewItem.status}</div>
               <div><span className="text-slate-400">归档情况：</span>{ARCHIVE_MAP[viewItem.archiveStatus || 'not_started']?.label || '-'}</div>
               <div><span className="text-slate-400">示范文本：</span>{viewItem.isModelText ? '是' : '否'}</div>
