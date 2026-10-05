@@ -174,7 +174,7 @@ export default function ContractIncomeLedgerPage() {
       },
     },
     {
-      key: 'amount', title: '合同金额(万)', width: '110px', align: 'right',
+      key: 'amount', title: '合同金额(元)', width: '110px', align: 'right',
       render: (row) => (row.amount || 0).toLocaleString(),
       footer: (data) => {
         const sum = data.reduce((s, c) => s + (c.amount || 0), 0);
@@ -183,7 +183,7 @@ export default function ContractIncomeLedgerPage() {
     },
     // ⭐⭐ 收入专属派生列
     {
-      key: 'paid', title: '已收金额(万)', width: '110px', align: 'right',
+      key: 'paid', title: '已收金额(元)', width: '110px', align: 'right',
       render: (row) => row.paid.toLocaleString(),
       footer: (data) => {
         const sum = data.reduce((s, c) => s + c.paid, 0);
@@ -191,7 +191,7 @@ export default function ContractIncomeLedgerPage() {
       },
     },
     {
-      key: 'uncollected', title: '未收金额(万)', width: '110px', align: 'right',
+      key: 'uncollected', title: '未收金额(元)', width: '110px', align: 'right',
       render: (row) => {
         const v = row.uncollected;
         if (v <= 0) return <span className="text-emerald-600">已收齐</span>;
@@ -232,7 +232,7 @@ export default function ContractIncomeLedgerPage() {
       '合同性质', '合同编号', '合同名称', '我方-经办部门', '我方-经办人',
       '客户单位', '客户负责人', '合同类型', '合同形成方式',
       '签订日期', '生效日期', '终止日期',
-      '合同金额(万)', '已收金额(万)', '未收金额(万)',
+      '合同金额(元)', '已收金额(元)', '未收金额(元)',
       '示范文本', '合同状态',
     ];
     const rows = withDerived.map((c) => [
@@ -266,9 +266,9 @@ export default function ContractIncomeLedgerPage() {
           <h1 className="text-xl font-bold text-slate-800">收入合同台账</h1>
           <p className="text-xs text-slate-500 mt-1">
             客户付款类合同 · 共 {summary.total} 份 ·
-            合同金额 ¥{summary.totalAmount.toLocaleString()} 万 ·
-            已收 ¥{summary.totalPaid.toLocaleString()} 万 ·
-            <span className="text-rose-600 font-medium"> 未收 ¥{summary.totalUncollected.toLocaleString()} 万</span>
+            合同金额 ¥{summary.totalAmount.toLocaleString()} 元 ·
+            已收 ¥{summary.totalPaid.toLocaleString()} 元 ·
+            <span className="text-rose-600 font-medium"> 未收 ¥{summary.totalUncollected.toLocaleString()} 元</span>
           </p>
         </div>
         <PrimaryButton onClick={handleExport}>
@@ -288,15 +288,15 @@ export default function ContractIncomeLedgerPage() {
             </div>
             <div>
               <div className="text-2xl font-bold text-indigo-600">¥{summary.totalAmount.toLocaleString()}</div>
-              <div className="text-[11px] text-slate-400 mt-0.5">合同总金额(万)</div>
+              <div className="text-[11px] text-slate-400 mt-0.5">合同总金额(元)</div>
             </div>
             <div>
               <div className="text-xl font-semibold text-emerald-600">¥{summary.totalPaid.toLocaleString()}</div>
-              <div className="text-[11px] text-slate-400 mt-0.5">已收合计(万)</div>
+              <div className="text-[11px] text-slate-400 mt-0.5">已收合计(元)</div>
             </div>
             <div>
               <div className="text-xl font-semibold text-rose-600">¥{summary.totalUncollected.toLocaleString()}</div>
-              <div className="text-[11px] text-slate-400 mt-0.5">未收金额(万)</div>
+              <div className="text-[11px] text-slate-400 mt-0.5">未收金额(元)</div>
             </div>
           </div>
         </div>
@@ -422,9 +422,9 @@ export default function ContractIncomeLedgerPage() {
             <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-100">
               <div className="text-indigo-700 font-semibold mb-2">💰 金额（收入专属）</div>
               <div className="grid grid-cols-3 gap-3 text-center">
-                <div><div className="text-lg font-bold text-slate-800">¥{(viewItem.amount || 0).toLocaleString()}</div><div className="text-[11px] text-slate-400">合同金额(万)</div></div>
-                <div><div className="text-lg font-bold text-emerald-600">¥{(viewItem.paidAmount || 0).toLocaleString()}</div><div className="text-[11px] text-slate-400">已收金额(万)</div></div>
-                <div><div className={`text-lg font-bold ${(viewItem.amount || 0) - (viewItem.paidAmount || 0) > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>¥{((viewItem.amount || 0) - (viewItem.paidAmount || 0)).toLocaleString()}</div><div className="text-[11px] text-slate-400">未收金额(万)</div></div>
+                <div><div className="text-lg font-bold text-slate-800">¥{(viewItem.amount || 0).toLocaleString()}</div><div className="text-[11px] text-slate-400">合同金额(元)</div></div>
+                <div><div className="text-lg font-bold text-emerald-600">¥{(viewItem.paidAmount || 0).toLocaleString()}</div><div className="text-[11px] text-slate-400">已收金额(元)</div></div>
+                <div><div className={`text-lg font-bold ${(viewItem.amount || 0) - (viewItem.paidAmount || 0) > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>¥{((viewItem.amount || 0) - (viewItem.paidAmount || 0)).toLocaleString()}</div><div className="text-[11px] text-slate-400">未收金额(元)</div></div>
               </div>
             </div>
 

@@ -252,7 +252,7 @@ export default function ContractProcurementPage() {
                 <th className="px-4 py-3 font-medium">中标时间</th>
                 <th className="px-4 py-3 font-medium">经办部门</th>
                 <th className="px-4 py-3 font-medium">对方单位</th>
-                <th className="px-4 py-3 font-medium text-right">合同金额(万)</th>
+                <th className="px-4 py-3 font-medium text-right">合同金额(元)</th>
                 <th className="px-4 py-3 font-medium">资金流向</th>
                 <th className="px-4 py-3 font-medium">状态</th>
                 <th className="px-4 py-3 font-medium text-center">操作</th>
@@ -415,9 +415,9 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
       supplierId: bidding?.winningSupplierId || '',
     };
 
-    // 合同金额：需求有预估金额 → 元转万元
+    // 合同金额：需求有预估金额 → 直接带入（现在统一为元，不需要换算）
     if (demand.estimatedAmount != null && demand.estimatedAmount > 0) {
-      patch.amount = +(demand.estimatedAmount / 10000).toFixed(2);
+      patch.amount = demand.estimatedAmount;
     }
 
     update(patch);
@@ -598,7 +598,7 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
               placeholder="draft/pending/active/..."
             />
             <Input
-              label="合同金额（万元）*"
+              label="合同金额（元）*"
               required
               type="number"
               step="0.01"

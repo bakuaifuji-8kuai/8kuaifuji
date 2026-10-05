@@ -1,4 +1,4 @@
-﻿import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
@@ -74,7 +74,7 @@ export default function ProcurementPlanPage() {
     { key: 'createTime', title: '编制时间', render: (row) => row.createTime?.split(' ')[0] || '-' },
     {
       key: 'totalBudget',
-      title: '预算总额(万元)',
+      title: '预算总额(元)',
       render: (row) => row.details.reduce((sum, d) => sum + d.budgetAmount, 0).toFixed(2),
     },
     { key: 'remark', title: '备注', render: (row) => row.remark || '-' },
@@ -378,7 +378,7 @@ export default function ProcurementPlanPage() {
   const handleExport = (plan: ProcurementPlan) => {
     const isAnnual = plan.planType === 'annual';
     const headers = [
-      '序号', '需求部门', '项目名称', '需求类型', '项目概况', '项目估（预）算（万元）',
+      '序号', '需求部门', '项目名称', '需求类型', '项目概况', '项目估（预）算（元）',
       '用户需求书编制计划完成时间', '预算编制审批计划完成时间', '合同前置审核计划完成时间',
       '计划采购启动时间', '计划采购完成时间'
     ];
@@ -407,7 +407,7 @@ export default function ProcurementPlanPage() {
   const handleDownloadTemplate = () => {
     const isAnnual = editItem?.planType === 'annual';
     const headers = [
-      '序号', '需求部门', '项目名称', '需求类型', '项目概况', '项目估（预）算（万元）',
+      '序号', '需求部门', '项目名称', '需求类型', '项目概况', '项目估（预）算（元）',
       '用户需求书编制计划完成时间', '预算编制审批计划完成时间', '合同前置审核计划完成时间',
       '计划采购启动时间', '计划采购完成时间'
     ];
@@ -697,7 +697,7 @@ export default function ProcurementPlanPage() {
                     <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap"><span className="text-[#ef4444]">*</span>项目名称</th>
                     <th className="px-2 py-2 text-xs text-left w-20 whitespace-nowrap"><span className="text-[#ef4444]">*</span>需求类型</th>
                     <th className="px-2 py-2 text-xs text-left w-40 whitespace-nowrap"><span className="text-[#ef4444]">*</span>项目概况</th>
-                    <th className="px-2 py-2 text-xs text-left w-28 whitespace-nowrap"><span className="text-[#ef4444]">*</span>项目估（预）算（万元）</th>
+                    <th className="px-2 py-2 text-xs text-left w-28 whitespace-nowrap"><span className="text-[#ef4444]">*</span>项目估（预）算（元）</th>
                     <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap bg-[#fef3c7]"><span className="text-[#ef4444]">*</span>用户需求书编制计划完成时间</th>
                     <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap bg-[#fef3c7]"><span className="text-[#ef4444]">*</span>预算编制审批计划完成时间</th>
                     <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap bg-[#fef3c7]"><span className="text-[#ef4444]">*</span>合同前置审核计划完成时间</th>
@@ -805,7 +805,7 @@ export default function ProcurementPlanPage() {
                   <tfoot className="bg-[#f5f7fa]">
                     <tr>
                       <td colSpan={5} className="px-2 py-2 text-xs text-right font-bold">合计：</td>
-                      <td className="px-2 py-2 text-xs font-bold">{totalBudget.toFixed(2)} 万元</td>
+                      <td className="px-2 py-2 text-xs font-bold">{totalBudget.toFixed(2)} 元</td>
                       <td colSpan={6}></td>
                     </tr>
                   </tfoot>

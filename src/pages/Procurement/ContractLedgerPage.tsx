@@ -468,7 +468,7 @@ export default function ContractLedgerPage() {
       alert('当前无数据可导出');
       return;
     }
-    const headers = ['合同编码', '合同名称', '分类', '类型', '签订主体', '经办部门', '需求部门', '经办人', '对方单位', '项目名称', '合同金额(万元)', '已支付(万元)', '结算金额(万元)', '签订日期', '生效日期', '终止日期', '状态', '履行情况', '备注'];
+    const headers = ['合同编码', '合同名称', '分类', '类型', '签订主体', '经办部门', '需求部门', '经办人', '对方单位', '项目名称', '合同金额(元)', '已支付(元)', '结算金额(元)', '签订日期', '生效日期', '终止日期', '状态', '履行情况', '备注'];
     const rows = filteredData.map((c) => [
       c.contractNo,
       c.contractName,
@@ -480,9 +480,9 @@ export default function ContractLedgerPage() {
       c.handler || '-',
       c.counterpartyName || '-',
       (c as any).projectName || '-',
-      c.amount?.toFixed(2) || '0.00',
-      c.paidAmount?.toFixed(2) || '0.00',
-      c.settlementAmount?.toFixed(2) || '0.00',
+      c.amount?.toLocaleString() || '0.00',
+      c.paidAmount?.toLocaleString() || '0.00',
+      c.settlementAmount?.toLocaleString() || '0.00',
       c.signingDate || '-',
       c.effectiveDate || '-',
       c.terminationDate || '-',
@@ -496,7 +496,7 @@ export default function ContractLedgerPage() {
     const totalSettlement = filteredData.reduce((s, c) => s + (c.settlementAmount || 0), 0);
     const summaryRow = [
       `合计(${filteredData.length}份)`, '', '', '', '', '', '', '', '', '',
-      totalAmount.toFixed(2), totalPaid.toFixed(2), totalSettlement.toFixed(2),
+      totalAmount.toLocaleString(), totalPaid.toLocaleString(), totalSettlement.toLocaleString(),
       '', '', '', '', '', '',
     ];
     const csv = '\uFEFF' + [headers, ...rows, summaryRow].map((row) =>
@@ -536,9 +536,9 @@ export default function ContractLedgerPage() {
         <td>${c.contractType === 'engineering' ? '工程类' : '非工程类'}</td>
         <td>${c.counterpartyName || '-'}</td>
         <td>${c.handlingDepartment || '-'}</td>
-        <td>${c.amount?.toFixed(2) || '0.00'}</td>
-        <td>${c.paidAmount?.toFixed(2) || '0.00'}</td>
-        <td>${c.settlementAmount?.toFixed(2) || '0.00'}</td>
+        <td>${c.amount?.toLocaleString() || '0.00'}</td>
+        <td>${c.paidAmount?.toLocaleString() || '0.00'}</td>
+        <td>${c.settlementAmount?.toLocaleString() || '0.00'}</td>
         <td>${c.signingDate || '-'}</td>
         <td>${statusMap[c.status]?.label || c.status}</td>
       </tr>
@@ -548,9 +548,9 @@ export default function ContractLedgerPage() {
       <tfoot>
         <tr style="background: #f0f2f5; font-weight: bold;">
           <td colspan="7" style="text-align: center;">合计（${filteredData.length}份合同）</td>
-          <td style="text-align: right;">${totalAmount.toFixed(2)}</td>
-          <td style="text-align: right;">${totalPaid.toFixed(2)}</td>
-          <td style="text-align: right;">${totalSettlement.toFixed(2)}</td>
+          <td style="text-align: right;">${totalAmount.toLocaleString()}</td>
+          <td style="text-align: right;">${totalPaid.toLocaleString()}</td>
+          <td style="text-align: right;">${totalSettlement.toLocaleString()}</td>
           <td colspan="2"></td>
         </tr>
       </tfoot>
@@ -578,16 +578,16 @@ export default function ContractLedgerPage() {
         <h2>合同台账报表</h2>
         <div class="summary">
           <div class="summary-item">合同总数：<strong>${filteredData.length}</strong> 份</div>
-          <div class="summary-item">合同总金额：<strong>${totalAmount.toFixed(2)}</strong> 万元</div>
-          <div class="summary-item">已支付金额：<strong>${totalPaid.toFixed(2)}</strong> 万元</div>
-          <div class="summary-item">结算金额：<strong>${totalSettlement.toFixed(2)}</strong> 万元</div>
+          <div class="summary-item">合同总金额：<strong>${totalAmount.toLocaleString()}</strong> 元</div>
+          <div class="summary-item">已支付金额：<strong>${totalPaid.toLocaleString()}</strong> 元</div>
+          <div class="summary-item">结算金额：<strong>${totalSettlement.toLocaleString()}</strong> 元</div>
         </div>
         <table>
           <thead>
             <tr>
               <th>序号</th><th>合同编码</th><th>合同名称</th><th>分类</th><th>类型</th>
-              <th>对方单位</th><th>经办部门</th><th>金额(万元)</th><th>已支付(万元)</th>
-              <th>结算金额(万元)</th><th>签订日期</th><th>状态</th>
+              <th>对方单位</th><th>经办部门</th><th>金额(元)</th><th>已支付(元)</th>
+              <th>结算金额(元)</th><th>签订日期</th><th>状态</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
@@ -776,8 +776,8 @@ export default function ContractLedgerPage() {
 
   const getRequisitionRatio = (row: ContractLedger) => {
     if (!row.requisitionAmount || row.requisitionAmount <= 0 || !row.amount) return null;
-    // requisitionAmount 是元，amount 是万元，amount*10000 转为元后对比
-    return ((row.amount * 10000) / row.requisitionAmount * 100).toFixed(1);
+    // requisitionAmount 是元，amount 也是元，直接对比
+    return ((row.amount / row.requisitionAmount) * 100).toFixed(1);
   };
 
   // ========== 表格列定义 ==========
@@ -886,38 +886,38 @@ export default function ContractLedgerPage() {
         );
       },
     },
-    // 16. 合同金额（万元）
+    // 16. 合同金额（元）
     {
-      key: 'amount', title: '合同金额(万)', align: 'right',
+      key: 'amount', title: '合同金额(元)', align: 'right',
       render: (row) => row.amount?.toLocaleString() || '-',
       footer: (data) => {
         const sum = data.reduce((s, c) => s + (c.amount || 0), 0);
         return sum > 0 ? sum.toLocaleString() : '-';
       },
     },
-    // 17. 采购申请合计金额（万元）
-    { key: 'requisitionAmount', title: '采购申请金额(万)', align: 'right', render: (row) => {
+    // 17. 采购申请合计金额（元）
+    { key: 'requisitionAmount', title: '采购申请金额(元)', align: 'right', render: (row) => {
       if (!row.requisitionAmount) return '-';
-      return (row.requisitionAmount / 10000).toLocaleString(undefined, { maximumFractionDigits: 2 });
+      return row.requisitionAmount.toLocaleString();
     }, footer: '' },
     // 18. 采购申请占合同金额比例（%）
     { key: 'requisitionRatio', title: '采购申请占比(%)', align: 'right', render: (row) => {
       const ratio = getRequisitionRatio(row);
       return ratio !== null ? `${ratio}%` : '-';
     }, footer: '' },
-    // 19. 已支付金额（万元）— ⚠️ 展示值 = paidAmountBase + Σ(linkedDemandIds 需求金额)
+    // 19. 已支付金额（元）— ⚠️ 展示值 = paidAmountBase + Σ(linkedDemandIds 需求金额)
     //    聚合函数 getAutoPaidAmount 在 utils/contractAggregate.ts
     {
-      key: 'paidAmount', title: '已支付金额(万)', align: 'right',
+      key: 'paidAmount', title: '已支付金额(元)', align: 'right',
       render: (row) => getAutoPaidAmount(row as ContractLedger, procurementDemands, biddings).toLocaleString(),
       footer: (data) => {
         const sum = data.reduce((s, c) => s + getAutoPaidAmount(c as ContractLedger, procurementDemands, biddings), 0);
         return sum > 0 ? sum.toLocaleString() : '-';
       },
     },
-    // 20. 合同结算金额（万元）
+    // 20. 合同结算金额（元）
     {
-      key: 'settlementAmount', title: '结算金额(万)', align: 'right',
+      key: 'settlementAmount', title: '结算金额(元)', align: 'right',
       render: (row) => row.settlementAmount?.toLocaleString() || '-',
       footer: (data) => {
         const sum = data.reduce((s, c) => s + (c.settlementAmount || 0), 0);
@@ -1092,7 +1092,7 @@ export default function ContractLedgerPage() {
         >
           <span>📊</span>
           <span className="text-slate-700">
-            {stats.total} 份合同 · 总 {stats.totalAmount.toFixed(0)} 万 · {stats.activeCount} 执行中 · {stats.expiringCount} 即将到期
+            {stats.total} 份合同 · 总 ¥{stats.totalAmount.toLocaleString()} 元 · {stats.activeCount} 执行中 · {stats.expiringCount} 即将到期
           </span>
         </button>
 
@@ -1246,8 +1246,8 @@ export default function ContractLedgerPage() {
                 <div className="grid grid-cols-6 gap-3 mb-4">
                   {[
                     { label: '合同总数', value: stats.total, unit: '份', color: '#3b82f6', bg: '#eff6ff' },
-                    { label: '合同总金额', value: stats.totalAmount.toFixed(0), unit: '万元', color: '#22c55e', bg: '#f0fdf4' },
-                    { label: '已支付金额', value: stats.totalPaid.toFixed(0), unit: '万元', color: '#f59e0b', bg: '#fffbeb' },
+                    { label: '合同总金额', value: stats.totalAmount.toLocaleString(), unit: '元', color: '#22c55e', bg: '#f0fdf4' },
+                    { label: '已支付金额', value: stats.totalPaid.toLocaleString(), unit: '元', color: '#f59e0b', bg: '#fffbeb' },
                     { label: '执行中', value: stats.activeCount, unit: '份', color: '#22c55e', bg: '#f0fdf4' },
                     { label: '待审批', value: stats.pendingCount, unit: '份', color: '#f59e0b', bg: '#fffbeb' },
                     { label: '即将到期(30天)', value: stats.expiringCount, unit: '份', color: '#ef4444', bg: '#fef2f2' },
@@ -1625,21 +1625,21 @@ export default function ContractLedgerPage() {
 
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <div className="mb-1 text-[#606266]">合同金额(万元)</div>
+                <div className="mb-1 text-[#606266]">合同金额(元)</div>
                 <input type="number" className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
                   value={editItem.amount || ''}
                   onChange={(e) => setEditItem({ ...editItem, amount: Number(e.target.value) || undefined })}
                 />
               </div>
               <div>
-                <div className="mb-1 text-[#606266]">已支付金额(万元)</div>
+                <div className="mb-1 text-[#606266]">已支付金额(元)</div>
                 <input type="number" className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
                   value={editItem.paidAmount || ''}
                   onChange={(e) => setEditItem({ ...editItem, paidAmount: Number(e.target.value) || undefined })}
                 />
               </div>
               <div>
-                <div className="mb-1 text-[#606266]">结算金额(万元)</div>
+                <div className="mb-1 text-[#606266]">结算金额(元)</div>
                 <input type="number" className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
                   value={editItem.settlementAmount || ''}
                   onChange={(e) => setEditItem({ ...editItem, settlementAmount: Number(e.target.value) || undefined })}
@@ -1735,9 +1735,9 @@ export default function ContractLedgerPage() {
               <div><span className="text-[#909399]">对方负责人：</span>{viewItem.counterpartyContact || '-'}</div>
               <div><span className="text-[#909399]">项目名称：</span>{(viewItem as any).projectName || '-'}</div>
               <div><span className="text-[#909399]">立项方式：</span>{viewItem.approvalMethod || '-'}</div>
-              <div><span className="text-[#909399]">合同金额：</span><span className="text-[#409eff] font-medium">{viewItem.amount?.toFixed(2)} 万元</span></div>
-              <div><span className="text-[#909399]">已支付：</span><span className="text-[#67c23a] font-medium">{viewItem.paidAmount?.toFixed(2)} 万元</span></div>
-              <div><span className="text-[#909399]">结算金额：</span>{viewItem.settlementAmount?.toFixed(2) || '-'} 万元</div>
+              <div><span className="text-[#909399]">合同金额：</span><span className="text-[#409eff] font-medium">{viewItem.amount?.toLocaleString()} 元</span></div>
+              <div><span className="text-[#909399]">已支付：</span><span className="text-[#67c23a] font-medium">{viewItem.paidAmount?.toLocaleString()} 元</span></div>
+              <div><span className="text-[#909399]">结算金额：</span>{viewItem.settlementAmount?.toLocaleString() || '-'} 元</div>
               <div><span className="text-[#909399]">签订日期：</span>{viewItem.signingDate || '-'}</div>
               <div><span className="text-[#909399]">生效日期：</span>{viewItem.effectiveDate || '-'}</div>
               <div><span className="text-[#909399]">终止日期：</span>{viewItem.terminationDate || '-'}</div>

@@ -142,7 +142,7 @@ export default function ProcurementPlanSummaryPage() {
   const handleExportSummary = () => {
     const groupLabel = { department: '部门', category: '项目类别', period: '期间' }[groupBy];
     const headers = [
-      groupLabel, '计划数', '项目数', '预算总额(万元)', '占比'
+      groupLabel, '计划数', '项目数', '预算总额(元)', '占比'
     ];
     const total = groupedData.reduce((s, g) => s + g.totalBudget, 0) || 1;
     const rows = groupedData.map((g) => [
@@ -173,7 +173,7 @@ export default function ProcurementPlanSummaryPage() {
   // 导出明细
   const handleExportDetail = () => {
     const headers = [
-      '序号', '计划方式', '计划类型', '时间', '需求部门', '项目名称', '项目类别', '项目概况', '项目估（预）算（万元）',
+      '序号', '计划方式', '计划类型', '时间', '需求部门', '项目名称', '项目类别', '项目概况', '项目估（预）算（元）',
       '用户需求书编制计划完成时间', '预算编制审批计划完成时间', '合同前置审核计划完成时间',
       '计划采购启动时间', '计划采购完成时间'
     ];
@@ -276,7 +276,7 @@ export default function ProcurementPlanSummaryPage() {
         </div>
         <div className="bg-white border border-[#e4e7ed] rounded p-3 shadow-sm">
           <div className="flex items-center gap-2 text-xs text-[#909399] mb-1">
-            <Building2 size={14} /> 预算总额（万元）
+            <Building2 size={14} /> 预算总额（元）
           </div>
           <div className="text-2xl font-bold text-[#e6a23c]">{summary.totalBudget.toFixed(2)}</div>
         </div>
@@ -338,7 +338,7 @@ export default function ProcurementPlanSummaryPage() {
                   </th>
                   <th className="px-3 py-2 text-xs text-right">计划数</th>
                   <th className="px-3 py-2 text-xs text-right">项目数</th>
-                  <th className="px-3 py-2 text-xs text-right">预算总额(万元)</th>
+                  <th className="px-3 py-2 text-xs text-right">预算总额(元)</th>
                   <th className="px-3 py-2 text-xs text-right">预算占比</th>
                   <th className="px-3 py-2 text-xs text-left">预算分布</th>
                 </tr>
@@ -399,7 +399,7 @@ export default function ProcurementPlanSummaryPage() {
                     <th className="px-2 py-2 text-xs text-left">项目名称</th>
                     <th className="px-2 py-2 text-xs text-left">项目类别</th>
                     <th className="px-2 py-2 text-xs text-left">项目概况</th>
-                    <th className="px-2 py-2 text-xs text-right">项目估（预）算（万元）</th>
+                    <th className="px-2 py-2 text-xs text-right">项目估（预）算（元）</th>
                     <th className="px-2 py-2 text-xs text-center bg-[#fef3c7]">用户需求书编制计划完成时间</th>
                     <th className="px-2 py-2 text-xs text-center bg-[#fef3c7]">预算编制审批计划完成时间</th>
                     <th className="px-2 py-2 text-xs text-center bg-[#fef3c7]">合同前置审核计划完成时间</th>

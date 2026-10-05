@@ -660,8 +660,8 @@ export default function ProcurementDemandConfirmPage() {
                       </div>
                       {linkedContract && (
                         <div className="text-[11px] text-slate-500 mt-1">
-                          原合同金额 {(linkedContract.amount ?? 0).toLocaleString()} 万
-                          {' · '}已支付 {(getAutoPaidAmount(linkedContract, procurementDemands)).toLocaleString()} 万
+                          原合同金额 {(linkedContract.amount ?? 0).toLocaleString()} 元
+                          {' · '}已支付 {(getAutoPaidAmount(linkedContract, procurementDemands)).toLocaleString()} 元
                           {' · '}关联需求 {linkedContract.linkedDemandIds?.length ?? 0} 条
                         </div>
                       )}

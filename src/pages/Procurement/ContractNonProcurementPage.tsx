@@ -254,7 +254,7 @@ export default function ContractNonProcurementPage() {
                 <th className="px-4 py-3 font-medium">合同形成方式</th>
                 <th className="px-4 py-3 font-medium">经办部门</th>
                 <th className="px-4 py-3 font-medium">对方单位</th>
-                <th className="px-4 py-3 font-medium text-right">合同金额(万)</th>
+                <th className="px-4 py-3 font-medium text-right">合同金额(元)</th>
                 <th className="px-4 py-3 font-medium">资金流向</th>
                 <th className="px-4 py-3 font-medium">销售合同</th>
                 <th className="px-4 py-3 font-medium">状态</th>
@@ -740,7 +740,7 @@ function ContractNonProcurementForm({ form, update, amountDetails, setAmountDeta
               <div className="mt-3 flex gap-4 flex-wrap">
                 <div className="min-w-[180px]">
                   <Input
-                    label="保证金金额(万)"
+                    label="保证金金额(元)"
                     type="number"
                     step="0.01"
                     value={form.performanceBond?.amount ?? ''}

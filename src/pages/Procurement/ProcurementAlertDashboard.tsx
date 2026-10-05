@@ -120,7 +120,7 @@ export default function ProcurementAlertDashboard() {
           sourceId: c.id,
           sourceNo: c.contractNo,
           sourceName: c.contractName,
-          meta: `¥${paid.toLocaleString()} / ¥${total.toLocaleString()} · 合同金额 ${total} 万`,
+          meta: `¥${paid.toLocaleString()} / ¥${total.toLocaleString()} · 合同金额 ${total} 元`,
           jumpPath: `/procurement/contract?id=${c.id}`,
         });
       }
