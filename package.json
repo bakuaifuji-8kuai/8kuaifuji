@@ -12,6 +12,7 @@
     "check": "tsc --noEmit",
     "deploy": "gh-pages -d dist -b gh-pages",
     "test": "playwright test",
+    "test:unit": "npx vite-node src/utils/__tests__/contractSupplement.test.ts",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "playwright:install": "playwright install chromium"
