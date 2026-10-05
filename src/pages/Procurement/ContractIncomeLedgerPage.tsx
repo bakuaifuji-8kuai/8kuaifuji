@@ -74,7 +74,7 @@ export default function ContractIncomeLedgerPage() {
   const filteredData = useMemo(() => {
     const kw = applied.keyword.trim().toLowerCase();
     return contractLedgers.filter((c) => {
-      if (c.businessCategory !== 'income') return false;
+      if (c.businessCategory !== 'income' && !c.isSalesContract) return false;
       if (kw) {
         const hitNo = c.contractNo.toLowerCase().includes(kw);
         const hitName = (c.contractName || '').toLowerCase().includes(kw);

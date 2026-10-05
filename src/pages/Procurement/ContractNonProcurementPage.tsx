@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import type {
   ContractLedger,
@@ -250,6 +250,7 @@ export default function ContractNonProcurementPage() {
                 <th className="px-4 py-3 font-medium">对方单位</th>
                 <th className="px-4 py-3 font-medium text-right">合同金额(万)</th>
                 <th className="px-4 py-3 font-medium">资金流向</th>
+                <th className="px-4 py-3 font-medium">销售合同</th>
                 <th className="px-4 py-3 font-medium">状态</th>
                 <th className="px-4 py-3 font-medium text-center">操作</th>
               </tr>
@@ -257,7 +258,7 @@ export default function ContractNonProcurementPage() {
             <tbody>
               {filteredList.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="px-4 py-10 text-center text-slate-400">
+                  <td colSpan={12} className="px-4 py-10 text-center text-slate-400">
                     暂无数据
                   </td>
                 </tr>
@@ -295,10 +296,35 @@ export default function ContractNonProcurementPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
+                      {row.isSalesContract ? (
+                        <Badge variant="success">✓ 是</Badge>
+                      ) : (
+                        <Badge variant="secondary">— 否</Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
                       <Badge variant={sb.variant}>{sb.text}</Badge>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
+                      <div className="flex items-center justify-center gap-1 flex-wrap">
+                        {/* 切换销售合同标记 — 所有状态可用 */}
+                        {row.isSalesContract ? (
+                          <button
+                            onClick={() => updateContractLedger(row.id, { isSalesContract: false })}
+                            className="text-rose-500 hover:text-rose-700 text-xs px-2 py-1 rounded hover:bg-rose-50"
+                            title="取消销售合同标记后，将从收入合同台账移除"
+                          >
+                            取消销售合同
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => updateContractLedger(row.id, { isSalesContract: true })}
+                            className="text-emerald-500 hover:text-emerald-700 text-xs px-2 py-1 rounded hover:bg-emerald-50"
+                            title="标记后，该合同自动纳入收入合同台账"
+                          >
+                            标为销售合同
+                          </button>
+                        )}
                         {row.status === 'draft' && (
                           <button
                             onClick={() => openEdit(row)}
@@ -314,9 +340,6 @@ export default function ContractNonProcurementPage() {
                           >
                             提交审批
                           </button>
-                        )}
-                        {(row.status === 'pending' || row.status === 'approved' || row.status === 'active' || row.status === 'completed') && (
-                          <span className="text-slate-300 text-xs">—</span>
                         )}
                       </div>
                     </td>

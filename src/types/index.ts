@@ -1,4 +1,4 @@
-﻿// 仓库类别
+// 仓库类别
 export type WarehouseCategory = 'exhibition' | 'consumable' | 'fixed_asset';
 
 // 仓库属性
@@ -2089,6 +2089,8 @@ export interface ContractLedger {
   approvalMethod?: string;       // 立项方式
   approvalRemark?: string;       // 立项方式备注
   isSettlementAudited?: boolean; // 结算审核（是/否）
+  /** 是否销售合同（业务场景标记，独立于 businessCategory 资金流向分类）— 非招采类合同常用；true 时合同自动纳入「收入合同台账」 */
+  isSalesContract?: boolean;
   businessCategory?: 'expense' | 'income' | 'other'; // 资金流向分类
   subType?: 'exhibition_display' | 'procurement' | 'investment'; // 细分类型
   subRemark?: string;            // 细分备注
