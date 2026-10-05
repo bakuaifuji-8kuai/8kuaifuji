@@ -20,6 +20,7 @@ import Badge from '@/components/common/Badge';
 import Modal from '@/components/common/Modal';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
+import ContractTierField from '@/components/business/ContractTierField';
 
 // ============== 状态 → Badge 样式映射 ==============
 const STATUS_BADGE: Record<string, { text: string; variant: 'default' | 'primary' | 'success' | 'warning' | 'danger' }> = {
@@ -82,23 +83,56 @@ export default function ContractProcurementPage() {
     );
   }, [contractLedgers]);
 
+  // ========== 补充协议：可作为"关联主合同"下拉的候选列表（同 contractNature 的主合同） ==========
+  const primaryOptions = useMemo(() => {
+    return contractLedgers
+      .filter(
+        (l) =>
+          l.contractNature === 'procurement' &&
+          l.contractTier !== 'supplement' &&
+          (l.status === 'draft' ||
+            l.status === 'pending' ||
+            l.status === 'approved' ||
+            l.status === 'active'),
+      )
+      .map((l) => ({
+        value: l.id,
+        label: `${l.contractNo} — ${l.contractName}（¥${(l.amount || 0).toLocaleString()}）`,
+      }));
+  }, [contractLedgers]);
+
   // ========== 状态筛选 ==========
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const filteredList = useMemo(() => {
-    if (statusFilter === 'all') return list;
-    return list.filter((l) => l.status === statusFilter);
-  }, [list, statusFilter]);
 
   // ========== 弹窗状态 ==========
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ContractLedger | null>(null);
   const [form, setForm] = useState<Partial<ContractLedger>>({});
 
+  // ========== 补充序号自动计算（依赖 form.parentContractId，所以必须在 form 声明之后）==========
+  const currentSupplementCount = useMemo(() => {
+    if (!form.parentContractId) return 0;
+    return contractLedgers.filter(
+      (l) =>
+        l.parentContractId === form.parentContractId &&
+        l.contractTier === 'supplement',
+    ).length;
+  }, [contractLedgers, form.parentContractId]);
+
+  const filteredList = useMemo(() => {
+    if (statusFilter === 'all') return list;
+    return list.filter((l) => l.status === statusFilter);
+  }, [list, statusFilter]);
+
   // ========== 打开新增 ==========
   const openAdd = () => {
     setEditing(null);
     setForm({
       contractNature: 'procurement',
+      contractTier: 'primary',
+      supplementAmount: undefined,
+      supplementType: 'price_change',
+      supplementIndex: 1,
       formation: 'state_owned_xunbi',
       contractType: 'non_engineering',
       isModelText: true,
@@ -353,6 +387,9 @@ export default function ContractProcurementPage() {
           biddings={biddings}
           procurementDemands={procurementDemands}
           isEdit={!!editing}
+          contractLedgers={contractLedgers}
+          primaryOptions={primaryOptions}
+          currentSupplementCount={currentSupplementCount}
         />
       </Modal>
     </div>
@@ -366,9 +403,12 @@ interface FormProps {
   biddings: Bidding[];
   procurementDemands: ProcurementDemand[];
   isEdit: boolean;
+  contractLedgers: ContractLedger[];
+  primaryOptions: Array<{ value: string; label: string }>;
+  currentSupplementCount: number;
 }
 
-function ContractProcurementForm({ form, update, biddings, procurementDemands, isEdit }: FormProps) {
+function ContractProcurementForm({ form, update, biddings, procurementDemands, isEdit, contractLedgers, primaryOptions, currentSupplementCount }: FormProps) {
   const formationOptions = Object.entries(PROCUREMENT_FORMATION_LABELS).map(([v, l]) => ({ value: v, label: l }));
   const contractTypeOptions = Object.entries(PROCUREMENT_CONTRACT_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }));
 
@@ -444,6 +484,43 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
       {/* ========== 916文档 一、基本信息 ========== */}
       <Section title="📋 基本信息（按916文档L14字段顺序）">
         <div className="grid grid-cols-2 gap-4">
+          {/* ===== 合同层级字段组 — 最顶部 ===== */}
+          <ContractTierField
+            tier={form.contractTier || 'primary'}
+            onChangeTier={(t) =>
+              update({
+                contractTier: t,
+                // 切换成补充协议时，自动带序号；切回主合同时清掉
+                supplementIndex:
+                  t === 'supplement' ? (currentSupplementCount + 1) : 1,
+                parentContractId: t === 'supplement' ? form.parentContractId : undefined,
+              })
+            }
+            contractNature="procurement"
+            primaryOptions={primaryOptions}
+            parentContractId={form.parentContractId}
+            onChangeParent={(id) =>
+              update({
+                parentContractId: id,
+                // 切换主合同后自动重新算补充序号
+                supplementIndex: id
+                  ? contractLedgers.filter(
+                      (l) =>
+                        l.parentContractId === id &&
+                        l.contractTier === 'supplement',
+                    ).length + 1
+                  : 1,
+              })
+            }
+            supplementAmount={form.supplementAmount}
+            onChangeSupplementAmount={(v) => update({ supplementAmount: v })}
+            supplementType={form.supplementType}
+            onChangeSupplementType={(v) => update({ supplementType: v })}
+            supplementIndex={form.supplementIndex}
+            onChangeSupplementIndex={(v) => update({ supplementIndex: v })}
+            disabled={isEdit}
+          />
+
           {/* ===== 第一行：关联采购需求 + 合同名称 — 关联需求优先 ===== */}
           {/* 关联采购需求（needContract='yes' 的已立项通过需求）*/}
           {/* 需求背景：合同表单选关联采购需求后，自动从关联工单带入需求类型、合同形成方式、对方单位、中标时间等字段 */}

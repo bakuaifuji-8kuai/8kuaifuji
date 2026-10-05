@@ -17,6 +17,7 @@ import Badge from '@/components/common/Badge';
 import Modal from '@/components/common/Modal';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
+import ContractTierField from '@/components/business/ContractTierField';
 
 // ============== 状态 → Badge 样式映射 ==============
 const STATUS_BADGE: Record<string, { text: string; variant: 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'secondary' }> = {
@@ -56,6 +57,24 @@ export default function ContractNonProcurementPage() {
     );
   }, [contractLedgers]);
 
+  // ========== 补充协议：可作为"关联主合同"下拉的候选列表 ==========
+  const primaryOptions = useMemo(() => {
+    return contractLedgers
+      .filter(
+        (l) =>
+          l.contractNature === 'non_procurement' &&
+          l.contractTier !== 'supplement' &&
+          (l.status === 'draft' ||
+            l.status === 'pending' ||
+            l.status === 'approved' ||
+            l.status === 'active'),
+      )
+      .map((l) => ({
+        value: l.id,
+        label: `${l.contractNo} — ${l.contractName}（¥${(l.amount || 0).toLocaleString()}）`,
+      }));
+  }, [contractLedgers]);
+
   // ========== 状态筛选 ==========
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const filteredList = useMemo(() => {
@@ -77,6 +96,10 @@ export default function ContractNonProcurementPage() {
     setEditing(null);
     setForm({
       contractNature: 'non_procurement',
+      contractTier: 'primary',
+      supplementAmount: undefined,
+      supplementType: 'price_change',
+      supplementIndex: 1,
       formation: 'exhibition_host',
       contractType: 'non_engineering_service',
       isModelText: true,
@@ -374,6 +397,8 @@ export default function ContractNonProcurementPage() {
         <ContractNonProcurementForm form={form} update={update}
           amountDetails={amountDetails}
           setAmountDetails={setAmountDetails}
+          isEdit={!!editing}
+          primaryOptions={primaryOptions}
         />
       </Modal>
     </div>
@@ -387,9 +412,11 @@ interface FormProps {
   update: (patch: Partial<ContractLedger>) => void;
   amountDetails: AmountDetailItem[];
   setAmountDetails: (v: AmountDetailItem[] | ((prev: AmountDetailItem[]) => AmountDetailItem[])) => void;
+  isEdit: boolean;
+  primaryOptions: Array<{ value: string; label: string }>;
 }
 
-function ContractNonProcurementForm({ form, update, amountDetails, setAmountDetails }: FormProps) {
+function ContractNonProcurementForm({ form, update, amountDetails, setAmountDetails, isEdit, primaryOptions }: FormProps) {
   const contractTypeOptions = Object.entries(NON_PROCUREMENT_CONTRACT_TYPE_LABELS).map(([v, l]) => ({
     value: v,
     label: l,
@@ -452,6 +479,29 @@ function ContractNonProcurementForm({ form, update, amountDetails, setAmountDeta
       {/* ========== 916文档 一、基本信息 ========== */}
       <Section title="📋 基本信息（按916文档L20字段顺序）" tone="blue">
         <div className="grid grid-cols-2 gap-4">
+          {/* ===== 合同层级字段组 — 最顶部 ===== */}
+          <ContractTierField
+            tier={form.contractTier || 'primary'}
+            onChangeTier={(t) =>
+              update({
+                contractTier: t,
+                parentContractId:
+                  t === 'supplement' ? form.parentContractId : undefined,
+              })
+            }
+            contractNature="non_procurement"
+            primaryOptions={primaryOptions}
+            parentContractId={form.parentContractId}
+            onChangeParent={(id) => update({ parentContractId: id })}
+            supplementAmount={form.supplementAmount}
+            onChangeSupplementAmount={(v) => update({ supplementAmount: v })}
+            supplementType={form.supplementType}
+            onChangeSupplementType={(v) => update({ supplementType: v })}
+            supplementIndex={form.supplementIndex}
+            onChangeSupplementIndex={(v) => update({ supplementIndex: v })}
+            disabled={isEdit}
+          />
+
           {/* 合同名称* */}
           <Input
             label="合同名称 *"

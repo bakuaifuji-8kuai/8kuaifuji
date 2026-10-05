@@ -2047,6 +2047,19 @@ export interface ContractLedger {
   contractName: string; // 合同名称
   /** 合同性质（顶层区分：招采类 vs 非招采类） */
   contractNature: ContractNature;
+  // ====== 主合同 / 补充协议 关系字段 ======
+  /** 合同层级：主合同 / 补充协议 — 合同台账去重依据，默认 primary */
+  contractTier?: 'primary' | 'supplement';
+  /** 补充协议指向的主合同 id — 补充协议必填，主合同 undefined */
+  parentContractId?: string;
+  /** 补充协议关联的主合同编号（冗余存储方便列表显示） */
+  parentContractNo?: string;
+  /** 补充协议序号（如 1/2/3，冗余存储方便显示"补充#1"） */
+  supplementIndex?: number;
+  /** 补充协议的补充金额（可正可负）— 仅补充协议有效，主合同为 undefined */
+  supplementAmount?: number;
+  /** 补充类型 */
+  supplementType?: 'price_change' | 'date_change' | 'scope_change' | 'other';
   // ====== 关联招采数据 ======
   demandId?: string;        // 关联采购需求 ID（合同表单"关联采购需求"下拉自动带）
   demandNo?: string;        // 关联采购需求编号

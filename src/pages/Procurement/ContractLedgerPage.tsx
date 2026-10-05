@@ -7,6 +7,7 @@ import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import { getAutoPaidAmount } from '@/utils/contractAggregate';
+import { splitContracts, attachAccumulated, type ContractLedgerWithAccumulated } from '@/utils/contractSupplement';
 import type { ContractLedger, Bidding, ContractEvaluationBinding, EvaluationType, ProcurementFormation, NonProcurementFormation, ProcurementContractType, NonProcurementContractType, ProcurementDemand, AlertOverride } from '@/types';
 import { PROCUREMENT_FORMATION_LABELS, NON_PROCUREMENT_FORMATION_LABELS, PROCUREMENT_CONTRACT_TYPE_LABELS, NON_PROCUREMENT_CONTRACT_TYPE_LABELS, ARCHIVE_STATUS_LABELS, BUSINESS_CATEGORY_LABELS } from '@/types';
 import { Printer, FileSpreadsheet, FileDown, Bell, ExternalLink } from 'lucide-react';
@@ -129,7 +130,7 @@ export default function ContractLedgerPage() {
   // 弹窗状态
   const [editItem, setEditItem] = useState<ContractLedger | null>(null);
   const [isNew, setIsNew] = useState(false);
-  const [viewItem, setViewItem] = useState<ContractLedger | null>(null);
+  const [viewItem, setViewItem] = useState<ContractLedgerWithAccumulated | null>(null);
   const [terminateItem, setTerminateItem] = useState<ContractLedger | null>(null);
   const [suspendItem, setSuspendItem] = useState<ContractLedger | null>(null);
   const [suspendReason, setSuspendReason] = useState('');
@@ -261,54 +262,60 @@ export default function ContractLedgerPage() {
     });
   }, [contractLedgers, applied]);
 
-  // 统计数据：按分类/类型/部门/供应商/年度的金额数量统计
+  // 台账展示数据：过滤掉补充协议、给主合同挂累计值（运行时计算，不写库）
+  const ledgerData = useMemo<ContractLedgerWithAccumulated[]>(() => {
+    const { primaryList, supplementMap } = splitContracts(filteredData);
+    return attachAccumulated(primaryList, supplementMap);
+  }, [filteredData]);
+
+  // 统计数据：按分类/类型/部门/供应商/年度的金额数量统计（基于主合同累计值）
   const stats = useMemo(() => {
-    const total = filteredData.length;
-    const totalAmount = filteredData.reduce((s, c) => s + (c.amount || 0), 0);
-    const totalPaid = filteredData.reduce((s, c) => s + (c.paidAmount || 0), 0);
-    const activeCount = filteredData.filter((c) => c.status === 'active').length;
-    const pendingCount = filteredData.filter((c) => c.status === 'pending').length;
-    const expiringCount = filteredData.filter((c) =>
-      c.status === 'active' && isExpiringSoon(c.terminationDate)
+    const total = ledgerData.length;
+    const totalAmount = ledgerData.reduce((s, c) => s + (c.accumulatedAmount || 0), 0);
+    const totalPaid = ledgerData.reduce((s, c) => s + (c.paidAmount || 0), 0);
+    const activeCount = ledgerData.filter((c) => c.status === 'active').length;
+    const pendingCount = ledgerData.filter((c) => c.status === 'pending').length;
+    const expiringCount = ledgerData.filter((c) =>
+      c.status === 'active' && isExpiringSoon(c.accumulatedTerminationDate || c.terminationDate)
     ).length;
-    const expiredCount = filteredData.filter((c) =>
-      c.status === 'active' && isExpired(c.terminationDate)
+    const expiredCount = ledgerData.filter((c) =>
+      c.status === 'active' && isExpired(c.accumulatedTerminationDate || c.terminationDate)
     ).length;
 
     // 按分类统计
     const byCategory: Record<string, { count: number; amount: number }> = {};
-    filteredData.forEach((c) => {
+    ledgerData.forEach((c) => {
       const key = categoryMap[c.category] || c.category;
       if (!byCategory[key]) byCategory[key] = { count: 0, amount: 0 };
       byCategory[key].count++;
-      byCategory[key].amount += c.amount || 0;
+      byCategory[key].amount += c.accumulatedAmount || 0;
     });
 
     // 按合同类型统计
     const byContractType: Record<string, { count: number; amount: number }> = {};
-    filteredData.forEach((c) => {
+    ledgerData.forEach((c) => {
       const key = c.contractType === 'engineering' ? '工程类' : '非工程类';
       if (!byContractType[key]) byContractType[key] = { count: 0, amount: 0 };
       byContractType[key].count++;
-      byContractType[key].amount += c.amount || 0;
+      byContractType[key].amount += c.accumulatedAmount || 0;
     });
 
     // 按经办部门统计
     const byDepartment: Record<string, { count: number; amount: number }> = {};
-    filteredData.forEach((c) => {
+    ledgerData.forEach((c) => {
       const key = c.handlingDepartment || c.demandDepartment || '未指定';
       if (!byDepartment[key]) byDepartment[key] = { count: 0, amount: 0 };
       byDepartment[key].count++;
-      byDepartment[key].amount += c.amount || 0;
+      byDepartment[key].amount += c.accumulatedAmount || 0;
     });
 
     // 按供应商统计（TOP 10）
     const byCounterparty: Record<string, { count: number; amount: number }> = {};
-    filteredData.forEach((c) => {
+    ledgerData.forEach((c) => {
       const key = c.counterpartyName || '未指定';
       if (!byCounterparty[key]) byCounterparty[key] = { count: 0, amount: 0 };
       byCounterparty[key].count++;
-      byCounterparty[key].amount += c.amount || 0;
+      byCounterparty[key].amount += c.accumulatedAmount || 0;
     });
     const topCounterparties = Object.entries(byCounterparty)
       .sort((a, b) => b[1].amount - a[1].amount)
@@ -316,24 +323,24 @@ export default function ContractLedgerPage() {
 
     // 按年度统计（按签订日期）
     const byYear: Record<string, { count: number; amount: number }> = {};
-    filteredData.forEach((c) => {
+    ledgerData.forEach((c) => {
       const key = c.signingDate?.slice(0, 4) || '未知';
       if (!byYear[key]) byYear[key] = { count: 0, amount: 0 };
       byYear[key].count++;
-      byYear[key].amount += c.amount || 0;
+      byYear[key].amount += c.accumulatedAmount || 0;
     });
 
     // 按状态统计
     const byStatus: Record<string, { count: number; amount: number }> = {};
-    filteredData.forEach((c) => {
+    ledgerData.forEach((c) => {
       const key = statusMap[c.status]?.label || c.status;
       if (!byStatus[key]) byStatus[key] = { count: 0, amount: 0 };
       byStatus[key].count++;
-      byStatus[key].amount += c.amount || 0;
+      byStatus[key].amount += c.accumulatedAmount || 0;
     });
 
     return { total, totalAmount, totalPaid, activeCount, pendingCount, expiringCount, expiredCount, byCategory, byContractType, byDepartment, byCounterparty: topCounterparties, byYear, byStatus };
-  }, [filteredData]);
+  }, [ledgerData]);
 
   // 派生选项
   const yearOptions = useMemo(() => {
@@ -366,16 +373,16 @@ export default function ContractLedgerPage() {
     return null;
   }
 
-  // ========== 提醒规则：已支付金额占比 + 到期日提前提醒 + 考核到期提醒 ==========
+  // ========== 提醒规则：已支付金额占比 + 到期日提前提醒 + 考核到期提醒（基于主合同累计值） ==========
   const reminderContracts = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const result: Array<{ contract: ContractLedger; type: 'paid' | 'expire' | 'eval'; message: string; level: 'warning' | 'danger' }> = [];
-    filteredData.forEach((c) => {
+    ledgerData.forEach((c) => {
       if (c.status === 'terminated' || c.status === 'completed') return;
-      // 1) 已支付金额占比提醒
+      // 1) 已支付金额占比提醒 — 分母用累计额
       if (!isAlertPermanentlyOff(c, 'paid') && !findActiveOverride(c, 'paid', today)) {
-        const total = Number((c as any).contractAmount || (c as any).totalAmount || c.amount || 0);
+        const total = (c as ContractLedgerWithAccumulated).accumulatedAmount || c.amount || 0;
         const paid = Number((c as any).paidAmount || c.paidAmount || 0);
         if (total > 0) {
           const ratio = (paid / total) * 100;
@@ -389,9 +396,9 @@ export default function ContractLedgerPage() {
           }
         }
       }
-      // 2) 到期日提前提醒
+      // 2) 到期日提前提醒 — 优先用累计终止日期
       if (!isAlertPermanentlyOff(c, 'expire') && !findActiveOverride(c, 'expire', today)) {
-        const expire = c.endDate || c.expireDate || c.terminationDate;
+        const expire = (c as ContractLedgerWithAccumulated).accumulatedTerminationDate || c.terminationDate;
         if (expire) {
           const expireDate = new Date(expire);
           const diffDays = Math.ceil((expireDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -412,7 +419,7 @@ export default function ContractLedgerPage() {
           }
         }
       }
-      // 3) 合同考核到期提醒
+      // 3) 合同考核到期提醒（不变）
       if (!isAlertPermanentlyOff(c, 'eval') && !findActiveOverride(c, 'eval', today)) {
         if (c.contractEvaluations && c.contractEvaluations.length > 0) {
           c.contractEvaluations.forEach((ev) => {
@@ -444,14 +451,14 @@ export default function ContractLedgerPage() {
       }
     });
     return result;
-  }, [filteredData, reminderSettings]);
+  }, [ledgerData, reminderSettings]);
 
   // ========== 当前被临时忽略的预警列表（用于 Modal 展示"已忽略"分组）==========
   const ignoredAlertsActive = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const items: Array<{ contract: ContractLedger; type: 'paid' | 'expire' | 'eval'; override: AlertOverride }> = [];
-    filteredData.forEach((c) => {
+    ledgerData.forEach((c) => {
       c.ignoredAlerts?.forEach((ov) => {
         if (new Date(ov.ignoredUntil) > today) {
           items.push({ contract: c, type: ov.type, override: ov });
@@ -460,16 +467,16 @@ export default function ContractLedgerPage() {
     });
     // 按忽略到期时间升序（最早恢复的排前面）
     return items.sort((a, b) => new Date(a.override.ignoredUntil).getTime() - new Date(b.override.ignoredUntil).getTime());
-  }, [filteredData]);
+  }, [ledgerData]);
 
   // ========== 导出 Excel (CSV) ==========
   const handleExportExcel = () => {
-    if (filteredData.length === 0) {
+    if (ledgerData.length === 0) {
       alert('当前无数据可导出');
       return;
     }
-    const headers = ['合同编码', '合同名称', '分类', '类型', '签订主体', '经办部门', '需求部门', '经办人', '对方单位', '项目名称', '合同金额(元)', '已支付(元)', '结算金额(元)', '签订日期', '生效日期', '终止日期', '状态', '履行情况', '备注'];
-    const rows = filteredData.map((c) => [
+    const headers = ['合同编码', '合同名称', '分类', '类型', '签订主体', '经办部门', '需求部门', '经办人', '对方单位', '项目名称', '合同金额(累计)(元)', '合同金额(原始)(元)', '已支付(元)', '结算金额(元)', '签订日期', '生效日期', '累计终止日期', '原始终止日期', '状态', '履行情况', '备注'];
+    const rows = ledgerData.map((c) => [
       c.contractNo,
       c.contractName,
       categoryMap[c.category] || c.category,
@@ -480,24 +487,28 @@ export default function ContractLedgerPage() {
       c.handler || '-',
       c.counterpartyName || '-',
       (c as any).projectName || '-',
+      c.accumulatedAmount?.toLocaleString() || '0.00',
       c.amount?.toLocaleString() || '0.00',
       c.paidAmount?.toLocaleString() || '0.00',
       c.settlementAmount?.toLocaleString() || '0.00',
       c.signingDate || '-',
       c.effectiveDate || '-',
+      c.accumulatedTerminationDate || '-',
       c.terminationDate || '-',
       statusMap[c.status]?.label || c.status,
       c.performanceStatus || '-',
       c.remark || '',
     ]);
     // 汇总行
-    const totalAmount = filteredData.reduce((s, c) => s + (c.amount || 0), 0);
-    const totalPaid = filteredData.reduce((s, c) => s + (c.paidAmount || 0), 0);
-    const totalSettlement = filteredData.reduce((s, c) => s + (c.settlementAmount || 0), 0);
+    const totalAmountAcc = ledgerData.reduce((s, c) => s + (c.accumulatedAmount || 0), 0);
+    const totalAmountOrig = ledgerData.reduce((s, c) => s + (c.amount || 0), 0);
+    const totalPaid = ledgerData.reduce((s, c) => s + (c.paidAmount || 0), 0);
+    const totalSettlement = ledgerData.reduce((s, c) => s + (c.settlementAmount || 0), 0);
     const summaryRow = [
-      `合计(${filteredData.length}份)`, '', '', '', '', '', '', '', '', '',
-      totalAmount.toLocaleString(), totalPaid.toLocaleString(), totalSettlement.toLocaleString(),
-      '', '', '', '', '', '',
+      `合计(${ledgerData.length}份)`, '', '', '', '', '', '', '', '', '',
+      totalAmountAcc.toLocaleString(), totalAmountOrig.toLocaleString(),
+      totalPaid.toLocaleString(), totalSettlement.toLocaleString(),
+      '', '', '', '', '', '', '',
     ];
     const csv = '\uFEFF' + [headers, ...rows, summaryRow].map((row) =>
       row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
@@ -513,7 +524,7 @@ export default function ContractLedgerPage() {
 
   // ========== 导出 PDF (通过打印实现) ==========
   const handleExportPDF = () => {
-    if (filteredData.length === 0) {
+    if (ledgerData.length === 0) {
       alert('当前无数据可导出');
       return;
     }
@@ -523,11 +534,11 @@ export default function ContractLedgerPage() {
       return;
     }
     // 计算汇总
-    const totalAmount = filteredData.reduce((s, c) => s + (c.amount || 0), 0);
-    const totalPaid = filteredData.reduce((s, c) => s + (c.paidAmount || 0), 0);
-    const totalSettlement = filteredData.reduce((s, c) => s + (c.settlementAmount || 0), 0);
+    const totalAmountAcc = ledgerData.reduce((s, c) => s + (c.accumulatedAmount || 0), 0);
+    const totalPaid = ledgerData.reduce((s, c) => s + (c.paidAmount || 0), 0);
+    const totalSettlement = ledgerData.reduce((s, c) => s + (c.settlementAmount || 0), 0);
 
-    const rowsHtml = filteredData.map((c, i) => `
+    const rowsHtml = ledgerData.map((c, i) => `
       <tr>
         <td>${i + 1}</td>
         <td>${c.contractNo}</td>
@@ -536,7 +547,7 @@ export default function ContractLedgerPage() {
         <td>${c.contractType === 'engineering' ? '工程类' : '非工程类'}</td>
         <td>${c.counterpartyName || '-'}</td>
         <td>${c.handlingDepartment || '-'}</td>
-        <td>${c.amount?.toLocaleString() || '0.00'}</td>
+        <td>${c.accumulatedAmount?.toLocaleString() || '0.00'}</td>
         <td>${c.paidAmount?.toLocaleString() || '0.00'}</td>
         <td>${c.settlementAmount?.toLocaleString() || '0.00'}</td>
         <td>${c.signingDate || '-'}</td>
@@ -547,8 +558,8 @@ export default function ContractLedgerPage() {
     const summaryHtml = `
       <tfoot>
         <tr style="background: #f0f2f5; font-weight: bold;">
-          <td colspan="7" style="text-align: center;">合计（${filteredData.length}份合同）</td>
-          <td style="text-align: right;">${totalAmount.toLocaleString()}</td>
+          <td colspan="7" style="text-align: center;">合计（${ledgerData.length}份合同）</td>
+          <td style="text-align: right;">${totalAmountAcc.toLocaleString()}</td>
           <td style="text-align: right;">${totalPaid.toLocaleString()}</td>
           <td style="text-align: right;">${totalSettlement.toLocaleString()}</td>
           <td colspan="2"></td>
@@ -577,8 +588,8 @@ export default function ContractLedgerPage() {
       <body>
         <h2>合同台账报表</h2>
         <div class="summary">
-          <div class="summary-item">合同总数：<strong>${filteredData.length}</strong> 份</div>
-          <div class="summary-item">合同总金额：<strong>${totalAmount.toLocaleString()}</strong> 元</div>
+          <div class="summary-item">合同总数：<strong>${ledgerData.length}</strong> 份</div>
+          <div class="summary-item">合同总金额：<strong>${totalAmountAcc.toLocaleString()}</strong> 元</div>
           <div class="summary-item">已支付金额：<strong>${totalPaid.toLocaleString()}</strong> 元</div>
           <div class="summary-item">结算金额：<strong>${totalSettlement.toLocaleString()}</strong> 元</div>
         </div>
@@ -815,7 +826,7 @@ export default function ContractLedgerPage() {
   //
   // 需求背景：用户提醒合同台账也要跟 916 文档对齐 → 补齐 2 个缺失列 + 重排列序
   // ====================================================================
-  const columns: ColumnDef<ContractLedger>[] = [
+  const columns: ColumnDef<ContractLedgerWithAccumulated>[] = [
     // 0. 合同性质（业务区分用，916L50无但实际必需）
     {
       key: 'contractNature',
@@ -867,28 +878,44 @@ export default function ContractLedgerPage() {
     { key: 'signingDate', title: '签订日期', render: (row) => row.signingDate || '-', footer: '' },
     // 14. 合同约定生效日期
     { key: 'effectiveDate', title: '生效日期', render: (row) => row.effectiveDate || '-', footer: '' },
-    // 15. 合同约定终止日期
+    // 15. 累计终止日期（主合同 + 补充协议中最晚的终止日期）
     {
-      key: 'terminationDate',
-      title: '终止日期',
+      key: 'accumulatedTerminationDate',
+      title: '累计终止日期',
       footer: '',
       render: (row) => {
-        if (!row.terminationDate) return '-';
+        const term = (row as ContractLedgerWithAccumulated).accumulatedTerminationDate || row.terminationDate;
+        if (!term) return '-';
         const classes = [];
-        if (row.status === 'active' && isExpiringSoon(row.terminationDate)) classes.push('text-[#e6a23c]', 'font-medium');
-        if (row.status === 'active' && isExpired(row.terminationDate)) classes.push('text-[#f56c6c]', 'font-medium');
+        if (row.status === 'active' && isExpiringSoon(term)) classes.push('text-[#e6a23c]', 'font-medium');
+        if (row.status === 'active' && isExpired(term)) classes.push('text-[#f56c6c]', 'font-medium');
+        const isAccumulated = !!(row as ContractLedgerWithAccumulated).accumulatedTerminationDate
+          && (row as ContractLedgerWithAccumulated).accumulatedTerminationDate !== row.terminationDate;
         return (
-          <span className={classes.join(' ')}>
-            {row.terminationDate}
-            {row.status === 'active' && isExpiringSoon(row.terminationDate) && !isExpired(row.terminationDate) && ' ⚠即将到期'}
-            {row.status === 'active' && isExpired(row.terminationDate) && ' ⚠已过期'}
+          <span className={classes.join(' ')} title={isAccumulated ? `补充协议延期至 ${term}` : undefined}>
+            {term}
+            {isAccumulated && <span className="ml-1 text-[10px] text-purple-500">累计</span>}
+            {row.status === 'active' && isExpiringSoon(term) && !isExpired(term) && ' ⚠即将到期'}
+            {row.status === 'active' && isExpired(term) && ' ⚠已过期'}
           </span>
         );
       },
     },
-    // 16. 合同金额（元）
+    // 16. 合同金额（累计）—— 主合同原始额 + 所有有效补充协议的 supplementAmount
     {
-      key: 'amount', title: '合同金额(元)', align: 'right',
+      key: 'accumulatedAmount', title: '合同金额(累计)(元)', align: 'right',
+      render: (row) => {
+        const acc = (row as ContractLedgerWithAccumulated).accumulatedAmount;
+        return acc?.toLocaleString() || row.amount?.toLocaleString() || '-';
+      },
+      footer: (data) => {
+        const sum = data.reduce((s, c) => s + ((c as ContractLedgerWithAccumulated).accumulatedAmount || c.amount || 0), 0);
+        return sum > 0 ? sum.toLocaleString() : '-';
+      },
+    },
+    // 16-2. 主合同原始金额（不含补充协议）
+    {
+      key: 'amount', title: '合同金额(原始)(元)', align: 'right',
       render: (row) => row.amount?.toLocaleString() || '-',
       footer: (data) => {
         const sum = data.reduce((s, c) => s + (c.amount || 0), 0);
@@ -980,7 +1007,7 @@ export default function ContractLedgerPage() {
       render: (row) => {
         let displayStatus = statusMap[row.status] || statusMap.draft;
         let extraLabel = '';
-        if (row.status === 'active' && isExpired(row.terminationDate)) extraLabel = ' (已过期)';
+        if (row.status === 'active' && isExpired((row as ContractLedgerWithAccumulated).accumulatedTerminationDate || row.terminationDate)) extraLabel = ' (已过期)';
         return (
           <span className={`px-2 py-0.5 rounded text-xs ${displayStatus.color} ${displayStatus.bg}`}>
             {displayStatus.label}{extraLabel}
@@ -1438,7 +1465,7 @@ export default function ContractLedgerPage() {
       </SearchBar>
 
       {/* 主数据表格 */}
-      <DataTable data={filteredData} columns={columns} rowKey={(row: any) => row.id} showFooter />
+      <DataTable data={ledgerData} columns={columns} rowKey={(row: any) => row.id} showFooter />
 
       {/* 新增/编辑弹窗 */}
       <Modal
@@ -1735,12 +1762,24 @@ export default function ContractLedgerPage() {
               <div><span className="text-[#909399]">对方负责人：</span>{viewItem.counterpartyContact || '-'}</div>
               <div><span className="text-[#909399]">项目名称：</span>{(viewItem as any).projectName || '-'}</div>
               <div><span className="text-[#909399]">立项方式：</span>{viewItem.approvalMethod || '-'}</div>
-              <div><span className="text-[#909399]">合同金额：</span><span className="text-[#409eff] font-medium">{viewItem.amount?.toLocaleString()} 元</span></div>
+              <div><span className="text-[#909399]">合同金额：</span>
+                 <span className="text-[#409eff] font-medium">累计 ¥{viewItem.accumulatedAmount?.toLocaleString() || viewItem.amount?.toLocaleString() || '-'}</span>
+                 {viewItem.supplementAmountSum !== undefined && viewItem.supplementAmountSum !== 0 && (
+                   <span className="ml-2 text-[12px] text-purple-500">
+                     （原始 ¥{viewItem.amount?.toLocaleString()} {viewItem.supplementAmountSum > 0 ? '+' : ''}补充 ¥{viewItem.supplementAmountSum.toLocaleString()}，{viewItem.supplementCount} 份）
+                   </span>
+                 )}
+               </div>
               <div><span className="text-[#909399]">已支付：</span><span className="text-[#67c23a] font-medium">{viewItem.paidAmount?.toLocaleString()} 元</span></div>
               <div><span className="text-[#909399]">结算金额：</span>{viewItem.settlementAmount?.toLocaleString() || '-'} 元</div>
               <div><span className="text-[#909399]">签订日期：</span>{viewItem.signingDate || '-'}</div>
               <div><span className="text-[#909399]">生效日期：</span>{viewItem.effectiveDate || '-'}</div>
-              <div><span className="text-[#909399]">终止日期：</span>{viewItem.terminationDate || '-'}</div>
+              <div><span className="text-[#909399]">终止日期：</span>
+                 <span>{viewItem.accumulatedTerminationDate || viewItem.terminationDate || '-'}</span>
+                 {viewItem.accumulatedTerminationDate && viewItem.accumulatedTerminationDate !== viewItem.terminationDate && (
+                   <span className="ml-2 text-[12px] text-purple-500">（主合同 {viewItem.terminationDate || '-'}，补充协议延期）</span>
+                 )}
+               </div>
             </div>
             <div>
               <div className="text-[#909399] mb-1">合同主要内容：</div>
