@@ -878,7 +878,7 @@ export default function ContractLedgerPage() {
     { key: 'signingDate', title: '签订日期', render: (row) => row.signingDate || '-', footer: '' },
     // 14. 合同约定生效日期
     { key: 'effectiveDate', title: '生效日期', render: (row) => row.effectiveDate || '-', footer: '' },
-    // 15. 累计终止日期（主合同 + 补充协议中最晚的终止日期）
+    // 15. 累计终止日期（主合同 + 补充协议中最晚的终止日期，用于到期预警）
     {
       key: 'accumulatedTerminationDate',
       title: '累计终止日期',
@@ -889,19 +889,23 @@ export default function ContractLedgerPage() {
         const classes = [];
         if (row.status === 'active' && isExpiringSoon(term)) classes.push('text-[#e6a23c]', 'font-medium');
         if (row.status === 'active' && isExpired(term)) classes.push('text-[#f56c6c]', 'font-medium');
-        const isAccumulated = !!(row as ContractLedgerWithAccumulated).accumulatedTerminationDate
-          && (row as ContractLedgerWithAccumulated).accumulatedTerminationDate !== row.terminationDate;
         return (
-          <span className={classes.join(' ')} title={isAccumulated ? `补充协议延期至 ${term}` : undefined}>
+          <span className={classes.join(' ')}>
             {term}
-            {isAccumulated && <span className="ml-1 text-[10px] text-purple-500">累计</span>}
             {row.status === 'active' && isExpiringSoon(term) && !isExpired(term) && ' ⚠即将到期'}
             {row.status === 'active' && isExpired(term) && ' ⚠已过期'}
           </span>
         );
       },
     },
-    // 16. 合同金额（累计）—— 主合同原始额 + 所有有效补充协议的 supplementAmount
+    // 16. 终止日期(原始) — 主合同签订时约定的终止日期，不受补充协议影响
+    {
+      key: 'terminationDate',
+      title: '终止日期(原始)',
+      footer: '',
+      render: (row) => row.terminationDate || '-',
+    },
+    // 17. 合同金额（累计）—— 主合同原始额 + 所有有效补充协议的 supplementAmount
     {
       key: 'accumulatedAmount', title: '合同金额(累计)(元)', align: 'right',
       render: (row) => {
@@ -1774,12 +1778,17 @@ export default function ContractLedgerPage() {
               <div><span className="text-[#909399]">结算金额：</span>{viewItem.settlementAmount?.toLocaleString() || '-'} 元</div>
               <div><span className="text-[#909399]">签订日期：</span>{viewItem.signingDate || '-'}</div>
               <div><span className="text-[#909399]">生效日期：</span>{viewItem.effectiveDate || '-'}</div>
-              <div><span className="text-[#909399]">终止日期：</span>
-                 <span>{viewItem.accumulatedTerminationDate || viewItem.terminationDate || '-'}</span>
-                 {viewItem.accumulatedTerminationDate && viewItem.accumulatedTerminationDate !== viewItem.terminationDate && (
-                   <span className="ml-2 text-[12px] text-purple-500">（主合同 {viewItem.terminationDate || '-'}，补充协议延期）</span>
-                 )}
-               </div>
+              <div>
+                <span className="text-[#909399]">累计终止日期：</span>
+                <span>{viewItem.accumulatedTerminationDate || viewItem.terminationDate || '-'}</span>
+              </div>
+              <div>
+                <span className="text-[#909399]">终止日期(原始)：</span>
+                <span>{viewItem.terminationDate || '-'}</span>
+                {viewItem.accumulatedTerminationDate && viewItem.accumulatedTerminationDate !== viewItem.terminationDate && (
+                  <span className="ml-2 text-[12px] text-purple-500">（补充协议延期）</span>
+                )}
+              </div>
             </div>
             <div>
               <div className="text-[#909399] mb-1">合同主要内容：</div>

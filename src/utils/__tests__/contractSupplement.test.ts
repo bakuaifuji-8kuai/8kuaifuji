@@ -1,4 +1,4 @@
-/**
+﻿/**
  * contractSupplement.ts 单元测试
  *
  * 运行方式：npx vite-node src/utils/__tests__/contractSupplement.test.ts
@@ -167,7 +167,7 @@ function testComputeAccumulated() {
   {
     const primary = mkPrimary({ amount: 1_000_000, terminationDate: '2026-12-31' });
     const supplements = [
-      mkSupplement('P1', { supplementAmount: 200_000, status: 'rejected', terminationDate: '2027-03-31' }),
+      mkSupplement('P1', { supplementAmount: 200_000, status: 'invalid', terminationDate: '2027-03-31' }),
     ];
     const result = computeAccumulated(primary, supplements);
     assert.equal(result.accumulatedAmount, 1_000_000, '驳回 → 不计入累计额');
@@ -180,7 +180,7 @@ function testComputeAccumulated() {
   {
     const primary = mkPrimary({ amount: 1_000_000 });
     const supplements = [
-      mkSupplement('P1', { supplementIndex: 1, supplementAmount: 200_000, status: 'rejected' }),
+      mkSupplement('P1', { supplementIndex: 1, supplementAmount: 200_000, status: 'invalid' }),
       mkSupplement('P1', { supplementIndex: 2, supplementAmount: 300_000, status: 'active' }),
     ];
     const result = computeAccumulated(primary, supplements);
@@ -240,7 +240,7 @@ function testAttachAccumulated() {
     ];
     const supplements = [
       mkSupplement('P1', { supplementIndex: 1, supplementAmount: 200_000, terminationDate: '2027-03-31' }),
-      mkSupplement('P1', { supplementIndex: 2, supplementAmount: -50_000, status: 'rejected' }),
+      mkSupplement('P1', { supplementIndex: 2, supplementAmount: -50_000, status: 'invalid' }),
       mkSupplement('P2', { supplementIndex: 1, supplementAmount: 500_000 }),
     ];
     const all = [...primaries, ...supplements];
@@ -303,7 +303,7 @@ function testEdgeCases() {
   {
     const primary = mkPrimary({ amount: 1_000_000 });
     const supplements = [
-      mkSupplement('P1', { supplementAmount: 200_000, status: 'rejected' }),
+      mkSupplement('P1', { supplementAmount: 200_000, status: 'invalid' }),
       mkSupplement('P1', { supplementAmount: 300_000, status: 'pending' }),
     ];
     const result = computeAccumulated(primary, supplements);

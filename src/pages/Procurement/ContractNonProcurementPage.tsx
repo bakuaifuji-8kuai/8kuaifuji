@@ -300,7 +300,9 @@ export default function ContractNonProcurementPage() {
                     className="border-b border-slate-100 hover:bg-indigo-50/30 transition-colors"
                   >
                     <td className="px-4 py-3">
-                      <Badge variant="secondary">非招采类</Badge>
+                      <Badge variant={row.contractTier === 'supplement' ? 'warning' : 'secondary'}>
+                        非招采类 · {row.contractTier === 'supplement' ? '补充协议' : '主合同'}
+                      </Badge>
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-800 max-w-[220px] truncate" title={row.contractName}>
                       {row.contractName}
