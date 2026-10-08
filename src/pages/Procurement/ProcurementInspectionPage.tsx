@@ -210,24 +210,45 @@ export default function ProcurementInspectionPage() {
 
   const openOrderPicker = () => {
     setOrderPickerKeyword('');
+    setOrderStatusFilter('');
     setOrderPickerTempId(editItem?.orderId);
     setOrderPickerOpen(true);
   };
 
-  // 筛选可验收的订单：submitted 状态 + 关键字
+  // 可验收的订单：已审批通过 / 已发送（业务上确认后才进入可验收状态）
+  // ProcurementOrderStatus = draft | pending | approved | sent | completed | cancelled
+  const ORDER_STATUS_LABELS: Record<string, string> = {
+    draft: '草稿', pending: '审批中', approved: '已审批通过', sent: '已发送',
+    completed: '已完成', cancelled: '已取消',
+  };
+  const AVAILABLE_STATUSES = ['approved', 'sent'] as const;
+  const ALL_STATUS_FILTERS = [
+    { value: '', label: '全部可验收' },
+    { value: 'approved', label: '已审批通过' },
+    { value: 'sent', label: '已发送' },
+    { value: 'completed', label: '已完成(历史)' },
+  ];
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>('');
   const availableOrders = useMemo(() => {
     const kw = orderPickerKeyword.trim().toLowerCase();
     return procurementOrders.filter((o) => {
-      if (o.status !== 'submitted') return false;
+      // 状态筛
+      if (orderStatusFilter) {
+        if (o.status !== orderStatusFilter) return false;
+      } else {
+        // 默认展示可验收状态（不含已取消/草稿/审批中）
+        if (o.status === 'cancelled' || o.status === 'draft' || o.status === 'pending') return false;
+      }
+      // 关键字搜：订单号 / 合同号 / 供应商 / 需求号 / 需求名称
       if (!kw) return true;
       return (
         (o.orderNo || '').toLowerCase().includes(kw) ||
         (o.contractNo || '').toLowerCase().includes(kw) ||
-        (o.supplierName || '').toLowerCase().includes(kw) ||
-        (o.projectName || '').toLowerCase().includes(kw)
+        (o.demandNo || '').toLowerCase().includes(kw) ||
+        (o.supplierName || '').toLowerCase().includes(kw)
       );
     });
-  }, [procurementOrders, orderPickerKeyword]);
+  }, [procurementOrders, orderPickerKeyword, orderStatusFilter]);
 
   const confirmPickOrder = () => {
     if (!orderPickerTempId || !editItem) {
@@ -593,29 +614,46 @@ export default function ProcurementInspectionPage() {
         footer={
           <>
             <span className="text-xs text-slate-500 mr-auto">
-              仅展示 <b className="text-indigo-600">已提交</b> 状态的订单，共 {availableOrders.length} 条
+              共 <b className="text-indigo-600">{availableOrders.length}</b> 条可验收订单
+              {orderStatusFilter && <> （{ALL_STATUS_FILTERS.find((f) => f.value === orderStatusFilter)?.label}）</>}
             </span>
             <DefaultButton onClick={() => setOrderPickerOpen(false)}>取消</DefaultButton>
             <PrimaryButton onClick={confirmPickOrder}>确认选择</PrimaryButton>
           </>
         }
-        width="max-w-[900px]"
+        width="max-w-[1000px]"
       >
-        {/* 搜索 */}
-        <div className="mb-3 p-3 bg-slate-50 rounded border border-slate-100">
+        {/* 多条件筛选区 */}
+        <div className="mb-3 p-3 bg-slate-50 rounded border border-slate-100 space-y-2">
           <div className="flex items-center gap-2">
-            <Search size={12} className="text-indigo-500" />
-            <span className="text-xs font-medium text-slate-700">快速搜索</span>
+            <Filter size={12} className="text-indigo-500" />
+            <span className="text-xs font-medium text-slate-700">多条件筛选</span>
           </div>
-          <div className="relative mt-2">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-            <input
-              type="text"
-              value={orderPickerKeyword}
-              onChange={(e) => setOrderPickerKeyword(e.target.value)}
-              placeholder="搜索订单编号 / 合同编号 / 供应商 / 项目名称"
-              className="w-full h-8 pl-8 pr-2 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* 快速搜索 */}
+            <div className="relative flex-1 min-w-[260px]">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+              <input
+                type="text"
+                value={orderPickerKeyword}
+                onChange={(e) => setOrderPickerKeyword(e.target.value)}
+                placeholder="订单号 / 合同号 / 供应商 / 需求号"
+                className="w-full h-8 pl-8 pr-2 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+            {/* 状态下拉 */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-slate-600 whitespace-nowrap">订单状态：</span>
+              <select
+                value={orderStatusFilter}
+                onChange={(e) => setOrderStatusFilter(e.target.value)}
+                className="h-8 px-2 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                {ALL_STATUS_FILTERS.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
         {/* 表格 */}
@@ -625,22 +663,25 @@ export default function ProcurementInspectionPage() {
               <tr>
                 <th className="w-10 py-2.5 text-center border-b border-slate-200"></th>
                 <th className="py-2.5 text-left border-b border-slate-200 text-slate-600 text-xs">订单编号</th>
+                <th className="py-2.5 text-left border-b border-slate-200 text-slate-600 text-xs">关联需求</th>
                 <th className="py-2.5 text-left border-b border-slate-200 text-slate-600 text-xs">合同编号</th>
-                <th className="py-2.5 text-left border-b border-slate-200 text-slate-600 text-xs">项目名称</th>
                 <th className="py-2.5 text-left border-b border-slate-200 text-slate-600 text-xs">供应商</th>
                 <th className="py-2.5 text-right border-b border-slate-200 text-slate-600 text-xs">订单金额</th>
-                <th className="py-2.5 text-left border-b border-slate-200 text-slate-600 text-xs">提交日期</th>
+                <th className="py-2.5 text-left border-b border-slate-200 text-slate-600 text-xs">订单状态</th>
+                <th className="py-2.5 text-left border-b border-slate-200 text-slate-600 text-xs">审批通过日期</th>
               </tr>
             </thead>
             <tbody>
               {availableOrders.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center text-slate-400 text-xs">
-                    {orderPickerKeyword ? '没有匹配的待验收订单' : '暂无可验收的采购订单，请先在「招采订单管理」提交订单'}
+                  <td colSpan={8} className="py-10 text-center text-slate-400 text-xs">
+                    {orderPickerKeyword || orderStatusFilter
+                      ? '没有匹配的可验收订单，请调整筛选条件'
+                      : '暂无可验收的订单，请先在「招采订单管理」提交订单并审批通过'}
                   </td>
                 </tr>
               )}
-              {availableOrders.map((order: ContractPurchaseOrder) => {
+              {availableOrders.map((order: any) => {
                 const checked = orderPickerTempId === order.id;
                 return (
                   <tr
@@ -660,11 +701,19 @@ export default function ProcurementInspectionPage() {
                       )}
                     </td>
                     <td className="py-2 font-mono text-xs text-indigo-600">{order.orderNo}</td>
+                    <td className="py-2 font-mono text-xs text-slate-500">{order.demandNo || '-'}</td>
                     <td className="py-2 font-mono text-xs text-slate-600">{order.contractNo || '-'}</td>
-                    <td className="py-2 text-slate-800 font-medium text-xs">{order.projectName || '-'}</td>
                     <td className="py-2 text-slate-700 text-xs">{order.supplierName || '-'}</td>
                     <td className="py-2 text-right text-slate-700 text-xs">¥{(order.details?.reduce((s, d) => s + (d.amount || 0), 0) || 0).toLocaleString()}</td>
-                    <td className="py-2 text-slate-500 text-xs">{(order.submitTime || order.createTime || '').split(' ')[0] || '-'}</td>
+                    <td className="py-2 text-xs">
+                      <span className={`px-1.5 py-0.5 rounded ${
+                        order.status === 'approved' ? 'bg-green-100 text-green-700' :
+                        order.status === 'sent' ? 'bg-blue-100 text-blue-700' :
+                        order.status === 'completed' ? 'bg-slate-100 text-slate-600' :
+                        'bg-slate-100 text-slate-500'
+                      }`}>{ORDER_STATUS_LABELS[order.status] || order.status}</span>
+                    </td>
+                    <td className="py-2 text-slate-500 text-xs">{(order.approveTime || order.createTime || '').split(' ')[0] || '-'}</td>
                   </tr>
                 );
               })}
