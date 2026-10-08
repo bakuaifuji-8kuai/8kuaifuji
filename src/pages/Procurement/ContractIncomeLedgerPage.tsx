@@ -147,14 +147,22 @@ export default function ContractIncomeLedgerPage() {
   // ============ 列定义（收入视角，基于主合同累计值）============
   const columns: ColumnDef<LedgerRow>[] = [
     {
-      key: 'contractNature', title: '合同性质', width: '72px',
-      render: (row) => (
-        <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-medium ${
-          row.contractNature === 'procurement'
+      key: 'contractNature', title: '合同性质', width: '100px',
+      render: (row) => {
+        const isSupplement = row.contractTier === 'supplement';
+        const natureLabel = row.contractNature === 'procurement' ? '招采类' : '非招采类';
+        const tierLabel = isSupplement ? '补充协议' : '主合同';
+        const colorCls = isSupplement
+          ? 'bg-amber-50 text-amber-700 border border-amber-200'
+          : row.contractNature === 'procurement'
             ? 'bg-green-50 text-green-700 border border-green-200'
-            : 'bg-slate-100 text-slate-600 border border-slate-200'
-        }`}>{row.contractNature === 'procurement' ? '招采类' : '非招采类'}</span>
-      ),
+            : 'bg-slate-100 text-slate-600 border border-slate-200';
+        return (
+          <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-medium ${colorCls}`}>
+            {natureLabel} · {tierLabel}
+          </span>
+        );
+      },
     },
     { key: 'contractNo', title: '合同编号', width: '130px', render: (row) => row.contractNo || '-' },
     { key: 'contractName', title: '合同名称', render: (row) => <span title={row.contractName} className="block max-w-[200px] truncate">{row.contractName || '-'}</span> },
@@ -175,15 +183,10 @@ export default function ContractIncomeLedgerPage() {
         const classes: string[] = [];
         if (row.status === 'active' && isExpiringSoon(term)) classes.push('text-amber-600 font-medium');
         if (row.status === 'active' && isExpired(term)) classes.push('text-rose-600 font-medium');
-        const isAccumulated = !!row.accumulatedTerminationDate && row.accumulatedTerminationDate !== row.terminationDate;
-        return (
-          <span className={classes.join(' ')} title={isAccumulated ? `补充协议延期至 ${term}` : undefined}>
-            {term}
-            {isAccumulated && <span className="ml-1 text-[10px] text-purple-500">累计</span>}
-          </span>
-        );
+        return <span className={classes.join(' ')}>{term}</span>;
       },
     },
+    { key: 'terminationDate', title: '终止日期(原始)', width: '120px', render: (row) => row.terminationDate || '-' },
     {
       key: 'accumulatedAmount', title: '合同金额(累计)(元)', width: '140px', align: 'right',
       render: (row) => (row.accumulatedAmount ?? row.amount ?? 0).toLocaleString(),
@@ -459,10 +462,14 @@ export default function ContractIncomeLedgerPage() {
               <div><span className="text-slate-400">签订日期：</span>{viewItem.signingDate || '-'}</div>
               <div><span className="text-slate-400">生效日期：</span>{viewItem.effectiveDate || '-'}</div>
               <div>
-                <span className="text-slate-400">终止日期：</span>
+                <span className="text-slate-400">累计终止日期：</span>
                 <span>{viewItem.accumulatedTerminationDate || viewItem.terminationDate || '-'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400">终止日期(原始)：</span>
+                <span>{viewItem.terminationDate || '-'}</span>
                 {viewItem.accumulatedTerminationDate && viewItem.accumulatedTerminationDate !== viewItem.terminationDate && (
-                  <span className="ml-1 text-[11px] text-purple-500">（主 {viewItem.terminationDate || '-'}）</span>
+                  <span className="ml-1 text-[11px] text-purple-500">（补充协议延期）</span>
                 )}
               </div>
               <div><span className="text-slate-400">合同状态：</span>{STATUS_MAP[viewItem.status]?.label || viewItem.status}</div>
