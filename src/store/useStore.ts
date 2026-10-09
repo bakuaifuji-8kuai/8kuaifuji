@@ -38,6 +38,12 @@ import {
   MOCK_CONTRACT_PURCHASE_ORDERS,
   MOCK_SUPPLIERS,
 } from '@/mock/biddingMockData';
+import {
+  INSPECTION_DEMO_CONTRACTS,
+  INSPECTION_DEMO_DEMANDS,
+  INSPECTION_DEMO_ORDERS,
+  INSPECTION_DEMO_INBOUNDS,
+} from '@/mock/inspectionDemoData';
 
 /**
  * 根据三个门控字段自动向合同台账注入考核绑定（审批通过时触发）。
@@ -519,7 +525,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 供应商
-  suppliers: mockData.suppliers,
+  suppliers: [...(mockData.suppliers || []), ...MOCK_SUPPLIERS],
   setSuppliers: (data) => set({ suppliers: data }),
   addSupplier: (supplier) => set((state) => ({ suppliers: [...state.suppliers, supplier] })),
   updateSupplier: (id, supplier) => set((state) => ({
@@ -629,7 +635,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 入库单
-  inboundOrders: mockData.inboundOrders,
+  inboundOrders: [...(mockData.inboundOrders || []), ...INSPECTION_DEMO_INBOUNDS],
   setInboundOrders: (data) => set({ inboundOrders: data }),
   addInboundOrder: (order) => set((state) => ({ inboundOrders: [...state.inboundOrders, order] })),
   updateInboundOrder: (id, order) => set((state) => ({
@@ -1179,7 +1185,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 采购需求申请
-  procurementDemands: mockData.procurementDemands || [],
+  procurementDemands: [...(mockData.procurementDemands || []), ...MOCK_PROCUREMENT_DEMANDS, ...INSPECTION_DEMO_DEMANDS],
   setProcurementDemands: (data) => set({ procurementDemands: data }),
   addProcurementDemand: (demand) => set((state) => ({ procurementDemands: [...state.procurementDemands, demand] })),
   updateProcurementDemand: (id, data) => set((state) => ({
@@ -1198,7 +1204,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 合同台账
-  contractLedgers: mockData.contractLedgers || [],
+  contractLedgers: [...(mockData.contractLedgers || []), ...MOCK_CONTRACT_LEDGERS, ...INSPECTION_DEMO_CONTRACTS],
   contractArchives: [], // 合同归档记录（空数组初始化，归档板块提交后写入）
   setContractLedgers: (data) => set({ contractLedgers: data }),
   addContractLedger: (ledger) => set((state) => ({
@@ -1248,7 +1254,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 采购订单
-  procurementOrders: mockData.procurementOrders || [],
+  procurementOrders: [...(mockData.procurementOrders || []), ...MOCK_PROCUREMENT_ORDERS, ...INSPECTION_DEMO_ORDERS],
   setProcurementOrders: (data) => set({ procurementOrders: data }),
   addProcurementOrder: (order) => set((state) => ({ procurementOrders: [...state.procurementOrders, order] })),
   updateProcurementOrder: (id, data) => set((state) => ({
@@ -1267,7 +1273,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 验收记录
-  procurementInspections: mockData.procurementInspections || [],
+  procurementInspections: [...(mockData.procurementInspections || []), ...MOCK_PROCUREMENT_INSPECTIONS],
   setProcurementInspections: (data) => set({ procurementInspections: data }),
   addProcurementInspection: (inspection) => set((state) => ({ procurementInspections: [...state.procurementInspections, inspection] })),
   updateProcurementInspection: (id, data) => set((state) => ({
@@ -1278,7 +1284,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 竞价采购
-  biddings: [],
+  biddings: MOCK_BIDDINGS,
   setBiddings: (data) => set({ biddings: data }),
   addBidding: (bidding) => set((state) => ({ biddings: [...state.biddings, bidding] })),
   updateBidding: (id, data) => set((state) => ({
@@ -1289,7 +1295,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 供应商报价单
-  supplierQuotes: [],
+  supplierQuotes: MOCK_SUPPLIER_QUOTES,
   setSupplierQuotes: (data) => set({ supplierQuotes: data }),
   addSupplierQuote: (quote) => set((state) => ({ supplierQuotes: [...state.supplierQuotes, quote] })),
   updateSupplierQuote: (id, data) => set((state) => ({
@@ -1410,7 +1416,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 合同采购订单
-  contractPurchaseOrders: mockData.contractPurchaseOrders || [],
+  contractPurchaseOrders: [...(mockData.contractPurchaseOrders || []), ...MOCK_CONTRACT_PURCHASE_ORDERS],
   setContractPurchaseOrders: (data) => set({ contractPurchaseOrders: data }),
   addContractPurchaseOrder: (order) => set((state) => ({ contractPurchaseOrders: [...state.contractPurchaseOrders, order] })),
   updateContractPurchaseOrder: (id, data) => set((state) => ({
@@ -1584,7 +1590,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 6,
+      version: 8,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -1707,6 +1713,77 @@ export const useStore = create<WarehouseState>()(
           // 这里不再额外 patch 归档记录
 
           console.log('[store migrate v6] 全景预警 mock 数据已注入 — 6 种预警类型全部可触发');
+        }
+        if (version < 7) {
+          // v6→v7：验收功能演示数据 — 5 种类型完整链路
+          // 需求 → 订单 → 合同 → (物资类) 入库单
+          const dedupe = (arr: any[], key: string) => {
+            const seen = new Set();
+            return arr.filter((x) => {
+              const k = x[key];
+              if (!k || seen.has(k)) return !k; // 没 key 的也要（避免误删），有重复 key 的去掉
+              seen.add(k); return true;
+            });
+          };
+
+          if (Array.isArray(persistedState.contractLedgers)) {
+            persistedState.contractLedgers = dedupe(
+              [...persistedState.contractLedgers, ...INSPECTION_DEMO_CONTRACTS],
+              'id',
+            );
+          }
+          if (Array.isArray(persistedState.procurementDemands)) {
+            persistedState.procurementDemands = dedupe(
+              [...persistedState.procurementDemands, ...INSPECTION_DEMO_DEMANDS],
+              'id',
+            );
+          }
+          if (Array.isArray(persistedState.procurementOrders)) {
+            persistedState.procurementOrders = dedupe(
+              [...persistedState.procurementOrders, ...INSPECTION_DEMO_ORDERS],
+              'id',
+            );
+          }
+          if (Array.isArray(persistedState.inboundOrders)) {
+            persistedState.inboundOrders = dedupe(
+              [...persistedState.inboundOrders, ...INSPECTION_DEMO_INBOUNDS],
+              'id',
+            );
+          }
+
+          console.log('[store migrate v7] 验收演示数据已注入 — 5 种需求类型完整链路');
+        }
+        if (version < 8) {
+          // v7→v8：清旧 DEMO 前缀数据，注入修正后的完整版本（补 contractId/category/productId 等必填字段）
+          const isDemo = (x: any) => {
+            const id = (x?.id || '').toString();
+            return id.startsWith('CT-DEMO-') || id.startsWith('DEMO-DM-') || id.startsWith('ORD-DEMO-') || id.startsWith('INB-DEMO-');
+          };
+          if (Array.isArray(persistedState.contractLedgers)) {
+            persistedState.contractLedgers = [
+              ...persistedState.contractLedgers.filter((x: any) => !isDemo(x)),
+              ...INSPECTION_DEMO_CONTRACTS,
+            ];
+          }
+          if (Array.isArray(persistedState.procurementDemands)) {
+            persistedState.procurementDemands = [
+              ...persistedState.procurementDemands.filter((x: any) => !isDemo(x)),
+              ...INSPECTION_DEMO_DEMANDS,
+            ];
+          }
+          if (Array.isArray(persistedState.procurementOrders)) {
+            persistedState.procurementOrders = [
+              ...persistedState.procurementOrders.filter((x: any) => !isDemo(x)),
+              ...INSPECTION_DEMO_ORDERS,
+            ];
+          }
+          if (Array.isArray(persistedState.inboundOrders)) {
+            persistedState.inboundOrders = [
+              ...persistedState.inboundOrders.filter((x: any) => !isDemo(x)),
+              ...INSPECTION_DEMO_INBOUNDS,
+            ];
+          }
+          console.log('[store migrate v8] 验收演示数据已刷新 — 修正必填字段 + 完整链路');
         }
         return persistedState;
       },
