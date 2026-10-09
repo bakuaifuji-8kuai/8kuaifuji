@@ -1523,7 +1523,7 @@ export const MOCK_PROCUREMENT_ORDERS: ProcurementOrder[] = COMPLETED_BIDDINGS.ma
 
 const COMPLETED_ORDERS = MOCK_PROCUREMENT_ORDERS.filter(o => o.status === 'completed');
 
-// 生成验收明细（从订单 details 复制）
+// 生成物资类验收明细（GoodsInspectionRow）
 const mkInspectionDetails = (order: ProcurementOrder) => order.details.map((d, i) => ({
   id: `INSPD-${order.id}-${i + 1}`,
   productId: d.productId,
@@ -1531,11 +1531,10 @@ const mkInspectionDetails = (order: ProcurementOrder) => order.details.map((d, i
   productName: d.productName,
   specification: d.specification,
   unit: d.unit,
+  demandQuantity: d.quantity,
   orderedQuantity: d.quantity,
-  inspectedQuantity: d.quantity,
-  passQuantity: d.quantity,
-  failQuantity: 0,
-  isQualified: true,
+  deliveredQuantity: d.deliveredQuantity ?? d.quantity,
+  verifiedQuantity: d.deliveredQuantity ?? d.quantity,
 }));
 
 const mkInspectionNo = (order: ProcurementOrder, seq: number): string => {
@@ -1546,15 +1545,21 @@ const mkInspectionNo = (order: ProcurementOrder, seq: number): string => {
 export const MOCK_PROCUREMENT_INSPECTIONS: ProcurementInspection[] = COMPLETED_ORDERS.map((o, i) => ({
   id: `INSP-${o.id}`,
   inspectionNo: mkInspectionNo(o, i + 1),
+  acceptanceType: 'goods',
+  demandId: o.demandId,
+  demandNo: o.demandNo,
   orderId: o.id,
   orderNo: o.orderNo,
+  contractId: o.contractId,
+  contractNo: o.contractNo,
   supplierId: o.supplierId,
   supplierName: o.supplierName,
   inspectionDate: mkTime(25 + i, 10).slice(0, 10),
   inspector: '质检员A',
+  inspectorDept: '质量管理部',
   status: 'approved',
   remark: '验收合格，数量和质量均符合要求',
-  details: mkInspectionDetails(o),
+  goodsDetails: mkInspectionDetails(o),
   approveTime: mkTime(25 + i, 14),
   approver: '质量管理部',
 }));

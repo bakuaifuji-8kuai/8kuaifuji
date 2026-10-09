@@ -2283,6 +2283,7 @@ export interface ProcurementOrderDetail {
   specification?: string;
   unit: string;
   quantity: number;
+  deliveredQuantity?: number; // 仓库已入库数量（仓库模块确认入库时累加）
   unitPrice?: number;
   amount?: number;
   deliveryDate?: string;
@@ -2343,32 +2344,64 @@ export interface ProcurementOrderChange {
   approver?: string;
 }
 
-// 验收记录
+// 验收记录（按招采需求发起，物资类 / 服务类分两套明细 schema）
+export type InspectionAcceptanceType = 'goods' | 'service';
+export type InspectionPhase = 'preliminary' | 'final'; // 初验 / 终验（物资类不使用 phase）
+
+// 物资类验收明细（只读展示仓库已入库数量 + 确认验收）
+export interface GoodsInspectionRow {
+  id: string;
+  productId: string;
+  productCode: string;
+  productName: string;
+  specification?: string;
+  unit: string;
+  demandQuantity: number;      // 需求数量
+  orderedQuantity: number;    // 下单数量
+  deliveredQuantity: number;  // 仓库已入库数量（from ProcurementOrderDetail.deliveredQuantity）
+  verifiedQuantity: number;   // 本次验收确认数量（<= deliveredQuantity）
+  remark?: string;
+}
+
+// 服务/项目类验收明细（里程碑 + 完成情况 + 签证）
+export interface ServiceInspectionRow {
+  id: string;
+  milestone: string;            // 里程碑名称
+  contractRequirement: string;  // 合同要求
+  completionStatus: 'not_started' | 'in_progress' | 'completed' | 'delayed'; // 完成状态
+  completionRate?: number;      // 完成度 0-100
+  completionDescription?: string; // 本次完成情况描述
+  visaNo?: string;              // 签证单号
+  photoUrl?: string;            // 验收照片/附件引用
+  conclusion: 'pass' | 'conditional_pass' | 'fail'; // 验收结论
+  remark?: string;
+}
+
 export interface ProcurementInspection {
   id: string;
   inspectionNo: string;
-  orderId?: string; // 关联订单
+  // ========== 关联链路 ==========
+  demandId?: string;           // 关联招采需求（主入口）
+  demandNo?: string;
+  orderId?: string;            // 关联采购订单
   orderNo?: string;
+  contractId?: string;         // 关联合同（从需求 / 订单自动带出）
+  contractNo?: string;
+  contractName?: string;
   supplierId?: string;
   supplierName?: string;
+  // ========== 类型 / 阶段 ==========
+  acceptanceType: InspectionAcceptanceType; // goods=物资类 / service=服务类
+  demandType?: ProcurementDemandType;       // 冗余存一份方便展示
+  phase?: InspectionPhase;                  // 初验 / 终验（仅 service 用）
+  // ========== 验收主体 ==========
   inspectionDate: string;
   inspector: string;
+  inspectorDept?: string;
   status: 'draft' | 'pending' | 'approved' | 'rejected';
   remark?: string;
-  details: {
-    id: string;
-    productId: string;
-    productCode: string;
-    productName: string;
-    specification?: string;
-    unit: string;
-    orderedQuantity: number;
-    inspectedQuantity: number;
-    passQuantity: number;
-    failQuantity: number;
-    isQualified: boolean;
-    remark?: string;
-  }[];
+  goodsDetails?: GoodsInspectionRow[];    // 物资类专属
+  serviceDetails?: ServiceInspectionRow[]; // 服务类专属
   attachments?: Attachment[];
   approveTime?: string;
   approver?: string;
