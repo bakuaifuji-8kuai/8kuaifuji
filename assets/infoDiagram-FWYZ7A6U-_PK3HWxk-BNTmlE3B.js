@@ -1,0 +1,2 @@
+import{e as r,I as s,aa as n,i as o}from"./index-C4z2R8F4.js";import{y as d}from"./cynefin-VYW2F7L2-BTJyEgdq-XyyeITFA.js";var p={parse:r(async e=>{const a=await d("info",e);s.debug(a)},"parse")},g={version:"11.16.0"},m=r(()=>g.version,"getVersion"),c={getVersion:m},v=r((e,a,i)=>{s.debug(`rendering info diagram
+`+e);const t=n(a);o(t,100,400,!0),t.append("g").append("text").attr("x",100).attr("y",40).attr("class","version").attr("font-size",32).style("text-anchor","middle").text(`v${i}`)},"draw"),f={draw:v},l={parser:p,db:c,renderer:f};export{l as diagram};
