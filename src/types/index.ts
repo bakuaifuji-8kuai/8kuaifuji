@@ -2349,6 +2349,17 @@ export type InspectionAcceptanceType = 'goods' | 'service';
 export type InspectionPhase = 'preliminary' | 'final'; // 初验 / 终验（物资类不使用 phase）
 
 // 物资类验收明细（只读展示仓库已入库数量 + 确认验收）
+export type GoodsQualityConclusion = 'pass' | 'conditional_pass' | 'fail';
+
+export interface InboundSourceRef {
+  inboundOrderId: string;
+  inboundOrderNo: string;
+  inboundDetailId: string;
+  positionName?: string;
+  confirmTime?: string;
+  confirmer?: string;
+}
+
 export interface GoodsInspectionRow {
   id: string;
   productId: string;
@@ -2357,9 +2368,13 @@ export interface GoodsInspectionRow {
   specification?: string;
   unit: string;
   demandQuantity: number;      // 需求数量
-  orderedQuantity: number;    // 下单数量
-  deliveredQuantity: number;  // 仓库已入库数量（from ProcurementOrderDetail.deliveredQuantity）
-  verifiedQuantity: number;   // 本次验收确认数量（<= deliveredQuantity）
+  orderedQuantity: number;     // 下单数量
+  deliveredQuantity: number;   // 仓库已入库数量（from ProcurementOrderDetail.deliveredQuantity）
+  verifiedQuantity: number;    // 本次验收确认数量（<= deliveredQuantity）
+  unitPrice?: number;          // 单价（from ProcurementOrderDetail.unitPrice）
+  amount?: number;             // 金额（from ProcurementOrderDetail.amount）
+  qualityConclusion?: GoodsQualityConclusion; // 验收结论：通过 / 有条件通过 / 不通过
+  inboundSources?: InboundSourceRef[]; // 本物品对应的入库来源（from InboundOrder.details 反查 productId）
   remark?: string;
 }
 

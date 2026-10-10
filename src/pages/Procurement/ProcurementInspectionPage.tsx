@@ -68,6 +68,7 @@ export default function ProcurementInspectionPage() {
   const procurementDemands = useStore((s) => s.procurementDemands);
   const procurementOrders = useStore((s) => s.procurementOrders);
   const contractLedgers = useStore((s) => s.contractLedgers);
+  const inboundOrders = useStore((s) => s.inboundOrders);
   const updateProcurementOrder = useStore((s) => s.updateProcurementOrder);
   const currentUser = useStore((s) => s.currentUser);
 
@@ -256,6 +257,27 @@ export default function ProcurementInspectionPage() {
     let serviceDetails: ServiceInspectionRow[] | undefined;
 
     if (acceptanceType === 'goods' && order) {
+      // 反查入库来源：所有 orderNo === 本订单号的入库单
+      const relatedInbounds = inboundOrders.filter((io) => io.orderNo === order.orderNo && io.details?.length);
+      const buildInboundSources = (productId: string) => {
+        const sources: { inboundOrderId: string; inboundOrderNo: string; inboundDetailId: string; positionName?: string; confirmTime?: string; confirmer?: string }[] = [];
+        for (const io of relatedInbounds) {
+          for (const d of io.details) {
+            if (d.productId === productId) {
+              sources.push({
+                inboundOrderId: io.id,
+                inboundOrderNo: io.orderNo,
+                inboundDetailId: d.id,
+                positionName: d.positionName,
+                confirmTime: io.confirmTime,
+                confirmer: io.confirmer,
+              });
+            }
+          }
+        }
+        return sources;
+      };
+
       goodsDetails = order.details.map((d, i) => ({
         id: `GD-${order.id}-${i}`,
         productId: d.productId,
@@ -267,6 +289,10 @@ export default function ProcurementInspectionPage() {
         orderedQuantity: d.quantity,
         deliveredQuantity: d.deliveredQuantity ?? 0,
         verifiedQuantity: d.deliveredQuantity ?? 0,
+        unitPrice: d.unitPrice,
+        amount: d.amount,
+        qualityConclusion: undefined,
+        inboundSources: buildInboundSources(d.productId),
       }));
     } else {
       // 服务类：从需求 projectRows 生成，空行让用户填
@@ -698,13 +724,16 @@ function FormBody({
 }) {
   const at = form.acceptanceType!;
 
-  // 物资类：更新 verifiedQuantity
-  const updateGoodsRow = (idx: number, verified: number) => {
+  // 物资类：更新指定行（patch 模式，verifiedQuantity 自动夹逼到 deliveredQuantity）
+  const updateGoodsRow = (idx: number, patch: Partial<GoodsInspectionRow>) => {
     if (!form.goodsDetails) return;
     const rows = [...form.goodsDetails];
     const row = rows[idx];
-    const verifiedQuantity = Math.max(0, Math.min(verified, row.deliveredQuantity));
-    rows[idx] = { ...row, verifiedQuantity };
+    let merged = { ...row, ...patch };
+    if (patch.verifiedQuantity !== undefined) {
+      merged.verifiedQuantity = Math.max(0, Math.min(patch.verifiedQuantity, row.deliveredQuantity));
+    }
+    rows[idx] = merged;
     setForm({ ...form, goodsDetails: rows });
   };
 
@@ -802,70 +831,208 @@ function FormBody({
       )}
 
       {/* ===== 物资类表单 ===== */}
-      {at === 'goods' && form.goodsDetails && (
-        <div>
-          {/* 仓库前置校验提示 */}
-          {goodsPrecheck && (
-            <div className={`rounded-lg px-3 py-2 text-xs mb-3 flex items-center gap-2 ${
-              goodsPrecheck.allIn ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                : 'bg-rose-50 text-rose-700 border border-rose-200'
-            }`}>
-              {goodsPrecheck.allIn
-                ? <><Check className="w-4 h-4" /> 全部 {goodsPrecheck.totalItems} 项已入库，可直接验收</>
-                : <><AlertTriangle className="w-4 h-4" /> 还有 {goodsPrecheck.unfinished.length} 项未全部入库（{goodsPrecheck.finishedItems}/{goodsPrecheck.totalItems}），请先去仓库模块完成入库</>
-              }
-            </div>
-          )}
+      {at === 'goods' && form.goodsDetails && (() => {
+        // 质量汇总
+        const qualityCount = { pass: 0, conditional_pass: 0, fail: 0, unset: 0 };
+        const totalDemand = form.goodsDetails.reduce((s, r) => s + r.demandQuantity, 0);
+        const totalDelivered = form.goodsDetails.reduce((s, r) => s + r.deliveredQuantity, 0);
+        const totalVerified = form.goodsDetails.reduce((s, r) => s + r.verifiedQuantity, 0);
+        const totalAmount = form.goodsDetails.reduce((s, r) => s + ((r.verifiedQuantity || 0) * (r.unitPrice || 0)), 0);
+        form.goodsDetails.forEach((r) => {
+          if (!r.qualityConclusion) qualityCount.unset++;
+          else qualityCount[r.qualityConclusion]++;
+        });
 
-          <div className="border border-slate-100 rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500 text-xs">
-                <tr>
-                  <th className="text-left px-3 py-2">品名规格</th>
-                  <th className="px-2 py-2">单位</th>
-                  <th className="px-2 py-2">需求数</th>
-                  <th className="px-2 py-2">下单数</th>
-                  <th className="px-2 py-2 bg-indigo-50 text-indigo-600">仓库已入库</th>
-                  <th className="px-2 py-2 bg-emerald-50 text-emerald-600">本次验收确认</th>
-                </tr>
-              </thead>
-              <tbody>
-                {form.goodsDetails.map((row, idx) => {
-                  const notFullyIn = row.deliveredQuantity < row.orderedQuantity;
-                  return (
-                    <tr key={row.id} className="border-t border-slate-50">
-                      <td className="px-3 py-2">
-                        <div className="font-medium">{row.productName}</div>
-                        {row.specification && <div className="text-xs text-slate-400">{row.specification}</div>}
-                      </td>
-                      <td className="text-center px-2 py-2 text-slate-500">{row.unit}</td>
-                      <td className="text-center px-2 py-2">{row.demandQuantity}</td>
-                      <td className="text-center px-2 py-2">{row.orderedQuantity}</td>
-                      <td className={`text-center px-2 py-2 font-medium ${notFullyIn ? 'text-rose-500' : 'text-emerald-600'}`}>
-                        {row.deliveredQuantity}
-                        {notFullyIn && <div className="text-[10px] text-rose-400">差 {row.orderedQuantity - row.deliveredQuantity}</div>}
-                      </td>
-                      <td className="text-center px-2 py-2 bg-emerald-50/30">
-                        <div className="inline-flex items-center gap-1">
+        // 入库来源弹窗
+        const [sourcePopup, setSourcePopup] = useState<{ rowId: string; sources: NonNullable<GoodsInspectionRow['inboundSources']> } | null>(null);
+
+        const QC_OPTIONS: { value: NonNullable<GoodsInspectionRow['qualityConclusion']> | ''; label: string }[] = [
+          { value: 'pass', label: '通过' },
+          { value: 'conditional_pass', label: '有条件通过' },
+          { value: 'fail', label: '不通过' },
+        ];
+
+        return (
+          <div>
+            {/* 仓库前置校验提示 */}
+            {goodsPrecheck && (
+              <div className={`rounded-lg px-3 py-2 text-xs mb-3 flex items-center gap-2 ${
+                goodsPrecheck.allIn ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-rose-50 text-rose-700 border border-rose-200'
+              }`}>
+                {goodsPrecheck.allIn
+                  ? <><Check className="w-4 h-4" /> 全部 {goodsPrecheck.totalItems} 项已入库，可直接验收</>
+                  : <><AlertTriangle className="w-4 h-4" /> 还有 {goodsPrecheck.unfinished.length} 项未全部入库（{goodsPrecheck.finishedItems}/{goodsPrecheck.totalItems}），请先去仓库模块完成入库</>
+                }
+              </div>
+            )}
+
+            {/* 顶部汇总条 */}
+            <div className="grid grid-cols-5 gap-2 mb-3 text-xs">
+              <div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                <div className="text-slate-500">总项数</div>
+                <div className="font-semibold text-slate-700 mt-0.5">{form.goodsDetails.length} 项</div>
+              </div>
+              <div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                <div className="text-slate-500">需求合计</div>
+                <div className="font-semibold text-slate-700 mt-0.5">{totalDemand}</div>
+              </div>
+              <div className="bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">
+                <div className="text-indigo-500">入库合计</div>
+                <div className="font-semibold text-indigo-700 mt-0.5">{totalDelivered}</div>
+              </div>
+              <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
+                <div className="text-emerald-600">本次验收合计</div>
+                <div className="font-semibold text-emerald-700 mt-0.5">{totalVerified}</div>
+              </div>
+              <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                <div className="text-amber-600">验收金额（估算）</div>
+                <div className="font-semibold text-amber-700 mt-0.5">¥{totalAmount.toLocaleString()}</div>
+              </div>
+            </div>
+
+            <div className="border border-slate-100 rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-slate-500 text-xs">
+                  <tr>
+                    <th className="text-left px-3 py-2">品名规格</th>
+                    <th className="px-2 py-2">单位</th>
+                    <th className="px-2 py-2">需求数</th>
+                    <th className="px-2 py-2">下单数</th>
+                    <th className="px-2 py-2 bg-indigo-50 text-indigo-600">入库来源</th>
+                    <th className="px-2 py-2 bg-indigo-50 text-indigo-600">仓库已入库</th>
+                    <th className="px-2 py-2 bg-indigo-50 text-indigo-600">单价 / 金额</th>
+                    <th className="px-2 py-2 bg-emerald-50 text-emerald-600">本次验收确认</th>
+                    <th className="px-2 py-2">验收结论</th>
+                    <th className="px-2 py-2">备注</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {form.goodsDetails.map((row, idx) => {
+                    const notFullyIn = row.deliveredQuantity < row.orderedQuantity;
+                    return (
+                      <tr key={row.id} className="border-t border-slate-50 align-top">
+                        <td className="px-3 py-2">
+                          <div className="font-medium">{row.productName}</div>
+                          {row.specification && <div className="text-xs text-slate-400">{row.specification}</div>}
+                        </td>
+                        <td className="text-center px-2 py-2 text-slate-500">{row.unit}</td>
+                        <td className="text-center px-2 py-2">{row.demandQuantity}</td>
+                        <td className="text-center px-2 py-2">{row.orderedQuantity}</td>
+                        <td className="text-center px-2 py-2">
+                          {row.inboundSources && row.inboundSources.length > 0 ? (
+                            <button
+                              onClick={() => setSourcePopup({ rowId: row.id, sources: row.inboundSources! })}
+                              className="text-indigo-600 hover:text-indigo-800 text-xs underline underline-offset-2"
+                            >
+                              {row.inboundSources.length} 条 ↗
+                            </button>
+                          ) : (
+                            <span className="text-slate-300 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className={`text-center px-2 py-2 font-medium ${notFullyIn ? 'text-rose-500' : 'text-emerald-600'}`}>
+                          {row.deliveredQuantity}
+                          {notFullyIn && <div className="text-[10px] text-rose-400">差 {row.orderedQuantity - row.deliveredQuantity}</div>}
+                        </td>
+                        <td className="text-center px-2 py-2 text-slate-600">
+                          {row.unitPrice !== undefined ? (
+                            <>
+                              <div className="text-xs">¥{row.unitPrice.toFixed(2)}</div>
+                              <div className="text-[10px] text-slate-400">= ¥{(row.amount ?? row.unitPrice * row.orderedQuantity).toLocaleString()}</div>
+                            </>
+                          ) : <span className="text-slate-300 text-xs">-</span>}
+                        </td>
+                        <td className="text-center px-2 py-2 bg-emerald-50/30">
                           <input
                             type="number"
                             min={0}
                             max={row.deliveredQuantity}
                             value={row.verifiedQuantity}
                             disabled={notFullyIn}
-                            onChange={(e) => updateGoodsRow(idx, Number(e.target.value))}
+                            onChange={(e) => updateGoodsRow(idx, { verifiedQuantity: Number(e.target.value) })}
                             className="w-20 text-center px-2 py-1 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 disabled:bg-slate-100 disabled:text-slate-400"
                           />
+                        </td>
+                        <td className="px-2 py-2">
+                          <select
+                            value={row.qualityConclusion || ''}
+                            disabled={notFullyIn}
+                            onChange={(e) => updateGoodsRow(idx, { qualityConclusion: e.target.value as any })}
+                            className="w-full min-w-[110px] px-2 py-1 border border-slate-200 rounded-md text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:bg-slate-100 disabled:text-slate-400"
+                          >
+                            <option value="">请判定</option>
+                            {QC_OPTIONS.map((o) => (
+                              <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-2 py-2">
+                          <input
+                            value={row.remark || ''}
+                            disabled={notFullyIn}
+                            onChange={(e) => updateGoodsRow(idx, { remark: e.target.value })}
+                            placeholder="如有异常..."
+                            className="w-full min-w-[120px] px-2 py-1 border border-slate-200 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:bg-slate-100 disabled:text-slate-400"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {/* 汇总行 */}
+                  <tr className="bg-slate-50 font-semibold text-slate-700 border-t-2 border-slate-200">
+                    <td className="px-3 py-2 text-xs">合计（{form.goodsDetails.length} 项）</td>
+                    <td></td>
+                    <td className="text-center px-2 py-2">{totalDemand}</td>
+                    <td className="text-center px-2 py-2"></td>
+                    <td></td>
+                    <td className="text-center px-2 py-2 text-indigo-600">{totalDelivered}</td>
+                    <td className="text-center px-2 py-2 text-amber-600 text-xs">¥{totalAmount.toLocaleString()}</td>
+                    <td className="text-center px-2 py-2 text-emerald-700">{totalVerified}</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* 入库来源小弹窗 */}
+            {sourcePopup && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center">
+                <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setSourcePopup(null)} />
+                <div className="relative bg-white rounded-xl shadow-xl w-[420px] border border-slate-100">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                    <div className="text-sm font-medium text-slate-700">入库来源（{sourcePopup.sources.length} 条）</div>
+                    <button onClick={() => setSourcePopup(null)} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+                  </div>
+                  <div className="max-h-[300px] overflow-auto">
+                    {sourcePopup.sources.map((s) => (
+                      <div key={s.inboundDetailId} className="px-4 py-2 border-b border-slate-50 text-xs">
+                        <div className="font-mono text-indigo-600">{s.inboundOrderNo}</div>
+                        <div className="text-slate-500 mt-1 flex gap-3">
+                          <span>仓位: {s.positionName || '-'}</span>
+                          <span>确认人: {s.confirmer || '-'}</span>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        <div className="text-slate-400 mt-0.5">入库时间: {s.confirmTime || '-'}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 质量汇总卡 */}
+            <div className="mt-3 flex gap-3 text-xs">
+              <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-emerald-700">✅ 通过 <span className="font-semibold">{qualityCount.pass}</span></div>
+              <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 text-amber-700">⚠️ 有条件通过 <span className="font-semibold">{qualityCount.conditional_pass}</span></div>
+              <div className="bg-rose-50 border border-rose-100 rounded-lg px-3 py-2 text-rose-700">❌ 不通过 <span className="font-semibold">{qualityCount.fail}</span></div>
+              {qualityCount.unset > 0 && (
+                <div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-slate-500">未判定 <span className="font-semibold">{qualityCount.unset}</span></div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ===== 服务类表单 ===== */}
       {at === 'service' && form.serviceDetails && (
@@ -974,34 +1141,99 @@ function ViewBody({ inspection }: { inspection: ProcurementInspection }) {
         <div><span className="text-slate-400">供应商：</span>{inspection.supplierName || '-'}</div>
       </div>
 
-      {at === 'goods' && inspection.goodsDetails && (
-        <div className="border border-slate-100 rounded-lg overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-slate-50 text-xs text-slate-500">
-              <tr>
-                <th className="text-left px-3 py-2">品名规格</th>
-                <th className="px-2 py-2">单位</th>
-                <th className="px-2 py-2">需求数</th>
-                <th className="px-2 py-2">下单数</th>
-                <th className="px-2 py-2">仓库已入库</th>
-                <th className="px-2 py-2 text-emerald-600">本次验收确认</th>
-              </tr>
-            </thead>
-            <tbody>
-              {inspection.goodsDetails.map((row) => (
-                <tr key={row.id} className="border-t border-slate-50">
-                  <td className="px-3 py-2">{row.productName}{row.specification && <span className="text-slate-400 text-xs ml-1">({row.specification})</span>}</td>
-                  <td className="text-center px-2 py-2">{row.unit}</td>
-                  <td className="text-center px-2 py-2">{row.demandQuantity}</td>
-                  <td className="text-center px-2 py-2">{row.orderedQuantity}</td>
-                  <td className="text-center px-2 py-2">{row.deliveredQuantity}</td>
-                  <td className="text-center px-2 py-2 font-medium text-emerald-600">{row.verifiedQuantity}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {at === 'goods' && inspection.goodsDetails && (() => {
+        const totalDemand = inspection.goodsDetails.reduce((s, r) => s + r.demandQuantity, 0);
+        const totalDelivered = inspection.goodsDetails.reduce((s, r) => s + r.deliveredQuantity, 0);
+        const totalVerified = inspection.goodsDetails.reduce((s, r) => s + r.verifiedQuantity, 0);
+        const totalAmount = inspection.goodsDetails.reduce((s, r) => s + ((r.verifiedQuantity || 0) * (r.unitPrice || 0)), 0);
+        const qcCount = inspection.goodsDetails.reduce((c, r) => {
+          if (r.qualityConclusion) c[r.qualityConclusion]++;
+          return c;
+        }, { pass: 0, conditional_pass: 0, fail: 0 } as Record<string, number>);
+        const QC_LABEL: Record<string, { label: string; variant: 'success' | 'warning' | 'danger' | 'default' }> = {
+          pass: { label: '✅ 通过', variant: 'success' },
+          conditional_pass: { label: '⚠️ 有条件通过', variant: 'warning' },
+          fail: { label: '❌ 不通过', variant: 'danger' },
+        };
+        return (
+          <div>
+            {/* 汇总条 */}
+            <div className="grid grid-cols-5 gap-2 mb-3 text-xs">
+              <div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                <div className="text-slate-500">总项数</div>
+                <div className="font-semibold text-slate-700 mt-0.5">{inspection.goodsDetails.length} 项</div>
+              </div>
+              <div className="bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">
+                <div className="text-indigo-500">入库合计</div>
+                <div className="font-semibold text-indigo-700 mt-0.5">{totalDelivered}</div>
+              </div>
+              <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
+                <div className="text-emerald-600">验收合计</div>
+                <div className="font-semibold text-emerald-700 mt-0.5">{totalVerified} / {totalDemand}</div>
+              </div>
+              <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                <div className="text-amber-600">验收金额</div>
+                <div className="font-semibold text-amber-700 mt-0.5">¥{totalAmount.toLocaleString()}</div>
+              </div>
+              <div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                <div className="text-slate-500">质量结论</div>
+                <div className="mt-0.5 flex gap-1 flex-wrap text-[11px]">
+                  {qcCount.pass > 0 && <span className="text-emerald-600">过{qcCount.pass}</span>}
+                  {qcCount.conditional_pass > 0 && <span className="text-amber-600">条件{qcCount.conditional_pass}</span>}
+                  {qcCount.fail > 0 && <span className="text-rose-600">不{qcCount.fail}</span>}
+                  {qcCount.pass === 0 && qcCount.conditional_pass === 0 && qcCount.fail === 0 && <span className="text-slate-400">无判定</span>}
+                </div>
+              </div>
+            </div>
+
+            <div className="border border-slate-100 rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-slate-50 text-xs text-slate-500">
+                  <tr>
+                    <th className="text-left px-3 py-2">品名规格</th>
+                    <th className="px-2 py-2">单位</th>
+                    <th className="px-2 py-2">需求数</th>
+                    <th className="px-2 py-2">下单数</th>
+                    <th className="px-2 py-2">入库来源</th>
+                    <th className="px-2 py-2">仓库已入库</th>
+                    <th className="px-2 py-2">单价/金额</th>
+                    <th className="px-2 py-2 text-emerald-600">本次验收确认</th>
+                    <th className="px-2 py-2">验收结论</th>
+                    <th className="px-2 py-2">备注</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {inspection.goodsDetails.map((row) => (
+                    <tr key={row.id} className="border-t border-slate-50 align-top">
+                      <td className="px-3 py-2">{row.productName}{row.specification && <span className="text-slate-400 text-xs ml-1">({row.specification})</span>}</td>
+                      <td className="text-center px-2 py-2">{row.unit}</td>
+                      <td className="text-center px-2 py-2">{row.demandQuantity}</td>
+                      <td className="text-center px-2 py-2">{row.orderedQuantity}</td>
+                      <td className="text-center px-2 py-2 text-xs">
+                        {row.inboundSources && row.inboundSources.length > 0
+                          ? `${row.inboundSources.length} 条` : <span className="text-slate-300">-</span>}
+                      </td>
+                      <td className="text-center px-2 py-2">{row.deliveredQuantity}</td>
+                      <td className="text-center px-2 py-2 text-xs text-slate-600">
+                        {row.unitPrice !== undefined
+                          ? <><div>¥{row.unitPrice.toFixed(2)}</div><div className="text-slate-400">= ¥{(row.amount ?? row.unitPrice * row.orderedQuantity).toLocaleString()}</div></>
+                          : <span className="text-slate-300">-</span>}
+                      </td>
+                      <td className="text-center px-2 py-2 font-medium text-emerald-600">{row.verifiedQuantity}</td>
+                      <td className="px-2 py-2">
+                        {row.qualityConclusion
+                          ? <Badge variant={QC_LABEL[row.qualityConclusion]?.variant || 'default'}>{QC_LABEL[row.qualityConclusion]?.label || row.qualityConclusion}</Badge>
+                          : <span className="text-slate-300 text-xs">未判定</span>}
+                      </td>
+                      <td className="px-2 py-2 text-xs text-slate-600 max-w-[150px]">{row.remark || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       {at === 'service' && inspection.serviceDetails && (
         <div className="space-y-2">
