@@ -1,0 +1,275 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" font-family="Microsoft YaHei, sans-serif">
+  <defs>
+    <radialGradient id="centerGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1400" height="900" fill="white"/>
+
+  <!-- Title -->
+  <text x="700" y="34" font-size="22" font-weight="bold" text-anchor="middle" fill="#1e293b">仓库管理系统 — 功能思维导图</text>
+  <text x="700" y="54" font-size="12" text-anchor="middle" fill="#64748b">Mind Map</text>
+
+  <!-- ===== Connections: center -> first-level (cubic bezier) ===== -->
+  <g fill="none" stroke-width="2.5">
+    <!-- to 报表管理 (top) -->
+    <path d="M 700 370 C 700 300, 700 240, 700 170" stroke="#0ea5e9"/>
+    <!-- to 库存管理 (top-left) -->
+    <path d="M 643 393 C 580 393, 580 240, 540 240" stroke="#3b82f6"/>
+    <!-- to 入库管理 (left) -->
+    <path d="M 620 450 C 540 450, 500 450, 420 450" stroke="#10b981"/>
+    <!-- to 出库管理 (bottom-left) -->
+    <path d="M 643 507 C 580 507, 580 660, 540 660" stroke="#f59e0b"/>
+    <!-- to 业务流程 (bottom) -->
+    <path d="M 700 530 C 700 600, 700 660, 700 730" stroke="#84cc16"/>
+    <!-- to 基础资料 (bottom-right) -->
+    <path d="M 757 507 C 820 507, 820 660, 860 660" stroke="#ec4899"/>
+    <!-- to 固定资产管理 (right) -->
+    <path d="M 780 450 C 860 450, 900 450, 980 450" stroke="#6366f1"/>
+    <!-- to 调拨管理 (top-right) -->
+    <path d="M 757 393 C 820 393, 820 240, 860 240" stroke="#06b3d4"/>
+  </g>
+
+  <!-- ===== Connections: first-level -> sub-level ===== -->
+  <g fill="none" stroke-width="1.5">
+    <!-- 库存管理 -> subs (left) -->
+    <path d="M 400 240 C 370 240, 360 180, 330 180" stroke="#3b82f6"/>
+    <path d="M 400 240 L 310 240" stroke="#3b82f6"/>
+    <path d="M 400 240 C 370 240, 360 300, 330 300" stroke="#3b82f6"/>
+
+    <!-- 入库管理 -> subs (left) -->
+    <path d="M 280 450 C 250 450, 250 390, 230 390" stroke="#10b981"/>
+    <path d="M 280 450 L 210 450" stroke="#10b981"/>
+    <path d="M 280 450 C 250 450, 250 510, 230 510" stroke="#10b981"/>
+
+    <!-- 出库管理 -> subs (left) -->
+    <path d="M 400 660 C 370 660, 360 600, 330 600" stroke="#f59e0b"/>
+    <path d="M 400 660 L 310 660" stroke="#f59e0b"/>
+    <path d="M 400 660 C 370 660, 360 720, 330 720" stroke="#f59e0b"/>
+
+    <!-- 调拨管理 -> subs (right) -->
+    <path d="M 1000 240 C 1030 240, 1040 180, 1070 180" stroke="#06b3d4"/>
+    <path d="M 1000 240 L 1090 240" stroke="#06b3d4"/>
+    <path d="M 1000 240 C 1030 240, 1040 300, 1070 300" stroke="#06b3d4"/>
+
+    <!-- 固定资产管理 -> subs (right, 8 items) -->
+    <path d="M 1120 450 C 1150 450, 1140 290, 1170 290" stroke="#6366f1"/>
+    <path d="M 1120 450 C 1150 450, 1160 340, 1190 340" stroke="#6366f1"/>
+    <path d="M 1120 450 C 1150 450, 1170 390, 1200 390" stroke="#6366f1"/>
+    <path d="M 1120 450 C 1150 450, 1170 440, 1200 440" stroke="#6366f1"/>
+    <path d="M 1120 450 C 1150 450, 1170 490, 1200 490" stroke="#6366f1"/>
+    <path d="M 1120 450 C 1150 450, 1170 540, 1200 540" stroke="#6366f1"/>
+    <path d="M 1120 450 C 1150 450, 1160 590, 1190 590" stroke="#6366f1"/>
+    <path d="M 1120 450 C 1150 450, 1140 640, 1170 640" stroke="#6366f1"/>
+
+    <!-- 基础资料 -> subs (right, 6 items) -->
+    <path d="M 1000 660 C 1030 660, 1040 580, 1070 580" stroke="#ec4899"/>
+    <path d="M 1000 660 C 1030 660, 1060 630, 1090 630" stroke="#ec4899"/>
+    <path d="M 1000 660 C 1030 660, 1060 680, 1090 680" stroke="#ec4899"/>
+    <path d="M 1000 660 C 1030 660, 1040 730, 1070 730" stroke="#ec4899"/>
+    <path d="M 1000 660 C 1030 660, 1060 780, 1090 780" stroke="#ec4899"/>
+    <path d="M 1000 660 C 1030 660, 1040 830, 1070 830" stroke="#ec4899"/>
+
+    <!-- 报表管理 -> subs (fan top) -->
+    <path d="M 630 150 C 580 150, 570 80, 540 80" stroke="#0ea5e9"/>
+    <path d="M 660 130 C 640 100, 620 80, 600 65" stroke="#0ea5e9"/>
+    <path d="M 740 130 C 760 100, 780 80, 800 65" stroke="#0ea5e9"/>
+    <path d="M 770 150 C 820 150, 830 80, 860 80" stroke="#0ea5e9"/>
+
+    <!-- 业务流程 -> subs (fan bottom) -->
+    <path d="M 630 750 C 580 750, 570 820, 540 820" stroke="#84cc16"/>
+    <path d="M 660 770 C 640 800, 620 820, 600 835" stroke="#84cc16"/>
+    <path d="M 740 770 C 760 800, 780 820, 800 835" stroke="#84cc16"/>
+    <path d="M 770 750 C 820 750, 830 820, 860 820" stroke="#84cc16"/>
+  </g>
+
+  <!-- ===== Center node ===== -->
+  <circle cx="700" cy="450" r="80" fill="url(#centerGrad)"/>
+  <circle cx="700" cy="450" r="80" fill="none" stroke="white" stroke-width="3" opacity="0.5"/>
+  <text x="700" y="445" fill="white" font-size="18" font-weight="bold" text-anchor="middle" dominant-baseline="central">仓库管理</text>
+  <text x="700" y="470" fill="white" font-size="18" font-weight="bold" text-anchor="middle" dominant-baseline="central">系统</text>
+
+  <!-- ===== First-level branches ===== -->
+  <!-- 报表管理 (top, centered text) -->
+  <g>
+    <rect x="630" y="130" width="140" height="40" rx="20" fill="#0ea5e9"/>
+    <text x="700" y="150" fill="white" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="central">报表管理</text>
+  </g>
+
+  <!-- 库存管理 (top-left, left-aligned) -->
+  <g>
+    <rect x="400" y="220" width="140" height="40" rx="20" fill="#3b82f6"/>
+    <text x="410" y="240" fill="white" font-size="14" font-weight="bold" text-anchor="start" dominant-baseline="central">库存管理</text>
+  </g>
+
+  <!-- 入库管理 (left, left-aligned) -->
+  <g>
+    <rect x="280" y="430" width="140" height="40" rx="20" fill="#10b981"/>
+    <text x="290" y="450" fill="white" font-size="14" font-weight="bold" text-anchor="start" dominant-baseline="central">入库管理</text>
+  </g>
+
+  <!-- 出库管理 (bottom-left, left-aligned) -->
+  <g>
+    <rect x="400" y="640" width="140" height="40" rx="20" fill="#f59e0b"/>
+    <text x="410" y="660" fill="white" font-size="14" font-weight="bold" text-anchor="start" dominant-baseline="central">出库管理</text>
+  </g>
+
+  <!-- 业务流程 (bottom, centered) -->
+  <g>
+    <rect x="630" y="730" width="140" height="40" rx="20" fill="#84cc16"/>
+    <text x="700" y="750" fill="white" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="central">业务流程</text>
+  </g>
+
+  <!-- 基础资料 (bottom-right, right-aligned) -->
+  <g>
+    <rect x="860" y="640" width="140" height="40" rx="20" fill="#ec4899"/>
+    <text x="990" y="660" fill="white" font-size="14" font-weight="bold" text-anchor="end" dominant-baseline="central">基础资料</text>
+  </g>
+
+  <!-- 固定资产管理 (right, right-aligned) -->
+  <g>
+    <rect x="980" y="430" width="140" height="40" rx="20" fill="#6366f1"/>
+    <text x="1110" y="450" fill="white" font-size="13" font-weight="bold" text-anchor="end" dominant-baseline="central">固定资产管理</text>
+  </g>
+
+  <!-- 调拨管理 (top-right, right-aligned) -->
+  <g>
+    <rect x="860" y="220" width="140" height="40" rx="20" fill="#06b3d4"/>
+    <text x="990" y="240" fill="white" font-size="14" font-weight="bold" text-anchor="end" dominant-baseline="central">调拨管理</text>
+  </g>
+
+  <!-- ===== Sub-level branches ===== -->
+
+  <!-- 库存管理 subs (left, left-aligned) -->
+  <g>
+    <rect x="210" y="165" width="120" height="30" rx="15" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+    <text x="218" y="180" font-size="11" fill="#1e3a8a" text-anchor="start" dominant-baseline="central">库存查询</text>
+
+    <rect x="190" y="225" width="120" height="30" rx="15" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+    <text x="198" y="240" font-size="11" fill="#1e3a8a" text-anchor="start" dominant-baseline="central">盘点管理</text>
+
+    <rect x="210" y="285" width="120" height="30" rx="15" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+    <text x="218" y="300" font-size="11" fill="#1e3a8a" text-anchor="start" dominant-baseline="central">库存流水记录</text>
+  </g>
+
+  <!-- 入库管理 subs (left, left-aligned) -->
+  <g>
+    <rect x="110" y="375" width="120" height="30" rx="15" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>
+    <text x="118" y="390" font-size="11" fill="#064e3b" text-anchor="start" dominant-baseline="central">采购入库</text>
+
+    <rect x="90" y="435" width="120" height="30" rx="15" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>
+    <text x="98" y="450" font-size="11" fill="#064e3b" text-anchor="start" dominant-baseline="central">自制入库</text>
+
+    <rect x="110" y="495" width="120" height="30" rx="15" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>
+    <text x="118" y="510" font-size="11" fill="#064e3b" text-anchor="start" dominant-baseline="central">退库</text>
+  </g>
+
+  <!-- 出库管理 subs (left, left-aligned) -->
+  <g>
+    <rect x="210" y="585" width="120" height="30" rx="15" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="218" y="600" font-size="10" fill="#78350f" text-anchor="start" dominant-baseline="central">低值易耗领用出库</text>
+
+    <rect x="190" y="645" width="120" height="30" rx="15" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="198" y="660" font-size="11" fill="#78350f" text-anchor="start" dominant-baseline="central">报废出库</text>
+
+    <rect x="210" y="705" width="120" height="30" rx="15" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="218" y="720" font-size="11" fill="#78350f" text-anchor="start" dominant-baseline="central">报损出库</text>
+  </g>
+
+  <!-- 调拨管理 subs (right, right-aligned) -->
+  <g>
+    <rect x="1070" y="165" width="120" height="30" rx="15" fill="#cffafe" stroke="#06b3d4" stroke-width="1.5"/>
+    <text x="1182" y="180" font-size="11" fill="#155e75" text-anchor="end" dominant-baseline="central">仓库调拨</text>
+
+    <rect x="1090" y="225" width="120" height="30" rx="15" fill="#cffafe" stroke="#06b3d4" stroke-width="1.5"/>
+    <text x="1202" y="240" font-size="10" fill="#155e75" text-anchor="end" dominant-baseline="central">展会物资调拨出库</text>
+
+    <rect x="1070" y="285" width="120" height="30" rx="15" fill="#cffafe" stroke="#06b3d4" stroke-width="1.5"/>
+    <text x="1182" y="300" font-size="10" fill="#155e75" text-anchor="end" dominant-baseline="central">展会物资调拨入库</text>
+  </g>
+
+  <!-- 固定资产管理 subs (right, right-aligned) -->
+  <g>
+    <rect x="1170" y="275" width="120" height="30" rx="15" fill="#e0e7ff" stroke="#6366f1" stroke-width="1.5"/>
+    <text x="1282" y="290" font-size="11" fill="#312e81" text-anchor="end" dominant-baseline="central">资产档案</text>
+
+    <rect x="1190" y="325" width="120" height="30" rx="15" fill="#e0e7ff" stroke="#6366f1" stroke-width="1.5"/>
+    <text x="1302" y="340" font-size="11" fill="#312e81" text-anchor="end" dominant-baseline="central">资产入库</text>
+
+    <rect x="1200" y="375" width="120" height="30" rx="15" fill="#e0e7ff" stroke="#6366f1" stroke-width="1.5"/>
+    <text x="1312" y="390" font-size="11" fill="#312e81" text-anchor="end" dominant-baseline="central">资产领用</text>
+
+    <rect x="1200" y="425" width="120" height="30" rx="15" fill="#e0e7ff" stroke="#6366f1" stroke-width="1.5"/>
+    <text x="1312" y="440" font-size="11" fill="#312e81" text-anchor="end" dominant-baseline="central">资产归还</text>
+
+    <rect x="1200" y="475" width="120" height="30" rx="15" fill="#e0e7ff" stroke="#6366f1" stroke-width="1.5"/>
+    <text x="1312" y="490" font-size="11" fill="#312e81" text-anchor="end" dominant-baseline="central">资产调拨</text>
+
+    <rect x="1200" y="525" width="120" height="30" rx="15" fill="#e0e7ff" stroke="#6366f1" stroke-width="1.5"/>
+    <text x="1312" y="540" font-size="11" fill="#312e81" text-anchor="end" dominant-baseline="central">资产报废</text>
+
+    <rect x="1190" y="575" width="120" height="30" rx="15" fill="#e0e7ff" stroke="#6366f1" stroke-width="1.5"/>
+    <text x="1302" y="590" font-size="11" fill="#312e81" text-anchor="end" dominant-baseline="central">资产报损</text>
+
+    <rect x="1170" y="625" width="120" height="30" rx="15" fill="#e0e7ff" stroke="#6366f1" stroke-width="1.5"/>
+    <text x="1282" y="640" font-size="11" fill="#312e81" text-anchor="end" dominant-baseline="central">资产报表</text>
+  </g>
+
+  <!-- 基础资料 subs (right, right-aligned) -->
+  <g>
+    <rect x="1070" y="565" width="120" height="30" rx="15" fill="#fce7f3" stroke="#ec4899" stroke-width="1.5"/>
+    <text x="1182" y="580" font-size="11" fill="#831843" text-anchor="end" dominant-baseline="central">仓库管理</text>
+
+    <rect x="1090" y="615" width="120" height="30" rx="15" fill="#fce7f3" stroke="#ec4899" stroke-width="1.5"/>
+    <text x="1202" y="630" font-size="11" fill="#831843" text-anchor="end" dominant-baseline="central">仓位管理</text>
+
+    <rect x="1090" y="665" width="120" height="30" rx="15" fill="#fce7f3" stroke="#ec4899" stroke-width="1.5"/>
+    <text x="1202" y="680" font-size="11" fill="#831843" text-anchor="end" dominant-baseline="central">物资分类</text>
+
+    <rect x="1070" y="715" width="120" height="30" rx="15" fill="#fce7f3" stroke="#ec4899" stroke-width="1.5"/>
+    <text x="1182" y="730" font-size="11" fill="#831843" text-anchor="end" dominant-baseline="central">物资档案</text>
+
+    <rect x="1090" y="765" width="120" height="30" rx="15" fill="#fce7f3" stroke="#ec4899" stroke-width="1.5"/>
+    <text x="1202" y="780" font-size="11" fill="#831843" text-anchor="end" dominant-baseline="central">物资申请审批</text>
+
+    <rect x="1070" y="815" width="120" height="30" rx="15" fill="#fce7f3" stroke="#ec4899" stroke-width="1.5"/>
+    <text x="1182" y="830" font-size="11" fill="#831843" text-anchor="end" dominant-baseline="central">工单物资配置</text>
+  </g>
+
+  <!-- 报表管理 subs (top, mixed alignment) -->
+  <g>
+    <rect x="420" y="65" width="120" height="30" rx="15" fill="#e0f2fe" stroke="#0ea5e9" stroke-width="1.5"/>
+    <text x="428" y="80" font-size="11" fill="#0c4a6e" text-anchor="start" dominant-baseline="central">库存报表</text>
+
+    <rect x="540" y="35" width="120" height="30" rx="15" fill="#e0f2fe" stroke="#0ea5e9" stroke-width="1.5"/>
+    <text x="548" y="50" font-size="11" fill="#0c4a6e" text-anchor="start" dominant-baseline="central">入库报表</text>
+
+    <rect x="740" y="35" width="120" height="30" rx="15" fill="#e0f2fe" stroke="#0ea5e9" stroke-width="1.5"/>
+    <text x="852" y="50" font-size="11" fill="#0c4a6e" text-anchor="end" dominant-baseline="central">出库报表</text>
+
+    <rect x="860" y="65" width="120" height="30" rx="15" fill="#e0f2fe" stroke="#0ea5e9" stroke-width="1.5"/>
+    <text x="972" y="80" font-size="11" fill="#0c4a6e" text-anchor="end" dominant-baseline="central">财务报表</text>
+  </g>
+
+  <!-- 业务流程 subs (bottom, mixed alignment) -->
+  <g>
+    <rect x="420" y="805" width="120" height="30" rx="15" fill="#ecfccb" stroke="#84cc16" stroke-width="1.5"/>
+    <text x="428" y="820" font-size="11" fill="#365314" text-anchor="start" dominant-baseline="central">入库流程</text>
+
+    <rect x="540" y="835" width="120" height="30" rx="15" fill="#ecfccb" stroke="#84cc16" stroke-width="1.5"/>
+    <text x="548" y="850" font-size="11" fill="#365314" text-anchor="start" dominant-baseline="central">出库流程</text>
+
+    <rect x="740" y="835" width="120" height="30" rx="15" fill="#ecfccb" stroke="#84cc16" stroke-width="1.5"/>
+    <text x="852" y="850" font-size="11" fill="#365314" text-anchor="end" dominant-baseline="central">调拨流程</text>
+
+    <rect x="860" y="805" width="120" height="30" rx="15" fill="#ecfccb" stroke="#84cc16" stroke-width="1.5"/>
+    <text x="972" y="820" font-size="11" fill="#365314" text-anchor="end" dominant-baseline="central">盘点流程</text>
+  </g>
+
+  <!-- Legend -->
+  <g transform="translate(40,870)">
+    <text x="0" y="0" font-size="10" fill="#64748b">说明：中心节点为系统主体，八个一级分支按方位均匀分布，曲线连接体现层级关系。</text>
+  </g>
+</svg>

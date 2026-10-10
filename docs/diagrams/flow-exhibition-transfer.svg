@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" font-family="Microsoft YaHei, 微软雅黑, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="900" fill="#f8fafc"/>
+
+  <!-- 标题 -->
+  <text x="600" y="45" text-anchor="middle" font-size="24" font-weight="bold" fill="#0f172a">展会物资调拨管理流程图</text>
+
+  <!-- 分区标题 -->
+  <text x="250" y="82" text-anchor="middle" font-size="16" font-weight="bold" fill="#1e40af">一、调拨出库流程</text>
+  <text x="850" y="82" text-anchor="middle" font-size="16" font-weight="bold" fill="#1e40af">二、调拨入库流程</text>
+
+  <!-- ============ 出库流程 连接线 ============ -->
+  <line x1="250" y1="146" x2="250" y2="159" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="250" y1="201" x2="250" y2="219" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="250" y1="261" x2="250" y2="279" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="250" y1="321" x2="250" y2="339" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="250" y1="381" x2="250" y2="399" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="250" y1="441" x2="250" y2="459" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="250" y1="501" x2="250" y2="519" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="250" y1="561" x2="250" y2="579" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="250" y1="621" x2="250" y2="639" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="250" y1="681" x2="250" y2="699" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="250" y1="741" x2="250" y2="754" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ============ 出库流程 节点 ============ -->
+  <circle cx="250" cy="120" r="26" fill="#10b981" stroke="#059669" stroke-width="2"/>
+  <text x="250" y="120" text-anchor="middle" dominant-baseline="central" fill="white" font-size="14" font-weight="bold">开始</text>
+
+  <rect x="140" y="159" width="220" height="42" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="250" y="180" text-anchor="middle" dominant-baseline="central" font-size="14">创建调拨出库单</text>
+
+  <rect x="140" y="219" width="220" height="42" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="250" y="240" text-anchor="middle" dominant-baseline="central" font-size="14">选择源仓库（展会仓库）</text>
+
+  <rect x="140" y="279" width="220" height="42" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="250" y="300" text-anchor="middle" dominant-baseline="central" font-size="14">选择目标仓库</text>
+
+  <rect x="140" y="339" width="220" height="42" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="250" y="360" text-anchor="middle" dominant-baseline="central" font-size="14">选择工单</text>
+
+  <polygon points="155,399 360,399 345,441 140,441" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="250" y="420" text-anchor="middle" dominant-baseline="central" font-size="14">选择物资（自动带出主辅料）</text>
+
+  <polygon points="155,459 360,459 345,501 140,501" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="250" y="480" text-anchor="middle" dominant-baseline="central" font-size="14">填写出库数量</text>
+
+  <rect x="140" y="519" width="220" height="42" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="250" y="540" text-anchor="middle" dominant-baseline="central" font-size="14">保存</text>
+
+  <rect x="140" y="579" width="220" height="42" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="250" y="600" text-anchor="middle" dominant-baseline="central" font-size="14">提交</text>
+
+  <rect x="140" y="639" width="220" height="42" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="250" y="660" text-anchor="middle" dominant-baseline="central" font-size="14">确认出库</text>
+
+  <rect x="140" y="699" width="220" height="42" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="250" y="720" text-anchor="middle" dominant-baseline="central" font-size="14">源仓库库存扣减</text>
+
+  <circle cx="250" cy="780" r="26" fill="#10b981" stroke="#059669" stroke-width="2"/>
+  <text x="250" y="780" text-anchor="middle" dominant-baseline="central" fill="white" font-size="14" font-weight="bold">结束</text>
+
+  <!-- ============ 入库流程 连接线 ============ -->
+  <line x1="850" y1="146" x2="850" y2="169" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="850" y1="211" x2="850" y2="239" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="850" y1="281" x2="850" y2="309" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="850" y1="351" x2="850" y2="379" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="850" y1="421" x2="850" y2="449" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="850" y1="491" x2="850" y2="514" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ============ 入库流程 节点 ============ -->
+  <circle cx="850" cy="120" r="26" fill="#10b981" stroke="#059669" stroke-width="2"/>
+  <text x="850" y="120" text-anchor="middle" dominant-baseline="central" fill="white" font-size="14" font-weight="bold">开始</text>
+
+  <rect x="740" y="169" width="220" height="42" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="850" y="190" text-anchor="middle" dominant-baseline="central" font-size="14">查看待入库的调拨单</text>
+
+  <rect x="740" y="239" width="220" height="42" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="850" y="260" text-anchor="middle" dominant-baseline="central" font-size="14">选择调拨出库单</text>
+
+  <rect x="740" y="309" width="220" height="42" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="850" y="330" text-anchor="middle" dominant-baseline="central" font-size="14">确认入库信息</text>
+
+  <rect x="740" y="379" width="220" height="42" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="850" y="400" text-anchor="middle" dominant-baseline="central" font-size="14">确认入库</text>
+
+  <rect x="740" y="449" width="220" height="42" rx="6" ry="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="850" y="470" text-anchor="middle" dominant-baseline="central" font-size="14">目标仓库库存增加</text>
+
+  <circle cx="850" cy="540" r="26" fill="#10b981" stroke="#059669" stroke-width="2"/>
+  <text x="850" y="540" text-anchor="middle" dominant-baseline="central" fill="white" font-size="14" font-weight="bold">结束</text>
+
+  <!-- ============ 流程说明 ============ -->
+  <rect x="620" y="590" width="460" height="180" rx="8" ry="8" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,3"/>
+  <text x="850" y="618" text-anchor="middle" font-size="15" font-weight="bold" fill="#334155">流程说明</text>
+  <text x="640" y="652" font-size="13" fill="#475569">• 调拨出库确认后，源仓库（展会仓库）库存自动扣减</text>
+  <text x="640" y="680" font-size="13" fill="#475569">• 调拨入库确认后，目标仓库库存相应增加</text>
+  <text x="640" y="708" font-size="13" fill="#475569">• 所有调拨记录均保留，可随时查看历史</text>
+  <text x="640" y="736" font-size="13" fill="#475569">• 所有单据生成后即可打印</text>
+
+  <!-- ============ 状态流转 ============ -->
+  <text x="600" y="805" text-anchor="middle" font-size="16" font-weight="bold" fill="#1e40af">三、状态流转</text>
+
+  <rect x="65" y="829" width="170" height="32" rx="16" ry="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="150" y="845" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="bold">草稿</text>
+
+  <rect x="290" y="829" width="170" height="32" rx="16" ry="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="375" y="845" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="bold">待出库</text>
+
+  <rect x="515" y="829" width="170" height="32" rx="16" ry="16" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="600" y="845" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="bold" fill="#92400e">已出库</text>
+
+  <rect x="740" y="829" width="170" height="32" rx="16" ry="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="825" y="845" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="bold">待入库</text>
+
+  <rect x="965" y="829" width="170" height="32" rx="16" ry="16" fill="#d1fae5" stroke="#10b981" stroke-width="2"/>
+  <text x="1050" y="845" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="bold" fill="#065f46">已入库</text>
+
+  <line x1="235" y1="845" x2="285" y2="845" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="460" y1="845" x2="510" y2="845" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="685" y1="845" x2="735" y2="845" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="910" y1="845" x2="960" y2="845" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <text x="600" y="885" text-anchor="middle" font-size="12" fill="#64748b">注：已出库为中间关键状态，已入库为终态（绿色标识完成）</text>
+</svg>
