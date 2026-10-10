@@ -229,7 +229,14 @@ export default function ProcurementInspectionPage() {
       }
       setShowPhasePicker(true);
     } else {
-      // 物资类：直接进表单
+      // 物资类：前置校验 — 没订单也没需求明细 → 提示
+      const order = procurementOrders.find((o) => o.demandId === demand.id);
+      const hasAnyDetail = order?.details?.length || demand.details?.length;
+      if (!hasAnyDetail) {
+        alert(`需求 ${demand.demandNo} 既没有采购订单也没有物资明细，请先在需求里补全明细，或去招采执行创建采购订单`);
+        return;
+      }
+      // 直接进表单
       openForm(demand, null);
     }
   };
@@ -252,13 +259,15 @@ export default function ProcurementInspectionPage() {
       procurementInspections.map((i) => i.inspectionNo),
     );
 
-    // 物资类：用订单明细生成 goodsDetails（前置校验后 confirmed）
+    // 物资类：无论有没有订单都生成 goodsDetails（有订单用订单明细 + 入库反查；无订单用需求明细兜底）
     let goodsDetails: GoodsInspectionRow[] | undefined;
     let serviceDetails: ServiceInspectionRow[] | undefined;
 
-    if (acceptanceType === 'goods' && order) {
-      // 反查入库来源：所有 orderNo === 本订单号的入库单
-      const relatedInbounds = inboundOrders.filter((io) => io.orderNo === order.orderNo && io.details?.length);
+    if (acceptanceType === 'goods') {
+      // 构建入库来源反查（仅 order 存在时才有意义）
+      const relatedInbounds = order
+        ? inboundOrders.filter((io) => io.orderNo === order.orderNo && io.details?.length)
+        : [];
       const buildInboundSources = (productId: string) => {
         const sources: { inboundOrderId: string; inboundOrderNo: string; inboundDetailId: string; positionName?: string; confirmTime?: string; confirmer?: string }[] = [];
         for (const io of relatedInbounds) {
@@ -278,22 +287,30 @@ export default function ProcurementInspectionPage() {
         return sources;
       };
 
-      goodsDetails = order.details.map((d, i) => ({
-        id: `GD-${order.id}-${i}`,
-        productId: d.productId,
-        productCode: d.productCode,
-        productName: d.productName,
-        specification: d.specification,
-        unit: d.unit,
-        demandQuantity: d.quantity,
-        orderedQuantity: d.quantity,
-        deliveredQuantity: d.deliveredQuantity ?? 0,
-        verifiedQuantity: d.deliveredQuantity ?? 0,
-        unitPrice: d.unitPrice,
-        amount: d.amount,
-        qualityConclusion: undefined,
-        inboundSources: buildInboundSources(d.productId),
-      }));
+      // 优先用订单明细 → 兜底用需求明细（demand.details）
+      const sourceDetails = order?.details?.length
+        ? order.details
+        : (demand.details || []);
+
+      goodsDetails = sourceDetails.map((d: any, i: number) => {
+        const productId = d.productId ?? `PRD-${i}`;
+        return {
+          id: order ? `GD-${order.id}-${i}` : `GD-${demand.id}-${i}`,
+          productId,
+          productCode: d.productCode ?? '',
+          productName: d.productName ?? d.name ?? '未命名物资',
+          specification: d.specification ?? '',
+          unit: d.unit ?? '个',
+          demandQuantity: d.quantity ?? d.demandQuantity ?? 0,
+          orderedQuantity: d.quantity ?? d.demandQuantity ?? 0,
+          deliveredQuantity: order ? (d.deliveredQuantity ?? 0) : 0,
+          verifiedQuantity: order ? (d.deliveredQuantity ?? 0) : 0,
+          unitPrice: d.unitPrice ?? d.unitPriceExcludingTax,
+          amount: d.amount ?? d.amountExcludingTax,
+          qualityConclusion: undefined,
+          inboundSources: order ? buildInboundSources(productId) : [],
+        };
+      });
     } else {
       // 服务类：从需求 projectRows 生成，空行让用户填
       const rows = demand.projectRows || [];
@@ -347,10 +364,29 @@ export default function ProcurementInspectionPage() {
   const handleSubmit = () => {
     if (!form.acceptanceType || !selectedDemand) return;
 
-    // 物资类前置校验
-    if (form.acceptanceType === 'goods' && goodsPrecheck && !goodsPrecheck.allIn) {
+    // 明细不能为空校验
+    if (form.acceptanceType === 'goods' && (!form.goodsDetails || form.goodsDetails.length === 0)) {
+      setFormError('没有可验收的物资明细，请先补全需求明细或创建采购订单');
+      return;
+    }
+    if (form.acceptanceType === 'service' && (!form.serviceDetails || form.serviceDetails.length === 0)) {
+      setFormError('没有可验收的服务/项目明细，请先补全需求 projectRows');
+      return;
+    }
+
+    // 物资类前置校验（仅当有 order 时才校验入库）
+    if (form.acceptanceType === 'goods' && form.orderId && goodsPrecheck && !goodsPrecheck.allIn) {
       setFormError(`还有 ${goodsPrecheck.unfinished.length} 项未全部入库，请先去仓库模块完成入库`);
       return;
+    }
+
+    // 物资类：没有订单时至少要填本次验收数量
+    if (form.acceptanceType === 'goods' && !form.orderId) {
+      const hasAnyVerified = form.goodsDetails!.some((r) => (r.verifiedQuantity || 0) > 0);
+      if (!hasAnyVerified) {
+        setFormError('请至少填写一项物资的本次验收数量');
+        return;
+      }
     }
 
     const now = new Date().toISOString();
@@ -854,8 +890,16 @@ function FormBody({
 
         return (
           <div>
+            {/* 订单/明细来源提示 */}
+            {!order && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs mb-3 flex items-center gap-2 text-amber-700">
+                <AlertTriangle className="w-4 h-4" />
+                本需求尚未生成采购订单，当前明细数据来自需求填报，{form.goodsDetails.length > 0 ? '可直接验收' : '请先补全需求明细或去招采执行创建订单'}
+              </div>
+            )}
+
             {/* 仓库前置校验提示 */}
-            {goodsPrecheck && (
+            {goodsPrecheck && order && (
               <div className={`rounded-lg px-3 py-2 text-xs mb-3 flex items-center gap-2 ${
                 goodsPrecheck.allIn ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                   : 'bg-rose-50 text-rose-700 border border-rose-200'
@@ -864,6 +908,14 @@ function FormBody({
                   ? <><Check className="w-4 h-4" /> 全部 {goodsPrecheck.totalItems} 项已入库，可直接验收</>
                   : <><AlertTriangle className="w-4 h-4" /> 还有 {goodsPrecheck.unfinished.length} 项未全部入库（{goodsPrecheck.finishedItems}/{goodsPrecheck.totalItems}），请先去仓库模块完成入库</>
                 }
+              </div>
+            )}
+
+            {/* 无明细兜底提示 */}
+            {form.goodsDetails.length === 0 && (
+              <div className="bg-rose-50 border border-rose-200 rounded-lg px-4 py-6 text-center text-sm text-rose-600 mb-3">
+                <AlertTriangle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                没有可验收的明细数据，请先在需求里补全物资明细，或去招采执行创建采购订单
               </div>
             )}
 
