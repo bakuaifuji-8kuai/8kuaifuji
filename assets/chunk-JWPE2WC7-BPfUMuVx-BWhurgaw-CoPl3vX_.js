@@ -1,0 +1,1 @@
+import{Z as t}from"./index-C38Q3iSC.js";function o(c,e){var l,a,i;c.accDescr&&((l=e.setAccDescription)==null||l.call(e,c.accDescr)),c.accTitle&&((a=e.setAccTitle)==null||a.call(e,c.accTitle)),c.title&&((i=e.setDiagramTitle)==null||i.call(e,c.title))}t(o,"populateCommonDb");export{o};
