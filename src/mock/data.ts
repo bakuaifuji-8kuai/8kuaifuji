@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   Warehouse, Position, ProductCategory, Product, Supplier, SupplierAssessment, Customer,
   Inventory, InboundOrder, InboundApplication, OutboundOrder, CheckOrder, TransferOrder, ReturnOrder, PendingReturn,
   AssetEquipment, ScrappedRecord, DamagedRecord, StockTransaction, Employee, PurchaseOrder,
@@ -2947,6 +2947,8 @@ export const procurementDemands = [
       reason: "部门日常运作及业务开展需求",
       status: "confirm_approved",
       createTime: "2026-09-12",
+      contractId: "HT-002",
+      contractNoSnapshot: "HT-202609002",
       details: [
         {
           id: "DD-002-1",
@@ -3211,6 +3213,8 @@ export const procurementDemands = [
       reason: "部门日常运作及业务开展需求",
       status: "confirm_approved",
       createTime: "2026-09-20",
+      contractId: "HT-005",
+      contractNoSnapshot: "HT-202609005",
       details: [
         {
           id: "DD-010-1",

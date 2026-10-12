@@ -110,8 +110,15 @@ export default function ProcurementInspectionPage() {
 
   // ========== 选中需求后自动派生合同信息（带累计值） ==========
   const relatedContract = useMemo<ContractLedgerWithAccumulated | undefined>(() => {
-    if (!selectedDemand?.contractId) return undefined;
-    const base = contractLedgers.find((c) => c.id === selectedDemand.contractId);
+    if (!selectedDemand) return undefined;
+    // 三级查找：contractId → demandId 反查 → contractNoSnapshot 匹配
+    let base = contractLedgers.find((c) => c.id === selectedDemand.contractId);
+    if (!base && selectedDemand.id) {
+      base = contractLedgers.find((c) => c.demandId === selectedDemand.id);
+    }
+    if (!base && selectedDemand.contractNoSnapshot) {
+      base = contractLedgers.find((c) => c.contractNo === selectedDemand.contractNoSnapshot);
+    }
     if (!base) return undefined;
     // splitContracts 分主合同+补充协议，attachAccumulated 算累计金额/终止日期
     const { primaryList, supplementMap } = splitContracts(contractLedgers);
@@ -759,6 +766,18 @@ function FormBody({
   error: string;
 }) {
   const at = form.acceptanceType!;
+  // DEBUG LOG
+  console.log('[FormBody DEBUG]', {
+    acceptanceType: form.acceptanceType,
+    at,
+    hasContract: !!contract,
+    contractId: contract?.id,
+    contractNo: contract?.contractNo,
+    goodsDetailsLen: form.goodsDetails?.length,
+    serviceDetailsLen: form.serviceDetails?.length,
+    hasOrder: !!order,
+    error,
+  });
 
   // 物资类：更新指定行（patch 模式，verifiedQuantity 自动夹逼到 deliveredQuantity）
   const updateGoodsRow = (idx: number, patch: Partial<GoodsInspectionRow>) => {
