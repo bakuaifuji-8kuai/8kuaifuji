@@ -1970,7 +1970,9 @@ export type NonProcurementContractType =
   | 'engineering_service'        // 工程类-服务
   | 'engineering_goods'          // 工程类-货物（含材料设备）
   | 'non_engineering_service'    // 非工程类-服务
-  | 'non_engineering_goods';     // 非工程类-货物（含材料设备）
+  | 'non_engineering_goods'      // 非工程类-货物（含材料设备）
+  | 'self_host'                  // 自办展合同（会展业务自办展览的合同）
+  | 'joint_host';                // 合办展合同（会展业务合作方合办展览的合同）
 
 // 合同类型（联合类型）
 export type ContractType = ProcurementContractType | NonProcurementContractType;
@@ -2178,6 +2180,8 @@ export const NON_PROCUREMENT_CONTRACT_TYPE_LABELS: Record<NonProcurementContract
   engineering_goods: '工程类-货物（含材料设备）',
   non_engineering_service: '非工程类-服务',
   non_engineering_goods: '非工程类-货物（含材料设备）',
+  self_host: '自办展合同',
+  joint_host: '合办展合同',
 };
 
 export const ARCHIVE_STATUS_LABELS: Record<'not_started' | 'in_progress' | 'archived', string> = {

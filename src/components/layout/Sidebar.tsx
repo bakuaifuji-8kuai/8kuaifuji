@@ -54,6 +54,7 @@ const menuItems: MenuItem[] = [
         { title: '合同审批', path: '/procurement/contract-approval-group', children: [
           { title: '招采类合同', path: '/procurement/contract-procurement' },
           { title: '非招采类合同', path: '/procurement/contract-non-procurement' },
+          { title: '自办展与合办展合同', path: '/procurement/contract-exhibition' },
         ]},
         { title: '合同台账', path: '/procurement/contract' },
         { title: '收入合同台账', path: '/procurement/contract-income' },

@@ -53,6 +53,7 @@ import ContractLedgerPage from "@/pages/Procurement/ContractLedgerPage";
 import ContractIncomeLedgerPage from "@/pages/Procurement/ContractIncomeLedgerPage";
 import ContractProcurementPage from "@/pages/Procurement/ContractProcurementPage";
 import ContractNonProcurementPage from "@/pages/Procurement/ContractNonProcurementPage";
+import ContractExhibitionPage from "@/pages/Procurement/ContractExhibitionPage";
 import ContractArchivePage from "@/pages/Procurement/ContractArchivePage";
 import ContractPerformancePage from "@/pages/Procurement/ContractPerformancePage";
 import EvaluationRecordPage from "@/pages/Procurement/EvaluationRecordPage";
@@ -132,6 +133,7 @@ export default function App() {
           <Route path="procurement/contract-income" element={<ContractIncomeLedgerPage />} />
           <Route path="procurement/contract-procurement" element={<ContractProcurementPage />} />
           <Route path="procurement/contract-non-procurement" element={<ContractNonProcurementPage />} />
+          <Route path="procurement/contract-exhibition" element={<ContractExhibitionPage />} />
           <Route path="procurement/contract-performance" element={<ContractPerformancePage />} />
           <Route path="procurement/contract-eval-record" element={<EvaluationRecordPage defaultType="contract_performance" />} />
           <Route path="procurement/contract-archive" element={<ContractArchivePage />} />

@@ -1,4 +1,4 @@
-﻿import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
@@ -292,9 +292,13 @@ export default function ContractLedgerPage() {
     });
 
     // 按合同类型统计
+    const ALL_CONTRACT_TYPE_LABELS: Record<string, string> = {
+      ...PROCUREMENT_CONTRACT_TYPE_LABELS,
+      ...NON_PROCUREMENT_CONTRACT_TYPE_LABELS,
+    };
     const byContractType: Record<string, { count: number; amount: number }> = {};
     ledgerData.forEach((c) => {
-      const key = c.contractType === 'engineering' ? '工程类' : '非工程类';
+      const key = ALL_CONTRACT_TYPE_LABELS[c.contractType] || c.contractType;
       if (!byContractType[key]) byContractType[key] = { count: 0, amount: 0 };
       byContractType[key].count++;
       byContractType[key].amount += c.accumulatedAmount || 0;
