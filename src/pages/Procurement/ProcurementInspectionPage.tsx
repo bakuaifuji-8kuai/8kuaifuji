@@ -766,18 +766,6 @@ function FormBody({
   error: string;
 }) {
   const at = form.acceptanceType!;
-  // DEBUG LOG
-  console.log('[FormBody DEBUG]', {
-    acceptanceType: form.acceptanceType,
-    at,
-    hasContract: !!contract,
-    contractId: contract?.id,
-    contractNo: contract?.contractNo,
-    goodsDetailsLen: form.goodsDetails?.length,
-    serviceDetailsLen: form.serviceDetails?.length,
-    hasOrder: !!order,
-    error,
-  });
 
   // 物资类：更新指定行（patch 模式，verifiedQuantity 自动夹逼到 deliveredQuantity）
   const updateGoodsRow = (idx: number, patch: Partial<GoodsInspectionRow>) => {
