@@ -17,6 +17,8 @@ import type {
   ProcurementOrder,
   ContractLedger,
   InboundOrder,
+  BatchInventory,
+  StockTransaction,
 } from '@/types';
 
 // ============ 供应商（复用已有名称，避免冲突） ============
@@ -168,7 +170,7 @@ export const INSPECTION_DEMO_DEMANDS: ProcurementDemand[] = [
       { id: 'DD-DEMO-001-3', demandId: 'DEMO-DM-001', productCode: 'SKU-FOLDER', productName: '文件资料夹', unit: '个', quantity: 200, unitPriceExcludingTax: 15, amountExcludingTax: 3000 },
     ],
   },
-  // --- 需求 2：物资类（非工程）- 部分入库场景（不可验收，演示前置校验） ---
+  // --- 需求 2：物资类（非工程）- 已全入库场景（可直接验收） ---
   {
     id: 'DEMO-DM-002',
     demandNo: 'DMP-20261002',
@@ -179,7 +181,7 @@ export const INSPECTION_DEMO_DEMANDS: ProcurementDemand[] = [
     applicant: '李四',
     applicantDept: '市场部',
     applyDate: '2026-09-30',
-    projectName: '市场宣传物料采购（仅部分入库）',
+    projectName: '市场宣传物料采购（已全部入库）',
     estimatedAmount: 30000,
     requiredDeliveryDate: '2026-10-15',
     reason: '行业展会宣传物料准备',
@@ -290,7 +292,7 @@ export const INSPECTION_DEMO_ORDERS: ProcurementOrder[] = [
       { id: 'OD-DEMO-001-3', orderId: 'ORD-DEMO-001', productId: 'SKU-FOLDER', productCode: 'SKU-FOLDER', productName: '文件资料夹', specification: 'A4 双夹', unit: '个', quantity: 200, deliveredQuantity: 200, unitPrice: 15, amount: 3000 },
     ],
   },
-  // 订单 2：物资类（非工程），deliveredQuantity < quantity（部分入库，未全）
+  // 订单 2：物资类（非工程），全量入库（可直接验收）
   {
     id: 'ORD-DEMO-002',
     orderNo: 'CGDD-202610002',
@@ -305,8 +307,8 @@ export const INSPECTION_DEMO_ORDERS: ProcurementOrder[] = [
     creator: '李四',
     handlingDepartment: '市场部',
     details: [
-      { id: 'OD-DEMO-002-1', orderId: 'ORD-DEMO-002', productId: 'SKU-POSTER', productCode: 'SKU-POSTER', productName: '宣传海报 A2', specification: '铜版纸 250g', unit: '张', quantity: 100, deliveredQuantity: 60, unitPrice: 80, amount: 8000 },
-      { id: 'OD-DEMO-002-2', orderId: 'ORD-DEMO-002', productId: 'SKU-BANNER', productCode: 'SKU-BANNER', productName: '展架横幅 3x1.5m', specification: 'PVC 喷绘', unit: '条', quantity: 20, deliveredQuantity: 10, unitPrice: 300, amount: 6000 },
+      { id: 'OD-DEMO-002-1', orderId: 'ORD-DEMO-002', productId: 'SKU-POSTER', productCode: 'SKU-POSTER', productName: '宣传海报 A2', specification: '铜版纸 250g', unit: '张', quantity: 100, deliveredQuantity: 100, unitPrice: 80, amount: 8000 },
+      { id: 'OD-DEMO-002-2', orderId: 'ORD-DEMO-002', productId: 'SKU-BANNER', productCode: 'SKU-BANNER', productName: '展架横幅 3x1.5m', specification: 'PVC 喷绘', unit: '条', quantity: 20, deliveredQuantity: 20, unitPrice: 300, amount: 6000 },
     ],
   },
   // 订单 3：服务项目（无 deliveredQuantity 概念）
@@ -359,40 +361,106 @@ export const INSPECTION_DEMO_ORDERS: ProcurementOrder[] = [
   },
 ];
 
-// ============ 仓库入库单（2 条，关联物资类订单） ============
+// ============ 仓库入库单（2 条，关联物资类订单，均已确认全量入库） ============
 // 入库单 1：对应 ORD-DEMO-001 全部入库
-// 入库单 2：对应 ORD-DEMO-002 部分入库（60/100 海报，10/20 横幅）
-export const INSPECTION_DEMO_INBOUNDS: Partial<InboundOrder>[] = [
+// 入库单 2：对应 ORD-DEMO-002 全部入库（100 海报，20 横幅）
+// 仓库/仓位均取自基础档案：WH001 展会物资仓，POS001-005
+export const INSPECTION_DEMO_INBOUNDS: InboundOrder[] = [
   {
     id: 'INB-DEMO-001',
     orderNo: 'CGDD-202610001',
-    supplierName: SUP_MATERIAL,
-    warehouseName: '总部主仓',
     type: 'purchase',
+    supplierName: SUP_MATERIAL,
+    warehouseId: 'WH001',
+    warehouseName: '展会物资仓',
+    custodian: '仓管员-周八',
+    personInCharge: '周八',
+    inspector: '质检员A',
+    creator: '采购部',
     status: 'confirmed',
+    operator: '仓管员-周八',
+    createTime: '2026-10-03 09:00:00',
+    approveTime: '2026-10-03 14:00:00',
+    approver: '仓储主管',
     confirmTime: '2026-10-03 14:30',
     confirmer: '仓管员-周八',
+    remark: 'Q4 办公物资集中到货入库',
     details: [
-      { id: 'INBD-001-1', inboundOrderId: 'INB-DEMO-001', productId: 'SKU-PAPER-A4', productName: 'A4 复印纸', specification: '70g 500张/包', unit: '包', quantity: 300, positionName: 'A-01-01' },
-      { id: 'INBD-001-2', inboundOrderId: 'INB-DEMO-001', productId: 'SKU-PEN-BALL', productName: '签字笔（黑色）', specification: '0.5mm 12支/盒', unit: '盒', quantity: 50, positionName: 'A-01-02' },
-      { id: 'INBD-001-3', inboundOrderId: 'INB-DEMO-001', productId: 'SKU-FOLDER', productName: '文件资料夹', specification: 'A4 双夹', unit: '个', quantity: 200, positionName: 'A-02-05' },
+      { id: 'INBD-001-1', inboundOrderId: 'INB-DEMO-001', productId: 'SKU-PAPER-A4', productName: 'A4 复印纸', specification: '70g 500张/包', unit: '包', quantity: 300, positionId: 'POS001', positionName: 'A区01号' },
+      { id: 'INBD-001-2', inboundOrderId: 'INB-DEMO-001', productId: 'SKU-PEN-BALL', productName: '签字笔（黑色）', specification: '0.5mm 12支/盒', unit: '盒', quantity: 50, positionId: 'POS002', positionName: 'A区02号' },
+      { id: 'INBD-001-3', inboundOrderId: 'INB-DEMO-001', productId: 'SKU-FOLDER', productName: '文件资料夹', specification: 'A4 双夹', unit: '个', quantity: 200, positionId: 'POS003', positionName: 'A区03号' },
     ],
   },
   {
     id: 'INB-DEMO-002',
     orderNo: 'CGDD-202610002',
-    supplierName: SUP_MATERIAL,
-    warehouseName: '总部主仓',
     type: 'purchase',
+    supplierName: SUP_MATERIAL,
+    warehouseId: 'WH001',
+    warehouseName: '展会物资仓',
+    custodian: '仓管员-周八',
+    personInCharge: '周八',
+    inspector: '质检员A',
+    creator: '采购部',
     status: 'confirmed',
+    operator: '仓管员-周八',
+    createTime: '2026-10-04 09:00:00',
+    approveTime: '2026-10-04 10:00:00',
+    approver: '仓储主管',
     confirmTime: '2026-10-04 10:15',
     confirmer: '仓管员-周八',
+    remark: '市场宣传物料到货入库',
     details: [
-      { id: 'INBD-002-1', inboundOrderId: 'INB-DEMO-002', productId: 'SKU-POSTER', productName: '宣传海报 A2', specification: '铜版纸 250g', unit: '张', quantity: 60, positionName: 'B-03-01' },
-      { id: 'INBD-002-2', inboundOrderId: 'INB-DEMO-002', productId: 'SKU-BANNER', productName: '展架横幅 3x1.5m', specification: 'PVC 喷绘', unit: '条', quantity: 10, positionName: 'B-03-02' },
+      { id: 'INBD-002-1', inboundOrderId: 'INB-DEMO-002', productId: 'SKU-POSTER', productName: '宣传海报 A2', specification: '铜版纸 250g', unit: '张', quantity: 100, positionId: 'POS004', positionName: 'B区01号' },
+      { id: 'INBD-002-2', inboundOrderId: 'INB-DEMO-002', productId: 'SKU-BANNER', productName: '展架横幅 3x1.5m', specification: 'PVC 喷绘', unit: '条', quantity: 20, positionId: 'POS005', positionName: 'B区02号' },
     ],
   },
 ];
+
+// ============ DEMO 批次库存 + 入库流水（与入库单一一对应，保证库存模块数据自洽） ============
+export const INSPECTION_DEMO_BATCH_INVENTORIES: BatchInventory[] = INSPECTION_DEMO_INBOUNDS.flatMap((io) =>
+  io.details.map((d) => ({
+    id: `BIM-${d.id}`,
+    batchNo: `BM${(io.confirmTime || '').slice(0, 10).replace(/-/g, '')}-${d.id.slice(-3)}`,
+    productId: d.productId,
+    productCode: d.productCode,
+    productName: d.productName,
+    specification: d.specification,
+    warehouseId: io.warehouseId,
+    warehouseName: io.warehouseName,
+    positionId: d.positionId || '',
+    positionName: d.positionName,
+    quantity: d.quantity,
+    originalQuantity: d.quantity,
+    inboundOrderId: io.id,
+    inboundOrderNo: io.orderNo,
+    inboundTime: (io.confirmTime || '').slice(0, 10),
+    remark: '验收演示批次',
+  })),
+);
+
+export const INSPECTION_DEMO_STOCK_TXNS: StockTransaction[] = INSPECTION_DEMO_INBOUNDS.flatMap((io) =>
+  io.details.map((d) => ({
+    id: `TXN-${d.id}`,
+    transactionNo: `LS${(io.confirmTime || '').slice(0, 10).replace(/-/g, '')}-${d.id.slice(-3)}`,
+    transactionTime: (io.confirmTime || '').length >= 19 ? io.confirmTime! : `${io.confirmTime}:00`,
+    transactionType: 'inbound' as const,
+    productId: d.productId,
+    productCode: d.productCode || '',
+    productName: d.productName || '',
+    specification: d.specification,
+    warehouseId: io.warehouseId,
+    warehouseName: io.warehouseName || '',
+    positionId: d.positionId || '',
+    positionName: d.positionName || '',
+    quantity: d.quantity,
+    sourceOrderId: io.id,
+    sourceOrderNo: io.orderNo,
+    sourceType: '采购入库',
+    operator: io.confirmer || io.operator,
+    remark: '验收演示数据入库',
+  })),
+);
 
 
 

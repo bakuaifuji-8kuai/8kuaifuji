@@ -1,4 +1,4 @@
-﻿import { useMemo, useState, useEffect } from 'react';
+﻿import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { Search, Check, Package, FileText, Calendar, AlertTriangle, Building2, Hash, Plus, X, ChevronRight, FileCheck, FileX } from 'lucide-react';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
@@ -20,6 +20,12 @@ import type {
 } from '@/types';
 import type { ContractLedgerWithAccumulated } from '@/utils/contractSupplement';
 import { splitContracts, attachAccumulated } from '@/utils/contractSupplement';
+import {
+  PROCUREMENT_CONTRACT_TYPE_LABELS,
+  NON_PROCUREMENT_CONTRACT_TYPE_LABELS,
+  PROCUREMENT_FORMATION_LABELS,
+  NON_PROCUREMENT_FORMATION_LABELS,
+} from '@/types';
 
 // ============ 需求类型 → 验收类型映射 ============
 const GOODS_TYPES: ProcurementDemandType[] = ['material', 'material_non_engineering'];
@@ -752,6 +758,140 @@ function PhasePicker({
 }
 
 // =====================================================================
+// 子组件：关联合同信息卡（物资 / 服务验收单共用，空字段统一显示 -）
+// =====================================================================
+function ContractInfoCard({ contract: c }: { contract: ContractLedgerWithAccumulated }) {
+  const isProc = c.contractNature === 'procurement';
+  const typeLabel = isProc
+    ? PROCUREMENT_CONTRACT_TYPE_LABELS[c.contractType as keyof typeof PROCUREMENT_CONTRACT_TYPE_LABELS]
+    : NON_PROCUREMENT_CONTRACT_TYPE_LABELS[c.contractType as keyof typeof NON_PROCUREMENT_CONTRACT_TYPE_LABELS];
+  const formationLabel = isProc
+    ? PROCUREMENT_FORMATION_LABELS[c.formation as keyof typeof PROCUREMENT_FORMATION_LABELS]
+    : NON_PROCUREMENT_FORMATION_LABELS[c.formation as keyof typeof NON_PROCUREMENT_FORMATION_LABELS];
+
+  const amountWan = c.accumulatedAmount ?? c.amount;
+  const showOriginalAmount = c.accumulatedAmount !== undefined && c.accumulatedAmount !== c.amount;
+  const dash = (v?: string | number | null) => (v === undefined || v === null || v === '' ? '-' : v);
+
+  const descItems = [
+    c.mainContent ? { label: '合同主要内容', value: c.mainContent } : null,
+    c.paymentDescription ? { label: '付款情况说明', value: c.paymentDescription } : null,
+    c.performanceStatus ? { label: '合同履行情况', value: c.performanceStatus } : null,
+    c.remark ? { label: '备注', value: c.remark } : null,
+  ].filter(Boolean) as { label: string; value: string }[];
+
+  const Cell = ({ label, children, span2 }: { label: string; children: ReactNode; span2?: boolean }) => (
+    <div className={span2 ? 'col-span-2' : ''}>
+      <div className="text-slate-500 text-[11px]">{label}</div>
+      <div className="text-slate-700 mt-0.5 text-xs leading-5">{children}</div>
+    </div>
+  );
+
+  return (
+    <div className="bg-indigo-50/60 border border-indigo-100 rounded-lg p-4">
+      {/* 头部：标题 + 性质/类型/形成方式/示范文本标签 */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <Building2 className="w-4 h-4 text-indigo-500" />
+        <span className="text-sm font-medium text-indigo-700">关联合同</span>
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-600 border border-indigo-200">
+          {isProc ? '招采类合同' : '非招采类合同'}
+        </span>
+        {typeLabel && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 border border-purple-200">
+            {typeLabel}
+          </span>
+        )}
+        {formationLabel && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-500/10 text-slate-600 border border-slate-200">
+            {formationLabel}
+          </span>
+        )}
+        {c.isModelText && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 border border-emerald-200">
+            示范文本
+          </span>
+        )}
+      </div>
+
+      {/* 信息网格 4 列 × 4 行 */}
+      <div className="grid grid-cols-4 gap-x-4 gap-y-3 text-xs">
+        <Cell label="合同编号">
+          <span className="font-mono text-indigo-600">{dash(c.contractNo)}</span>
+        </Cell>
+        <Cell label="合同名称" span2>
+          <span title={c.contractName}>{dash(c.contractName)}</span>
+        </Cell>
+        <Cell label="项目名称">
+          <span className="line-clamp-1" title={c.projectName}>{dash(c.projectName)}</span>
+        </Cell>
+
+        <Cell label="合同金额（万元）">
+          <span className="font-semibold text-slate-800">
+            {amountWan !== undefined ? `¥${Number(amountWan).toLocaleString()}` : '-'}
+          </span>
+          {showOriginalAmount && (
+            <span className="ml-1 text-slate-400 text-[10px]">
+              (原始 ¥{Number(c.amount ?? 0).toLocaleString()})
+            </span>
+          )}
+          {c.settlementAmount !== undefined && (
+            <span className="ml-1 text-slate-400 text-[10px]">/ 结算 ¥{Number(c.settlementAmount).toLocaleString()}</span>
+          )}
+        </Cell>
+        <Cell label="已付金额（万元）">
+          {c.paidAmount !== undefined ? `¥${Number(c.paidAmount).toLocaleString()}` : '-'}
+        </Cell>
+        <Cell label="签订日期">
+          {dash(c.signingDate)}
+          {c.winningDate && <span className="ml-1 text-slate-400 text-[10px]">中标 {c.winningDate}</span>}
+        </Cell>
+        <Cell label="生效 / 终止">
+          {dash(c.effectiveDate)} ~ {dash(c.accumulatedTerminationDate || c.terminationDate)}
+        </Cell>
+
+        <Cell label="对方单位">
+          <span className="line-clamp-1" title={c.counterpartyName}>{dash(c.counterpartyName)}</span>
+        </Cell>
+        <Cell label="对方负责人">{dash(c.counterpartyContact)}</Cell>
+        <Cell label="我方经办部门">{dash(c.handlingDepartment)}</Cell>
+        <Cell label="我方经办人">
+          {dash(c.handler)}
+          {c.handlerContact && <span className="ml-1 text-slate-400 text-[10px]">{c.handlerContact}</span>}
+        </Cell>
+
+        <Cell label="需求部门">{dash(c.demandDepartment)}</Cell>
+        <Cell label="立项方式">{dash(c.approvalMethod)}</Cell>
+        <Cell label="合同履行情况">{dash(c.performanceStatus)}</Cell>
+        <Cell label="合同状态">{c.status ? CONTRACT_STATUS_TEXT[c.status] ?? c.status : '-'}</Cell>
+      </div>
+
+      {/* 描述类字段（有才显示） */}
+      {descItems.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-indigo-100 space-y-2">
+          {descItems.map((item) => (
+            <div key={item.label} className="text-xs flex gap-2">
+              <span className="text-slate-500 shrink-0 w-20">{item.label}</span>
+              <span className="text-slate-700 leading-5">{item.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 合同状态中文（仅验收单展示用，取台账常用状态）
+const CONTRACT_STATUS_TEXT: Record<string, string> = {
+  draft: '草稿',
+  pending: '审批中',
+  active: '履行中',
+  approved: '履行中',
+  completed: '已完成',
+  terminated: '已终止',
+  expired: '已到期',
+};
+
+// =====================================================================
 // 子组件：表单主体
 // =====================================================================
 function FormBody({
@@ -790,40 +930,8 @@ function FormBody({
 
   return (
     <div className="space-y-5">
-      {/* 合同摘要卡片 */}
-      {contract && (
-        <div className="bg-indigo-50/60 border border-indigo-100 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Building2 className="w-4 h-4 text-indigo-500" />
-            <span className="text-sm font-medium text-indigo-700">关联合同</span>
-          </div>
-          <div className="grid grid-cols-4 gap-4 text-xs">
-            <div>
-              <div className="text-slate-500">合同编号</div>
-              <div className="font-mono text-indigo-600 mt-0.5">{contract.contractNo}</div>
-            </div>
-            <div>
-              <div className="text-slate-500">合同名称</div>
-              <div className="text-slate-700 mt-0.5 truncate max-w-[180px]">{contract.contractName}</div>
-            </div>
-            <div>
-              <div className="text-slate-500">合同金额</div>
-              <div className="text-slate-700 mt-0.5">
-                ¥{(contract.accumulatedAmount ?? contract.amount ?? 0).toLocaleString()}
-                {contract.accumulatedAmount !== undefined && contract.accumulatedAmount !== contract.amount && (
-                  <span className="ml-1 text-slate-400 text-[10px]">(原始 ¥{(contract.amount ?? 0).toLocaleString()})</span>
-                )}
-              </div>
-            </div>
-            <div>
-              <div className="text-slate-500">生效 / 终止</div>
-              <div className="text-slate-700 mt-0.5">
-                {contract.effectiveDate || '-'} ~ {contract.accumulatedTerminationDate || contract.terminationDate || '-'}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 关联合同信息卡 */}
+      {contract && <ContractInfoCard contract={contract} />}
 
       {/* 基础信息 */}
       <div className="grid grid-cols-4 gap-4 text-sm">

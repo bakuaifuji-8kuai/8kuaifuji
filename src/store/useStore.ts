@@ -37,12 +37,17 @@ import {
   MOCK_CONTRACT_LEDGERS,
   MOCK_CONTRACT_PURCHASE_ORDERS,
   MOCK_SUPPLIERS,
+  MOCK_PROCUREMENT_INBOUNDS,
+  MOCK_PROCUREMENT_BATCH_INVENTORIES,
+  MOCK_PROCUREMENT_STOCK_TXNS,
 } from '@/mock/biddingMockData';
 import {
   INSPECTION_DEMO_CONTRACTS,
   INSPECTION_DEMO_DEMANDS,
   INSPECTION_DEMO_ORDERS,
   INSPECTION_DEMO_INBOUNDS,
+  INSPECTION_DEMO_BATCH_INVENTORIES,
+  INSPECTION_DEMO_STOCK_TXNS,
 } from '@/mock/inspectionDemoData';
 
 /**
@@ -623,8 +628,12 @@ export const useStore = create<WarehouseState>()(
   })),
   addInventory: (inventory) => set((state) => ({ inventories: [...state.inventories, inventory] })),
 
-  // 批次库存（FIFO）
-  batchInventories: mockData.batchInventories as BatchInventory[],
+  // 批次库存（FIFO）：基础 mock + 招采验收演示批次（MOCK + DEMO）
+  batchInventories: [
+    ...(mockData.batchInventories as BatchInventory[]),
+    ...MOCK_PROCUREMENT_BATCH_INVENTORIES,
+    ...INSPECTION_DEMO_BATCH_INVENTORIES,
+  ],
   setBatchInventories: (data) => set({ batchInventories: data }),
   addBatchInventory: (batch) => set((state) => ({ batchInventories: [...state.batchInventories, batch] })),
   updateBatchInventory: (id, data) => set((state) => ({
@@ -634,8 +643,12 @@ export const useStore = create<WarehouseState>()(
     batchInventories: state.batchInventories.filter((b) => b.id !== id)
   })),
 
-  // 入库单
-  inboundOrders: [...(mockData.inboundOrders || []), ...INSPECTION_DEMO_INBOUNDS],
+  // 入库单：基础 mock + 招采链路演示入库单（MOCK + DEMO，均为 confirmed 全量入库）
+  inboundOrders: [
+    ...(mockData.inboundOrders || []),
+    ...MOCK_PROCUREMENT_INBOUNDS,
+    ...INSPECTION_DEMO_INBOUNDS,
+  ],
   setInboundOrders: (data) => set({ inboundOrders: data }),
   addInboundOrder: (order) => set((state) => ({ inboundOrders: [...state.inboundOrders, order] })),
   updateInboundOrder: (id, order) => set((state) => ({
@@ -744,8 +757,12 @@ export const useStore = create<WarehouseState>()(
     damagedRecords: state.damagedRecords.filter((r) => r.id !== id)
   })),
 
-  // 库存流水记录
-  stockTransactions: mockData.stockTransactions as StockTransaction[],
+  // 库存流水记录：基础 mock + 招采验收入库流水（MOCK + DEMO）
+  stockTransactions: [
+    ...(mockData.stockTransactions as StockTransaction[]),
+    ...MOCK_PROCUREMENT_STOCK_TXNS,
+    ...INSPECTION_DEMO_STOCK_TXNS,
+  ],
   setStockTransactions: (data) => set({ stockTransactions: data }),
   addStockTransaction: (transaction) => set((state) => ({ stockTransactions: [transaction, ...state.stockTransactions] })),
 
@@ -1590,7 +1607,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 8,
+      version: 9,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -1784,6 +1801,76 @@ export const useStore = create<WarehouseState>()(
             ];
           }
           console.log('[store migrate v8] 验收演示数据已刷新 — 修正必填字段 + 完整链路');
+        }
+        if (version < 9) {
+          // v8→v9：物资类验收测试数据补齐完整仓库链路
+          // 需求 → 采购订单（明细已入库）→ 入库单(confirmed) → 批次库存 + 入库流水
+          const mockOrderIds = new Set(MOCK_PROCUREMENT_ORDERS.map((o) => o.id));
+          const mockDemandIds = new Set(MOCK_PROCUREMENT_DEMANDS.map((d) => d.id));
+          const mockInboundIds = new Set([
+            ...MOCK_PROCUREMENT_INBOUNDS.map((x) => x.id),
+            ...INSPECTION_DEMO_INBOUNDS.map((x) => x.id),
+          ]);
+          const mockBatchIds = new Set([
+            ...MOCK_PROCUREMENT_BATCH_INVENTORIES.map((x) => x.id),
+            ...INSPECTION_DEMO_BATCH_INVENTORIES.map((x) => x.id),
+          ]);
+          const mockTxnIds = new Set([
+            ...MOCK_PROCUREMENT_STOCK_TXNS.map((x) => x.id),
+            ...INSPECTION_DEMO_STOCK_TXNS.map((x) => x.id),
+          ]);
+          const isDemoOrder = (x: any) => (x?.id || '').toString().startsWith('ORD-DEMO-');
+
+          // 招采需求：MOCK 集合按 id 覆盖刷新（补明细等），用户自建需求保留
+          if (Array.isArray(persistedState.procurementDemands)) {
+            persistedState.procurementDemands = [
+              ...persistedState.procurementDemands.filter((x: any) => !mockDemandIds.has(x.id)),
+              ...MOCK_PROCUREMENT_DEMANDS,
+            ];
+          }
+          // 采购订单：删除旧 MOCK 订单 + DEMO 订单后整体重注（物资类明细补 deliveredQuantity）
+          if (Array.isArray(persistedState.procurementOrders)) {
+            persistedState.procurementOrders = [
+              ...persistedState.procurementOrders.filter((x: any) => !mockOrderIds.has(x.id) && !isDemoOrder(x)),
+              ...MOCK_PROCUREMENT_ORDERS,
+              ...INSPECTION_DEMO_ORDERS,
+            ];
+          }
+          // 入库单：删除旧演示入库单后重注（含 MOCK 新链路 + DEMO 全量入库修正版）
+          if (Array.isArray(persistedState.inboundOrders)) {
+            persistedState.inboundOrders = [
+              ...persistedState.inboundOrders.filter((x: any) => !mockInboundIds.has(x.id)),
+              ...MOCK_PROCUREMENT_INBOUNDS,
+              ...INSPECTION_DEMO_INBOUNDS,
+            ];
+          }
+          // 批次库存：重注演示批次
+          if (Array.isArray(persistedState.batchInventories)) {
+            persistedState.batchInventories = [
+              ...persistedState.batchInventories.filter((x: any) => !mockBatchIds.has(x.id)),
+              ...MOCK_PROCUREMENT_BATCH_INVENTORIES,
+              ...INSPECTION_DEMO_BATCH_INVENTORIES,
+            ];
+          } else {
+            persistedState.batchInventories = [
+              ...MOCK_PROCUREMENT_BATCH_INVENTORIES,
+              ...INSPECTION_DEMO_BATCH_INVENTORIES,
+            ];
+          }
+          // 入库流水：重注演示流水
+          if (Array.isArray(persistedState.stockTransactions)) {
+            persistedState.stockTransactions = [
+              ...persistedState.stockTransactions.filter((x: any) => !mockTxnIds.has(x.id)),
+              ...MOCK_PROCUREMENT_STOCK_TXNS,
+              ...INSPECTION_DEMO_STOCK_TXNS,
+            ];
+          } else {
+            persistedState.stockTransactions = [
+              ...MOCK_PROCUREMENT_STOCK_TXNS,
+              ...INSPECTION_DEMO_STOCK_TXNS,
+            ];
+          }
+          console.log('[store migrate v9] 物资类验收仓库链路已补齐 — 订单入库数/入库单/批次/流水');
         }
         return persistedState;
       },

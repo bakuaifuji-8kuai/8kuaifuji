@@ -18,6 +18,9 @@ import type {
   ContractPurchaseOrderDetail,
   ContractPurchaseOrderStatus,
   Supplier,
+  InboundOrder,
+  BatchInventory,
+  StockTransaction,
 } from '@/types';
 
 // ======== 时间戳工具 ========
@@ -373,6 +376,11 @@ export const MOCK_BIDDINGS: Bidding[] = [
     awardTime: mkTime(-9, 14),
     creator: '采购部',
     createTime: mkTime(-12, 9),
+    items: [
+      mkCatalogItem('五金配件采购', '不锈钢内六角螺栓 M8×40', 500, '套', 2.5, 0, '固定单价'),
+      mkCatalogItem('五金配件采购', '重型不锈钢合页 4寸', 120, '个', 18, 0, '固定单价'),
+      mkCatalogItem('五金配件采购', '304不锈钢膨胀螺栓 M10×80', 300, '套', 6, 0, '固定单价'),
+    ],
     quotes: [],
   },
   {
@@ -1481,7 +1489,22 @@ const mkOrderNo = (b: Bidding, seq: number): string => {
 
 const COMPLETED_BIDDINGS = MOCK_BIDDINGS.filter(b => b.status === 'completed' || b.status === 'evaluated');
 
-export const MOCK_PROCUREMENT_ORDERS: ProcurementOrder[] = COMPLETED_BIDDINGS.map((b, i) => {
+// 物资类需求（与验收页 GOODS_TYPES 保持一致）
+const GOODS_DEMAND_TYPES: ProcurementDemandType[] = ['material', 'material_non_engineering'];
+
+// 判断 bidding 对应的需求是否为「已确认的物资类」（会出现在待验收列表里）
+const isGoodsBidding = (b: Bidding): boolean => {
+  const d = MOCK_PROCUREMENT_DEMANDS.find((x) => x.id === `DEM-${b.id}`);
+  return !!d && d.status === 'confirm_approved' && GOODS_DEMAND_TYPES.includes(d.demandType);
+};
+
+// 造单范围：已完成/已评标的（原逻辑） + 已确认物资类但仍在 published/bidding 阶段的（补齐链路供验收演示）
+const ORDER_BIDDINGS = [
+  ...COMPLETED_BIDDINGS,
+  ...MOCK_BIDDINGS.filter((b) => !COMPLETED_BIDDINGS.includes(b) && isGoodsBidding(b)),
+];
+
+export const MOCK_PROCUREMENT_ORDERS: ProcurementOrder[] = ORDER_BIDDINGS.map((b, i) => {
   const finishTime = b.awardTime || b.createTime || mkTime(-10);
   const createOffset = 1 + (i % 3); // awardTime 后 1-3 天
   
@@ -1492,7 +1515,12 @@ export const MOCK_PROCUREMENT_ORDERS: ProcurementOrder[] = COMPLETED_BIDDINGS.ma
   const status: ProcurementOrderStatus = b.status === 'completed' ? 'completed' : 'approved';
   
   const total = b.contractAmount || b.totalAmountIncludingTax || 50000;
-  
+
+  // 物资类订单：明细全部已入库（仓库 confirmed 入库单在下方 MOCK_PROCUREMENT_INBOUNDS 统一生成）
+  const details = mkOrderDetails(b).map((d) =>
+    isGoodsBidding(b) ? { ...d, deliveredQuantity: d.quantity } : d,
+  );
+
   return {
     id: `PO-${b.id}`,
     orderNo: mkOrderNo(b, i + 1),
@@ -1513,9 +1541,132 @@ export const MOCK_PROCUREMENT_ORDERS: ProcurementOrder[] = COMPLETED_BIDDINGS.ma
     contactPerson: b.winningSupplierId ? '' : undefined,
     contactPhone: '',
     completionTime: status === 'completed' ? mkTime(createOffset + 15, 18) : undefined,
-    details: mkOrderDetails(b),
+    details,
   };
 });
+
+// =====================================================================
+//  MOCK_PROCUREMENT_INBOUNDS —— 物资类订单的仓库入库单（全部 confirmed 全量入库）
+//  业务链路：需求(confirm_approved) → 采购订单(明细已入库) → 入库单(confirmed)
+//  验收页通过 inboundOrders.orderNo + detail.productId 反查「入库来源 / 仓库已入库」
+// =====================================================================
+
+const INBOUND_WAREHOUSE = { id: 'WH001', name: '展会物资仓' };
+const INBOUND_POSITIONS = [
+  { id: 'POS001', name: 'A区01号' },
+  { id: 'POS002', name: 'A区02号' },
+  { id: 'POS003', name: 'A区03号' },
+  { id: 'POS004', name: 'B区01号' },
+  { id: 'POS005', name: 'B区02号' },
+];
+
+// 仅给「物资类 + 有明细 + 有入库数量」的订单造入库单
+const GOODS_ORDERS_FOR_INBOUND = MOCK_PROCUREMENT_ORDERS.filter(
+  (o) => o.details.length > 0 && o.details.some((d) => (d.deliveredQuantity ?? 0) > 0),
+);
+
+export const MOCK_PROCUREMENT_INBOUNDS: InboundOrder[] = GOODS_ORDERS_FOR_INBOUND.map((o, oi) => {
+  const confirmTs = mkTime(-1 - (oi % 7), 10 + (oi % 8)); // 过去 1-7 天内确认入库
+  return {
+    id: `INB-MOCK-${oi + 1}`,
+    orderNo: o.orderNo,
+    type: 'purchase',
+    supplierId: o.supplierId,
+    supplierName: o.supplierName,
+    warehouseId: INBOUND_WAREHOUSE.id,
+    warehouseName: INBOUND_WAREHOUSE.name,
+    custodian: '仓管员-周八',
+    personInCharge: '周八',
+    inspector: '质检员A',
+    salesperson: o.handler,
+    creator: '采购部',
+    status: 'confirmed',
+    operator: '仓管员-周八',
+    createTime: confirmTs,
+    approveTime: confirmTs,
+    approver: '仓储主管',
+    confirmTime: confirmTs,
+    confirmer: '仓管员-周八',
+    remark: '招采验收演示数据：随采购订单自动生成的采购入库单',
+    details: o.details.map((d, di) => {
+      const pos = INBOUND_POSITIONS[di % INBOUND_POSITIONS.length];
+      return {
+        id: `INBD-MOCK-${oi + 1}-${di + 1}`,
+        inboundOrderId: `INB-MOCK-${oi + 1}`,
+        productId: d.productId,
+        productCode: d.productCode,
+        productName: d.productName,
+        specification: d.specification,
+        unit: d.unit,
+        quantity: d.deliveredQuantity ?? d.quantity,
+        positionId: pos.id,
+        positionName: pos.name,
+      };
+    }),
+  };
+});
+
+// 批次库存（与入库单一一对应，保证「入库管理 → 库存查询」数据自洽）
+export const MOCK_PROCUREMENT_BATCH_INVENTORIES: BatchInventory[] =
+  MOCK_PROCUREMENT_INBOUNDS.flatMap((io, oiIdx) =>
+    io.details.map((d, di) => {
+      const dateCompact = (io.confirmTime || io.createTime).slice(0, 10).replace(/-/g, '');
+      const orderSeq = String(oiIdx + 1).padStart(2, '0');
+      const seq = String(di + 1).padStart(3, '0');
+      return {
+        id: `BIM-MOCK-${io.id}-${di + 1}`,
+        batchNo: `BM${dateCompact}${orderSeq}${seq}`,
+        productId: d.productId,
+        productCode: d.productCode,
+        productName: d.productName,
+        specification: d.specification,
+        warehouseId: io.warehouseId,
+        warehouseName: io.warehouseName,
+        positionId: d.positionId || '',
+        positionName: d.positionName,
+        quantity: d.quantity,
+        originalQuantity: d.quantity,
+        inboundOrderId: io.id,
+        inboundOrderNo: io.orderNo,
+        inboundTime: (io.confirmTime || io.createTime).slice(0, 10),
+        remark: '招采验收演示批次',
+      };
+    }),
+  );
+
+// 入库库存流水（与入库单明细一一对应）
+export const MOCK_PROCUREMENT_STOCK_TXNS: StockTransaction[] =
+  MOCK_PROCUREMENT_INBOUNDS.flatMap((io, oiIdx) =>
+    io.details.map((d, di) => {
+      const dateCompact = (io.confirmTime || io.createTime).slice(0, 10).replace(/-/g, '');
+      const orderSeq = String(oiIdx + 1).padStart(2, '0');
+      const seq = String(di + 1).padStart(3, '0');
+      const batch = MOCK_PROCUREMENT_BATCH_INVENTORIES.find(
+        (b) => b.inboundOrderId === io.id && b.productId === d.productId,
+      );
+      return {
+        id: `TXN-MOCK-${io.id}-${di + 1}`,
+        transactionNo: `LS${dateCompact}${orderSeq}${seq}`,
+        transactionTime: io.confirmTime || io.createTime,
+        transactionType: 'inbound' as const,
+        productId: d.productId,
+        productCode: d.productCode || '',
+        productName: d.productName || '',
+        specification: d.specification,
+        warehouseId: io.warehouseId,
+        warehouseName: io.warehouseName || '',
+        positionId: d.positionId || '',
+        positionName: d.positionName || '',
+        quantity: d.quantity,
+        sourceOrderId: io.id,
+        sourceOrderNo: io.orderNo,
+        sourceType: '采购入库',
+        batchNo: batch?.batchNo,
+        operator: io.confirmer || io.operator,
+        remark: '招采验收演示数据入库',
+      };
+    }),
+  );
 
 // =====================================================================
 //  MOCK_PROCUREMENT_INSPECTIONS —— 仅给 completed 的订单创建
