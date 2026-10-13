@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState, useEffect, type ReactNode } from 'react';
-import { Search, Check, Package, FileText, Calendar, AlertTriangle, Building2, Hash, Plus, X, ChevronRight, FileCheck, FileX } from 'lucide-react';
+import { Search, Check, Package, FileText, Calendar, AlertTriangle, Building2, Hash, Plus, X, ChevronRight, FileCheck, FileX, Paperclip } from 'lucide-react';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
@@ -89,6 +89,14 @@ const ACCEPTANCE_TYPE_LABEL: Record<InspectionAcceptanceType, string> = {
 const PHASE_LABEL: Record<InspectionPhase, string> = {
   preliminary: '初验',
   final: '终验',
+};
+
+// 服务/项目节点完成状态（详情展示用）
+const COMPLETION_STATUS_META: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'info' }> = {
+  not_started: { label: '未开始', variant: 'default' },
+  in_progress: { label: '进行中', variant: 'info' },
+  completed: { label: '已完成', variant: 'success' },
+  delayed: { label: '延期', variant: 'warning' },
 };
 
 // ============ 需求类型 label ============
@@ -625,7 +633,7 @@ export default function ProcurementInspectionPage() {
 
       {/* ========== 详情弹窗 ========== */}
       {viewVisible && viewItem && (
-        <Modal open={viewVisible} title={`验收单详情 - ${viewItem.inspectionNo}`} size="lg" onClose={() => { setViewVisible(false); setViewItem(null); }}
+        <Modal open={viewVisible} title={`验收单详情 - ${viewItem.inspectionNo}`} size="xl" onClose={() => { setViewVisible(false); setViewItem(null); }}
           footer={<DefaultButton onClick={() => { setViewVisible(false); setViewItem(null); }}>关闭</DefaultButton>}>
           <ViewBody inspection={viewItem} />
         </Modal>
@@ -1355,38 +1363,96 @@ function FormBody({
 // 子组件：查看详情
 // =====================================================================
 function ViewBody({ inspection }: { inspection: ProcurementInspection }) {
-  const at = inspection.acceptanceType;
   const contractLedgers = useStore((s) => s.contractLedgers);
   const procurementOrders = useStore((s) => s.procurementOrders);
+  const contractPurchaseOrders = useStore((s) => s.contractPurchaseOrders);
+  const procurementDemands = useStore((s) => s.procurementDemands);
 
-  // 详情页关联合同：验收单快照 → 需求反查 → 关联订单兜底
+  // ========== 关联订单：采购订单 ∪ 合同采购订单（CPQ 开头）双源反查 ==========
   const relatedOrder = inspection.orderId || inspection.orderNo
     ? procurementOrders.find((o) => o.id === inspection.orderId || o.orderNo === inspection.orderNo)
     : undefined;
+  const relatedCpo = inspection.orderId || inspection.orderNo
+    ? contractPurchaseOrders.find((o) => o.id === inspection.orderId || o.orderNo === inspection.orderNo)
+    : undefined;
+
+  // ========== 关联需求：验收单 → 订单 → 合同采购订单 ==========
+  const relatedDemandId = inspection.demandId || relatedOrder?.demandId || relatedCpo?.procurementDemandId;
+  const relatedDemand = relatedDemandId
+    ? procurementDemands.find((d) => d.id === relatedDemandId)
+    : undefined;
+
+  // ========== 关联合同：验收单快照 → 需求反查 → 订单 / 合同采购订单兜底 ==========
   const relatedContract = resolveInspectionContract(contractLedgers, {
     contractId: inspection.contractId,
-    demandId: inspection.demandId,
+    demandId: relatedDemandId,
     contractNoSnapshot: inspection.contractNo,
-    orderContractId: relatedOrder?.contractId,
-    orderContractNo: relatedOrder?.contractNo,
+    orderContractId: relatedOrder?.contractId || relatedCpo?.contractId,
+    orderContractNo: relatedOrder?.contractNo || relatedCpo?.contractNo,
   });
+
+  // ========== 验收类型：快照缺失时按需求/订单推断（兼容历史数据） ==========
+  const at: InspectionAcceptanceType | undefined = inspection.acceptanceType
+    || (relatedDemand ? getAcceptanceType(relatedDemand.demandType) : undefined)
+    || (relatedCpo?.projectType ? 'service' : undefined)
+    || (inspection.goodsDetails?.length ? 'goods' : undefined)
+    || (inspection.serviceDetails?.length ? 'service' : undefined);
+
+  // 历史版本验收单明细（orderedQuantity/inspectedQuantity/passQuantity/isQualified 旧结构）
+  const legacyDetails: Array<Record<string, any>> = (inspection as any).details || [];
+
+  // 快照缺失字段统一用反查结果兜底
+  const demandNo = inspection.demandNo || relatedOrder?.demandNo || relatedCpo?.procurementDemandNo || relatedDemand?.demandNo;
+  const contractNo = inspection.contractNo || relatedContract?.contractNo || relatedCpo?.contractNo;
+  const contractName = inspection.contractName || relatedContract?.contractName || relatedCpo?.contractName;
+  const supplierName = inspection.supplierName || relatedOrder?.supplierName || relatedCpo?.supplierName;
+  const projectName = relatedDemand?.projectName || relatedCpo?.projectName;
+
+  const InfoItem = ({ label, children, span2 }: { label: string; children: ReactNode; span2?: boolean }) => (
+    <div className={span2 ? 'col-span-2' : ''}>
+      <div className="text-slate-400 text-[11px] mb-0.5">{label}</div>
+      <div className="text-slate-700 text-xs leading-5 break-all">{children || <span className="text-slate-300">-</span>}</div>
+    </div>
+  );
 
   return (
     <div className="space-y-4 text-sm">
       {/* 关联合同信息卡（物资 / 服务验收单共用） */}
       {relatedContract && <ContractInfoCard contract={relatedContract} />}
 
-      <div className="grid grid-cols-4 gap-3">
-        <div><span className="text-slate-400">验收编号：</span><span className="font-mono text-indigo-600">{inspection.inspectionNo}</span></div>
-        <div><span className="text-slate-400">类型：</span>{ACCEPTANCE_TYPE_LABEL[at]}{inspection.phase && ` · ${PHASE_LABEL[inspection.phase]}`}</div>
-        <div><span className="text-slate-400">状态：</span>{STATUS_BADGE[inspection.status].label}</div>
-        <div><span className="text-slate-400">验收日期：</span>{inspection.inspectionDate}</div>
-        <div><span className="text-slate-400">需求编号：</span>{inspection.demandNo || '-'}</div>
-        <div><span className="text-slate-400">订单编号：</span>{inspection.orderNo || '-'}</div>
-        <div><span className="text-slate-400">合同编号：</span>{inspection.contractNo || '-'}</div>
-        <div><span className="text-slate-400">供应商：</span>{inspection.supplierName || '-'}</div>
+      {/* ========== 区块一：验收单信息 ========== */}
+      <div className="border border-slate-100 rounded-lg overflow-hidden">
+        <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-600 flex items-center gap-2">
+          <FileText className="w-3.5 h-3.5 text-indigo-500" /> 验收单信息
+        </div>
+        <div className="p-4">
+          {/* 编号 + 标签行 */}
+          <div className="flex items-center gap-2 flex-wrap mb-3 pb-3 border-b border-slate-100">
+            <span className="font-mono text-sm text-indigo-600 font-semibold">{inspection.inspectionNo}</span>
+            {at && <Badge variant={at === 'goods' ? 'info' : 'primary'}>{ACCEPTANCE_TYPE_LABEL[at]}</Badge>}
+            {inspection.phase && (
+              <Badge variant={inspection.phase === 'final' ? 'warning' : 'default'}>{PHASE_LABEL[inspection.phase]}</Badge>
+            )}
+            <Badge variant={STATUS_BADGE[inspection.status].variant}>{STATUS_BADGE[inspection.status].label}</Badge>
+          </div>
+          {/* 信息网格 */}
+          <div className="grid grid-cols-4 gap-x-4 gap-y-3">
+            <InfoItem label="验收日期">{inspection.inspectionDate}</InfoItem>
+            <InfoItem label="验收人">{inspection.inspector}</InfoItem>
+            <InfoItem label="验收部门">{inspection.inspectorDept}</InfoItem>
+            <InfoItem label="供应商">{supplierName}</InfoItem>
+            <InfoItem label="需求编号">{demandNo && <span className="font-mono text-indigo-600">{demandNo}</span>}</InfoItem>
+            <InfoItem label="项目名称">{projectName}</InfoItem>
+            <InfoItem label="订单编号">{inspection.orderNo && <span className="font-mono">{inspection.orderNo}</span>}</InfoItem>
+            <InfoItem label="合同编号">{contractNo && <span className="font-mono">{contractNo}</span>}</InfoItem>
+            <InfoItem label="合同名称" span2>{contractName}</InfoItem>
+            <InfoItem label="审批时间">{inspection.approveTime}</InfoItem>
+            <InfoItem label="审批人">{inspection.approver}</InfoItem>
+          </div>
+        </div>
       </div>
 
+      {/* ========== 区块二：物资类验收明细 ========== */}
       {at === 'goods' && inspection.goodsDetails && (() => {
         const totalDemand = inspection.goodsDetails.reduce((s, r) => s + r.demandQuantity, 0);
         const totalDelivered = inspection.goodsDetails.reduce((s, r) => s + r.deliveredQuantity, 0);
@@ -1402,7 +1468,12 @@ function ViewBody({ inspection }: { inspection: ProcurementInspection }) {
           fail: { label: '❌ 不通过', variant: 'danger' },
         };
         return (
-          <div>
+          <div className="border border-slate-100 rounded-lg overflow-hidden">
+            <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-600 flex items-center gap-2">
+              <Package className="w-3.5 h-3.5 text-indigo-500" /> 物资验收明细
+              <span className="ml-1 text-slate-400 font-normal">共 {inspection.goodsDetails.length} 项</span>
+            </div>
+            <div className="p-4">
             {/* 汇总条 */}
             <div className="grid grid-cols-5 gap-2 mb-3 text-xs">
               <div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
@@ -1432,8 +1503,8 @@ function ViewBody({ inspection }: { inspection: ProcurementInspection }) {
               </div>
             </div>
 
-            <div className="border border-slate-100 rounded-lg overflow-hidden">
-              <table className="w-full">
+            <div className="border border-slate-200 rounded-lg overflow-x-auto">
+              <table className="w-full text-xs min-w-[860px]">
                 <thead className="bg-slate-50 text-xs text-slate-500">
                   <tr>
                     <th className="text-left px-3 py-2">品名规格</th>
@@ -1477,48 +1548,136 @@ function ViewBody({ inspection }: { inspection: ProcurementInspection }) {
                 </tbody>
               </table>
             </div>
+            </div>
           </div>
         );
       })()}
 
-      {at === 'service' && inspection.serviceDetails && (
-        <div className="space-y-2">
-          {inspection.serviceDetails.map((row) => (
-            <div key={row.id} className="border border-slate-100 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-medium">{row.milestone}</span>
-                <Badge variant={
-                  row.conclusion === 'pass' ? 'success' :
-                  row.conclusion === 'conditional_pass' ? 'warning' : 'danger'
-                } >
-                  {row.conclusion === 'pass' ? '通过' : row.conclusion === 'conditional_pass' ? '附条件通过' : '不通过'}
-                </Badge>
-              </div>
-              <div className="text-xs text-slate-500">合同要求：{row.contractRequirement}</div>
-              {row.completionDescription && <div className="text-xs text-slate-600 mt-1">完成情况：{row.completionDescription}</div>}
-              <div className="text-xs text-slate-400 mt-1">
-                状态：{row.completionStatus} | 完成度：{row.completionRate}%
-              </div>
+      {/* ========== 区块三：服务/项目类验收明细 ========== */}
+      {at === 'service' && inspection.serviceDetails && inspection.serviceDetails.length > 0 && (
+        <div className="border border-slate-100 rounded-lg overflow-hidden">
+          <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-600 flex items-center gap-2">
+            <FileCheck className="w-3.5 h-3.5 text-indigo-500" /> 服务/项目验收明细
+            <span className="ml-1 text-slate-400 font-normal">共 {inspection.serviceDetails.length} 个节点</span>
+          </div>
+          <div className="p-4 space-y-3">
+            {inspection.serviceDetails.map((row, idx) => {
+              const rate = Math.max(0, Math.min(100, Number(row.completionRate ?? 0)));
+              const statusMeta = COMPLETION_STATUS_META[row.completionStatus] || { label: row.completionStatus || '-', variant: 'default' as const };
+              return (
+                <div key={row.id} className="border border-slate-200 rounded-lg p-3 bg-white">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-5 h-5 shrink-0 rounded-full bg-indigo-100 text-indigo-600 text-[11px] flex items-center justify-center font-semibold">{idx + 1}</span>
+                      <span className="font-medium text-slate-800 text-sm truncate">{row.milestone}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Badge variant={statusMeta.variant}>{statusMeta.label}</Badge>
+                      <Badge variant={
+                        row.conclusion === 'pass' ? 'success' :
+                        row.conclusion === 'conditional_pass' ? 'warning' : 'danger'
+                      }>
+                        {row.conclusion === 'pass' ? '通过' : row.conclusion === 'conditional_pass' ? '附条件通过' : '不通过'}
+                      </Badge>
+                    </div>
+                  </div>
+                  {/* 完成度进度条 */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[11px] text-slate-400 shrink-0">完成度</span>
+                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${rate >= 100 ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-indigo-500 to-purple-500'}`}
+                        style={{ width: `${rate}%` }}
+                      />
+                    </div>
+                    <span className={`text-xs font-semibold w-10 text-right ${rate >= 100 ? 'text-emerald-600' : 'text-indigo-600'}`}>{rate}%</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                    <div className="col-span-2 flex gap-2">
+                      <span className="text-slate-400 shrink-0">合同要求：</span>
+                      <span className="text-slate-600 leading-5">{row.contractRequirement || '-'}</span>
+                    </div>
+                    {row.completionDescription && (
+                      <div className="col-span-2 flex gap-2">
+                        <span className="text-slate-400 shrink-0">完成情况：</span>
+                        <span className="text-slate-700 leading-5 bg-slate-50 rounded px-2 py-1 flex-1">{row.completionDescription}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ========== 历史版本验收明细（旧结构 details：下单/验收/合格/不合格/质检结论） ========== */}
+      {(!inspection.goodsDetails || inspection.goodsDetails.length === 0)
+        && (!inspection.serviceDetails || inspection.serviceDetails.length === 0)
+        && legacyDetails.length > 0 && (
+        <div className="border border-slate-100 rounded-lg overflow-hidden">
+          <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-600 flex items-center gap-2">
+            <Package className="w-3.5 h-3.5 text-indigo-500" /> 验收明细
+            <span className="ml-1 text-slate-400 font-normal">共 {legacyDetails.length} 项</span>
+          </div>
+          <div className="p-4">
+            <div className="border border-slate-200 rounded-lg overflow-x-auto">
+              <table className="w-full text-xs min-w-[720px]">
+                <thead className="bg-slate-50 text-slate-500">
+                  <tr>
+                    <th className="text-left px-3 py-2">物资编码</th>
+                    <th className="text-left px-3 py-2">品名</th>
+                    <th className="px-2 py-2">单位</th>
+                    <th className="px-2 py-2">下单数</th>
+                    <th className="px-2 py-2">验收数</th>
+                    <th className="px-2 py-2">合格</th>
+                    <th className="px-2 py-2">不合格</th>
+                    <th className="px-2 py-2">质检结论</th>
+                    <th className="px-2 py-2">备注</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {legacyDetails.map((row, i) => (
+                    <tr key={row.id || i} className="border-t border-slate-100 align-top">
+                      <td className="px-3 py-2 font-mono text-slate-500">{row.productCode || '-'}</td>
+                      <td className="px-3 py-2 text-slate-700">{row.productName || '-'}</td>
+                      <td className="text-center px-3 py-2">{row.unit || '-'}</td>
+                      <td className="text-center px-3 py-2">{row.orderedQuantity ?? '-'}</td>
+                      <td className="text-center px-3 py-2 font-medium text-emerald-600">{row.inspectedQuantity ?? '-'}</td>
+                      <td className="text-center px-3 py-2 text-emerald-600">{row.passQuantity ?? '-'}</td>
+                      <td className="text-center px-3 py-2 text-rose-500">{row.failQuantity ?? '-'}</td>
+                      <td className="text-center px-2 py-2">
+                        {row.isQualified === true ? <Badge variant="success">合格</Badge>
+                          : row.isQualified === false ? <Badge variant="danger">不合格</Badge>
+                          : <span className="text-slate-300">-</span>}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600 max-w-[180px]">{row.remark || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))}
+          </div>
         </div>
       )}
 
       {/* 验收附件（只读）：现场照片 / 盖章资料 / 其他 */}
       {inspection.attachments && inspection.attachments.length > 0 && (
-        <div className="border border-slate-100 rounded-lg p-3 bg-slate-50/40">
-          <div className="text-slate-700 font-medium text-sm mb-2">
-            验收附件
-            <span className="ml-2 text-xs text-slate-400">共 {inspection.attachments.length} 个</span>
+        <div className="border border-slate-100 rounded-lg overflow-hidden">
+          <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-600 flex items-center gap-2">
+            <Paperclip className="w-3.5 h-3.5 text-indigo-500" /> 验收附件
+            <span className="ml-1 text-slate-400 font-normal">共 {inspection.attachments.length} 个</span>
           </div>
-          <InspectionAttachments attachments={inspection.attachments} readOnly />
+          <div className="p-4">
+            <InspectionAttachments attachments={inspection.attachments} readOnly />
+          </div>
         </div>
       )}
 
       {inspection.remark && (
-        <div>
-          <div className="text-slate-400 mb-1 text-xs">备注</div>
-          <div className="bg-slate-50 rounded-lg p-3 text-slate-700">{inspection.remark}</div>
+        <div className="border border-slate-100 rounded-lg overflow-hidden">
+          <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-600">整体备注</div>
+          <div className="p-4 text-slate-700 text-xs leading-5">{inspection.remark}</div>
         </div>
       )}
     </div>
