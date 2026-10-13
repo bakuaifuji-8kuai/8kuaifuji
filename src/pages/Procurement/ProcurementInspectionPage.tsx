@@ -790,20 +790,6 @@ function FormBody({
 
   return (
     <div className="space-y-5">
-      {/* 🔴 DEBUG 面板：验收弹窗诊断 */}
-      <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs font-mono text-red-700">
-        <div className="font-bold mb-1">🔴 DEBUG 诊断面板</div>
-        <div>acceptanceType(at): {at}</div>
-        <div>contract prop: {contract ? `✅ 有值 (id=${contract.id}, no=${contract.contractNo})` : '❌ undefined'}</div>
-        <div>goodsDetails: {form.goodsDetails ? `✅ 数组长度=${form.goodsDetails.length}` : '❌ undefined'}</div>
-        <div>serviceDetails: {form.serviceDetails ? `✅ 数组长度=${form.serviceDetails.length}` : '❌ undefined'}</div>
-        <div>demand.details?.length: {demand.details?.length || 0}</div>
-        <div>form.contractId: {form.contractId || '(空)'}</div>
-        <div>form.contractNo: {form.contractNo || '(空)'}</div>
-        <div>contract 渲染条件 contract &&: {String(!!contract)}</div>
-        <div>明细渲染条件 at==='goods' && form.goodsDetails &&: {String(at === 'goods' && !!form.goodsDetails)}</div>
-      </div>
-
       {/* 合同摘要卡片 */}
       {contract && (
         <div className="bg-indigo-50/60 border border-indigo-100 rounded-lg p-4">
