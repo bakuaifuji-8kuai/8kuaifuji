@@ -1607,7 +1607,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 9,
+      version: 10,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -1871,6 +1871,51 @@ export const useStore = create<WarehouseState>()(
             ];
           }
           console.log('[store migrate v9] 物资类验收仓库链路已补齐 — 订单入库数/入库单/批次/流水');
+        }
+        if (version < 10) {
+          // v9→v10：修复验收单关联合同卡断链
+          // procurementDemoData 覆盖 data.ts 数组时丢失了 DEM-002/DEM-010 的合同关联，
+          // 合同 HT-002/HT-005 也缺少 demandId 反查字段，导致（尤其服务类）验收单不显示合同明细卡。
+          const DEMAND_CONTRACT_LINKS: Record<string, { demandNo: string; contractId: string; contractNo: string }> = {
+            'DEM-002': { demandNo: 'DMP-20260902', contractId: 'HT-002', contractNo: 'HT-202609002' },
+            'DEM-010': { demandNo: 'DMP-20260910', contractId: 'HT-005', contractNo: 'HT-202609005' },
+          };
+          if (Array.isArray(persistedState.procurementDemands)) {
+            const dArr: any[] = persistedState.procurementDemands;
+            Object.entries(DEMAND_CONTRACT_LINKS).forEach(([id, link]) => {
+              const idx = dArr.findIndex((x: any) => x?.id === id);
+              if (idx >= 0) {
+                if (dArr[idx].demandNo === link.demandNo) {
+                  if (!dArr[idx].contractId) dArr[idx].contractId = link.contractId;
+                  if (!dArr[idx].contractNoSnapshot) dArr[idx].contractNoSnapshot = link.contractNo;
+                }
+              } else {
+                // 历史迁移路径缺失该种子需求 → 从最新 mock 补入
+                const seed = (mockData.procurementDemands || []).find((x: any) => x.id === id && x.demandNo === link.demandNo);
+                if (seed) dArr.push(seed);
+              }
+            });
+          }
+          const CONTRACT_DEMAND_LINKS: Record<string, { contractNo: string; demandId: string; demandNo: string }> = {
+            'HT-002': { contractNo: 'HT-202609002', demandId: 'DEM-002', demandNo: 'DMP-20260902' },
+            'HT-005': { contractNo: 'HT-202609005', demandId: 'DEM-010', demandNo: 'DMP-20260910' },
+          };
+          if (Array.isArray(persistedState.contractLedgers)) {
+            const cArr: any[] = persistedState.contractLedgers;
+            Object.entries(CONTRACT_DEMAND_LINKS).forEach(([id, link]) => {
+              const idx = cArr.findIndex((x: any) => x?.id === id);
+              if (idx >= 0) {
+                if (cArr[idx].contractNo === link.contractNo) {
+                  if (!cArr[idx].demandId) cArr[idx].demandId = link.demandId;
+                  if (!cArr[idx].demandNo) cArr[idx].demandNo = link.demandNo;
+                }
+              } else {
+                const seed = (mockData.contractLedgers || []).find((x: any) => x.id === id && x.contractNo === link.contractNo);
+                if (seed) cArr.push(seed);
+              }
+            });
+          }
+          console.log('[store migrate v10] 验收单合同关联断链已修复 — DEM-002/HT-002、DEM-010/HT-005');
         }
         return persistedState;
       },

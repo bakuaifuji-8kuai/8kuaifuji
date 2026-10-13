@@ -36,6 +36,30 @@ const getAcceptanceType = (demandType?: ProcurementDemandType): InspectionAccept
 // ============ 需求状态（已确认的才能验收） ============
 const DEMAND_CONFIRMED_STATUSES = ['confirm_approved'] as const;
 
+// ============ 关联合同统一解析（物资 / 服务验收单共用） ============
+// 五级查找：contractId → demandId 反查 → contractNoSnapshot → 订单 contractId → 订单 contractNo
+export function resolveInspectionContract(
+  contractLedgers: ContractLedger[],
+  refs: {
+    contractId?: string;
+    demandId?: string;
+    contractNoSnapshot?: string;
+    orderContractId?: string;
+    orderContractNo?: string;
+  },
+): ContractLedgerWithAccumulated | undefined {
+  let base: ContractLedger | undefined;
+  if (refs.contractId) base = contractLedgers.find((c) => c.id === refs.contractId);
+  if (!base && refs.demandId) base = contractLedgers.find((c) => c.demandId === refs.demandId);
+  if (!base && refs.contractNoSnapshot) base = contractLedgers.find((c) => c.contractNo === refs.contractNoSnapshot);
+  if (!base && refs.orderContractId) base = contractLedgers.find((c) => c.id === refs.orderContractId);
+  if (!base && refs.orderContractNo) base = contractLedgers.find((c) => c.contractNo === refs.orderContractNo);
+  if (!base) return undefined;
+  // splitContracts 分主合同+补充协议，attachAccumulated 算累计金额/终止日期
+  const { primaryList, supplementMap } = splitContracts(contractLedgers);
+  return attachAccumulated(primaryList, supplementMap).find((c) => c.id === base!.id);
+}
+
 // ============ 状态 Badge ============
 const STATUS_BADGE: Record<ProcurementInspection['status'], { label: string; variant: 'default' | 'success' | 'warning' | 'danger' }> = {
   draft: { label: '草稿', variant: 'default' },
@@ -114,29 +138,24 @@ export default function ProcurementInspectionPage() {
   const [phaseChoice, setPhaseChoice] = useState<InspectionPhase | null>(null);
   const [formError, setFormError] = useState('');
 
-  // ========== 选中需求后自动派生合同信息（带累计值） ==========
-  const relatedContract = useMemo<ContractLedgerWithAccumulated | undefined>(() => {
-    if (!selectedDemand) return undefined;
-    // 三级查找：contractId → demandId 反查 → contractNoSnapshot 匹配
-    let base = contractLedgers.find((c) => c.id === selectedDemand.contractId);
-    if (!base && selectedDemand.id) {
-      base = contractLedgers.find((c) => c.demandId === selectedDemand.id);
-    }
-    if (!base && selectedDemand.contractNoSnapshot) {
-      base = contractLedgers.find((c) => c.contractNo === selectedDemand.contractNoSnapshot);
-    }
-    if (!base) return undefined;
-    // splitContracts 分主合同+补充协议，attachAccumulated 算累计金额/终止日期
-    const { primaryList, supplementMap } = splitContracts(contractLedgers);
-    const withAcc = attachAccumulated(primaryList, supplementMap);
-    return withAcc.find((c) => c.id === base.id);
-  }, [selectedDemand, contractLedgers]);
-
   // ========== 选中需求后自动关联订单 ==========
   const relatedOrder = useMemo<ProcurementOrder | undefined>(() => {
     if (!selectedDemand?.id) return undefined;
     return procurementOrders.find((o) => o.demandId === selectedDemand.id);
   }, [selectedDemand, procurementOrders]);
+
+  // ========== 选中需求后自动派生合同信息（带累计值） ==========
+  const relatedContract = useMemo<ContractLedgerWithAccumulated | undefined>(() => {
+    if (!selectedDemand) return undefined;
+    // 五级查找：需求 contractId → 合同 demandId 反查 → contractNoSnapshot → 订单 contractId → 订单合同编号
+    return resolveInspectionContract(contractLedgers, {
+      contractId: selectedDemand.contractId,
+      demandId: selectedDemand.id,
+      contractNoSnapshot: selectedDemand.contractNoSnapshot,
+      orderContractId: relatedOrder?.contractId,
+      orderContractNo: relatedOrder?.contractNo,
+    });
+  }, [selectedDemand, relatedOrder, contractLedgers]);
 
   // ========== 同一张需求下已有的验收单 ==========
   const existingForDemand = useMemo(() => {
@@ -1295,8 +1314,26 @@ function FormBody({
 // =====================================================================
 function ViewBody({ inspection }: { inspection: ProcurementInspection }) {
   const at = inspection.acceptanceType;
+  const contractLedgers = useStore((s) => s.contractLedgers);
+  const procurementOrders = useStore((s) => s.procurementOrders);
+
+  // 详情页关联合同：验收单快照 → 需求反查 → 关联订单兜底
+  const relatedOrder = inspection.orderId || inspection.orderNo
+    ? procurementOrders.find((o) => o.id === inspection.orderId || o.orderNo === inspection.orderNo)
+    : undefined;
+  const relatedContract = resolveInspectionContract(contractLedgers, {
+    contractId: inspection.contractId,
+    demandId: inspection.demandId,
+    contractNoSnapshot: inspection.contractNo,
+    orderContractId: relatedOrder?.contractId,
+    orderContractNo: relatedOrder?.contractNo,
+  });
+
   return (
     <div className="space-y-4 text-sm">
+      {/* 关联合同信息卡（物资 / 服务验收单共用） */}
+      {relatedContract && <ContractInfoCard contract={relatedContract} />}
+
       <div className="grid grid-cols-4 gap-3">
         <div><span className="text-slate-400">验收编号：</span><span className="font-mono text-indigo-600">{inspection.inspectionNo}</span></div>
         <div><span className="text-slate-400">类型：</span>{ACCEPTANCE_TYPE_LABEL[at]}{inspection.phase && ` · ${PHASE_LABEL[inspection.phase]}`}</div>

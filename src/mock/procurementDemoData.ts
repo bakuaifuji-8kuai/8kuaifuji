@@ -517,6 +517,9 @@ export const procurementDemands = [
       reason: "部门日常运作及业务开展需求",
       status: "confirm_approved",
       createTime: "2026-09-12",
+      // 业务链路：需求 DEM-002 → 招采执行 BID-002 → 采购订单 CGDD202609002 → 合同 HT-002
+      contractId: "HT-002",
+      contractNoSnapshot: "HT-202609002",
       details: [
         {
           id: "DD-002-1",
@@ -781,6 +784,9 @@ export const procurementDemands = [
       reason: "部门日常运作及业务开展需求",
       status: "confirm_approved",
       createTime: "2026-09-20",
+      // 业务链路：需求 DEM-010 → 招采执行 BID-010 → 合同 HT-005
+      contractId: "HT-005",
+      contractNoSnapshot: "HT-202609005",
       details: [
         {
           id: "DD-010-1",
@@ -1357,6 +1363,8 @@ export const contractLedgers = [
       terminationDate: "2027-02-28",
       biddingId: "BID-002",
       biddingNo: "BP-202609002",
+      demandId: "DEM-002",
+      demandNo: "DMP-20260902",
       projectName: "新办公区网络设备综合布线",
       winningDate: "2026-09-15",
       isModelText: true,
@@ -1477,6 +1485,8 @@ export const contractLedgers = [
       terminationDate: "2026-10-31",
       biddingId: "BID-012",
       biddingNo: "BP-202609012",
+      demandId: "DEM-010",
+      demandNo: "DMP-20260910",
       projectName: "2026年秋季办公用品补充采购",
       winningDate: "2026-09-25",
       isModelText: true,
