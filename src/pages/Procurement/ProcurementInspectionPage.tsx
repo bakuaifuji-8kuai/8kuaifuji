@@ -12,6 +12,7 @@ import type {
   ProcurementDemand,
   ProcurementOrder,
   ContractLedger,
+  Attachment,
   InspectionAcceptanceType,
   InspectionPhase,
   GoodsInspectionRow,
@@ -20,6 +21,10 @@ import type {
 } from '@/types';
 import type { ContractLedgerWithAccumulated } from '@/utils/contractSupplement';
 import { splitContracts, attachAccumulated } from '@/utils/contractSupplement';
+import InspectionAttachments from '@/components/business/InspectionAttachments';
+import { parseIdbKey } from '@/utils/fileHelper';
+import { deleteAttachmentBlobs } from '@/utils/attachmentDB';
+import { ensureInspectionAttachmentSeeds } from '@/utils/inspectionAttachmentSeed';
 import {
   PROCUREMENT_CONTRACT_TYPE_LABELS,
   NON_PROCUREMENT_CONTRACT_TYPE_LABELS,
@@ -58,6 +63,14 @@ export function resolveInspectionContract(
   // splitContracts 分主合同+补充协议，attachAccumulated 算累计金额/终止日期
   const { primaryList, supplementMap } = splitContracts(contractLedgers);
   return attachAccumulated(primaryList, supplementMap).find((c) => c.id === base!.id);
+}
+
+// 批量删除附件对应的 IndexedDB 文件（dataURL/直链无需清理，自动忽略）
+async function purgeAttachmentFiles(list?: Attachment[]) {
+  const keys = (list || [])
+    .map((a) => parseIdbKey(a.filePath))
+    .filter((k): k is string => !!k);
+  if (keys.length > 0) await deleteAttachmentBlobs(keys).catch(() => undefined);
 }
 
 // ============ 状态 Badge ============
@@ -174,6 +187,22 @@ export default function ProcurementInspectionPage() {
       finishedItems: relatedOrder.details.length - unfinished.length,
     };
   }, [selectedDemand, relatedOrder]);
+
+  // ========== 首次进入：内置演示附件（canvas 示意照片 + 占位 PDF，仅一次，不影响真实数据） ==========
+  useEffect(() => {
+    ensureInspectionAttachmentSeeds(procurementInspections, updateProcurementInspection).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ========== 关闭表单弹窗：discard=true 时清理本次已写入 idb 但未落单的孤儿附件 ==========
+  const closeForm = (discard: boolean) => {
+    if (discard) void purgeAttachmentFiles(form.attachments);
+    setFormVisible(false);
+    setSelectedDemand(null);
+    setSelectedOrder(null);
+    setPhaseChoice(null);
+    if (discard) setForm({});
+  };
 
   // ========== 列表表格列 ==========
   const columns: ColumnDef<ProcurementInspection>[] = [
@@ -444,6 +473,7 @@ export default function ProcurementInspectionPage() {
       remark: form.remark,
       goodsDetails: form.goodsDetails,
       serviceDetails: form.serviceDetails,
+      attachments: form.attachments,
       approveTime: now,
       approver: form.inspector || currentUser?.name,
     };
@@ -469,8 +499,11 @@ export default function ProcurementInspectionPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm('确定删除这条验收记录？')) return;
+    if (!confirm('确定删除这条验收记录？关联的附件文件也将一并删除')) return;
+    const target = procurementInspections.find((i) => i.id === id);
     deleteProcurementInspection(id);
+    // 级联清理 IndexedDB 中的附件文件
+    void purgeAttachmentFiles(target?.attachments);
   };
 
   const openView = (row: ProcurementInspection) => {
@@ -570,10 +603,10 @@ export default function ProcurementInspectionPage() {
           open={formVisible}
           title={`${form.acceptanceType === 'goods' ? '物资类' : '服务/项目类'}验收单${form.phase ? ` · ${PHASE_LABEL[form.phase]}` : ''}`}
           size="xl"
-          onClose={() => { setFormVisible(false); setSelectedDemand(null); setSelectedOrder(null); }}
+          onClose={() => closeForm(true)}
           footer={
             <div className="flex gap-2 justify-end w-full">
-              <DefaultButton onClick={() => { setFormVisible(false); setSelectedDemand(null); setSelectedOrder(null); }}>取消</DefaultButton>
+              <DefaultButton onClick={() => closeForm(true)}>取消</DefaultButton>
               <PrimaryButton onClick={handleSubmit}>提交验收</PrimaryButton>
             </div>
           }
@@ -1294,6 +1327,15 @@ function FormBody({
         </div>
       )}
 
+      {/* 验收附件：现场照片 / 盖章资料 / 其他（物资、服务初验/终验通用） */}
+      <div className="border border-slate-100 rounded-lg p-3 bg-slate-50/40">
+        <div className="text-sm text-slate-700 font-medium mb-2">验收附件</div>
+        <InspectionAttachments
+          attachments={form.attachments || []}
+          onChange={(list) => setForm({ ...form, attachments: list })}
+        />
+      </div>
+
       {/* 备注 */}
       <div>
         <div className="text-sm text-slate-500 mb-1">整体备注</div>
@@ -1459,6 +1501,17 @@ function ViewBody({ inspection }: { inspection: ProcurementInspection }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 验收附件（只读）：现场照片 / 盖章资料 / 其他 */}
+      {inspection.attachments && inspection.attachments.length > 0 && (
+        <div className="border border-slate-100 rounded-lg p-3 bg-slate-50/40">
+          <div className="text-slate-700 font-medium text-sm mb-2">
+            验收附件
+            <span className="ml-2 text-xs text-slate-400">共 {inspection.attachments.length} 个</span>
+          </div>
+          <InspectionAttachments attachments={inspection.attachments} readOnly />
         </div>
       )}
 

@@ -436,13 +436,18 @@ export interface InboundApplication {
   details: InboundApplicationDetail[];
 }
 
+// 验收附件分类：现场照片 / 盖章资料 / 其他
+export type InspectionAttachmentCategory = 'site_photo' | 'stamped_doc' | 'other';
+
 export interface Attachment {
   id: string;
   fileName: string;
+  // 存储引用：idb://<id> 走 IndexedDB 取 Blob；data:... 为降级时的内联 base64；http(s) 直链直接使用
   filePath: string;
   fileSize: number;
   fileType: string;
   uploadTime: string;
+  category?: InspectionAttachmentCategory; // 旧数据（如合同归档附件）可无分类
 }
 
 // 采购单

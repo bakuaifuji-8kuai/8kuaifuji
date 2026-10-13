@@ -484,7 +484,7 @@ interface WarehouseState {
 
 export const useStore = create<WarehouseState>()(
   persist<WarehouseState>(
-    (set) => ({
+    (set, get) => ({
   // 仓库
   warehouses: mockData.warehouses,
   setWarehouses: (data) => set({ warehouses: data }),
@@ -1255,11 +1255,16 @@ export const useStore = create<WarehouseState>()(
     contractLedgers: state.contractLedgers.filter((l) => l.id !== id)
   })),
   // contractNature 过滤快捷方法（每次调用从 state.contractLedgers 实时 filter）
-  get contractProcurementLedgers() {
-    return useStore.getState().contractLedgers.filter((l) => l.contractNature === 'procurement');
+  // 注意：必须用 creator 注入的 get()，不能引用 useStore.getState()——persist 默认 merge 在
+  // store 创建完成前会展开当前 state（触发该 getter），此时 useStore 仍处于 TDZ，会导致
+  // 初始水合抛 ReferenceError、持久化状态整包无法恢复。
+  get contractProcurementLedgers(this: WarehouseState) {
+    // persist 对同步 storage 的水合同步发生在 store 创建期间，此时 get() 尚为 undefined；
+    // 展开当前 state 会触发该 getter，此时以 this（初始 state 对象）兜底，避免水合中断。
+    return (get() ?? this).contractLedgers.filter((l) => l.contractNature === 'procurement');
   },
-  get contractNonProcurementLedgers() {
-    return useStore.getState().contractLedgers.filter((l) => l.contractNature === 'non_procurement');
+  get contractNonProcurementLedgers(this: WarehouseState) {
+    return (get() ?? this).contractLedgers.filter((l) => l.contractNature === 'non_procurement');
   },
 
   // 合同归档 actions
