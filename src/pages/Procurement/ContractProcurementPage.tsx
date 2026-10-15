@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import type {
   ContractLedger,
@@ -21,6 +21,8 @@ import Modal from '@/components/common/Modal';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
 import ContractTierField from '@/components/business/ContractTierField';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 
 // ============== 状态 → Badge 样式映射 ==============
 const STATUS_BADGE: Record<string, { text: string; variant: 'default' | 'primary' | 'success' | 'warning' | 'danger' }> = {
@@ -268,7 +270,10 @@ export default function ContractProcurementPage() {
               </button>
             ))}
           </div>
-          <PrimaryButton onClick={openAdd}>+ 新增招采类合同</PrimaryButton>
+          <div className="flex items-center gap-2">
+            <FeatureHelpButton content={PROCUREMENT_HELP.contractProcurement} />
+            <PrimaryButton onClick={openAdd}>+ 新增招采类合同</PrimaryButton>
+          </div>
         </div>
       </Card>
 

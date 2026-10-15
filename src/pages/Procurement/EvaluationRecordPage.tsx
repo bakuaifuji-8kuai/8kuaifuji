@@ -7,6 +7,8 @@ import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Bu
 import Badge from '@/components/common/Badge';
 import Modal from '@/components/common/Modal';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 import { Eye, Check, X, Download, Trash2, BarChart3 } from 'lucide-react';
 
 export default function EvaluationRecordPage({ defaultType }: { defaultType?: string } = {}) {
@@ -14,6 +16,8 @@ export default function EvaluationRecordPage({ defaultType }: { defaultType?: st
   const updateEvaluationRecord = useStore((s) => s.updateEvaluationRecord);
   const deleteEvaluationRecord = useStore((s) => s.deleteEvaluationRecord);
   const currentUser = useStore((s) => s.currentUser);
+
+  const helpContent = defaultType === 'contract_performance' ? PROCUREMENT_HELP.contractEvalRecord : PROCUREMENT_HELP.evaluationRecord;
 
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterType, setFilterType] = useState<string>(defaultType || '');
@@ -364,7 +368,8 @@ export default function EvaluationRecordPage({ defaultType }: { defaultType?: st
             </div>
 
             {/* 操作按钮 */}
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-end mb-4 gap-2">
+              <FeatureHelpButton content={helpContent} />
               <DefaultButton onClick={handleExport}><Download size={14} /> 导出</DefaultButton>
             </div>
 

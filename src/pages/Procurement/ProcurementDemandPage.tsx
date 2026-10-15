@@ -9,6 +9,8 @@ import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import { exportDetailList, parseAndValidateExcel, type RowResult } from '@/utils/excelImport';
 import type { ProcurementDemand, ProcurementDemandDetail, ProcurementDemandChange, Contract, ProductContract, ProcurementType, ProcurementMode, ProjectRow, DemandChangeRecord, Project, ContractPurchaseOrder, ContractPurchaseOrderDetail } from '@/types';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 
 // ============ 业务分类 <-> 底层 demandType 映射 ============
 // 业务分类 + 细分 → 底层模板类型（5 种，对应 5 种明细渲染）
@@ -780,7 +782,10 @@ export default function ProcurementDemandPage() {
     <div className="p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-[#303133]">采购需求申请</h2>
-        <PrimaryButton onClick={openAdd}>+ 新增需求申请</PrimaryButton>
+        <div className="flex gap-2">
+          <FeatureHelpButton content={PROCUREMENT_HELP.demand} />
+          <PrimaryButton onClick={openAdd}>+ 新增需求申请</PrimaryButton>
+        </div>
       </div>
 
       <SearchBar

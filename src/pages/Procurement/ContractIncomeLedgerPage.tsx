@@ -25,6 +25,8 @@ import {
 } from '@/types';
 import { splitContracts, attachAccumulated, type ContractLedgerWithAccumulated } from '@/utils/contractSupplement';
 import { FileSpreadsheet } from 'lucide-react';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 
 // ============ 标签映射 ============
 const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
@@ -294,9 +296,12 @@ export default function ContractIncomeLedgerPage() {
             <span className="text-rose-600 font-medium"> 未收 ¥{summary.totalUncollected.toLocaleString()} 元</span>
           </p>
         </div>
-        <PrimaryButton onClick={handleExport}>
-          <FileSpreadsheet className="w-4 h-4 mr-1" /> 导出台账
-        </PrimaryButton>
+        <div className="flex items-center gap-2">
+          <FeatureHelpButton content={PROCUREMENT_HELP.contractIncome} />
+          <PrimaryButton onClick={handleExport}>
+            <FileSpreadsheet className="w-4 h-4 mr-1" /> 导出台账
+          </PrimaryButton>
+        </div>
       </div>
 
       {/* ===== 收入专属预警面板 ===== */}

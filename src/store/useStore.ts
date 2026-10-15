@@ -49,6 +49,7 @@ import {
   INSPECTION_DEMO_BATCH_INVENTORIES,
   INSPECTION_DEMO_STOCK_TXNS,
 } from '@/mock/inspectionDemoData';
+import { SUPPLEMENT_DEMO_DATA } from '@/mock/procurementDemoSupplement';
 
 /**
  * 根据三个门控字段自动向合同台账注入考核绑定（审批通过时触发）。
@@ -530,7 +531,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 供应商
-  suppliers: [...(mockData.suppliers || []), ...MOCK_SUPPLIERS],
+  suppliers: [...(mockData.suppliers || []), ...MOCK_SUPPLIERS, ...SUPPLEMENT_DEMO_DATA.suppliers],
   setSuppliers: (data) => set({ suppliers: data }),
   addSupplier: (supplier) => set((state) => ({ suppliers: [...state.suppliers, supplier] })),
   updateSupplier: (id, supplier) => set((state) => ({
@@ -1180,7 +1181,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 采购计划
-  procurementPlans: mockData.procurementPlans || [],
+  procurementPlans: [...(mockData.procurementPlans || []), ...SUPPLEMENT_DEMO_DATA.plans],
   setProcurementPlans: (data) => set({ procurementPlans: data }),
   addProcurementPlan: (plan) => set((state) => ({ procurementPlans: [...state.procurementPlans, plan] })),
   updateProcurementPlan: (id, data) => set((state) => ({
@@ -1202,7 +1203,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 采购需求申请
-  procurementDemands: [...(mockData.procurementDemands || []), ...MOCK_PROCUREMENT_DEMANDS, ...INSPECTION_DEMO_DEMANDS],
+  procurementDemands: [...(mockData.procurementDemands || []), ...MOCK_PROCUREMENT_DEMANDS, ...INSPECTION_DEMO_DEMANDS, ...SUPPLEMENT_DEMO_DATA.demands],
   setProcurementDemands: (data) => set({ procurementDemands: data }),
   addProcurementDemand: (demand) => set((state) => ({ procurementDemands: [...state.procurementDemands, demand] })),
   updateProcurementDemand: (id, data) => set((state) => ({
@@ -1221,8 +1222,8 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 合同台账
-  contractLedgers: [...(mockData.contractLedgers || []), ...MOCK_CONTRACT_LEDGERS, ...INSPECTION_DEMO_CONTRACTS],
-  contractArchives: [], // 合同归档记录（空数组初始化，归档板块提交后写入）
+  contractLedgers: [...(mockData.contractLedgers || []), ...MOCK_CONTRACT_LEDGERS, ...INSPECTION_DEMO_CONTRACTS, ...SUPPLEMENT_DEMO_DATA.contractLedgers],
+  contractArchives: [...SUPPLEMENT_DEMO_DATA.contractArchives], // 合同归档记录（含 v11 补充演示单，用户提交的归档单继续追加）
   setContractLedgers: (data) => set({ contractLedgers: data }),
   addContractLedger: (ledger) => set((state) => ({
     contractLedgers: [
@@ -1298,7 +1299,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 验收记录
-  procurementInspections: [...(mockData.procurementInspections || []), ...MOCK_PROCUREMENT_INSPECTIONS],
+  procurementInspections: [...(mockData.procurementInspections || []), ...MOCK_PROCUREMENT_INSPECTIONS, ...SUPPLEMENT_DEMO_DATA.inspections],
   setProcurementInspections: (data) => set({ procurementInspections: data }),
   addProcurementInspection: (inspection) => set((state) => ({ procurementInspections: [...state.procurementInspections, inspection] })),
   updateProcurementInspection: (id, data) => set((state) => ({
@@ -1309,7 +1310,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 竞价采购
-  biddings: MOCK_BIDDINGS,
+  biddings: [...MOCK_BIDDINGS, ...SUPPLEMENT_DEMO_DATA.biddings],
   setBiddings: (data) => set({ biddings: data }),
   addBidding: (bidding) => set((state) => ({ biddings: [...state.biddings, bidding] })),
   updateBidding: (id, data) => set((state) => ({
@@ -1320,7 +1321,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 供应商报价单
-  supplierQuotes: MOCK_SUPPLIER_QUOTES,
+  supplierQuotes: [...MOCK_SUPPLIER_QUOTES, ...SUPPLEMENT_DEMO_DATA.supplierQuotes],
   setSupplierQuotes: (data) => set({ supplierQuotes: data }),
   addSupplierQuote: (quote) => set((state) => ({ supplierQuotes: [...state.supplierQuotes, quote] })),
   updateSupplierQuote: (id, data) => set((state) => ({
@@ -1343,6 +1344,7 @@ export const useStore = create<WarehouseState>()(
 
   // 合同模板（预置 2 条示例数据）
   contractTemplates: [
+    ...SUPPLEMENT_DEMO_DATA.contractTemplates,
     {
       id: 'CTPL-MOCK-001',
       name: '展览服务合同示范文本 v1',
@@ -1441,7 +1443,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 合同采购订单
-  contractPurchaseOrders: [...(mockData.contractPurchaseOrders || []), ...MOCK_CONTRACT_PURCHASE_ORDERS],
+  contractPurchaseOrders: [...(mockData.contractPurchaseOrders || []), ...MOCK_CONTRACT_PURCHASE_ORDERS, ...SUPPLEMENT_DEMO_DATA.contractPurchaseOrders],
   setContractPurchaseOrders: (data) => set({ contractPurchaseOrders: data }),
   addContractPurchaseOrder: (order) => set((state) => ({ contractPurchaseOrders: [...state.contractPurchaseOrders, order] })),
   updateContractPurchaseOrder: (id, data) => set((state) => ({
@@ -1569,7 +1571,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 履约评估
-  evaluationTemplates: mockData.evaluationTemplates || [],
+  evaluationTemplates: [...(mockData.evaluationTemplates || []), ...SUPPLEMENT_DEMO_DATA.evaluationTemplates],
   setEvaluationTemplates: (data) => set({ evaluationTemplates: data }),
   addEvaluationTemplate: (template) => set((state) => ({ evaluationTemplates: [...state.evaluationTemplates, template] })),
   updateEvaluationTemplate: (id, data) => set((state) => ({
@@ -1578,7 +1580,7 @@ export const useStore = create<WarehouseState>()(
   deleteEvaluationTemplate: (id) => set((state) => ({
     evaluationTemplates: state.evaluationTemplates.filter((t) => t.id !== id)
   })),
-  evaluationRecords: mockData.evaluationRecords || [],
+  evaluationRecords: [...(mockData.evaluationRecords || []), ...SUPPLEMENT_DEMO_DATA.evaluationRecords],
   setEvaluationRecords: (data) => set({ evaluationRecords: data }),
   addEvaluationRecord: (record) => set((state) => ({ evaluationRecords: [...state.evaluationRecords, record] })),
   updateEvaluationRecord: (id, data) => set((state) => ({
@@ -1615,7 +1617,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 10,
+      version: 11,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -1924,6 +1926,34 @@ export const useStore = create<WarehouseState>()(
             });
           }
           console.log('[store migrate v10] 验收单合同关联断链已修复 — DEM-002/HT-002、DEM-010/HT-005');
+        }
+        if (version < 11) {
+          // v10→v11：招采及合约管理「全状态演示数据包」幂等注入
+          // DEMO2 前缀全新 ID，不与历史/用户单据冲突；同 ID 用补充包最新版覆盖，
+          // 用户自建数据全部保留；老用户无需清缓存即可看到各状态演示数据。
+          const mergeSupplement = (existing: any, incoming: any[]) => {
+            if (!Array.isArray(existing)) return existing; // undefined/非数组交给 initial state（已含补充包）
+            const incomingIds = new Set(incoming.map((i) => i.id));
+            return [...existing.filter((x: any) => !incomingIds.has(x?.id)), ...incoming];
+          };
+          const supplementPairs: Array<[keyof typeof SUPPLEMENT_DEMO_DATA, string]> = [
+            ['plans', 'procurementPlans'],
+            ['demands', 'procurementDemands'],
+            ['biddings', 'biddings'],
+            ['supplierQuotes', 'supplierQuotes'],
+            ['contractLedgers', 'contractLedgers'],
+            ['contractArchives', 'contractArchives'],
+            ['contractPurchaseOrders', 'contractPurchaseOrders'],
+            ['inspections', 'procurementInspections'],
+            ['evaluationRecords', 'evaluationRecords'],
+            ['suppliers', 'suppliers'],
+            ['contractTemplates', 'contractTemplates'],
+            ['evaluationTemplates', 'evaluationTemplates'],
+          ];
+          supplementPairs.forEach(([suppKey, stateKey]) => {
+            persistedState[stateKey] = mergeSupplement(persistedState[stateKey], SUPPLEMENT_DEMO_DATA[suppKey] as any[]);
+          });
+          console.log('[store migrate v11] 招采及合约全状态演示数据已注入（计划/需求/工单/合同/归档/订单/验收/考核/模板）');
         }
         return persistedState;
       },

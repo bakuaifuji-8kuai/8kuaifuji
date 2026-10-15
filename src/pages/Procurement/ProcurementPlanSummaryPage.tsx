@@ -4,6 +4,8 @@ import { PrimaryButton, DefaultButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { BarChart3, Download, FileText, Building2, Calendar, Package } from 'lucide-react';
 import type { ProcurementPlan, ProcurementPlanDetail } from '@/types';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 
 type GroupBy = 'department' | 'category' | 'period';
 
@@ -301,6 +303,7 @@ export default function ProcurementPlanSummaryPage() {
           ))}
         </div>
         <div className="flex items-center gap-2">
+          <FeatureHelpButton content={PROCUREMENT_HELP.planSummary} />
           <div className="flex border border-[#dcdfe6] rounded overflow-hidden">
             <button
               onClick={() => setViewMode('summary')}

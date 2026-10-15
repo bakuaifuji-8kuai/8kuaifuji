@@ -16,6 +16,8 @@ import type {
   OfflineDetailItem,
 } from '@/types';
 import { BIDDING_METHOD_LABEL } from '@/types';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 
 /**
  * 采购方式下拉选项（10 种，对齐 916 文档 L18）
@@ -1082,7 +1084,10 @@ export default function CompetitiveBiddingPage() {
     <div className="p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-[#303133]">招采执行</h2>
-        <PrimaryButton onClick={openAdd}>+ 新增招采执行</PrimaryButton>
+        <div className="flex gap-2">
+          <FeatureHelpButton content={PROCUREMENT_HELP.bidding} />
+          <PrimaryButton onClick={openAdd}>+ 新增招采执行</PrimaryButton>
+        </div>
       </div>
 
       <SearchBar

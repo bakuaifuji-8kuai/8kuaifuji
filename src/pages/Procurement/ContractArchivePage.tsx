@@ -6,6 +6,8 @@ import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import type { Attachment, ContractArchive, ArchiveChecklist } from '@/types';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 
 const defaultChecklist: ArchiveChecklist = {
   hasApprovalSheet: false,
@@ -273,7 +275,10 @@ export default function ContractArchivePage() {
             ]}
           />
         </SearchBar>
-        <PrimaryButton onClick={() => setCreateModalOpen(true)}>+ 新增归档</PrimaryButton>
+        <div className="flex items-center gap-2">
+          <FeatureHelpButton content={PROCUREMENT_HELP.contractArchive} />
+          <PrimaryButton onClick={() => setCreateModalOpen(true)}>+ 新增归档</PrimaryButton>
+        </div>
       </div>
 
       {/* 归档记录列表 */}

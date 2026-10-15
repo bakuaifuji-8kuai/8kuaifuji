@@ -7,6 +7,8 @@ import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Bu
 import Badge from '@/components/common/Badge';
 import Modal from '@/components/common/Modal';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 import { Plus, Edit2, Trash2, Eye, GripVertical, Save, Copy, Lock, Unlock } from 'lucide-react';
 
 type TabKey = 'all' | 'assessment' | 'yearly';
@@ -338,6 +340,7 @@ export default function EvaluationTemplatePage() {
 
           <div className="flex-1"></div>
 
+          <FeatureHelpButton content={PROCUREMENT_HELP.evaluationTemplate} />
           <PrimaryButton onClick={openAdd}><Plus size={14} /> 新增自定义模板</PrimaryButton>
         </div>
 

@@ -11,6 +11,8 @@ import type {
   ContractLedger,
 } from '@/types';
 import { getAutoPaidAmount, isContractLinkable, addLinkedDemand } from '@/utils/contractAggregate';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 
 // ============ 业务输入类型 → 表单类型映射 ============
 // 5 输入 → 3 表单
@@ -324,7 +326,10 @@ export default function ProcurementDemandConfirmPage() {
       {/* ============ 左侧列表 ============ */}
       <div className="flex flex-col bg-white rounded-xl shadow-sm border border-slate-100 w-[420px] flex-shrink-0">
         <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="text-lg font-semibold text-slate-800">招采需求确认管理</h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-slate-800">招采需求确认管理</h2>
+            <FeatureHelpButton content={PROCUREMENT_HELP.demandConfirm} />
+          </div>
           <p className="text-xs text-slate-500 mt-0.5">
             申请审批通过后，在此完成立项信息填写与审批
           </p>

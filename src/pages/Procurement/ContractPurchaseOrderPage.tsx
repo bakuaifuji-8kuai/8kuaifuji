@@ -4,6 +4,8 @@ import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import DemandPickerModal from '@/components/common/DemandPickerModal';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import type { ContractPurchaseOrder, ContractPurchaseOrderDetail, ContractPurchaseOrderStatus, ContractPurchaseOrderChangeRecord, ProcurementDemand } from '@/types';
@@ -396,7 +398,10 @@ export default function ContractPurchaseOrderPage() {
     <div className="p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-[#303133]">采购订单管理</h2>
-        <PrimaryButton onClick={openAdd}>+ 新增采购订单</PrimaryButton>
+        <div className="flex items-center gap-2">
+          <FeatureHelpButton content={PROCUREMENT_HELP.contractPurchaseOrder} />
+          <PrimaryButton onClick={openAdd}>+ 新增采购订单</PrimaryButton>
+        </div>
       </div>
 
       <SearchBar

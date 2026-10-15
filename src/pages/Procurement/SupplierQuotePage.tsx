@@ -6,6 +6,8 @@ import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
 import { MOCK_BIDDINGS, MOCK_SUPPLIER_QUOTES } from '@/mock/biddingMockData';
 import type { Bidding, BiddingItem, Supplier, SupplierQuote, SupplierQuoteDetail, BiddingQuote } from '@/types';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 
 // ======== 测试数据已抽离到 @/mock/biddingMockData ========
 
@@ -614,20 +616,15 @@ export default function SupplierQuotePage() {
       <div className="mb-3 flex items-center justify-between">
         <div>
           <h2 className="text-sm font-semibold text-[#303133]">目录内供应商报价管理</h2>
-          <span className="text-xs text-[#909399] ml-3">供应商通过 APP 上传报价</span>
         </div>
-        <div>
-          <PrimaryButton
-            onClick={() => {
-              setNewQuoteModal(true);
-              setNewQuoteBiddingId('');
-              setNewQuoteSupplierIds([]);
-              setNewQuoteSupplierSearch('');
-            }}
-          >
-            + 新增报价单
-          </PrimaryButton>
+        <div className="flex items-center gap-2">
+          <FeatureHelpButton content={PROCUREMENT_HELP.supplierQuote} />
         </div>
+      </div>
+      {/* 备注说明：报价单来源 */}
+      <div className="mb-3 flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-2 text-xs text-blue-700">
+        <span>ℹ️</span>
+        <span>备注：该报价单由小程序端，供应商上报的报价单记录。</span>
       </div>
 
       {/* 视图切换 */}

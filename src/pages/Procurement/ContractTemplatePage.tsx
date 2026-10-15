@@ -9,6 +9,8 @@ import { useStore } from '@/store/useStore';
 import type { ContractTemplate, ContractTemplateVersion, ContractCategory, TemplateComponent, TemplateAnnotation, DataSourceMapping, Attachment } from '@/types';
 import { CONTRACT_CATEGORIES, getCategoryLabel } from '@/constants/contractCategories';
 import { FileEdit, Eye, GitCompare, MessageSquare, Download, History, RotateCcw, ChevronDown, ChevronUp, Upload } from 'lucide-react';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 
 export default function ContractTemplatePage() {
   const contractTemplates = useStore((s) => s.contractTemplates || []) as ContractTemplate[];
@@ -638,6 +640,7 @@ export default function ContractTemplatePage() {
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-[#303133]">合同文本模板</h2>
         <div className="flex items-center gap-2">
+          <FeatureHelpButton content={PROCUREMENT_HELP.contractTemplate} />
           <DefaultButton onClick={openUploadModal}>
             <Upload size={14} className="inline mr-1" />
             📎 上传 Word 模板

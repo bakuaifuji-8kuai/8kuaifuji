@@ -5,6 +5,8 @@ import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import Badge from '@/components/common/Badge';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import type {
@@ -536,9 +538,12 @@ export default function ProcurementInspectionPage() {
             物资类须全部入库后验收；服务/项目类支持初验 / 终验两次
           </p>
         </div>
-        <PrimaryButton onClick={handleCreate}>
-          <Plus className="w-4 h-4 mr-1" /> 新增验收
-        </PrimaryButton>
+        <div className="flex items-center gap-2">
+          <FeatureHelpButton content={PROCUREMENT_HELP.inspection} />
+          <PrimaryButton onClick={handleCreate}>
+            <Plus className="w-4 h-4 mr-1" /> 新增验收
+          </PrimaryButton>
+        </div>
       </div>
 
       {/* 搜索区 */}

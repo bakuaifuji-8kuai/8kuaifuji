@@ -13,6 +13,8 @@ import { EVALUATION_TYPE_LABELS, EVALUATION_STATUS_LABELS } from '@/types';
 import Card from '@/components/common/Card';
 import { PrimaryButton, DefaultButton } from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 import { Plus, Save, Send, FileUp, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
 
 // ===== 合同可能的考核类型（assessmentManagement + yearlyEvaluation 合并视图）=====
@@ -363,9 +365,12 @@ export default function EvaluationExecutePage() {
   return (
     <div className="p-5">
       {/* 页面标题 */}
-      <div className="mb-5">
-        <h1 className="text-xl font-bold text-slate-800">考核评价执行</h1>
-        <p className="text-sm text-slate-500 mt-1">选择招采类合同，从合同自动带出供应商和考核方式，在线评分并提交审批</p>
+      <div className="mb-5 flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800">考核评价执行</h1>
+          <p className="text-sm text-slate-500 mt-1">选择招采类合同，从合同自动带出供应商和考核方式，在线评分并提交审批</p>
+        </div>
+        <FeatureHelpButton content={PROCUREMENT_HELP.evaluationExecute} />
       </div>
 
       <div className="grid grid-cols-3 gap-5">

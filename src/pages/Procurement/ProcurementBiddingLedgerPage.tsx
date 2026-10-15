@@ -6,6 +6,8 @@ import { useStore } from '@/store/useStore';
 import * as XLSX from 'xlsx';
 import type { Bidding } from '@/types';
 import { BIDDING_METHOD_LABEL } from '@/types';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 
 // ========== 工具：Demand 左联 ==========
 type JoinedRow = Bidding & {
@@ -225,7 +227,10 @@ export default function ProcurementBiddingLedgerPage() {
             以招采执行工单为主表，关联采购需求信息，全链路展示 {biddings.length} 条记录
           </p>
         </div>
-        <PrimaryButton onClick={handleExport}>📥 导出 Excel（当前筛选结果 {filteredData.length} 条）</PrimaryButton>
+        <div className="flex items-center gap-2">
+          <FeatureHelpButton content={PROCUREMENT_HELP.biddingLedger} />
+          <PrimaryButton onClick={handleExport}>📥 导出 Excel（当前筛选结果 {filteredData.length} 条）</PrimaryButton>
+        </div>
       </div>
 
       {/* ========== 筛选区（12 维）========== */}

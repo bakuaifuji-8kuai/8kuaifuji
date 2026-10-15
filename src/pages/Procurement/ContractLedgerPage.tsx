@@ -11,6 +11,8 @@ import { splitContracts, attachAccumulated, type ContractLedgerWithAccumulated }
 import type { ContractLedger, Bidding, ContractEvaluationBinding, EvaluationType, ProcurementFormation, NonProcurementFormation, ProcurementContractType, NonProcurementContractType, ProcurementDemand, AlertOverride } from '@/types';
 import { PROCUREMENT_FORMATION_LABELS, NON_PROCUREMENT_FORMATION_LABELS, PROCUREMENT_CONTRACT_TYPE_LABELS, NON_PROCUREMENT_CONTRACT_TYPE_LABELS, ARCHIVE_STATUS_LABELS, BUSINESS_CATEGORY_LABELS } from '@/types';
 import { Printer, FileSpreadsheet, FileDown, Bell, ExternalLink } from 'lucide-react';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 
 const categoryMap: Record<string, string> = {
   exhibition_service: '展览服务',
@@ -1081,6 +1083,7 @@ export default function ContractLedgerPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <FeatureHelpButton content={PROCUREMENT_HELP.contractLedger} />
           <DefaultButton onClick={() => setReminderSettingsOpen(true)}>
             <Bell size={14} /> 提醒设置
           </DefaultButton>

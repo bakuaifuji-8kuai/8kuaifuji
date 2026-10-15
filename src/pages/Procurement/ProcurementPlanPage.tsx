@@ -6,6 +6,8 @@ import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import type { ProcurementPlan, ProcurementPlanDetail, ProjectNature, ProcurementMethod, BidEvaluationMethod, ApprovalRecord, ApprovalFlowConfig } from '@/types';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 
 export default function ProcurementPlanPage() {
   const procurementPlans = useStore((s) => s.procurementPlans);
@@ -500,6 +502,7 @@ export default function ProcurementPlanPage() {
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-[#303133]">招采计划</h2>
         <div className="flex gap-2">
+          <FeatureHelpButton content={PROCUREMENT_HELP.plan} />
           <PrimaryButton onClick={openAdd}>+ 新增计划</PrimaryButton>
         </div>
       </div>

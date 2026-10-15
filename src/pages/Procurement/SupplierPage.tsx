@@ -3,6 +3,8 @@ import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Bu
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 import { useStore } from '@/store/useStore';
 import type { Supplier, SupplierQualification, SupplierChangeRequest, SupplierChangeItem, QualificationType, ChangeFieldKey, Attachment } from '@/types';
 
@@ -419,7 +421,10 @@ export default function SupplierPage() {
     <div className="p-4 space-y-3">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-[#303133]">供应商管理</h2>
-        <PrimaryButton onClick={openAdd}>+ 新增供应商</PrimaryButton>
+        <div className="flex items-center gap-2">
+          <FeatureHelpButton content={PROCUREMENT_HELP.supplier} />
+          <PrimaryButton onClick={openAdd}>+ 新增供应商</PrimaryButton>
+        </div>
       </div>
 
       {/* 资质预警汇总 */}

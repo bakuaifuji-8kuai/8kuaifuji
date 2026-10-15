@@ -6,6 +6,8 @@ import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
 import * as XLSX from 'xlsx';
 import type { ProcurementDemand } from '@/types';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 
 // ========== 标签辅助函数 ==========
 function getCategoryLabel(bc?: string, st?: string, dt?: string): string {
@@ -256,7 +258,10 @@ export default function ProcurementDemandLedgerPage() {
             )}
           </p>
         </div>
-        <PrimaryButton onClick={handleExport}>📥 导出 Excel（当前筛选结果 {filteredData.length} 条）</PrimaryButton>
+        <div className="flex items-center gap-2">
+          <FeatureHelpButton content={PROCUREMENT_HELP.demandLedger} />
+          <PrimaryButton onClick={handleExport}>📥 导出 Excel（当前筛选结果 {filteredData.length} 条）</PrimaryButton>
+        </div>
       </div>
 
       {/* ========== 筛选区（10 维）========== */}
