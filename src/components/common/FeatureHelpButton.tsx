@@ -3,10 +3,19 @@ import Modal from './Modal';
 import { HelpCircle } from 'lucide-react';
 
 // ============ 功能操作说明弹窗数据结构 ============
-// sections（操作说明，旧结构，仓库域 28 处继续使用，保持向后兼容）
+// sections（操作流程引导，旧结构，仓库域 28 处继续使用，保持向后兼容）
+// operations 逐操作清单：操作名 | 什么时候能用 | 做什么 | 做完后的影响（risk 标记高危）
 // fields  字段级逻辑说明：字段名 | 业务含义 | 取值/计算逻辑 | 来源与关联
 // statusFlow 状态流转：状态 | 含义 | 可执行操作 | 下一状态
 // related 上下游单据关系
+export interface HelpOperationRow {
+  name: string;          // 操作名（页面按钮原文）
+  condition?: string;    // 什么时候能用（前置状态/权限/条件）
+  detail?: string;       // 这个操作做什么（含必填/校验）
+  impact: string;        // 做完后的影响（本单变化 + 对上下游环节影响）
+  risk?: 'normal' | 'warning' | 'danger'; // danger=不可逆/高危红色标记
+}
+
 export interface HelpFieldRow {
   name: string;         // 字段名
   meaning: string;      // 业务含义
@@ -28,6 +37,7 @@ export interface HelpContent {
     heading: string;
     items: string[];
   }[];
+  operations?: HelpOperationRow[];
   fields?: HelpFieldRow[];
   statusFlow?: HelpStatusRow[];
   related?: { upstream?: string[]; downstream?: string[]; note?: string };
@@ -64,11 +74,17 @@ export default function FeatureHelpButton({ content }: Props) {
             </p>
           )}
 
-          {/* 操作说明 */}
+          {(() => {
+            // 区块序号统一按出现顺序累计
+            let seq = 0;
+            const blockNo = () => ++seq;
+            return (
+            <>
+          {/* 操作流程引导 */}
           {content.sections?.map((section, idx) => (
             <div key={`s-${idx}`}>
               <h4 className="text-[#303133] font-semibold mb-2 text-[13px]">
-                {idx + 1}. {section.heading}
+                {blockNo()}. {section.heading}
               </h4>
               <ul className="space-y-1 pl-5 list-disc">
                 {section.items.map((item, i) => (
@@ -78,11 +94,52 @@ export default function FeatureHelpButton({ content }: Props) {
             </div>
           ))}
 
+          {/* 操作清单（逐按钮） */}
+          {content.operations && content.operations.length > 0 && (
+            <div>
+              <h4 className="text-[#303133] font-semibold mb-2 text-[13px]">
+                {blockNo()}. 操作清单（每个操作什么时候能用、做什么、做完后的影响）
+              </h4>
+              <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-indigo-50 text-indigo-900">
+                      <th className="px-2.5 py-2 text-left border border-slate-200 whitespace-nowrap w-32">操作</th>
+                      <th className="px-2.5 py-2 text-left border border-slate-200 w-40">什么时候能用</th>
+                      <th className="px-2.5 py-2 text-left border border-slate-200 w-56">这个操作做什么</th>
+                      <th className="px-2.5 py-2 text-left border border-slate-200">做完后的影响（对上/对下）</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {content.operations.map((op, i) => (
+                      <tr key={i} className={`hover:bg-indigo-50/30 align-top ${op.risk === 'danger' ? 'bg-rose-50/40' : ''}`}>
+                        <td className="px-2.5 py-1.5 border border-slate-200 font-medium whitespace-nowrap">
+                          <span className={op.risk === 'danger' ? 'text-rose-600' : op.risk === 'warning' ? 'text-amber-600' : 'text-slate-800'}>
+                            {op.name}
+                          </span>
+                          {op.risk === 'danger' && (
+                            <span className="ml-1 inline-block px-1 py-px rounded text-[10px] bg-rose-100 text-rose-600 border border-rose-200 align-middle">不可逆</span>
+                          )}
+                          {op.risk === 'warning' && (
+                            <span className="ml-1 inline-block px-1 py-px rounded text-[10px] bg-amber-100 text-amber-700 border border-amber-200 align-middle">注意</span>
+                          )}
+                        </td>
+                        <td className="px-2.5 py-1.5 border border-slate-200 text-slate-600">{op.condition || '-'}</td>
+                        <td className="px-2.5 py-1.5 border border-slate-200">{op.detail || '-'}</td>
+                        <td className="px-2.5 py-1.5 border border-slate-200 text-slate-700">{op.impact}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* 状态流转 */}
           {content.statusFlow && content.statusFlow.length > 0 && (
             <div>
               <h4 className="text-[#303133] font-semibold mb-2 text-[13px]">
-                {content.sections?.length ? content.sections.length + 1 : 1}. 状态流转说明
+                {blockNo()}. 状态流转说明
               </h4>
               <div className="overflow-x-auto border border-slate-200 rounded-lg">
                 <table className="w-full text-xs border-collapse">
@@ -113,7 +170,7 @@ export default function FeatureHelpButton({ content }: Props) {
           {content.fields && content.fields.length > 0 && (
             <div>
               <h4 className="text-[#303133] font-semibold mb-2 text-[13px]">
-                {(content.sections?.length || 0) + (content.statusFlow ? 1 : 0) + 1}. 字段逻辑说明
+                {blockNo()}. 字段填写说明
               </h4>
               <div className="overflow-x-auto border border-slate-200 rounded-lg">
                 <table className="w-full text-xs border-collapse">
@@ -144,7 +201,7 @@ export default function FeatureHelpButton({ content }: Props) {
           {content.related && (
             <div>
               <h4 className="text-[#303133] font-semibold mb-2 text-[13px]">
-                {(content.sections?.length || 0) + (content.statusFlow ? 1 : 0) + (content.fields ? 1 : 0) + 1}. 上下游单据关系
+                {blockNo()}. 上下游关系
               </h4>
               <div className="grid grid-cols-2 gap-3">
                 <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/60">
@@ -171,6 +228,9 @@ export default function FeatureHelpButton({ content }: Props) {
               )}
             </div>
           )}
+            </>
+            );
+          })()}
         </div>
       </Modal>
     </>
