@@ -8,7 +8,7 @@ import type {
   ProductApplication, Contract, ProductContract, ExhibitionProject,
   WorkOrderProductConfig, Project, StockTransfer,
   // 采购管理类型
-  ProcurementPlan, ProcurementDemand, ProcurementDemandChange,
+  ProcurementPlan, ProcurementDemand,
   ContractLedger, ContractArchive, ArchiveChecklist, ContractStatus, ContractEvaluationBinding, EvaluationType,
   ProcurementOrder, ProcurementOrderChange, ProcurementInspection,
   Bidding, SupplierQuote, WebsiteInfo, ContractTemplate, ContractWarning,
@@ -355,12 +355,6 @@ interface WarehouseState {
   addProcurementDemand: (demand: ProcurementDemand) => void;
   updateProcurementDemand: (id: string, data: Partial<ProcurementDemand>) => void;
   deleteProcurementDemand: (id: string) => void;
-
-  // 采购需求变更
-  procurementDemandChanges: ProcurementDemandChange[];
-  setProcurementDemandChanges: (data: ProcurementDemandChange[]) => void;
-  addProcurementDemandChange: (change: ProcurementDemandChange) => void;
-  updateProcurementDemandChange: (id: string, data: Partial<ProcurementDemandChange>) => void;
 
   // 合同台账
   contractLedgers: ContractLedger[];
@@ -1213,14 +1207,6 @@ export const useStore = create<WarehouseState>()(
     procurementDemands: state.procurementDemands.filter((d) => d.id !== id)
   })),
 
-  // 采购需求变更
-  procurementDemandChanges: [] as any[],
-  setProcurementDemandChanges: (data) => set({ procurementDemandChanges: data }),
-  addProcurementDemandChange: (change) => set((state) => ({ procurementDemandChanges: [...state.procurementDemandChanges, change] })),
-  updateProcurementDemandChange: (id, data) => set((state) => ({
-    procurementDemandChanges: state.procurementDemandChanges.map((c) => c.id === id ? { ...c, ...data } : c)
-  })),
-
   // 合同台账
   contractLedgers: [...(mockData.contractLedgers || []), ...MOCK_CONTRACT_LEDGERS, ...INSPECTION_DEMO_CONTRACTS, ...SUPPLEMENT_DEMO_DATA.contractLedgers],
   contractArchives: [...SUPPLEMENT_DEMO_DATA.contractArchives], // 合同归档记录（含 v11 补充演示单，用户提交的归档单继续追加）
@@ -1617,7 +1603,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 11,
+      version: 12,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -1954,6 +1940,28 @@ export const useStore = create<WarehouseState>()(
             persistedState[stateKey] = mergeSupplement(persistedState[stateKey], SUPPLEMENT_DEMO_DATA[suppKey] as any[]);
           });
           console.log('[store migrate v11] 招采及合约全状态演示数据已注入（计划/需求/工单/合同/归档/订单/验收/考核/模板）');
+        }
+        if (version < 12) {
+          // v11→v12：招采需求「发起变更」功能下线，改为「撤销回草稿」
+          // ① 清理废弃的变更单台账；② 所有需求清除 changeHistory；
+          // ③ changed 状态归零：DEM-008（宣传物料，已有已发布工单 BID-008）→ 已立项通过保持链路闭合；
+          //    其余 changed 需求 → approved（待立项，可重新撤销或推进立项）。用户自建数据保留。
+          delete persistedState.procurementDemandChanges;
+          if (Array.isArray(persistedState.procurementDemands)) {
+            let changedCount = 0;
+            persistedState.procurementDemands = persistedState.procurementDemands.map((d: any) => {
+              const next: any = { ...d };
+              delete next.changeHistory;
+              if (d.status === 'changed') {
+                changedCount++;
+                next.status = (d.id === 'DEM-008' || d.demandNo === 'DMP-20260908')
+                  ? 'confirm_approved'
+                  : 'approved';
+              }
+              return next;
+            });
+            console.log(`[store migrate v12] 需求变更功能已下线：清理 ${changedCount} 条 changed 状态需求`);
+          }
         }
         return persistedState;
       },

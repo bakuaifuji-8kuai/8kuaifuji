@@ -11,6 +11,7 @@ import type {
   ContractLedger,
 } from '@/types';
 import { getAutoPaidAmount, isContractLinkable, addLinkedDemand } from '@/utils/contractAggregate';
+import SearchableSelect from '@/components/common/SearchableSelect';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
 import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 
@@ -89,9 +90,7 @@ export default function ProcurementDemandConfirmPage() {
   const [projectRows, setProjectRows] = useState<ProjectRow[]>([]);
   // ====== 合同关联（needContract）======
   const [needContract, setNeedContract] = useState<'yes' | 'no' | null>(null);
-  const [contractNoInput, setContractNoInput] = useState('');
   const [linkedContract, setLinkedContract] = useState<ContractLedger | null>(null);
-  const [contractError, setContractError] = useState('');
   // 附件（简化为文件名列表，演示用）
   const [attachments, setAttachments] = useState<string[]>([]);
   // 筛选条件
@@ -131,6 +130,19 @@ export default function ProcurementDemandConfirmPage() {
   }, [procurementDemands, selectedId]);
 
   const formType = selected ? toFormType(selected) : null;
+
+  // ============ 可关联合同候选：仅"执行中"的招采类合同 ============
+  // 搜索字段：合同编号 + 合同名称（label）+ 对方单位（role），由 SearchableSelect 统一模糊过滤
+  const linkableContractOptions = useMemo(
+    () => contractLedgers
+      .filter((l) => isContractLinkable(l))
+      .map((l) => ({
+        id: l.id,
+        label: `${l.contractNo}｜${l.contractName}`,
+        role: l.counterpartyName || '',
+      })),
+    [contractLedgers]
+  );
 
   // ============ 成本审核明细：摘要指标 + 搜索过滤 + 分页 ============
   const auditSummary = useMemo(() => {
@@ -201,6 +213,19 @@ export default function ProcurementDemandConfirmPage() {
         : []
     );
     setRejectReason('');
+
+    // ====== 合同关联回显：已保存 needContract='no' 的需求重开时自动带出原合同 ======
+    setNeedContract(d.needContract ?? null);
+    if (d.needContract === 'no') {
+      // 优先按合同主键查找；合同被删/缺失时用合同号快照兜底反查
+      const linked =
+        (d.contractId ? contractLedgers.find((l) => l.id === d.contractId) : undefined) ||
+        (d.contractNoSnapshot ? contractLedgers.find((l) => l.contractNo === d.contractNoSnapshot) : undefined) ||
+        null;
+      setLinkedContract(linked);
+    } else {
+      setLinkedContract(null);
+    }
   };
 
   // ============ 提交立项 ============
@@ -247,9 +272,9 @@ export default function ProcurementDemandConfirmPage() {
     };
 
     if (finalNeedContract === 'no') {
-      // 选"否" → 必须输入有效的合同编号
+      // 选"否" → 必须从下拉选择一份可关联的执行中招采类合同
       if (!linkedContract) {
-        alert('请输入有效的执行中合同编号，确认该需求挂到哪个合同上');
+        alert('请搜索并选择一份执行中的招采类合同，确认该需求挂到哪个合同上');
         return;
       }
       updatePatch.contractId = linkedContract.id;
@@ -598,7 +623,7 @@ export default function ProcurementDemandConfirmPage() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => { setNeedContract('yes'); setContractError(''); setLinkedContract(null); setContractNoInput(''); }}
+                  onClick={() => { setNeedContract('yes'); setLinkedContract(null); }}
                   className={`p-3 rounded-lg border-2 text-left transition-all ${
                     needContract === 'yes'
                       ? 'border-indigo-500 bg-white shadow-sm'
@@ -622,50 +647,33 @@ export default function ProcurementDemandConfirmPage() {
                 </button>
               </div>
 
-              {/* needContract='no' 时展开：合同编号输入 + 自动带出合同名 */}
+              {/* needContract='no' 时展开：合同关键字搜索下拉 + 自动带出合同名与金额摘要 */}
               {needContract === 'no' && (
                 <div className="mt-4 space-y-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className="text-xs text-slate-500 mb-1">合同编号 <span className="text-rose-500">*</span></div>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={contractNoInput}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setContractNoInput(v);
-                            setContractError('');
-                            setLinkedContract(null);
-                            if (v.trim()) {
-                              const found = contractLedgers.find((l) =>
-                                l.contractNo.toLowerCase() === v.trim().toLowerCase()
-                              );
-                              if (!found) {
-                                setContractError('合同编号不存在');
-                              } else if (!isContractLinkable(found)) {
-                                setContractError(`合同不可关联（当前状态：${found.status}，仅"执行中"的招采类合同可关联新需求）`);
-                              } else {
-                                setLinkedContract(found);
-                              }
-                            }
-                          }}
-                          placeholder="输入合同编号，如 HT-202609001"
-                          className="flex-1 h-8 px-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
-                        />
-                      </div>
-                      {contractError && (
-                        <div className="text-xs text-rose-500 mt-1">⚠ {contractError}</div>
-                      )}
+                      <div className="text-xs text-slate-500 mb-1">选择合同 <span className="text-rose-500">*</span></div>
+                      <SearchableSelect
+                        width="w-full"
+                        value={linkedContract?.id || ''}
+                        options={linkableContractOptions}
+                        onChange={(id) => {
+                          setLinkedContract(contractLedgers.find((l) => l.id === id) || null);
+                        }}
+                        placeholder="输入合同编号 / 名称 / 对方单位搜索"
+                        emptyText="暂无执行中的招采类合同"
+                      />
+                      <div className="text-[11px] text-slate-400 mt-1">仅可选择"执行中"的招采类合同；输入关键字后点选，可清空重选</div>
                     </div>
                     <div>
                       <div className="text-xs text-slate-500 mb-1">合同名称（自动带出）</div>
                       <div className="h-8 px-2 py-1 border border-slate-200 rounded-lg text-sm bg-slate-100 text-slate-500 truncate">
-                        {linkedContract ? linkedContract.contractName : contractNoInput && !contractError ? '（校验中...）' : '-'}
+                        {linkedContract ? linkedContract.contractName : '-'}
                       </div>
                       {linkedContract && (
                         <div className="text-[11px] text-slate-500 mt-1">
-                          原合同金额 {(linkedContract.amount ?? 0).toLocaleString()} 元
+                          对方单位：{linkedContract.counterpartyName || '-'}
+                          {' · '}原合同金额 {(linkedContract.amount ?? 0).toLocaleString()} 元
                           {' · '}已支付 {(getAutoPaidAmount(linkedContract, procurementDemands)).toLocaleString()} 元
                           {' · '}关联需求 {linkedContract.linkedDemandIds?.length ?? 0} 条
                         </div>

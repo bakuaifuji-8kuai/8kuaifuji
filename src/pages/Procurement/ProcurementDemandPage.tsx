@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState, useRef } from 'react';
-import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
+import Button, { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
@@ -8,7 +8,7 @@ import ImportPreviewModal from '@/components/common/ImportPreviewModal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import { exportDetailList, parseAndValidateExcel, type RowResult } from '@/utils/excelImport';
-import type { ProcurementDemand, ProcurementDemandDetail, ProcurementDemandChange, Contract, ProductContract, ProcurementType, ProcurementMode, ProjectRow, DemandChangeRecord, Project, ContractPurchaseOrder, ContractPurchaseOrderDetail } from '@/types';
+import type { ProcurementDemand, ProcurementDemandDetail, Contract, ProductContract, ProcurementType, ProcurementMode, ProjectRow, Project, ContractPurchaseOrder, ContractPurchaseOrderDetail } from '@/types';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
 import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 
@@ -74,8 +74,6 @@ export default function ProcurementDemandPage() {
   const addProcurementDemand = useStore((s) => s.addProcurementDemand);
   const updateProcurementDemand = useStore((s) => s.updateProcurementDemand);
   const deleteProcurementDemand = useStore((s) => s.deleteProcurementDemand);
-  const procurementDemandChanges = useStore((s) => s.procurementDemandChanges);
-  const addProcurementDemandChange = useStore((s) => s.addProcurementDemandChange);
   const contracts = useStore((s) => s.contracts);
   const productContracts = useStore((s) => s.productContracts);
   const products = useStore((s) => s.products);
@@ -87,7 +85,7 @@ export default function ProcurementDemandPage() {
   const serviceCategories = useStore((s) => s.serviceCategories);
   // 月度采购计划
   const procurementPlans = useStore((s) => s.procurementPlans);
-  // 下游单据：用于变更时校验是否被引用
+  // 下游单据：用于撤销时校验是否已被引用
   const biddings = useStore((s) => s.biddings);
   const procurementOrders = useStore((s) => s.procurementOrders);
   const contractPurchaseOrders = useStore((s) => s.contractPurchaseOrders);
@@ -188,7 +186,6 @@ export default function ProcurementDemandPage() {
           pending: { label: '待审批', color: 'text-[#e6a23c]' },
           approved: { label: '已通过（待立项）', color: 'text-[#409eff]' },
           rejected: { label: '已驳回', color: 'text-[#f56c6c]' },
-          changed: { label: '已变更', color: 'text-[#409eff]' },
           confirm_pending: { label: '立项审批中', color: 'text-[#e6a23c]' },
           confirm_approved: { label: '立项已通过', color: 'text-[#67c23a]' },
           confirm_rejected: { label: '立项已驳回', color: 'text-[#f56c6c]' },
@@ -224,23 +221,23 @@ export default function ProcurementDemandPage() {
             }}>编辑</TextButton>
           )}
           <TextButton onClick={() => viewDetail(row)}>查看详情</TextButton>
-          {row.status === 'approved' && !inConfirmFlow && (() => {
+          {row.status === 'approved' && (() => {
             const downstreamRefs = getDownstreamRefs(row.id, row.demandNo);
             if (downstreamRefs.length > 0) {
               return (
                 <span
                   className="text-slate-300 cursor-not-allowed text-[13px]"
-                  title={`已被下游引用，无法变更：\n${downstreamRefs.map(r => `- ${r.type} ${r.no}`).join('\n')}`}
-                >发起变更</span>
+                  title={`已被下游引用，无法撤销：\n${downstreamRefs.map(r => `- ${r.type} ${r.no}`).join('\n')}`}
+                >撤销</span>
               );
             }
-            return <TextButton onClick={() => openChange(row)}>发起变更</TextButton>;
+            return <TextButton type="warning" onClick={() => openRevoke(row)}>撤销</TextButton>;
           })()}
           {inConfirmFlow && (
             <span
               className="text-slate-300 cursor-not-allowed text-[13px]"
-              title="已进入立项确认流程，不能发起变更"
-            >发起变更</span>
+              title="已进入立项确认流程，不能撤销"
+            >撤销</span>
           )}
           {row.status === 'draft' && (
             <TextButton onClick={() => handleSubmit(row)}>提交审批</TextButton>
@@ -272,7 +269,9 @@ export default function ProcurementDemandPage() {
   const [details, setDetails] = useState<ProcurementDemandDetail[]>([]);
   const [projectRows, setProjectRows] = useState<ProjectRow[]>([]);
   const [viewItem, setViewItem] = useState<ProcurementDemand | null>(null);
-  const [changeItem, setChangeItem] = useState<ProcurementDemandChange | null>(null);
+  // 撤销（已通过待立项 → 草稿）
+  const [revokeItem, setRevokeItem] = useState<ProcurementDemand | null>(null);
+  const [revokeReason, setRevokeReason] = useState('');
   const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<ProductPickerItem[]>([]);
@@ -421,36 +420,40 @@ export default function ProcurementDemandPage() {
     }
   };
 
-  // 发起变更
-  const openChange = (demand: ProcurementDemand) => {
-    // 1. 只有审批通过的才可发起变更
+  // ============ 撤销：已通过（待立项）且无下游引用 → 回到草稿，可编辑/删除/重新提交 ============
+  const openRevoke = (demand: ProcurementDemand) => {
     if (demand.status !== 'approved') {
-      alert('只有审批通过的需求申请才可发起变更');
+      alert('只有已审批通过、尚未立项确认的需求才可撤销');
       return;
     }
-    // 2. 校验是否已被下游单据引用
     const refs = getDownstreamRefs(demand.id, demand.demandNo);
     if (refs.length > 0) {
       const refText = refs.map((r) => `- ${r.type} ${r.no}（${r.name}）`).join('\n');
-      alert(`该需求已被下游使用，无法发起变更：\n\n${refText}\n\n请先处理下游单据后再操作。`);
+      alert(`该需求已被下游使用，无法撤销：\n\n${refText}\n\n请先处理下游单据后再操作。`);
       return;
     }
-    const isProjectType = demand.demandType === 'implementation_project' || demand.demandType === 'service_project';
-    const change: ProcurementDemandChange = {
-      id: 'PDC' + Date.now(),
-      demandId: demand.id,
-      demandType: demand.demandType,
-      changeNo: `BG${demand.demandNo}`,
-      changeReason: '',
-      changeTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
-      changer: currentUser.name,
-      beforeDetails: isProjectType ? [] : [...demand.details],
-      afterDetails: isProjectType ? [] : [...demand.details],
-      beforeProjectRows: isProjectType ? (demand.projectRows ?? []).map(r => ({ ...r })) : undefined,
-      afterProjectRows: isProjectType ? (demand.projectRows ?? []).map(r => ({ ...r })) : undefined,
-      status: 'pending',
-    };
-    setChangeItem(change);
+    setRevokeItem(demand);
+    setRevokeReason('');
+  };
+
+  const closeRevoke = () => {
+    setRevokeItem(null);
+    setRevokeReason('');
+  };
+
+  const submitRevoke = () => {
+    if (!revokeItem) return;
+    const reason = revokeReason.trim();
+    if (reason.length < 5 || reason.length > 200) {
+      alert('请填写撤销原因（5-200 字）');
+      return;
+    }
+    updateProcurementDemand(revokeItem.id, {
+      status: 'draft',
+      remark: `撤销原因：${reason}`,
+    });
+    closeRevoke();
+    alert(`需求 ${revokeItem.demandNo} 已撤销，回到草稿状态，可编辑、删除或重新提交审批`);
   };
 
   const handleSave = () => {
@@ -724,60 +727,6 @@ export default function ProcurementDemandPage() {
 
   const totalAmount = details.reduce((sum, d) => sum + (d.amountIncludingTax || 0), 0);
 
-  // 变更操作
-  const updateChangeDetail = (index: number, field: keyof ProcurementDemandDetail, value: any) => {
-    if (!changeItem) return;
-    const newDetails = [...changeItem.afterDetails];
-    newDetails[index] = { ...newDetails[index], [field]: value };
-    setChangeItem({ ...changeItem, afterDetails: newDetails });
-  };
-
-  const removeChangeDetail = (index: number) => {
-    if (!changeItem) return;
-    setChangeItem({
-      ...changeItem,
-      afterDetails: changeItem.afterDetails.filter((_, i) => i !== index),
-    });
-  };
-
-  const submitChange = () => {
-    if (!changeItem) return;
-    const isProjectType = changeItem.beforeProjectRows !== undefined;
-    // 创建变更历史记录
-    const changeRecord: DemandChangeRecord = {
-      id: changeItem.id,
-      changeNo: changeItem.changeNo,
-      changeReason: changeItem.changeReason,
-      changeTime: changeItem.changeTime,
-      changer: changeItem.changer,
-      beforeDetails: changeItem.beforeDetails,
-      afterDetails: changeItem.afterDetails,
-      beforeProjectRows: changeItem.beforeProjectRows,
-      afterProjectRows: changeItem.afterProjectRows,
-      status: 'pending',
-    };
-    // 查找原需求
-    const originalDemand = procurementDemands.find((d) => d.id === changeItem.demandId);
-    if (!originalDemand) return;
-    // 更新需求状态为待审核，并追加变更历史
-    const updatedHistory = [...(originalDemand.changeHistory || []), changeRecord];
-    const updateData: Partial<ProcurementDemand> = {
-      status: 'pending',
-      changeHistory: updatedHistory,
-    };
-    if (isProjectType) {
-      updateData.projectRows = changeItem.afterProjectRows;
-    } else {
-      updateData.details = changeItem.afterDetails;
-    }
-    updateProcurementDemand(changeItem.demandId, updateData);
-    // 同时记录到变更申请台账
-    addProcurementDemandChange(changeItem);
-    setChangeItem(null);
-    alert('变更申请已提交，需重新审核');
-  };
-
-
   return (
     <div className="p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -809,9 +758,8 @@ export default function ProcurementDemandPage() {
             { value: '', label: '全部' },
             { value: 'draft', label: '草稿' },
             { value: 'pending', label: '待审批' },
-            { value: 'approved', label: '已通过' },
+            { value: 'approved', label: '已通过（待立项）' },
             { value: 'rejected', label: '已驳回' },
-            { value: 'changed', label: '已变更' },
           ]}
         />
         <SearchField
@@ -1805,174 +1753,43 @@ export default function ProcurementDemandPage() {
         )}
       </Modal>
 
-      {/* 物资选择弹窗 */}
+      {/* 撤销弹窗：已通过（待立项）→ 草稿，可编辑/删除/重新提交 */}
       <Modal
-        open={!!changeItem}
-        title="需求变更申请"
-        onClose={() => setChangeItem(null)}
+        open={!!revokeItem}
+        title="撤销需求申请"
+        onClose={closeRevoke}
         footer={
           <>
-            <DefaultButton onClick={() => setChangeItem(null)}>取消</DefaultButton>
-            <PrimaryButton onClick={submitChange}>提交变更</PrimaryButton>
+            <DefaultButton onClick={closeRevoke}>取消</DefaultButton>
+            <Button variant="warning" onClick={submitRevoke}>确认撤销</Button>
           </>
         }
-        width="1000px"
+        width="520px"
       >
-        {changeItem && (
+        {revokeItem && (
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="mb-1 text-[#606266]">变更单号</div>
-                <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa]" value={changeItem.changeNo} disabled />
-              </div>
-              <div>
-                <div className="mb-1 text-[#606266]">变更人</div>
-                <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa]" value={changeItem.changer} disabled />
-              </div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-[13px] leading-relaxed text-amber-700">
+              撤销后该需求将回到<b>草稿</b>状态，可重新编辑、删除或再次提交审批（需求编号不变），并从「招采需求确认管理」列表中移除。
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-[13px] text-slate-600 space-y-1">
+              <div>需求编号：<span className="font-medium text-slate-800">{revokeItem.demandNo}</span></div>
+              <div>项目名称：<span className="font-medium text-slate-800">{revokeItem.projectName}</span></div>
+              <div>申请部门 / 申请人：{revokeItem.applicantDept} / {revokeItem.applicant}</div>
             </div>
             <div>
-              <div className="mb-1 text-[#606266]">变更原因</div>
+              <div className="mb-1 text-[#606266] text-[13px]">撤销原因 <span className="text-[#f56c6c]">*</span></div>
               <textarea
-                className="w-full h-16 px-2 border border-[#dcdfe6] rounded"
-                value={changeItem.changeReason}
-                onChange={(e) => setChangeItem({ ...changeItem, changeReason: e.target.value })}
-                placeholder="请输入变更原因（只能调减数量或删减项目，禁止新增）"
+                className="w-full h-24 px-2 py-1 border border-[#dcdfe6] rounded text-[13px] resize-none focus:outline-none focus:border-amber-400"
+                value={revokeReason}
+                maxLength={200}
+                onChange={(e) => setRevokeReason(e.target.value)}
+                placeholder="请输入撤销原因（5-200 字）"
               />
-            </div>
-            <div className="text-[#e6a23c] text-sm">提示：变更仅允许调减采购数量/预算或删减项目，禁止新增</div>
-            <div>
-              <div className="text-[#606266] mb-2">变更后明细</div>
-              {changeItem.beforeProjectRows !== undefined ? (
-                // ======== 实施/服务项目：渲染 ProjectRow 表格 ========
-                <div className="border border-[#dcdfe6] rounded max-h-80 overflow-auto">
-                  <table className="w-full">
-                    <thead className="sticky top-0 bg-[#f5f7fa]">
-                      <tr>
-                        <th className="px-2 py-2 text-xs text-left w-20">需求部门</th>
-                        <th className="px-2 py-2 text-xs text-left w-28">项目名称</th>
-                        <th className="px-2 py-2 text-xs text-left">主要内容</th>
-                        <th className="px-2 py-2 text-xs text-left w-24">原预算</th>
-                        <th className="px-2 py-2 text-xs text-left w-28">新预算（不得超原）</th>
-                        <th className="px-2 py-2 text-xs text-left w-24">不含税预算审定总金额</th>
-                        <th className="px-2 py-2 text-xs text-left w-16">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(changeItem.afterProjectRows ?? []).map((row, idx) => {
-                        const orig = changeItem.beforeProjectRows?.find(r => r.id === row.id);
-                        return (
-                          <tr key={row.id} className="border-t border-[#ebeef5]">
-                            <td className="px-2 py-1 text-xs">{row.dept}</td>
-                            <td className="px-2 py-1 text-xs">{row.projectName}</td>
-                            <td className="px-2 py-1 text-xs max-w-[220px]">
-                              <textarea
-                                className="w-full h-8 px-1 border border-[#dcdfe6] rounded text-xs resize-none"
-                                value={row.mainContent ?? ''}
-                                onChange={(e) => {
-                                  const list = [...(changeItem.afterProjectRows ?? [])];
-                                  list[idx] = { ...list[idx], mainContent: e.target.value };
-                                  setChangeItem({ ...changeItem, afterProjectRows: list });
-                                }}
-                              />
-                            </td>
-                            <td className="px-2 py-1 text-xs text-[#909399]">¥{(orig?.budgetAmount ?? 0).toLocaleString()}</td>
-                            <td className="px-2 py-1">
-                              <input
-                                type="number"
-                                min={0}
-                                max={orig?.budgetAmount ?? 0}
-                                className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
-                                value={row.budgetAmount}
-                                onChange={(e) => {
-                                  const v = Number(e.target.value);
-                                  if (v <= (orig?.budgetAmount ?? 0)) {
-                                    const list = [...(changeItem.afterProjectRows ?? [])];
-                                    list[idx] = { ...list[idx], budgetAmount: v };
-                                    setChangeItem({ ...changeItem, afterProjectRows: list });
-                                  }
-                                }}
-                              />
-                            </td>
-                            <td className="px-2 py-1">
-                              <input
-                                type="number"
-                                min={0}
-                                className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
-                                value={row.budgetControlAmount}
-                                onChange={(e) => {
-                                  const list = [...(changeItem.afterProjectRows ?? [])];
-                                  list[idx] = { ...list[idx], budgetControlAmount: Number(e.target.value) };
-                                  setChangeItem({ ...changeItem, afterProjectRows: list });
-                                }}
-                              />
-                            </td>
-                            <td className="px-2 py-1">
-                              <TextButton
-                                type="danger"
-                                size="small"
-                                onClick={() => {
-                                  const list = (changeItem.afterProjectRows ?? []).filter((_, i) => i !== idx);
-                                  setChangeItem({ ...changeItem, afterProjectRows: list });
-                                }}
-                              >删除</TextButton>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      {(!changeItem.afterProjectRows || changeItem.afterProjectRows.length === 0) && (
-                        <tr><td colSpan={7} className="px-2 py-4 text-center text-xs text-[#909399]">暂无明细</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                // ======== 物资采购：渲染 Details 表格 ========
-                <div className="border border-[#dcdfe6] rounded max-h-64 overflow-auto">
-                  <table className="w-full">
-                    <thead className="sticky top-0 bg-[#f5f7fa]">
-                      <tr>
-                        <th className="px-2 py-2 text-xs text-left">商品编码</th>
-                        <th className="px-2 py-2 text-xs text-left">产品名称</th>
-                        <th className="px-2 py-2 text-xs text-left w-20">单位</th>
-                        <th className="px-2 py-2 text-xs text-left w-20">原数量</th>
-                        <th className="px-2 py-2 text-xs text-left w-20">新数量</th>
-                        <th className="px-2 py-2 text-xs text-left w-20">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {changeItem.afterDetails.map((detail, index) => {
-                        const originalDetail = changeItem.beforeDetails.find(d => d.id === detail.id);
-                        return (
-                          <tr key={detail.id} className="border-t border-[#ebeef5]">
-                            <td className="px-2 py-1 text-xs">{detail.productCode}</td>
-                            <td className="px-2 py-1 text-xs">{detail.productName}</td>
-                            <td className="px-2 py-1 text-xs">{detail.unit}</td>
-                            <td className="px-2 py-1 text-xs text-[#909399]">{originalDetail?.quantity}</td>
-                            <td className="px-2 py-1">
-                              <input
-                                type="number"
-                                max={originalDetail?.quantity}
-                                min={0}
-                                className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
-                                value={detail.quantity}
-                                onChange={(e) => {
-                                  const newQty = Number(e.target.value);
-                                  if (newQty <= (originalDetail?.quantity || 0)) {
-                                    updateChangeDetail(index, 'quantity', newQty);
-                                  }
-                                }}
-                              />
-                            </td>
-                            <td className="px-2 py-1">
-                              <TextButton type="danger" size="small" onClick={() => removeChangeDetail(index)}>删除</TextButton>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <div className={'text-xs mt-1 text-right ' + (revokeReason.trim().length < 5 ? 'text-[#f59e0b]' : 'text-slate-400')}>
+                {revokeReason.trim().length < 5
+                  ? '至少 5 个字（当前 ' + revokeReason.trim().length + ' 字）'
+                  : revokeReason.length + '/200'}
+              </div>
             </div>
           </div>
         )}
@@ -2006,6 +1823,11 @@ export default function ProcurementDemandPage() {
               <span className="text-[#909399]">申请事由：</span>
               <p className="text-[#303133]">{viewItem.reason}</p>
             </div>
+            {viewItem.remark && (
+              <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] text-amber-700">
+                {viewItem.remark}
+              </div>
+            )}
             <div>
               <div className="text-[#606266] mb-3">需求明细</div>
               <div className="border border-[#dcdfe6] rounded">
@@ -2035,90 +1857,6 @@ export default function ProcurementDemandPage() {
                 </table>
               </div>
             </div>
-            {/* 变更历史记录 */}
-            {viewItem.changeHistory && viewItem.changeHistory.length > 0 && (
-              <div>
-                <div className="text-[#606266] mb-2 font-semibold">变更历史记录</div>
-                <div className="space-y-3">
-                  {viewItem.changeHistory.map((record) => (
-                    <div key={record.id} className="border border-[#dcdfe6] rounded p-3 bg-[#f5f7fa]">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs text-[#909399]">变更单号：{record.changeNo}</span>
-                          <span className="text-xs text-[#909399]">变更人：{record.changer}</span>
-                          <span className="text-xs text-[#909399]">变更时间：{record.changeTime}</span>
-                        </div>
-                        <span className={`text-xs px-2 py-0.5 rounded ${
-                          record.status === 'pending' ? 'bg-[#e6a23c] text-white' :
-                          record.status === 'approved' ? 'bg-[#67c23a] text-white' :
-                          'bg-[#f56c6c] text-white'
-                        }`}>
-                          {record.status === 'pending' ? '待审核' : record.status === 'approved' ? '已审核' : '已驳回'}
-                        </span>
-                      </div>
-                      <div className="text-xs text-[#606266] mb-2">变更原因：{record.changeReason || '无'}</div>
-                      <div className="grid grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <div className="text-[#909399] mb-1">变更前：</div>
-                          <div className="bg-white rounded p-2 border border-[#e4e7ed]">
-                            {record.beforeDetails.length === 0 ? '（空）' : (
-                              <table className="w-full">
-                                <thead className="bg-[#f5f7fa]">
-                                  <tr>
-                                    <th className="px-1 py-1 text-left text-[10px]">品名</th>
-                                    <th className="px-1 py-1 text-left text-[10px]">数量</th>
-                                    <th className="px-1 py-1 text-left text-[10px]">含税金额</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {record.beforeDetails.map((d) => (
-                                    <tr key={d.id} className="border-t border-[#ebeef5]">
-                                      <td className="px-1 py-1">{d.productName}</td>
-                                      <td className="px-1 py-1">{d.quantity}</td>
-                                      <td className="px-1 py-1">¥{(d.amountIncludingTax || 0).toFixed(2)}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-[#909399] mb-1">变更后：</div>
-                          <div className="bg-white rounded p-2 border border-[#e4e7ed]">
-                            {record.afterDetails.length === 0 ? '（空）' : (
-                              <table className="w-full">
-                                <thead className="bg-[#f5f7fa]">
-                                  <tr>
-                                    <th className="px-1 py-1 text-left text-[10px]">品名</th>
-                                    <th className="px-1 py-1 text-left text-[10px]">数量</th>
-                                    <th className="px-1 py-1 text-left text-[10px]">含税金额</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {record.afterDetails.map((d) => (
-                                    <tr key={d.id} className="border-t border-[#ebeef5]">
-                                      <td className="px-1 py-1">{d.productName}</td>
-                                      <td className="px-1 py-1">{d.quantity}</td>
-                                      <td className="px-1 py-1">¥{(d.amountIncludingTax || 0).toFixed(2)}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      {record.approver && (
-                        <div className="text-xs text-[#909399] mt-2">
-                          审核人：{record.approver}，审核时间：{record.approveTime}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
       </Modal>

@@ -43,7 +43,6 @@ function getStatusLabel(s?: string): { label: string; color: string } {
     approved: { label: '已立项通过', color: 'bg-green-100 text-green-700' },
     confirm_approved: { label: '已立项通过', color: 'bg-green-100 text-green-700' },
     confirm_rejected: { label: '立项已驳回', color: 'bg-rose-100 text-rose-700' },
-    changed: { label: '已变更', color: 'bg-purple-100 text-purple-700' },
   };
   return (s && map[s]) || { label: s || '-', color: 'bg-slate-100 text-slate-600' };
 }
@@ -345,7 +344,6 @@ export default function ProcurementDemandLedgerPage() {
             { value: 'confirm_pending', label: '待立项确认' },
             { value: 'confirm_approved', label: '已立项通过' },
             { value: 'confirm_rejected', label: '立项已驳回' },
-            { value: 'changed', label: '已变更' },
           ]}
         />
         <div className="flex items-end gap-2 ml-auto">
@@ -410,21 +408,6 @@ export default function ProcurementDemandLedgerPage() {
               </section>
             )}
 
-            {/* 变更历史 */}
-            {viewItem.changeHistory && viewItem.changeHistory.length > 0 && (
-              <section>
-                <h3 className="text-sm font-semibold text-slate-700 mb-3 pb-2 border-b border-slate-200">🔄 变更历史（{viewItem.changeHistory.length} 次）</h3>
-                <div className="space-y-2">
-                  {viewItem.changeHistory.map((c, i) => (
-                    <div key={i} className="text-xs bg-purple-50 p-2 rounded border border-purple-100">
-                      <span className="font-medium text-purple-700">{c.changeNo}</span>
-                      <span className="text-slate-500 ml-2">{c.changeTime} · {c.changer}</span>
-                      <div className="text-slate-600 mt-1">{c.changeReason}</div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
           </div>
         </Modal>
       )}

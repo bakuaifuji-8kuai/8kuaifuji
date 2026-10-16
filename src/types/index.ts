@@ -1117,11 +1117,10 @@ export interface ProjectRow {
 }
 
 export type ProcurementDemandStatus =
-  | 'draft'               // 申请草稿
+  | 'draft'               // 申请草稿（含撤销/驳回后回到此状态，可编辑删除重提）
   | 'pending'             // 申请审批中
-  | 'approved'            // 申请审批通过（等待立项确认）
+  | 'approved'            // 申请审批通过（等待立项确认，未立项前可撤销回草稿）
   | 'rejected'            // 申请审批驳回
-  | 'changed'             // 变更发起后状态
   | 'confirm_pending'     // 立项审批中
   | 'confirm_approved'    // 立项审批通过（下游可见，可生成订单）
   | 'confirm_rejected';   // 立项审批驳回（可重提）
@@ -1189,7 +1188,6 @@ export interface ProcurementDemand {
   projectRows?: ProjectRow[]; // 服务/工程类采购需求的多行项目明细
   attachments?: Attachment[];
   approvalHistory?: ApprovalRecord[];
-  changeHistory?: DemandChangeRecord[]; // 变更历史记录
   relatedOrderId?: string; // 关联的采购工单ID
   budgetAudit?: {
     budgetAmount: number;
@@ -1213,40 +1211,6 @@ export interface ProcurementDemand {
   contractId?: string;
   /** 合同编号快照（防合同删除后找不到，UI 自动带出合同名用） */
   contractNoSnapshot?: string;
-}
-
-// 采购需求变更记录
-export interface ProcurementDemandChange {
-  id: string;
-  demandId: string;
-  demandType?: ProcurementDemandType;
-  changeNo: string;
-  changeReason: string;
-  changeTime: string;
-  changer: string;
-  beforeDetails: ProcurementDemandDetail[];
-  afterDetails: ProcurementDemandDetail[];
-  beforeProjectRows?: ProjectRow[];
-  afterProjectRows?: ProjectRow[];
-  status: 'pending' | 'approved' | 'rejected';
-  approveTime?: string;
-  approver?: string;
-}
-
-// 采购需求变更历史记录（存储在需求主表）
-export interface DemandChangeRecord {
-  id: string;
-  changeNo: string;
-  changeReason: string;
-  changeTime: string;
-  changer: string;
-  beforeDetails: ProcurementDemandDetail[];
-  afterDetails: ProcurementDemandDetail[];
-  beforeProjectRows?: ProjectRow[];
-  afterProjectRows?: ProjectRow[];
-  status: 'pending' | 'approved' | 'rejected';
-  approveTime?: string;
-  approver?: string;
 }
 
 // ==================== 采购实施过程类型 ====================

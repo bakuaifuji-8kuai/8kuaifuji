@@ -16,6 +16,8 @@ interface SearchableSelectProps {
   required?: boolean;
   width?: string;
   filter?: string;
+  /** 无候选/无匹配时的空态文案（默认"无匹配结果"） */
+  emptyText?: string;
 }
 
 export default function SearchableSelect({
@@ -27,6 +29,7 @@ export default function SearchableSelect({
   required,
   width = 'w-[220px]',
   filter,
+  emptyText = '无匹配结果',
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -117,7 +120,7 @@ export default function SearchableSelect({
             </div>
             <div className="max-h-[220px] overflow-y-auto">
               {filtered.length === 0 ? (
-                <div className="px-3 py-4 text-center text-xs text-[#909399]">无匹配结果</div>
+                <div className="px-3 py-4 text-center text-xs text-[#909399]">{options.length === 0 ? emptyText : '无匹配结果'}</div>
               ) : (
                 filtered.map((opt) => (
                   <div

@@ -716,7 +716,7 @@ export const procurementDemands = [
       estimatedAmount: 68000,
       requiredDeliveryDate: "2026-10-15",
       reason: "部门日常运作及业务开展需求",
-      status: "changed",
+      status: "confirm_approved",
       createTime: "2026-09-18",
       details: [
         {

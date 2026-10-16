@@ -93,12 +93,11 @@ const operationFlows: OperationFlow[] = [
     statusFlow: [
       { status: 'draft', label: '草稿', color: 'text-[#909399]', description: '新增后初始状态，可编辑修改' },
       { status: 'pending', label: '待审批', color: 'text-[#e6a23c]', description: '已提交审批，等待审批人处理' },
-      { status: 'approved', label: '已通过', color: 'text-[#67c23a]', description: '审批通过，可生成招采工单' },
+      { status: 'approved', label: '已通过（待立项）', color: 'text-[#409eff]', description: '审批通过等待立项确认；未立项且无下游引用时可撤销回草稿' },
       { status: 'rejected', label: '已驳回', color: 'text-[#f56c6c]', description: '审批驳回，可修改重新提交' },
-      { status: 'changed', label: '已变更', color: 'text-[#409eff]', description: '已通过后发起变更申请' },
     ],
     relatedModules: ['招采工单'],
-    tips: ['需求申请独立创建，不依赖采购计划', '含税金额、税额由系统自动计算，无需手动填写', '审批通过后如需调整，请发起变更申请'],
+    tips: ['需求申请独立创建，不依赖采购计划', '含税金额、税额由系统自动计算，无需手动填写', '审批通过后、立项确认前如需调整，可「撤销」回草稿修改后重新提交；已进入立项流程或已被下游引用的不可撤销'],
   },
   {
     id: 'bidding',
