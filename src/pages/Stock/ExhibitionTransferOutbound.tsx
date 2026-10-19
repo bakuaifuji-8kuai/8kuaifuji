@@ -65,7 +65,7 @@ export default function ExhibitionTransferOutboundPage() {
   const currentUser = useStore((s) => s.currentUser);
   const workOrderConfigs = useStore((s) => s.workOrderConfigs);
   const reverseStockTransfer = useStore((s) => s.reverseStockTransfer);
-  const projects = useStore((s) => s.projects);
+  const exhibitionProjects = useStore((s) => s.exhibitionProjects);
 
   // 调出仓库：展会物资仓 + 实物仓
   const fromWarehouses = useMemo(() => {
@@ -147,7 +147,7 @@ export default function ExhibitionTransferOutboundPage() {
     {
       key: 'projectId',
       title: '所属展会',
-      render: (row) => row.projectName || projects.find((p) => p.id === row.projectId)?.name || '-',
+      render: (row) => row.projectName || exhibitionProjects.find((p) => p.id === row.projectId)?.projectName || '-',
     },
     { key: 'fromWarehouseName', title: '调出仓库' },
     { key: 'toWarehouseName', title: '调入仓库' },
@@ -504,7 +504,7 @@ export default function ExhibitionTransferOutboundPage() {
         <SearchField label="所属展会" type="select" value={filterProjectId} onChange={setFilterProjectId}
           options={[
             { value: '', label: '全部' },
-            ...projects.map((p) => ({ value: p.id, label: p.name })),
+            ...exhibitionProjects.map((p) => ({ value: p.id, label: p.projectName })),
           ]}
         />
       </SearchBar>

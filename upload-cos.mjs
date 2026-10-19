@@ -35,11 +35,18 @@ async function upload(filePath, key) {
   }
   const contentType = contentTypes[ext] || 'application/octet-stream'
 
+  const headers = {
+    'Content-Type': contentType,
+  }
+  // index.html 专属：禁用缓存 + 内联展示（规则强制）
+  if (key === '/index.html') {
+    headers['Cache-Control'] = 'no-cache'
+    headers['Content-Disposition'] = 'inline'
+  }
+
   const res = await fetch(url, {
     method: 'PUT',
-    headers: {
-      'Content-Type': contentType,
-    },
+    headers,
     body: fileContent,
   })
 
