@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   Warehouse, Position, ProductCategory, Product, Supplier, SupplierAssessment, Customer,
   Inventory, InboundOrder, InboundApplication, OutboundOrder, CheckOrder, TransferOrder, ReturnOrder, PendingReturn,
   AssetEquipment, ScrappedRecord, DamagedRecord, StockTransaction, Employee, PurchaseOrder,
@@ -2188,6 +2188,9 @@ export const stockTransfers: StockTransfer[] = [
   {
     id: 'TF001',
     transferNo: 'DB202406150001',
+    businessCategory: 'without_workorder',
+    constructionUnit: '上海锦华',
+    managedWorkOrderIds: [],
     projectId: 'PRJ001',
     projectName: '2024北京国际科技展',
     fromWarehouseId: 'WH001',
@@ -2210,6 +2213,11 @@ export const stockTransfers: StockTransfer[] = [
   {
     id: 'TF002',
     transferNo: 'DB202406180001',
+    businessCategory: 'with_workorder',
+    workOrderId: 'WO001',
+    workOrderCode: 'WI2606010001',
+    workOrderName: '电箱220V室内',
+    managedWorkOrderIds: ['WOC001'],
     projectId: 'PRJ002',
     projectName: '2024上海工业博览会',
     fromWarehouseId: 'WH002',
@@ -2229,6 +2237,9 @@ export const stockTransfers: StockTransfer[] = [
   {
     id: 'TF003',
     transferNo: 'DB202406200001',
+    businessCategory: 'without_workorder',
+    constructionUnit: '湖南警安',
+    managedWorkOrderIds: [],
     projectId: 'PRJ003',
     projectName: '2024广州文创展',
     fromWarehouseId: 'WH001',
@@ -2366,6 +2377,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ001',
     projectName: '会展电力配套项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '中裕电力',
     category: '电力/电箱/室内',
     mainProducts: [
       { id: 'WP0001', productId: 'PRD779', productCode: 'QD2010', productName: '配电箱', categoryName: '低值易耗', specification: '16A', unit: '个', quantity: 1 },
@@ -2394,6 +2406,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ001',
     projectName: '会展电力配套项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '中裕电力',
     category: '电力/电箱/室外',
     mainProducts: [
       { id: 'WP0003', productId: 'PRD014', productCode: 'P20006', productName: '电箱220V室外', categoryName: '低值易耗', specification: '220V/16A 室外防水款', unit: '台', quantity: 15 },
@@ -2411,6 +2424,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ002',
     projectName: '展会现场服务项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '上海锦华',
     category: '其他/停车/停车',
     mainProducts: [
       { id: 'WP001', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', quantity: 5 },
@@ -2428,6 +2442,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ003',
     projectName: '会议中心配套项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '湖南警安',
     category: '会议室/会议室/会议室延时',
     mainProducts: [
       { id: 'WP003', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', quantity: 10 },
@@ -2445,6 +2460,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ003',
     projectName: '会议中心配套项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '湖南警安',
     category: '会议室/会议室/场租',
     mainProducts: [
       { id: 'WP005', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', quantity: 20 },
@@ -2462,6 +2478,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ001',
     projectName: '会展电力配套项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '中裕电力',
     category: '水/气/水气作业/给排水',
     mainProducts: [
       { id: 'WP007', productId: 'PRD008', productCode: 'P40001', productName: '水管接头', categoryName: '低值易耗', specification: 'DN50', unit: '个', quantity: 30 },
@@ -2479,6 +2496,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ002',
     projectName: '展会现场服务项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '湖南警安',
     category: '设备押金/设备押金/设备押金',
     mainProducts: [
       { id: 'WP009', productId: 'PRD007', productCode: 'P50002', productName: '设备押金条', categoryName: '其他物资', specification: '标准', unit: '张', quantity: 50 },
@@ -2496,6 +2514,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ002',
     projectName: '展会现场服务项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '上海锦华',
     category: '搭建押金/搭建押金/搭建押金',
     mainProducts: [
       { id: 'WP011', productId: 'PRD001', productCode: 'P10001', productName: '钢板', categoryName: '会展物资', specification: '1m*2m', unit: '块', quantity: 15 },
@@ -2514,6 +2533,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ002',
     projectName: '展会现场服务项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '上海锦华',
     category: '搭建押金/搭建押金/安全清洁押金',
     mainProducts: [
       { id: 'WP014', productId: 'PRD001', productCode: 'P10001', productName: '钢板', categoryName: '会展物资', specification: '1m*2m', unit: '块', quantity: 10 },
@@ -2531,6 +2551,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ002',
     projectName: '展会现场服务项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '上海锦华',
     category: '管理费/管理费/地毯管理费',
     mainProducts: [
       { id: 'WP016', productId: 'PRD003', productCode: 'P10003', productName: '地毯', categoryName: '会展物资', specification: '加厚型', unit: '平方米', quantity: 200 },
@@ -2548,6 +2569,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ002',
     projectName: '展会现场服务项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '上海锦华',
     category: '管理费/管理费/特装管理费',
     mainProducts: [
       { id: 'WP018', productId: 'PRD001', productCode: 'P10001', productName: '钢板', categoryName: '会展物资', specification: '1m*2m', unit: '块', quantity: 25 },
@@ -2566,6 +2588,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ002',
     projectName: '展会现场服务项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '上海锦华',
     category: '管理费/管理费/管理费',
     mainProducts: [
       { id: 'WP021', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', quantity: 30 },
@@ -2583,6 +2606,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ002',
     projectName: '展会现场服务项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '湖南警安',
     category: '保洁/物业安保/布撤展-保洁加班',
     mainProducts: [
       { id: 'WP023', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 15 },
@@ -2600,6 +2624,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ002',
     projectName: '展会现场服务项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '湖南警安',
     category: '保洁/物业安保/布撤展-保洁',
     mainProducts: [
       { id: 'WP025', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 12 },
@@ -2617,6 +2642,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ002',
     projectName: '展会现场服务项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '湖南警安',
     category: '保洁/物业安保/展期-保洁加班',
     mainProducts: [
       { id: 'WP027', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 10 },
@@ -2634,6 +2660,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ002',
     projectName: '展会现场服务项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '湖南警安',
     category: '保洁/物业安保/展期-保洁',
     mainProducts: [
       { id: 'WP029', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 8 },
@@ -2651,6 +2678,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ002',
     projectName: '展会现场服务项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '湖南警安',
     category: '安保/物业安保/展期-安保加班',
     mainProducts: [
       { id: 'WP031', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', quantity: 20 },
@@ -2668,6 +2696,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ002',
     projectName: '展会现场服务项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '上海锦华',
     category: '安保/物业安保/布撤展--安保加班',
     mainProducts: [
       { id: 'WP033', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', quantity: 15 },
@@ -2685,6 +2714,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ002',
     projectName: '展会现场服务项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '上海锦华',
     category: '安保/物业安保/展期-物业安保',
     mainProducts: [
       { id: 'WP035', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', quantity: 12 },
@@ -2702,6 +2732,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ002',
     projectName: '展会现场服务项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '上海锦华',
     category: '安保/物业安保/布撤展-物业安保',
     mainProducts: [
       { id: 'WP037', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', quantity: 10 },
@@ -2719,6 +2750,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     projectId: 'PROJ001',
     projectName: '会展电力配套项目',
     exhibitionName: '2026上海国际会展',
+    constructionUnit: '中裕电力',
     category: '水/气/水气作业/给排水',
     mainProducts: [
       { id: 'WP039', productId: 'PRD008', productCode: 'P40001', productName: '水管接头', categoryName: '低值易耗', specification: 'DN50', unit: '个', quantity: 20 },

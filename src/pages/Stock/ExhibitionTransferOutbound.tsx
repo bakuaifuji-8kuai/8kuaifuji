@@ -65,6 +65,7 @@ export default function ExhibitionTransferOutboundPage() {
   const currentUser = useStore((s) => s.currentUser);
   const workOrderConfigs = useStore((s) => s.workOrderConfigs);
   const reverseStockTransfer = useStore((s) => s.reverseStockTransfer);
+  const projects = useStore((s) => s.projects);
 
   // 调出仓库：展会物资仓 + 实物仓
   const fromWarehouses = useMemo(() => {
@@ -82,6 +83,7 @@ export default function ExhibitionTransferOutboundPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterFrom, setFilterFrom] = useState('');
   const [filterTo, setFilterTo] = useState('');
+  const [filterProjectId, setFilterProjectId] = useState('');
   const [applied, setApplied] = useState({
     no: '',
     status: '',
@@ -89,6 +91,7 @@ export default function ExhibitionTransferOutboundPage() {
     toWarehouses: [] as string[],
     from: '',
     to: '',
+    projectId: '',
   });
 
   const outboundTransfers = useMemo(() => {
@@ -107,6 +110,7 @@ export default function ExhibitionTransferOutboundPage() {
       if (applied.toWarehouses.length > 0 && !applied.toWarehouses.includes(o.toWarehouseId)) return false;
       if (applied.from && o.createTime < applied.from) return false;
       if (applied.to && o.createTime > applied.to + ' 23:59:59') return false;
+      if (applied.projectId && o.projectId !== applied.projectId) return false;
       return true;
     });
   }, [outboundTransfers, applied]);
@@ -139,6 +143,11 @@ export default function ExhibitionTransferOutboundPage() {
         const woDetail = row.details.find((d) => d.workOrderCode);
         return woDetail ? <span className="text-[#2f54eb]">{woDetail.workOrderCode}</span> : '-';
       },
+    },
+    {
+      key: 'projectId',
+      title: '所属展会',
+      render: (row) => row.projectName || projects.find((p) => p.id === row.projectId)?.name || '-',
     },
     { key: 'fromWarehouseName', title: '调出仓库' },
     { key: 'toWarehouseName', title: '调入仓库' },
@@ -444,6 +453,7 @@ export default function ExhibitionTransferOutboundPage() {
             toWarehouses: filterToWarehouse,
             from: filterFrom,
             to: filterTo,
+            projectId: filterProjectId,
           })
         }
         onReset={() => {
@@ -453,6 +463,7 @@ export default function ExhibitionTransferOutboundPage() {
           setFilterToWarehouse([]);
           setFilterFrom('');
           setFilterTo('');
+          setFilterProjectId('');
           setApplied({
             no: '',
             status: '',
@@ -460,6 +471,7 @@ export default function ExhibitionTransferOutboundPage() {
             toWarehouses: [],
             from: '',
             to: '',
+            projectId: '',
           });
         }}
       >
@@ -489,6 +501,12 @@ export default function ExhibitionTransferOutboundPage() {
         />
         <SearchField label="起始日期" type="date" value={filterFrom} onChange={setFilterFrom} />
         <SearchField label="结束日期" type="date" value={filterTo} onChange={setFilterTo} />
+        <SearchField label="所属展会" type="select" value={filterProjectId} onChange={setFilterProjectId}
+          options={[
+            { value: '', label: '全部' },
+            ...projects.map((p) => ({ value: p.id, label: p.name })),
+          ]}
+        />
       </SearchBar>
 
       <DataTable data={filteredData} columns={columns} />
@@ -531,6 +549,7 @@ export default function ExhibitionTransferOutboundPage() {
                   <th className="px-4 py-3 text-left">单位</th>
                   <th className="px-4 py-3 text-left">工单</th>
                   <th className="px-4 py-3 text-right">数量</th>
+                  <th className="px-4 py-3 text-left">备注</th>
                 </tr>
               </thead>
               <tbody>
@@ -547,11 +566,12 @@ export default function ExhibitionTransferOutboundPage() {
                       </td>
                       <td className="px-4 py-3 text-[#2f54eb]">{d.workOrderCode || '-'}</td>
                       <td className="px-4 py-3 text-right text-[#303133]">{d.quantity}</td>
+                      <td className="px-4 py-3 text-[#303133]">{d.remark || '-'}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="py-6 text-center text-[#909399]">
+                    <td colSpan={7} className="py-6 text-center text-[#909399]">
                       无明细
                     </td>
                   </tr>

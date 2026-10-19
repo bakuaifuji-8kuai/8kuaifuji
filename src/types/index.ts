@@ -630,6 +630,7 @@ export interface StockTransferDetail {
   workOrderCode?: string; // 关联工单号
   workOrderName?: string; // 关联工单名称
   isMain?: boolean; // 是否主料
+  remark?: string; // 明细备注
 }
 
 export type StockTransferStatus = 'pending' | 'outbound_confirmed' | 'completed' | 'cancelled';
@@ -643,6 +644,12 @@ export interface StockTransfer {
   fromWarehouseName?: string;
   toWarehouseId: string; // 调入仓库
   toWarehouseName?: string;
+  businessCategory?: 'with_workorder' | 'without_workorder'; // 业务分类：有工单/无工单
+  constructionUnit?: string; // 施工单位（无工单模式必填；有工单模式从已选工单自动带出）
+  managedWorkOrderIds?: string[]; // 管理工单关联（保存后在操作列"管理工单"弹框多选）
+  workOrderId?: string; // 有工单模式下选定的工单（用于从工单物资配置自动填明细）
+  workOrderCode?: string;
+  workOrderName?: string;
   status: StockTransferStatus;
   creator: string; // 制单人
   createTime: string;
@@ -972,6 +979,7 @@ export interface WorkOrderProductConfig {
   projectId: string;
   projectName: string;
   exhibitionName: string;
+  constructionUnit?: string; // 施工单位（上海锦华 / 湖南警安 / 中裕电力）
   category: string;
   mainProducts: WorkOrderProductItem[];
   auxiliaryProducts: WorkOrderProductItem[];

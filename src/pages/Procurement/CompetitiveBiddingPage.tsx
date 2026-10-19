@@ -213,6 +213,16 @@ export default function CompetitiveBiddingPage() {
       title: '评定结果',
       render: (row) => {
         const count = row.attachments?.length || 0;
+        const isCatalog = isCatalogCompare(row.procurementMethod);
+        const canManage = isCatalog && ['evaluated', 'completed'].includes(row.status);
+        if (!canManage) {
+          // 非目录内比价 或 招标尚未结束 — 灰色提示
+          return (
+            <span className="text-[#909399] text-xs">
+              {isCatalog ? '招标结束后可上传' : '-'}
+            </span>
+          );
+        }
         if (count === 0) return <span className="text-[#909399] text-xs">无附件</span>;
         return (
           <div className="flex items-center gap-1">
@@ -268,6 +278,14 @@ export default function CompetitiveBiddingPage() {
                 生成采购订单
               </TextButton>
             )}
+            {/* 评定结果附件管理：目录内比价 + 招标结束后（已评审/已完成） */}
+            {isCatalog && ['evaluated', 'completed'].includes(row.status) && (
+              <TextButton onClick={() => openAttachmentManager(row)}>
+                {(row.attachments?.length || 0) > 0
+                  ? `管理评定结果(${row.attachments!.length})`
+                  : '上传评定结果'}
+              </TextButton>
+            )}
             {/* 线下录入类：提交审批按钮 */}
             {!isCatalog && row.approvalStatus === 'draft' && (
               <TextButton onClick={() => updateBidding?.(row.id, { approvalStatus: 'submitted', status: 'submitted' })}>
@@ -294,8 +312,6 @@ export default function CompetitiveBiddingPage() {
   const [viewItem, setViewItem] = useState<Bidding | null>(null);
   const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([]);
   const [selectedDemand, setSelectedDemand] = useState<ProcurementDemand | null>(null);
-  // 竞价小组评定结果附件
-  const [editAttachments, setEditAttachments] = useState<Attachment[]>([]);
   // 竞价公告附件
   const [editAnnouncement, setEditAnnouncement] = useState<Attachment[]>([]);
   // 竞价文件附件
@@ -311,26 +327,16 @@ export default function CompetitiveBiddingPage() {
   const [supplierPickerOpen, setSupplierPickerOpen] = useState(false);
   const [demandPickerOpen, setDemandPickerOpen] = useState(false);
   const [timePickerTarget, setTimePickerTarget] = useState<Bidding | null>(null);
+  // 评定结果附件管理（列表操作，仅已评审/已完成状态可用）
+  const [attachmentTarget, setAttachmentTarget] = useState<Bidding | null>(null);
+  const [attachmentLocalList, setAttachmentLocalList] = useState<Attachment[]>([]);
+  const attachmentFileRef = useRef<HTMLInputElement>(null);
   // 清单明细编辑大弹窗（明细可能达数百项，主弹窗只放摘要卡，明细进大弹窗分页编辑）
   const [detailListOpen, setDetailListOpen] = useState(false);
   const [detailSearch, setDetailSearch] = useState('');
   const [detailPage, setDetailPage] = useState(1);
 
   // ===== 附件处理函数 =====
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-    const newAttachments: Attachment[] = Array.from(e.target.files).map((file) => ({
-      id: 'ATT' + Date.now().toString() + Math.random().toString(36).slice(2, 6),
-      fileName: file.name,
-      filePath: URL.createObjectURL(file),
-      fileSize: file.size,
-      fileType: file.type,
-      uploadTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    }));
-    setEditAttachments([...editAttachments, ...newAttachments]);
-    e.target.value = '';
-  };
-
   const handleAnnouncementUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const newAttachments: Attachment[] = Array.from(e.target.files).map((file) => ({
@@ -419,12 +425,6 @@ export default function CompetitiveBiddingPage() {
     );
   };
 
-  const removeAttachment = (id: string) => {
-    const att = editAttachments.find((a) => a.id === id);
-    if (att && att.filePath.startsWith('blob:')) URL.revokeObjectURL(att.filePath);
-    setEditAttachments(editAttachments.filter((a) => a.id !== id));
-  };
-
   const removeAnnouncement = (id: string) => {
     const att = editAnnouncement.find((a) => a.id === id);
     if (att && att.filePath.startsWith('blob:')) URL.revokeObjectURL(att.filePath);
@@ -473,7 +473,6 @@ export default function CompetitiveBiddingPage() {
     };
     setSelectedSuppliers([]);
     setSelectedDemand(null);
-    setEditAttachments([]);
     setEditAnnouncement([]);
     setEditBiddingDocs([]);
     setIsNew(true);
@@ -484,7 +483,6 @@ export default function CompetitiveBiddingPage() {
     setSelectedSuppliers(bidding.inviteSupplierIds || []);
     const demand = procurementDemands?.find((d) => d.id === bidding.demandId) || null;
     setSelectedDemand(demand);
-    setEditAttachments([...(bidding.attachments || [])]);
     setEditAnnouncement([...(bidding.biddingAnnouncement || [])]);
     setEditBiddingDocs([...(bidding.biddingDocuments || [])]);
     // 回填线下审批材料
@@ -759,7 +757,6 @@ export default function CompetitiveBiddingPage() {
     if (!saveBidding.approvalStatus) saveBidding.approvalStatus = 'draft';
     // 邀约供应商 + 附件
     saveBidding.inviteSupplierIds = selectedSuppliers;
-    saveBidding.attachments = [...editAttachments];
     saveBidding.biddingAnnouncement = [...editAnnouncement];
     saveBidding.biddingDocuments = [...editBiddingDocs];
     // 线下审批材料附件：按 cat 分发到 Bidding 对应字段
@@ -783,7 +780,6 @@ export default function CompetitiveBiddingPage() {
     setEditItem(null);
     setSelectedSuppliers([]);
     setSelectedDemand(null);
-    setEditAttachments([]);
     setEditAnnouncement([]);
     setEditBiddingDocs([]);
     setOfflineMaterials([]);
@@ -865,6 +861,59 @@ export default function CompetitiveBiddingPage() {
     if (!timePickerTarget) return;
     updateBidding?.(timePickerTarget.id, { startTime, endTime });
     setTimePickerTarget(null);
+  };
+
+  // ===== 评定结果附件管理（列表操作，仅招标结束后可用） =====
+  const MAX_RESULT_ATTACHMENTS = 3;
+
+  const openAttachmentManager = (bidding: Bidding) => {
+    setAttachmentTarget(bidding);
+    setAttachmentLocalList([...(bidding.attachments || [])]);
+  };
+
+  const closeAttachmentManager = () => {
+    // 清理本地 blob URL 避免内存泄漏
+    attachmentLocalList.forEach((a) => {
+      if (a.filePath.startsWith('blob:')) URL.revokeObjectURL(a.filePath);
+    });
+    setAttachmentTarget(null);
+    setAttachmentLocalList([]);
+  };
+
+  const handleResultAttachmentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const remain = MAX_RESULT_ATTACHMENTS - attachmentLocalList.length;
+    if (remain <= 0) {
+      alert(`最多只能上传 ${MAX_RESULT_ATTACHMENTS} 个附件，请先删除已有附件`);
+      e.target.value = '';
+      return;
+    }
+    const fileArr = Array.from(e.target.files).slice(0, remain);
+    const newOnes: Attachment[] = fileArr.map((file) => ({
+      id: 'RES' + Date.now().toString() + Math.random().toString(36).slice(2, 6),
+      fileName: file.name,
+      filePath: URL.createObjectURL(file),
+      fileSize: file.size,
+      fileType: file.type,
+      uploadTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    }));
+    setAttachmentLocalList([...attachmentLocalList, ...newOnes]);
+    e.target.value = '';
+    if (fileArr.length < e.target.files.length) {
+      alert(`超出 ${MAX_RESULT_ATTACHMENTS} 个上限，只选取了前 ${remain} 个文件`);
+    }
+  };
+
+  const handleResultAttachmentRemove = (id: string) => {
+    const att = attachmentLocalList.find((a) => a.id === id);
+    if (att && att.filePath.startsWith('blob:')) URL.revokeObjectURL(att.filePath);
+    setAttachmentLocalList(attachmentLocalList.filter((a) => a.id !== id));
+  };
+
+  const handleConfirmAttachments = () => {
+    if (!attachmentTarget) return;
+    updateBidding?.(attachmentTarget.id, { attachments: [...attachmentLocalList] });
+    closeAttachmentManager();
   };
 
   // 更新某条目录内比价条目
@@ -1493,10 +1542,10 @@ export default function CompetitiveBiddingPage() {
       <Modal
         open={!!editItem}
         title={isNew ? '新增招采执行' : '编辑招采执行'}
-        onClose={() => { setEditItem(null); setDetailListOpen(false); setSelectedSuppliers([]); setSelectedDemand(null); setEditAttachments([]); setEditAnnouncement([]); setEditBiddingDocs([]); setOfflineMaterials([]); }}
+        onClose={() => { setEditItem(null); setDetailListOpen(false); setSelectedSuppliers([]); setSelectedDemand(null); setEditAnnouncement([]); setEditBiddingDocs([]); setOfflineMaterials([]); }}
         footer={
           <>
-            <DefaultButton onClick={() => { setEditItem(null); setDetailListOpen(false); setSelectedSuppliers([]); setSelectedDemand(null); setEditAttachments([]); setEditAnnouncement([]); setEditBiddingDocs([]); setOfflineMaterials([]); }}>取消</DefaultButton>
+            <DefaultButton onClick={() => { setEditItem(null); setDetailListOpen(false); setSelectedSuppliers([]); setSelectedDemand(null); setEditAnnouncement([]); setEditBiddingDocs([]); setOfflineMaterials([]); }}>取消</DefaultButton>
             <PrimaryButton onClick={handleSave}>保存</PrimaryButton>
           </>
         }
@@ -2266,59 +2315,6 @@ export default function CompetitiveBiddingPage() {
               )}
             </div>
             )}
-
-            {/* 竞价小组评定结果附件（仅框架协议采购） */}
-            {editItem?.procurementMethod === 'framework_catalog' && (
-            <div className="border border-[#67c23a] rounded p-3 bg-[#f0f9eb]">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <div className="text-sm font-semibold text-[#303133]">竞价小组评定结果附件</div>
-                  <div className="text-xs text-[#909399]">可上传评审报告、比价记录等附件（PDF/Word/Excel/图片等）</div>
-                </div>
-                <label className="inline-block">
-                  <input
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
-                  <PrimaryButton size="small">+ 上传附件</PrimaryButton>
-                </label>
-              </div>
-              {editAttachments.length === 0 ? (
-                <div className="text-xs text-[#909399] text-center py-3 border border-dashed border-[#c2e7b0] rounded bg-white">暂无附件，点击上方「上传附件」选择文件</div>
-              ) : (
-                <div className="space-y-1 max-h-48 overflow-auto">
-                  {editAttachments.map((att, idx) => (
-                    <div key={att.id} className="flex items-center justify-between text-xs bg-white border border-[#e4e7ed] rounded px-3 py-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="text-[#409eff] text-sm">📎</span>
-                        <span className="truncate font-medium text-[#303133]" title={att.fileName}>
-                          {idx + 1}. {att.fileName}
-                        </span>
-                        <span className="text-[#909399] flex-shrink-0">({formatFileSize(att.fileSize)})</span>
-                        <span className="text-[#909399] flex-shrink-0">上传：{att.uploadTime}</span>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                        <button
-                          className="text-[#409eff] hover:underline"
-                          onClick={() => setPreviewAtt(att)}
-                        >预览</button>
-                        <button
-                          className="text-[#409eff] hover:underline"
-                          onClick={() => downloadAttachment(att)}
-                        >下载</button>
-                        <button
-                          className="text-[#f56c6c] hover:underline"
-                          onClick={() => removeAttachment(att.id)}
-                        >删除</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            )}
           </div>
         )}
       </Modal>
@@ -2870,6 +2866,115 @@ export default function CompetitiveBiddingPage() {
         initialEnd={timePickerTarget?.endTime}
         onConfirm={handleConfirmTime}
       />
+
+      {/* 评定结果附件管理弹窗（仅目录内比价 + 招标结束后可用） */}
+      <Modal
+        open={!!attachmentTarget}
+        title="评定结果附件管理"
+        onClose={closeAttachmentManager}
+        footer={
+          <>
+            <DefaultButton onClick={closeAttachmentManager}>取消</DefaultButton>
+            <PrimaryButton
+              onClick={handleConfirmAttachments}
+              disabled={attachmentLocalList.length > MAX_RESULT_ATTACHMENTS}
+            >保存</PrimaryButton>
+          </>
+        }
+        width="560px"
+      >
+        {attachmentTarget && (
+          <div className="space-y-3">
+            {/* 工单信息卡 */}
+            <div className="bg-[#f5f7fa] border border-[#e4e7ed] rounded px-3 py-2 text-xs text-[#606266]">
+              <div className="font-semibold text-[#303133] mb-1">
+                {attachmentTarget.biddingNo} · {attachmentTarget.biddingName}
+              </div>
+              <div>
+                当前状态：
+                <span className={
+                  attachmentTarget.status === 'completed'
+                    ? 'text-green-600 font-semibold'
+                    : 'text-amber-600 font-semibold'
+                }>
+                  {attachmentTarget.status === 'completed' ? '已完成' : '已评审'}
+                </span>
+              </div>
+            </div>
+
+            {/* 上传区 */}
+            <div className="border border-[#67c23a] rounded p-3 bg-[#f0f9eb]">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <div className="text-sm font-semibold text-[#303133]">竞价小组评定结果附件</div>
+                  <div className="text-xs text-[#909399]">可上传评审报告、比价记录等附件（最多 {MAX_RESULT_ATTACHMENTS} 个）</div>
+                </div>
+                <label className="inline-block">
+                  <input
+                    ref={attachmentFileRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={handleResultAttachmentUpload}
+                  />
+                  <PrimaryButton
+                    size="small"
+                    disabled={attachmentLocalList.length >= MAX_RESULT_ATTACHMENTS}
+                    onClick={() => attachmentFileRef.current?.click()}
+                  >
+                    + 上传附件
+                  </PrimaryButton>
+                </label>
+              </div>
+
+              {attachmentLocalList.length === 0 ? (
+                <div className="text-xs text-[#909399] text-center py-3 border border-dashed border-[#c2e7b0] rounded bg-white">
+                  暂无附件，点击上方「上传附件」选择文件
+                </div>
+              ) : (
+                <div className="space-y-1 max-h-60 overflow-auto">
+                  {attachmentLocalList.map((att, idx) => (
+                    <div key={att.id} className="flex items-center justify-between text-xs bg-white border border-[#e4e7ed] rounded px-3 py-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="text-[#67c23a] text-sm">📎</span>
+                        <span className="truncate font-medium text-[#303133]" title={att.fileName}>
+                          {idx + 1}. {att.fileName}
+                        </span>
+                        <span className="text-[#909399] flex-shrink-0">({formatFileSize(att.fileSize)})</span>
+                        <span className="text-[#909399] flex-shrink-0">上传：{att.uploadTime}</span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                        <button
+                          className="text-[#409eff] hover:underline"
+                          onClick={() => setPreviewAtt(att)}
+                        >预览</button>
+                        <button
+                          className="text-[#409eff] hover:underline"
+                          onClick={() => downloadAttachment(att)}
+                        >下载</button>
+                        <button
+                          className="text-[#f56c6c] hover:underline"
+                          onClick={() => handleResultAttachmentRemove(att.id)}
+                        >删除</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 数量提示条 */}
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <span className={attachmentLocalList.length >= MAX_RESULT_ATTACHMENTS ? 'text-[#f56c6c]' : 'text-[#909399]'}>
+                  已上传 {attachmentLocalList.length} / {MAX_RESULT_ATTACHMENTS} 个
+                </span>
+                {attachmentLocalList.length >= MAX_RESULT_ATTACHMENTS && (
+                  <span className="text-[#f56c6c]">已达上限，请先删除后再上传</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* offline 清单导入隐藏 file input */}
       <input
