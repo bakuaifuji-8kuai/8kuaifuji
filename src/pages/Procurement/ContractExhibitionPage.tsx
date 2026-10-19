@@ -509,17 +509,7 @@ function ContractExhibitionForm({ form, update, biddings, procurementDemands, is
             disabled={isEdit}
           />
 
-          {/* ===== 第一行：关联采购需求 + 合同名称 — 关联需求优先 ===== */}
-          {/* 关联采购需求（needContract='yes' 的已立项通过需求）*/}
-          {/* 需求背景：合同表单选关联采购需求后，自动从关联工单带入需求类型、合同形成方式、对方单位、中标时间等字段 */}
-          <Select
-            label="关联采购需求"
-            options={demandOptions}
-            value={form.demandId || ''}
-            onChange={(e) => handleDemandChange(e.target.value)}
-            placeholder="可选项 — 选择后自动带入项目名称/对方单位/金额等"
-          />
-          {/* 合同名称* */}
+          {/* ===== 第一行：合同名称 ===== */}
           <Input
             label="合同名称 *"
             required
@@ -546,19 +536,13 @@ function ContractExhibitionForm({ form, update, biddings, procurementDemands, is
             placeholder="选择合同形成方式"
           />
 
-          {/* ===== 第三行：合同编号 + 中标时间 ===== */}
+          {/* ===== 第三行：合同编号 ===== */}
           <Input
             label="合同编号 *"
             required
             value={form.contractNo || ''}
             onChange={(e) => update({ contractNo: e.target.value })}
             placeholder="手工输入，如：HT-202609001"
-          />
-          <Input
-            label="中标时间"
-            type="date"
-            value={form.winningDate || ''}
-            onChange={(e) => update({ winningDate: e.target.value })}
           />
 
           {/* ===== 第四行：示范文本 + 是否展会现场相关 ===== */}
