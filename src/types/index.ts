@@ -1493,9 +1493,11 @@ export interface Bidding {
   implementationUnit?: string;         // 招采实施单位
   projectImplementationUnit?: string;  // 项目实施单位
   procurementHandler?: string;          // 招采经办人
-  agentName?: string;                   // 招标代理机构名称（询比/竞价/谈判）
+  hasAgent?: boolean;                  // 是否有招标代理机构（询比/竞价/谈判，门控开关）
+  agentName?: string;                   // 招标代理机构名称（询比/竞价/谈判，hasAgent=true 时可填）
   agentDrawResult?: Attachment[];      // 招标代理抽取结果表（询比/竞价/谈判）
-  ownerRepresentative?: string;        // 业主代表（询比）
+  ownerRepresentative?: string;        // @deprecated 旧单值，兼容历史数据
+  ownerRepresentatives?: string[];     // 业主代表列表（询比，新多值字段）
   hasDispute?: '是' | '否';            // 是否存在答疑/质疑/投诉
   isFailed?: boolean;                  // 是否流标（询比/竞价/谈判-公开）
   failedReason?: string;               // 流标原因（多行，非必填）

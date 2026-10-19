@@ -56,6 +56,9 @@ const isOfflineExecution = (m?: BiddingProcurementMethod) =>
 /** 直接采购（简化明细：无税率/含税） */
 const isDirectOrMall = (m?: BiddingProcurementMethod) => m === 'direct' || m === 'e_mall';
 
+/** 项目部门下拉选项（复用资产申领里已有的部门列表） */
+const PROJECT_DEPARTMENTS = ['展览部', '市场部', '宣传部', '活动部', '行政部', '技术部', '工程部'];
+
 export default function CompetitiveBiddingPage() {
   const biddings = useStore((s) => s.biddings || []) as Bidding[];
   const setBiddings = useStore((s) => s.setBiddings) as ((data: Bidding[]) => void) | undefined;
@@ -1906,10 +1909,14 @@ export default function CompetitiveBiddingPage() {
                 {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') && (
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">项目实施单位 <span className={(editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') ? 'text-[#f56c6c]' : ''}>{(editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') ? '*' : ''}</span></div>
-                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                  <select className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm bg-white"
                     value={editItem.projectImplementationUnit || ''}
-                    onChange={(e) => setEditItem({ ...editItem, projectImplementationUnit: e.target.value })}
-                    placeholder="如：会展运营部" />
+                    onChange={(e) => setEditItem({ ...editItem, projectImplementationUnit: e.target.value })}>
+                    <option value="">请选择部门</option>
+                    {PROJECT_DEPARTMENTS.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
                 </div>
                 )}
                 <div>
@@ -2038,6 +2045,21 @@ export default function CompetitiveBiddingPage() {
               <div className="grid grid-cols-3 gap-3">
                 {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && (
                 <div>
+                  <div className="mb-1 text-xs text-[#606266]">是否有招标代理机构</div>
+                  <div className="flex gap-3 pt-1">
+                    <label className="flex items-center gap-1 text-xs cursor-pointer">
+                      <input type="radio" name="hasAgent" checked={!!editItem.hasAgent}
+                        onChange={() => setEditItem({ ...editItem, hasAgent: true })} /> 是
+                    </label>
+                    <label className="flex items-center gap-1 text-xs cursor-pointer">
+                      <input type="radio" name="hasAgent" checked={!editItem.hasAgent}
+                        onChange={() => setEditItem({ ...editItem, hasAgent: false, agentName: '' })} /> 否
+                    </label>
+                  </div>
+                </div>
+                )}
+                {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && editItem.hasAgent && (
+                <div>
                   <div className="mb-1 text-xs text-[#606266]">招标代理机构名称</div>
                   <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
                     value={editItem.agentName || ''}
@@ -2091,10 +2113,48 @@ export default function CompetitiveBiddingPage() {
                 {editItem.procurementMethod?.startsWith('inquiry') && (
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">业主代表</div>
-                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-                    value={editItem.ownerRepresentative || ''}
-                    onChange={(e) => setEditItem({ ...editItem, ownerRepresentative: e.target.value })}
-                    placeholder="业主评委姓名" />
+                  <div className="space-y-1.5">
+                    {(editItem.ownerRepresentatives && editItem.ownerRepresentatives.length > 0
+                      ? editItem.ownerRepresentatives
+                      : [editItem.ownerRepresentative || '']
+                    ).map((name, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <input className="flex-1 h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                          value={name}
+                          onChange={(e) => {
+                            const arr = [...(editItem.ownerRepresentatives && editItem.ownerRepresentatives.length > 0
+                              ? editItem.ownerRepresentatives
+                              : [editItem.ownerRepresentative || ''])];
+                            arr[idx] = e.target.value;
+                            setEditItem({ ...editItem, ownerRepresentatives: arr });
+                          }}
+                          placeholder={`业主代表 ${idx + 1}`} />
+                        {idx === 0 && editItem.ownerRepresentatives !== undefined && editItem.ownerRepresentatives.length > 1 && (
+                          <button type="button" className="px-1 text-xs text-red-500 hover:text-red-600 shrink-0"
+                            onClick={() => {
+                              const arr = (editItem.ownerRepresentatives || ['']).filter((_, i) => i !== idx);
+                              setEditItem({ ...editItem, ownerRepresentatives: arr });
+                            }}>删除</button>
+                        )}
+                        {idx > 0 && (
+                          <button type="button" className="px-1 text-xs text-red-500 hover:text-red-600 shrink-0"
+                            onClick={() => {
+                              const arr = (editItem.ownerRepresentatives || ['']).filter((_, i) => i !== idx);
+                              setEditItem({ ...editItem, ownerRepresentatives: arr });
+                            }}>删除</button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" className="text-xs text-indigo-600 hover:text-indigo-700 pt-0.5"
+                      onClick={() => {
+                        const base = (editItem.ownerRepresentatives && editItem.ownerRepresentatives.length > 0
+                          ? editItem.ownerRepresentatives
+                          : [editItem.ownerRepresentative || '']);
+                        setEditItem({ ...editItem, ownerRepresentatives: [...base, ''] });
+                      }}>
+                      + 添加业主代表
+                    </button>
+                  </div>
                 </div>
                 )}
               </div>
