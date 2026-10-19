@@ -431,7 +431,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
     demandId: 'DEM-INQ-001',
     biddingNo: 'INQ-001',
     biddingName: '2026秋季博览会展架搭建询比采购（已完成）',
-    procurementMethod: 'inquiry',
+    procurementMethod: 'inquiry_open',
     approvalStatus: 'approved',
     demandNo: 'XQ20260903001',
     projectName: PROJ[1].name,
@@ -473,7 +473,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
     demandId: 'DEM-INQ-002',
     biddingNo: 'INQ-002',
     biddingName: 'LED展示屏询比采购（已取消-流标）',
-    procurementMethod: 'inquiry',
+    procurementMethod: 'inquiry_invited',
     approvalStatus: 'approved',
     demandNo: 'XQ20260902002',
     projectName: PROJ[3].name,
@@ -506,7 +506,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
     demandId: 'DEM-INQ-003',
     biddingNo: 'INQ-003',
     biddingName: '办公隔断询比采购（待审）',
-    procurementMethod: 'inquiry',
+    procurementMethod: 'inquiry_open',
     approvalStatus: 'submitted',
     demandNo: 'XQ20260905001',
     projectName: PROJ[6].name,
@@ -537,7 +537,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
     demandId: 'DEM-INQ-004',
     biddingNo: 'INQ-004',
     biddingName: '打印机询比采购（草稿）',
-    procurementMethod: 'inquiry',
+    procurementMethod: 'inquiry_invited',
     approvalStatus: 'draft',
     projectName: PROJ[4].name,
     implementationUnit: '信息部',
@@ -558,7 +558,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
     demandId: 'DEM-INQ-005',
     biddingNo: 'INQ-005',
     biddingName: '投影仪询比采购（驳回）',
-    procurementMethod: 'inquiry',
+    procurementMethod: 'inquiry_open',
     approvalStatus: 'rejected',
     demandNo: 'XQ20260820001',
     projectName: PROJ[4].name,
@@ -1387,7 +1387,7 @@ const mkDemandDetails = (b: Bidding): ProcurementDemandDetail[] => {
 const methodToBiz = (m?: string): { procurementType: 'within_framework' | 'outside_framework' | 'new_supplier'; isFramework: boolean } => {
   if (!m) return { procurementType: 'outside_framework', isFramework: false };
   if (m.startsWith('framework_')) return { procurementType: 'within_framework', isFramework: true };
-  if (m === 'legal_bidding' || m === 'voluntary_bidding' || m === 'inquiry' || m === 'competitive_bidding' || m === 'negotiation_open' || m === 'negotiation_invited') {
+  if (m === 'legal_bidding' || m === 'voluntary_bidding' || m.startsWith('inquiry') || m === 'competitive_bidding' || m === 'negotiation_open' || m === 'negotiation_invited') {
     return { procurementType: 'outside_framework', isFramework: false };
   }
   return { procurementType: 'outside_framework', isFramework: false }; // direct / e_mall
@@ -1723,7 +1723,8 @@ export const MOCK_PROCUREMENT_INSPECTIONS: ProcurementInspection[] = COMPLETED_O
 const METHOD_TO_FORMATION: Record<string, ContractLedger['formation']> = {
   framework_catalog: 'state_owned_framework',
   framework_random: 'state_owned_framework',
-  inquiry: 'state_owned_xunbi',
+  inquiry_open: 'state_owned_xunbi',
+  inquiry_invited: 'state_owned_xunbi',
   competitive_bidding: 'state_owned_jingjia',
   negotiation_open: 'state_owned_tanpan',
   negotiation_invited: 'state_owned_tanpan',

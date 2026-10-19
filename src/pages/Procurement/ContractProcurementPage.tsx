@@ -59,7 +59,8 @@ function getNowString(): string {
 const BIDDING_METHOD_TO_FORMATION: Record<BiddingProcurementMethod, ProcurementFormation> = {
   legal_bidding: 'legal_bidding',
   voluntary_bidding: 'voluntary_bidding',
-  inquiry: 'state_owned_xunbi',
+  inquiry_open: 'state_owned_xunbi',
+  inquiry_invited: 'state_owned_xunbi',
   competitive_bidding: 'state_owned_jingjia',
   negotiation_open: 'state_owned_tanpan',
   negotiation_invited: 'state_owned_tanpan',

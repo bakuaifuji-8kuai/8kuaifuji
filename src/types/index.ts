@@ -1242,7 +1242,8 @@ export interface ProcurementDemand {
  *          → 2026-09-21 框架协议采购拆为目录内比价 / 随机抽取两种子模式
  */
 export type BiddingProcurementMethod =
-  | 'inquiry'               // 询比采购（线下录入）
+  | 'inquiry_open'           // 询比采购-公开（线下录入，字段同邀请）
+  | 'inquiry_invited'        // 询比采购-邀请（线下录入，字段同公开）
   | 'competitive_bidding'   // 竞价采购（线下录入）
   | 'negotiation_open'      // 谈判采购-公开（线下录入）
   | 'negotiation_invited'   // 谈判采购-邀请（线下录入）
@@ -1258,7 +1259,8 @@ type _DeprecatedFramework = 'framework';
 
 /** 采购方式中文名 */
 export const BIDDING_METHOD_LABEL: Record<BiddingProcurementMethod, string> = {
-  inquiry: '询比采购',
+  inquiry_open: '询比采购-公开',
+  inquiry_invited: '询比采购-邀请',
   competitive_bidding: '竞价采购',
   negotiation_open: '谈判采购-公开',
   negotiation_invited: '谈判采购-邀请',

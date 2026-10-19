@@ -32,7 +32,8 @@ import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 const PROCUREMENT_OPTIONS: Array<{ value: BiddingProcurementMethod; label: string }> = [
   { value: 'legal_bidding', label: '法定招标' },
   { value: 'voluntary_bidding', label: '自愿招标' },
-  { value: 'inquiry', label: '询比采购' },
+  { value: 'inquiry_open', label: '询比采购-公开' },
+  { value: 'inquiry_invited', label: '询比采购-邀请' },
   { value: 'competitive_bidding', label: '竞价采购' },
   { value: 'negotiation_open', label: '谈判采购-公开' },
   { value: 'negotiation_invited', label: '谈判采购-邀请' },
@@ -50,7 +51,7 @@ const isFrameworkRandom = (m?: BiddingProcurementMethod) => m === 'framework_ran
 
 /** 线下流程模式（需要招采执行字段：公告/开标/评标/中标结果等） */
 const isOfflineExecution = (m?: BiddingProcurementMethod) =>
-  m === 'inquiry' || m === 'competitive_bidding' || m === 'negotiation_open' || m === 'negotiation_invited';
+  m?.startsWith('inquiry') || m === 'competitive_bidding' || m === 'negotiation_open' || m === 'negotiation_invited';
 
 /** 直接采购（简化明细：无税率/含税） */
 const isDirectOrMall = (m?: BiddingProcurementMethod) => m === 'direct' || m === 'e_mall';
@@ -1902,7 +1903,7 @@ export default function CompetitiveBiddingPage() {
                     onChange={(e) => setEditItem({ ...editItem, implementationUnit: e.target.value })}
                     placeholder="如：国金招标采购中心" />
                 </div>
-                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') && (
+                {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') && (
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">项目实施单位 <span className={(editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') ? 'text-[#f56c6c]' : ''}>{(editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') ? '*' : ''}</span></div>
                   <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
@@ -1918,7 +1919,7 @@ export default function CompetitiveBiddingPage() {
                     onChange={(e) => setEditItem({ ...editItem, procurementHandler: e.target.value })}
                     placeholder="经办人姓名" />
                 </div>
-                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && (
+                {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && (
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">招标人</div>
                   <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
@@ -2035,7 +2036,7 @@ export default function CompetitiveBiddingPage() {
                 <span className="text-xs text-slate-400 font-normal">（916 L21-30）</span>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && (
+                {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && (
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">招标代理机构名称</div>
                   <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
@@ -2044,7 +2045,7 @@ export default function CompetitiveBiddingPage() {
                     placeholder="如：湖南招标代理公司" />
                 </div>
                 )}
-                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'negotiation_open') && (
+                {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'negotiation_open') && (
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">招采公告发布时间</div>
                   <input type="datetime-local" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
@@ -2052,7 +2053,7 @@ export default function CompetitiveBiddingPage() {
                     onChange={(e) => setEditItem({ ...editItem, announcementPublishTime: e.target.value.replace('T', ' ') })} />
                 </div>
                 )}
-                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding') && (
+                {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding') && (
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">开标时间</div>
                   <input type="datetime-local" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
@@ -2060,7 +2061,7 @@ export default function CompetitiveBiddingPage() {
                     onChange={(e) => setEditItem({ ...editItem, bidOpeningTime: e.target.value.replace('T', ' ') })} />
                 </div>
                 )}
-                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding') && (
+                {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding') && (
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">评标办法</div>
                   <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
@@ -2072,7 +2073,7 @@ export default function CompetitiveBiddingPage() {
               </div>
 
               {/* 是否委派业主评委 + 业主代表（询比/竞价） */}
-              {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding') && (
+              {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding') && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">是否委派业主评委</div>
@@ -2087,7 +2088,7 @@ export default function CompetitiveBiddingPage() {
                     </label>
                   </div>
                 </div>
-                {editItem.procurementMethod === 'inquiry' && (
+                {editItem.procurementMethod?.startsWith('inquiry') && (
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">业主代表</div>
                   <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
@@ -2123,7 +2124,7 @@ export default function CompetitiveBiddingPage() {
                     onChange={(e) => setEditItem({ ...editItem, winningSupplierLegalPerson: e.target.value })}
                     placeholder="法人姓名" />
                 </div>
-                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding') && (
+                {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding') && (
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">中标单位得分</div>
                   <input type="number" step="0.01" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
@@ -2161,7 +2162,7 @@ export default function CompetitiveBiddingPage() {
               </div>
 
               {/* 未中标单位1 / 未中标单位2（询比/竞价） */}
-              {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding') && (
+              {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding') && (
               <>
                 <div className="text-xs text-slate-500 mt-2">未中标单位</div>
                 <div className="grid grid-cols-2 gap-3">
@@ -2214,14 +2215,14 @@ export default function CompetitiveBiddingPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {/* 必须项：询比 */}
-                {editItem.procurementMethod === 'inquiry' && renderMaterialSlot('meetingMinutes', '会议纪要', true)}
-                {editItem.procurementMethod === 'inquiry' && renderMaterialSlot('onMeetingMaterials', '上会材料', true)}
+                {editItem.procurementMethod?.startsWith('inquiry') && renderMaterialSlot('meetingMinutes', '会议纪要', true)}
+                {editItem.procurementMethod?.startsWith('inquiry') && renderMaterialSlot('onMeetingMaterials', '上会材料', true)}
                 {/* 竞价 + 谈判 */}
                 {(editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && renderMaterialSlot('demandMaterial', '需求立项材料')}
                 {/* 谈判 */}
                 {editItem.procurementMethod?.startsWith('negotiation') && renderMaterialSlot('preContractReview', '前置审核合同文本')}
                 {/* 招标代理（询比/竞价/谈判） */}
-                {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && renderMaterialSlot('agentDrawResult', '招标代理抽取结果表')}
+                {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && renderMaterialSlot('agentDrawResult', '招标代理抽取结果表')}
                 {/* 成交通知书 + 过程备案：4 种都要 */}
                 {renderMaterialSlot('awardNotice', '成交通知书')}
                 {renderMaterialSlot('processArchive', '招采过程备案')}
@@ -2231,7 +2232,7 @@ export default function CompetitiveBiddingPage() {
               </div>
 
               {/* 流标（仅询比/竞价/谈判-公开，放在最下方一行） */}
-              {(editItem.procurementMethod === 'inquiry' || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'negotiation_open') && (
+              {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'negotiation_open') && (
               <div className="pt-3 border-t border-slate-200">
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-[#606266] font-semibold">流标：</span>

@@ -577,7 +577,7 @@ export const SUPPLEMENT_BIDDINGS: Bidding[] = [
     id: 'BID-DEMO2-12',
     biddingNo: 'FM-RND-DE2-12',
     projectName: '展馆消防设施年度检测服务（审批通过待推进）',
-    procurementMethod: 'inquiry',
+    procurementMethod: 'inquiry_invited',
     demandNo: '',
     status: 'approved',
     approvalStatus: 'approved',
