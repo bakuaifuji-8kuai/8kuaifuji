@@ -2215,9 +2215,18 @@ export default function CompetitiveBiddingPage() {
                     </label>
                     <label className="flex items-center gap-1 text-xs cursor-pointer">
                       <input type="radio" name="hasDispute" value="否" checked={editItem.hasDispute === '否'}
-                        onChange={(e) => setEditItem({ ...editItem, hasDispute: e.target.value as '是' | '否' })} /> 否
+                        onChange={(e) => setEditItem({ ...editItem, hasDispute: e.target.value as '是' | '否', disputeReason: '' })} /> 否
                     </label>
                   </div>
+                  {editItem.hasDispute === '是' && (
+                    <textarea
+                      value={editItem.disputeReason || ''}
+                      onChange={(e) => setEditItem({ ...editItem, disputeReason: e.target.value })}
+                      rows={2}
+                      placeholder="请简要说明答疑/质疑/投诉情况"
+                      className="mt-1.5 w-full text-xs px-2 py-1.5 border border-[#dcdfe6] rounded resize-none min-h-[56px]"
+                    />
+                  )}
                 </div>
               </div>
 
