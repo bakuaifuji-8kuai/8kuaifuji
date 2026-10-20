@@ -1193,7 +1193,7 @@ export interface ProcurementDemand {
   demandType: ProcurementDemandType;
   businessCategory?: 'engineering' | 'non_engineering'; // 业务分类：工程类 / 非工程类
   subType?: 'construction' | 'service' | 'goods'; // 细分：施工 / 服务 / 货物
-  procurementType: ProcurementType; // 框架合同清单内/外采购：清单内/清单外/新增供应商目录
+  procurementType?: ProcurementType | ''; // 框架合同清单内/外采购：清单内/清单外/新增供应商目录（可空，保存前必填校验）
   procurementMode?: ProcurementMode; // 需求立项方式：会议审批/签报审批/采购项目申请表
   applicant: string; // 申请人
   applicantDept: string; // 申请部门
