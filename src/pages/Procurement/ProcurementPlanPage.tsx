@@ -380,15 +380,17 @@ export default function ProcurementPlanPage() {
   const handleExport = (plan: ProcurementPlan) => {
     const isAnnual = plan.planType === 'annual';
     const headers = [
-      '序号', '需求部门', '项目名称', '需求类型', '项目概况', '项目估（预）算（元）',
+      '序号', '需求部门', '项目名称', '项目类别', '项目概况', '项目估（预）算（元）',
       '用户需求书编制计划完成时间', '预算编制审批计划完成时间', '合同前置审核计划完成时间',
-      '计划采购启动时间', '计划采购完成时间'
+      '需求审批全套佐证资料', '采购方式',
+      '计划采购启动时间', '计划采购完成时间', '备注'
     ];
 
     const rows = plan.details.map((d, i) => [
       i + 1, plan.department, d.projectName, d.projectNature, d.projectOverview, d.budgetAmount,
       d.userRequirementDocDate || '', d.budgetApprovalDate || '', d.contractReviewDate || '',
-      d.planProcurementStartDate || '', d.planProcurementEndDate || ''
+      d.approvalSupportDocs || '', d.procurementMethod || '',
+      d.planProcurementStartDate || '', d.planProcurementEndDate || '', d.remark || ''
     ]);
 
     const csvContent = [
@@ -409,14 +411,16 @@ export default function ProcurementPlanPage() {
   const handleDownloadTemplate = () => {
     const isAnnual = editItem?.planType === 'annual';
     const headers = [
-      '序号', '需求部门', '项目名称', '需求类型', '项目概况', '项目估（预）算（元）',
+      '序号', '需求部门', '项目名称', '项目类别', '项目概况', '项目估（预）算（元）',
       '用户需求书编制计划完成时间', '预算编制审批计划完成时间', '合同前置审核计划完成时间',
-      '计划采购启动时间', '计划采购完成时间'
+      '需求审批全套佐证资料', '采购方式',
+      '计划采购启动时间', '计划采购完成时间', '备注'
     ];
     const sampleRow = [
-      1, 'XX部', '展会地毯铺设服务', '服务', 'XX展会通道地毯', 15,
+      1, 'XX部', '展会地毯铺设服务', '非工程类/服务', 'XX展会通道地毯', 15,
       '2026-03-01', '2026-03-15', '2026-03-20',
-      '2026-04-01', '2026-04-30'
+      '需求说明书/预算表齐全', '询比采购-公开',
+      '2026-04-01', '2026-04-30', '样例'
     ];
     const csvContent = [
       [`${isAnnual ? editItem?.year + '年度计划' : editItem?.year + '年' + editItem?.month + '月月度计划'}`],
@@ -474,8 +478,11 @@ export default function ProcurementPlanPage() {
           userRequirementDocDate: values[6] || '',
           budgetApprovalDate: values[7] || '',
           contractReviewDate: values[8] || '',
-          planProcurementStartDate: values[9] || '',
-          planProcurementEndDate: values[10] || '',
+          approvalSupportDocs: values[9] || '',
+          procurementMethod: (values[10] || '') as ProcurementMethod | '',
+          planProcurementStartDate: values[11] || '',
+          planProcurementEndDate: values[12] || '',
+          remark: values[13] || '',
         };
         importedDetails.push(detail);
       }
@@ -691,21 +698,24 @@ export default function ProcurementPlanPage() {
                   <tr>
                     <th colSpan={6} className="px-2 py-1 text-xs text-center border-r border-[#dcdfe6]">项目基本信息</th>
                     <th colSpan={3} className="px-2 py-1 text-xs text-center border-r border-[#dcdfe6] bg-[#fef3c7]">招标采购前置阶段</th>
-                    <th colSpan={2} className="px-2 py-1 text-xs text-center bg-[#dbeafe]">招标采购阶段</th>
+                    <th colSpan={5} className="px-2 py-1 text-xs text-center bg-[#dbeafe]">招标采购阶段</th>
                     <th rowSpan={2} className="px-2 py-2 text-xs text-left w-20 whitespace-nowrap">操作</th>
                   </tr>
                   <tr>
                     <th className="px-2 py-2 text-xs text-left w-12 whitespace-nowrap">序号</th>
                     <th className="px-2 py-2 text-xs text-left w-32 whitespace-nowrap"><span className="text-[#ef4444]">*</span>需求部门</th>
                     <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap"><span className="text-[#ef4444]">*</span>项目名称</th>
-                    <th className="px-2 py-2 text-xs text-left w-20 whitespace-nowrap"><span className="text-[#ef4444]">*</span>需求类型</th>
+                    <th className="px-2 py-2 text-xs text-left w-28 whitespace-nowrap"><span className="text-[#ef4444]">*</span>项目类别</th>
                     <th className="px-2 py-2 text-xs text-left w-40 whitespace-nowrap"><span className="text-[#ef4444]">*</span>项目概况</th>
                     <th className="px-2 py-2 text-xs text-left w-28 whitespace-nowrap"><span className="text-[#ef4444]">*</span>项目估（预）算（元）</th>
                     <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap bg-[#fef3c7]"><span className="text-[#ef4444]">*</span>用户需求书编制计划完成时间</th>
                     <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap bg-[#fef3c7]"><span className="text-[#ef4444]">*</span>预算编制审批计划完成时间</th>
                     <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap bg-[#fef3c7]"><span className="text-[#ef4444]">*</span>合同前置审核计划完成时间</th>
-                    <th className="px-2 py-2 text-xs text-left w-32 whitespace-nowrap bg-[#dbeafe]"><span className="text-[#ef4444]">*</span>计划采购启动时间</th>
-                    <th className="px-2 py-2 text-xs text-left w-32 whitespace-nowrap bg-[#dbeafe]"><span className="text-[#ef4444]">*</span>计划采购完成时间</th>
+                    <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap bg-[#dbeafe]">需求审批全套佐证资料</th>
+                    <th className="px-2 py-2 text-xs text-left w-32 whitespace-nowrap bg-[#dbeafe]">采购方式</th>
+                    <th className="px-2 py-2 text-xs text-left w-28 whitespace-nowrap bg-[#dbeafe]"><span className="text-[#ef4444]">*</span>计划采购启动时间</th>
+                    <th className="px-2 py-2 text-xs text-left w-28 whitespace-nowrap bg-[#dbeafe]"><span className="text-[#ef4444]">*</span>计划采购完成时间</th>
+                    <th className="px-2 py-2 text-xs text-left w-32 whitespace-nowrap bg-[#dbeafe]">备注</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -733,9 +743,11 @@ export default function ProcurementPlanPage() {
                           onChange={(e) => updateDetail(index, 'projectNature', e.target.value as ProjectNature)}
                         >
                           <option value="">请选择</option>
-                          <option value="服务">服务</option>
-                          <option value="工程">工程</option>
-                          <option value="物资">物资</option>
+                          <option value="工程类/施工">工程类/施工</option>
+                          <option value="工程类/服务">工程类/服务</option>
+                          <option value="工程类/货物（含材料和设备）">工程类/货物（含材料和设备）</option>
+                          <option value="非工程类/服务">非工程类/服务</option>
+                          <option value="非工程类/货物（含材料和设备）">非工程类/货物（含材料和设备）</option>
                         </select>
                       </td>
                       <td className="px-2 py-1">
@@ -778,6 +790,35 @@ export default function ProcurementPlanPage() {
                         />
                       </td>
                       <td className="px-2 py-1 bg-[#dbeafe]/30">
+                        <textarea
+                          rows={1}
+                          className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs resize-none"
+                          value={detail.approvalSupportDocs || ''}
+                          onChange={(e) => updateDetail(index, 'approvalSupportDocs', e.target.value)}
+                          placeholder="佐证资料清单"
+                        />
+                      </td>
+                      <td className="px-2 py-1 bg-[#dbeafe]/30">
+                        <select
+                          className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
+                          value={detail.procurementMethod || ''}
+                          onChange={(e) => updateDetail(index, 'procurementMethod', e.target.value as ProcurementMethod | '')}
+                        >
+                          <option value="">请选择</option>
+                          <option value="法定招标">法定招标</option>
+                          <option value="自愿招标">自愿招标</option>
+                          <option value="询比采购-公开">询比采购-公开</option>
+                          <option value="询比采购-邀请">询比采购-邀请</option>
+                          <option value="竞价采购">竞价采购</option>
+                          <option value="谈判采购-公开">谈判采购-公开</option>
+                          <option value="谈判采购-邀请">谈判采购-邀请</option>
+                          <option value="直接采购">直接采购</option>
+                          <option value="框架协议采购-目录内比价">框架协议采购-目录内比价</option>
+                          <option value="框架协议采购-随机抽取">框架协议采购-随机抽取</option>
+                          <option value="电子商城采购">电子商城采购</option>
+                        </select>
+                      </td>
+                      <td className="px-2 py-1 bg-[#dbeafe]/30">
                         <input
                           type="date"
                           className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
@@ -793,6 +834,14 @@ export default function ProcurementPlanPage() {
                           onChange={(e) => updateDetail(index, 'planProcurementEndDate', e.target.value)}
                         />
                       </td>
+                      <td className="px-2 py-1 bg-[#dbeafe]/30">
+                        <input
+                          className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
+                          value={detail.remark || ''}
+                          onChange={(e) => updateDetail(index, 'remark', e.target.value)}
+                          placeholder="备注"
+                        />
+                      </td>
                       <td className="px-2 py-1">
                         <TextButton type="danger" size="small" onClick={() => removeDetail(index)}>删除</TextButton>
                       </td>
@@ -800,7 +849,7 @@ export default function ProcurementPlanPage() {
                   ))}
                   {details.length === 0 && (
                     <tr>
-                      <td colSpan={12} className="px-3 py-4 text-center text-[#909399] text-sm">暂无明细，请点击"导入Excel"或"添加明细"</td>
+                      <td colSpan={15} className="px-3 py-4 text-center text-[#909399] text-sm">暂无明细，请点击"导入Excel"或"添加明细"</td>
                     </tr>
                   )}
                 </tbody>

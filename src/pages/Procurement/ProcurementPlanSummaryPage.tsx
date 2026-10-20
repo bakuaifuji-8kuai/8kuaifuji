@@ -177,7 +177,8 @@ export default function ProcurementPlanSummaryPage() {
     const headers = [
       '序号', '计划方式', '计划类型', '时间', '需求部门', '项目名称', '项目类别', '项目概况', '项目估（预）算（元）',
       '用户需求书编制计划完成时间', '预算编制审批计划完成时间', '合同前置审核计划完成时间',
-      '计划采购启动时间', '计划采购完成时间'
+      '需求审批全套佐证资料', '采购方式',
+      '计划采购启动时间', '计划采购完成时间', '备注'
     ];
     const rows = summary.allDetails.map((d) => {
       const period = d._planType === 'annual' ? `${d._year}年` : `${d._year}年${d._month}月`;
@@ -186,7 +187,8 @@ export default function ProcurementPlanSummaryPage() {
       return [
         d.seq, planModeLabel, planTypeLabel, period, d._department, d.projectName, d.projectNature || '', d.projectOverview || '',
         d.budgetAmount.toFixed(2), d.userRequirementDocDate || '', d.budgetApprovalDate || '',
-        d.contractReviewDate || '', d.planProcurementStartDate || '', d.planProcurementEndDate || ''
+        d.contractReviewDate || '', d.approvalSupportDocs || '', d.procurementMethod || '',
+        d.planProcurementStartDate || '', d.planProcurementEndDate || '', d.remark || ''
       ];
     });
     const csv = [

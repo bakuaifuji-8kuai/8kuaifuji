@@ -717,6 +717,22 @@ export default function CompetitiveBiddingPage() {
       for (const r of editItem.offlineDetails) {
         if (!r.itemName) { alert('清单条目名称不能为空！'); return; }
       }
+      // ===== 清单合计金额手填校验：至少填一项 + 与明细合计必须一致 =====
+      const exclInput = editItem.totalAmountExcludingTaxInput;
+      const inclInput = editItem.totalAmountIncludingTaxInput;
+      if (exclInput == null && inclInput == null) {
+        alert('请填写"清单明细合计金额"（不含税总金额 / 含税总金额至少填一项）！');
+        return;
+      }
+      const TOL = 0.01; // 容差 0.01 元
+      if (exclInput != null && Math.abs(exclInput - offlineTotals.ex) > TOL) {
+        alert(`不含税总金额与清单明细合计不一致！\n您填写：¥${exclInput.toFixed(2)}\n清单合计：¥${offlineTotals.ex.toFixed(2)}\n请核对清单明细或修正输入值。`);
+        return;
+      }
+      if (inclInput != null && Math.abs(inclInput - offlineTotals.in) > TOL) {
+        alert(`含税总金额与清单明细合计不一致！\n您填写：¥${inclInput.toFixed(2)}\n清单合计：¥${offlineTotals.in.toFixed(2)}\n请核对清单明细或修正输入值。`);
+        return;
+      }
     }
 
     // === 直接采购/电子商城：6 个基础执行信息必填 ===
@@ -1038,14 +1054,18 @@ export default function CompetitiveBiddingPage() {
     if (!file || !editItem) return;
     try {
       const rows = await parseOfflineList(file);
-      // 计算不含税/含税/税额等自动字段
+      // Excel 有原值则按原值显示；无值才用单价×数量×税率兜底计算
       const computed = rows.map((r) => {
         const taxRate = r.taxRate ?? 0.13;
         const unitPriceExcludingTax = r.unitPriceExcludingTax ?? 0;
-        const unitPriceIncludingTax = +(unitPriceExcludingTax * (1 + taxRate)).toFixed(4);
-        const amountExcludingTax = +(unitPriceExcludingTax * r.quantity).toFixed(2);
-        const taxAmount = +(amountExcludingTax * taxRate).toFixed(2);
-        const amountIncludingTax = +(amountExcludingTax + taxAmount).toFixed(2);
+        const unitPriceIncludingTax = r.unitPriceIncludingTax
+          ?? +(unitPriceExcludingTax * (1 + taxRate)).toFixed(4);
+        const amountExcludingTax = r.amountExcludingTax
+          ?? +(unitPriceExcludingTax * r.quantity).toFixed(2);
+        const taxAmount = r.taxAmount
+          ?? +(amountExcludingTax * taxRate).toFixed(2);
+        const amountIncludingTax = r.amountIncludingTax
+          ?? +(amountExcludingTax + taxAmount).toFixed(2);
         return {
           rowNo: r.rowNo,
           itemName: r.itemName,
@@ -1060,7 +1080,7 @@ export default function CompetitiveBiddingPage() {
         };
       });
       setEditItem({ ...editItem, offlineDetails: computed });
-      alert(`✅ 导入成功，共 ${computed.length} 条`);
+      alert(`✅ 导入成功，共 ${computed.length} 条（Excel 原值优先，无金额列则按单价计算）`);
     } catch (err: any) {
       alert(err?.message || '文件解析失败');
     } finally {
@@ -1834,6 +1854,7 @@ export default function CompetitiveBiddingPage() {
                       </div>
                     </div>
                   ) : (
+                    <>
                     <div className="border border-slate-200 rounded-xl p-4 bg-white">
                       <div className="flex gap-2 flex-wrap mb-3">
                         <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md">
@@ -1868,6 +1889,41 @@ export default function CompetitiveBiddingPage() {
                         </button>
                       </div>
                     </div>
+
+                    {/* 线下录入类：页面手填合计值（至少填一项，保存时与明细合计比对） */}
+                    {!isCatalogCompare(editItem.procurementMethod) && editItem.offlineDetails && editItem.offlineDetails.length > 0 && !isFrameworkRandom(editItem.procurementMethod) && (
+                    <div className="mt-3 pt-3 border-t border-dashed border-slate-200">
+                      <div className="text-xs text-[#606266] mb-2 flex items-center gap-1.5">
+                        <span className="inline-block w-1 h-1 rounded-full bg-indigo-500"></span>
+                        清单明细合计金额（至少填一项，保存时将与明细合计比对，必须一致）
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <div className="text-[11px] text-slate-400 mb-1">不含税总金额（元）</div>
+                          <input type="number" step="0.01" min="0"
+                            className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                            value={editItem.totalAmountExcludingTaxInput ?? ''}
+                            onChange={(e) => setEditItem({
+                              ...editItem,
+                              totalAmountExcludingTaxInput: e.target.value === '' ? undefined : Number(e.target.value),
+                            })}
+                            placeholder={`系统计算：¥${offlineTotals.ex.toLocaleString()}`} />
+                        </div>
+                        <div>
+                          <div className="text-[11px] text-slate-400 mb-1">含税总金额（元）</div>
+                          <input type="number" step="0.01" min="0"
+                            className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                            value={editItem.totalAmountIncludingTaxInput ?? ''}
+                            onChange={(e) => setEditItem({
+                              ...editItem,
+                              totalAmountIncludingTaxInput: e.target.value === '' ? undefined : Number(e.target.value),
+                            })}
+                            placeholder={`系统计算：¥${offlineTotals.in.toLocaleString()}`} />
+                        </div>
+                      </div>
+                    </div>
+                    )}
+                    </>
                   )}
                 </div>
               </>

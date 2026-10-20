@@ -996,11 +996,27 @@ export type ProcurementPlanType = 'monthly' | 'annual';
 // 采购计划状态
 export type ProcurementPlanStatus = 'draft' | 'pending' | 'approved' | 'archived' | 'returned' | 'rejected_by_modify';
 
-// 项目性质
-export type ProjectNature = '服务' | '工程' | '物资';
+// 项目性质（统一收敛为 5 类，全项目通用）
+export type ProjectNature =
+  | '工程类/施工'
+  | '工程类/服务'
+  | '工程类/货物（含材料和设备）'
+  | '非工程类/服务'
+  | '非工程类/货物（含材料和设备）';
 
-// 采购方式
-export type ProcurementMethod = '公开招标' | '邀请招标' | '竞争性谈判' | '单一来源采购' | '询价采购' | '框架协议采购';
+// 采购方式（与招采执行页对齐，11 种）
+export type ProcurementMethod =
+  | '法定招标'
+  | '自愿招标'
+  | '询比采购-公开'
+  | '询比采购-邀请'
+  | '竞价采购'
+  | '谈判采购-公开'
+  | '谈判采购-邀请'
+  | '直接采购'
+  | '框架协议采购-目录内比价'
+  | '框架协议采购-随机抽取'
+  | '电子商城采购';
 
 // 评标办法
 export type BidEvaluationMethod = '综合评分法' | '最低价法' | '性价比法';
@@ -1021,6 +1037,7 @@ export interface ProcurementPlanDetail {
   // ==================== 招标采购阶段 ====================
   planProcurementStartDate?: string; // 计划采购启动时间
   planProcurementEndDate?: string; // 计划采购完成时间
+  approvalSupportDocs?: string; // 需求审批全套佐证资料（新增，描述资料齐套情况）
   // ==================== 原有保留字段 ====================
   estimatedCost?: number; // 项目控制价（万元）
   plannedStartDate?: string; // 计划启动时间
@@ -1463,11 +1480,15 @@ export interface Bidding {
   offlineDetails?: OfflineDetailItem[];
 
   // ====== 金额汇总（不含税/含税双线） ======
-  totalAmountExcludingTax?: number;  // 不含税金额合计
-  totalAmountIncludingTax?: number;   // 含税金额合计
-  totalTaxAmount?: number;            // 税额合计
+  totalAmountExcludingTax?: number;  // 不含税金额合计（保存时由系统根据明细计算，用于下游展示）
+  totalAmountIncludingTax?: number;   // 含税金额合计（保存时由系统根据明细计算，用于下游展示）
+  totalTaxAmount?: number;            // 税额合计（保存时由系统根据明细计算）
   /** @deprecated 旧字段，含税上限 */
   totalPriceLimit?: number;
+
+  // ====== 线下录入类：页面手填合计值（至少填一项，保存时与明细合计比对，必须一致） ======
+  totalAmountExcludingTaxInput?: number;  // 页面手填的不含税总金额
+  totalAmountIncludingTaxInput?: number;   // 页面手填的含税总金额
 
   // ====== 目录内比价特有 ======
   startTime?: string;

@@ -56,8 +56,8 @@ export const SUPPLEMENT_PLANS: ProcurementPlan[] = [
     creator: '张三',
     currentNodeName: '部门负责人审批',
     details: [
-      { id: 'PLD-DEMO2-01-1', planId: 'PL-DEMO2-01', seq: 1, projectName: '11月车展临时围挡及导视制作', projectNature: '物资', projectOverview: '车展展馆外围围挡、入口导视牌一批', budgetAmount: 18.5, userRequirementDocDate: '2026-10-12', budgetApprovalDate: '2026-10-15', contractReviewDate: '2026-10-18', planProcurementStartDate: '2026-10-20', planProcurementEndDate: '2026-10-28' },
-      { id: 'PLD-DEMO2-01-2', planId: 'PL-DEMO2-01', seq: 2, projectName: '展会志愿者餐饮保障服务', projectNature: '服务', projectOverview: '展期 5 天志愿者及工作人员午餐', budgetAmount: 6.2, planProcurementStartDate: '2026-10-22', planProcurementEndDate: '2026-10-30' },
+      { id: 'PLD-DEMO2-01-1', planId: 'PL-DEMO2-01', seq: 1, projectName: '11月车展临时围挡及导视制作', projectNature: '工程类/货物（含材料和设备）', projectOverview: '车展展馆外围围挡、入口导视牌一批', budgetAmount: 18.5, userRequirementDocDate: '2026-10-12', budgetApprovalDate: '2026-10-15', contractReviewDate: '2026-10-18', planProcurementStartDate: '2026-10-20', planProcurementEndDate: '2026-10-28' },
+      { id: 'PLD-DEMO2-01-2', planId: 'PL-DEMO2-01', seq: 2, projectName: '展会志愿者餐饮保障服务', projectNature: '非工程类/服务', projectOverview: '展期 5 天志愿者及工作人员午餐', budgetAmount: 6.2, planProcurementStartDate: '2026-10-22', planProcurementEndDate: '2026-10-30' },
     ],
   },
   {
@@ -74,7 +74,7 @@ export const SUPPLEMENT_PLANS: ProcurementPlan[] = [
     currentNodeName: '起草人修改',
     remark: '审批退回：预算明细需拆分为硬件与服务两部分后重报',
     details: [
-      { id: 'PLD-DEMO2-02-1', planId: 'PL-DEMO2-02', seq: 1, projectName: '机房网络设备维保续约', projectNature: '服务', projectOverview: '核心交换机/防火墙年度维保', budgetAmount: 22, planProcurementStartDate: '2026-10-10', planProcurementEndDate: '2026-11-10' },
+      { id: 'PLD-DEMO2-02-1', planId: 'PL-DEMO2-02', seq: 1, projectName: '机房网络设备维保续约', projectNature: '非工程类/服务', projectOverview: '核心交换机/防火墙年度维保', budgetAmount: 22, planProcurementStartDate: '2026-10-10', planProcurementEndDate: '2026-11-10' },
     ],
   },
   {
@@ -91,7 +91,7 @@ export const SUPPLEMENT_PLANS: ProcurementPlan[] = [
     isModifiedDuringApproval: true,
     remark: '审批过程中被修改后驳回：宣传渠道调整，本计划不予立项',
     details: [
-      { id: 'PLD-DEMO2-03-1', planId: 'PL-DEMO2-03', seq: 1, projectName: '秋季展会户外广告投放', projectNature: '服务', projectOverview: '地铁灯箱+公交站台广告 4 周', budgetAmount: 35, planProcurementStartDate: '2026-09-20', planProcurementEndDate: '2026-10-20' },
+      { id: 'PLD-DEMO2-03-1', planId: 'PL-DEMO2-03', seq: 1, projectName: '秋季展会户外广告投放', projectNature: '非工程类/服务', projectOverview: '地铁灯箱+公交站台广告 4 周', budgetAmount: 35, planProcurementStartDate: '2026-09-20', planProcurementEndDate: '2026-10-20' },
     ],
   },
   {
@@ -109,7 +109,7 @@ export const SUPPLEMENT_PLANS: ProcurementPlan[] = [
     approver: '系统（报备备案）',
     remark: '报备制月度计划，备案留存',
     details: [
-      { id: 'PLD-DEMO2-04-1', planId: 'PL-DEMO2-04', seq: 1, projectName: '办公区绿植租摆（月度）', projectNature: '服务', projectOverview: '公共区域绿植养护与更换', budgetAmount: 0.8, planProcurementStartDate: '2026-10-01', planProcurementEndDate: '2026-10-31' },
+      { id: 'PLD-DEMO2-04-1', planId: 'PL-DEMO2-04', seq: 1, projectName: '办公区绿植租摆（月度）', projectNature: '非工程类/服务', projectOverview: '公共区域绿植养护与更换', budgetAmount: 0.8, planProcurementStartDate: '2026-10-01', planProcurementEndDate: '2026-10-31' },
     ],
   },
   {
@@ -124,7 +124,7 @@ export const SUPPLEMENT_PLANS: ProcurementPlan[] = [
     creator: '周八',
     remark: '2027 年度采购计划编制草稿',
     details: [
-      { id: 'PLD-DEMO2-05-1', planId: 'PL-DEMO2-05', seq: 1, projectName: '2027 年度展会 IT 设备框架采购', projectNature: '物资', projectOverview: '笔记本、显示设备、网络设备年度框架', budgetAmount: 260, planProcurementStartDate: '2027-01-15', planProcurementEndDate: '2027-02-28' },
+      { id: 'PLD-DEMO2-05-1', planId: 'PL-DEMO2-05', seq: 1, projectName: '2027 年度展会 IT 设备框架采购', projectNature: '工程类/货物（含材料和设备）', projectOverview: '笔记本、显示设备、网络设备年度框架', budgetAmount: 260, planProcurementStartDate: '2027-01-15', planProcurementEndDate: '2027-02-28' },
     ],
   },
 ];

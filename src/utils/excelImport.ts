@@ -521,6 +521,10 @@ export async function parseOfflineList(
   unit: string;
   taxRate: number;
   unitPriceExcludingTax: number;
+  unitPriceIncludingTax?: number;   // 可选，Excel 有则读
+  amountExcludingTax?: number;      // 可选，Excel 有则读（原值优先）
+  amountIncludingTax?: number;      // 可选，Excel 有则读（原值优先）
+  taxAmount?: number;               // 可选，Excel 有则读（原值优先）
 }>> {
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: 'array' });
@@ -538,6 +542,10 @@ export async function parseOfflineList(
     unit: ['单位'],
     taxRate: ['税率(%)', '税率%', '税率'],
     unitPriceExcludingTax: ['不含税单价', '单价(不含税)', '不含税价格'],
+    unitPriceIncludingTax: ['含税单价', '单价(含税)', '含税价格'],
+    amountExcludingTax: ['不含税金额', '不含税总额', '金额(不含税)'],
+    amountIncludingTax: ['含税金额', '含税总额', '价税合计', '金额(含税)'],
+    taxAmount: ['税额', '增值税额', '税金'],
   };
   const get = (row: any, key: string): any => {
     const aliases = headerKeys[key];
@@ -555,7 +563,11 @@ export async function parseOfflineList(
     let quantity = Number(get(row, 'quantity') || 0);
     let unit = String(get(row, 'unit') || '').trim();
     let taxRateRaw = get(row, 'taxRate');
-    let unitPriceExcludingTax = Number(get(row, 'unitPriceExcludingTax') || 0);
+    let unitPriceExcludingTaxRaw = get(row, 'unitPriceExcludingTax');
+    let unitPriceIncludingTaxRaw = get(row, 'unitPriceIncludingTax');
+    let amountExcludingTaxRaw = get(row, 'amountExcludingTax');
+    let amountIncludingTaxRaw = get(row, 'amountIncludingTax');
+    let taxAmountRaw = get(row, 'taxAmount');
 
     if (!itemName) {
       throw new Error(`第 ${rowNo} 行：项目/物料名称不能为空`);
@@ -573,9 +585,28 @@ export async function parseOfflineList(
         taxRate = n <= 1 ? n : n / 100;
       }
     }
+
+    // 单价：含税/不含税 任一存在即可，另一头由税率反推
+    let unitPriceExcludingTax = Number(unitPriceExcludingTaxRaw || 0);
+    let unitPriceIncludingTax: number | undefined = unitPriceIncludingTaxRaw !== undefined && unitPriceIncludingTaxRaw !== ''
+      ? Number(unitPriceIncludingTaxRaw) : undefined;
+    if (unitPriceExcludingTax <= 0 && unitPriceIncludingTax && unitPriceIncludingTax > 0) {
+      unitPriceExcludingTax = +(unitPriceIncludingTax / (1 + taxRate)).toFixed(4);
+    }
     if (unitPriceExcludingTax < 0) unitPriceExcludingTax = 0;
 
-    return { rowNo, itemName, quantity, unit, taxRate, unitPriceExcludingTax };
+    // 金额：Excel 有原值则原样读入；无值则返回 undefined 让调用方兜底计算
+    const amountExcludingTax = amountExcludingTaxRaw !== undefined && amountExcludingTaxRaw !== ''
+      ? +Number(amountExcludingTaxRaw).toFixed(2) : undefined;
+    const amountIncludingTax = amountIncludingTaxRaw !== undefined && amountIncludingTaxRaw !== ''
+      ? +Number(amountIncludingTaxRaw).toFixed(2) : undefined;
+    const taxAmount = taxAmountRaw !== undefined && taxAmountRaw !== ''
+      ? +Number(taxAmountRaw).toFixed(2) : undefined;
+
+    return {
+      rowNo, itemName, quantity, unit, taxRate, unitPriceExcludingTax,
+      unitPriceIncludingTax, amountExcludingTax, amountIncludingTax, taxAmount,
+    };
   });
 
   return results;
