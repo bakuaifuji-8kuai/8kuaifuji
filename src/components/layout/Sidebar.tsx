@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   Boxes, ArrowDownToLine, ArrowUpFromLine, Package, FileText, ChevronRight, Warehouse, RotateCcw, AlertTriangle,
-  ClipboardList, Users, FileCheck, ShoppingCart, CheckSquare, ArrowRightLeft, LayoutGrid, Workflow, Award
+  ClipboardList, Users, FileCheck, ShoppingCart, CheckSquare, ArrowRightLeft, LayoutGrid, Workflow, Award, GitBranch
 } from 'lucide-react';
 
 interface MenuChild {
@@ -39,6 +39,7 @@ const menuItems: MenuItem[] = [
         { title: '招采计划', path: '/procurement/plan' },
         { title: '招采计划汇总', path: '/procurement/plan-summary' },
       ]},
+      { title: '招采流程管理', path: '/procurement/flow-instance', icon: GitBranch },
       { title: '招采需求管理', path: '/procurement/demand-group', children: [
         { title: '招采需求申请管理', path: '/procurement/demand' },
         { title: '招采需求确认管理', path: '/procurement/demand-confirm' },
@@ -105,12 +106,12 @@ const menuItems: MenuItem[] = [
       { title: '报损出库', path: '/outbound/damaged' },
     ],
   },
-  {
-    title: '展会物资调拨管理',
+  { title: '展会物资调拨管理',
     icon: ArrowRightLeft,
     children: [
       { title: '调拨出库', path: '/stock/exhibition-transfer-outbound' },
       { title: '调拨入库', path: '/stock/exhibition-transfer-inbound' },
+      { title: '调拨还库', path: '/stock/exhibition-transfer-return' },
     ],
   },
   {

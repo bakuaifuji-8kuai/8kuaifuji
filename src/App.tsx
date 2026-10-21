@@ -23,6 +23,7 @@ import StockTransactionPage from "@/pages/Stock/StockTransaction";
 import StockTransferPage from "@/pages/Stock/StockTransfer";
 import ExhibitionTransferOutboundPage from "@/pages/Stock/ExhibitionTransferOutbound";
 import ExhibitionTransferInboundPage from "@/pages/Stock/ExhibitionTransferInbound";
+import ExhibitionTransferReturnPage from "@/pages/Stock/ExhibitionTransferReturn";
 import StockReportPage from "@/pages/Report/StockReport";
 import InboundReportPage from "@/pages/Report/InboundReport";
 import OutboundReportPage from "@/pages/Report/OutboundReport";
@@ -67,6 +68,7 @@ import ContractTemplatePage from "@/pages/Procurement/ContractTemplatePage";
 import ProcurementAlertDashboard from "@/pages/Procurement/ProcurementAlertDashboard";
 import ProcurementFunctionDocs from "@/pages/Procurement/ProcurementFunctionDocs";
 import ApprovalFlowConfigPage from "@/pages/Procurement/ApprovalFlowConfigPage";
+import ApprovalFlowInstancePage from "@/pages/Procurement/ApprovalFlowInstancePage";
 import ContractPurchaseOrderPage from "@/pages/Procurement/ContractPurchaseOrderPage";
 import ProcurementPlanSummaryPage from "@/pages/Procurement/ProcurementPlanSummaryPage";
 import EvaluationTemplatePage from "@/pages/Procurement/EvaluationTemplatePage";
@@ -110,6 +112,7 @@ export default function App() {
           <Route path="stock/transaction" element={<StockTransactionPage />} />
           <Route path="stock/exhibition-transfer-outbound" element={<ExhibitionTransferOutboundPage />} />
           <Route path="stock/exhibition-transfer-inbound" element={<ExhibitionTransferInboundPage />} />
+          <Route path="stock/exhibition-transfer-return" element={<ExhibitionTransferReturnPage />} />
           <Route path="stock/transfer" element={<StockTransferPage />} />
 
           {/* 固定资产管理 */}
@@ -126,6 +129,7 @@ export default function App() {
           {/* 采购管理 */}
           <Route path="procurement/plan" element={<ProcurementPlanPage />} />
           <Route path="procurement/plan-summary" element={<ProcurementPlanSummaryPage />} />
+          <Route path="procurement/flow-instance" element={<ApprovalFlowInstancePage />} />
           <Route path="procurement/demand" element={<ProcurementDemandPage />} />
           <Route path="procurement/demand-confirm" element={<ProcurementDemandConfirmPage />} />
           <Route path="procurement/demand-ledger" element={<ProcurementDemandLedgerPage />} />

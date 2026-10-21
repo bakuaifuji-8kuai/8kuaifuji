@@ -735,15 +735,33 @@ export default function CompetitiveBiddingPage() {
       }
     }
 
-    // === 直接采购/电子商城：6 个基础执行信息必填 ===
+    // === 直接采购/电子商城：7 个基础执行信息必填 + 金额比对 ===
     if (procurementMethod === 'direct' || procurementMethod === 'e_mall') {
       if (!editItem.procurementApprovalMethod) { alert('请选择采购方式审批方式！'); return; }
       if (!editItem.procurementApprovalDate) { alert('请选择采购方式审批日期！'); return; }
       if (!editItem.implementationUnit?.trim()) { alert('请填写招采实施单位！'); return; }
       if (!editItem.projectImplementationUnit?.trim()) { alert('请填写项目实施单位！'); return; }
       if (!editItem.procurementHandler?.trim()) { alert('请填写招采经办人！'); return; }
+      if (!editItem.supplier?.trim()) { alert('请填写供应商！'); return; }
+      // 含税/不含税总金额至少填一项
+      const hasTax = editItem.taxTotalAmount != null && editItem.taxTotalAmount > 0;
+      const hasExcl = editItem.taxExclusiveTotalAmount != null && editItem.taxExclusiveTotalAmount > 0;
+      if (!hasTax && !hasExcl) { alert('请填写含税总金额或不含税总金额（至少一项）！'); return; }
+      // 比对清单自动合计值
+      if (offlineDetailRows && offlineDetailRows.length > 0) {
+        const sumIn = offlineDetailRows.reduce((s, r) => s + (r.row?.amountIncludingTax || 0), 0);
+        const sumEx = offlineDetailRows.reduce((s, r) => s + (r.row?.amountExcludingTax || 0), 0);
+        if (hasTax && Math.abs((editItem.taxTotalAmount ?? 0) - sumIn) > 0.01) {
+          alert(`含税总金额与清单明细合计不一致！\n您填写：¥${(editItem.taxTotalAmount ?? 0).toFixed(2)}\n清单合计：¥${sumIn.toFixed(2)}\n请核对清单明细或修正输入值。`);
+          return;
+        }
+        if (hasExcl && Math.abs((editItem.taxExclusiveTotalAmount ?? 0) - sumEx) > 0.01) {
+          alert(`不含税总金额与清单明细合计不一致！\n您填写：¥${(editItem.taxExclusiveTotalAmount ?? 0).toFixed(2)}\n清单合计：¥${sumEx.toFixed(2)}\n请核对清单明细或修正输入值。`);
+          return;
+        }
+      }
       const approvalFiles = offlineMaterials.filter((a) => a.cat === 'procurementApprovalFile');
-      if (approvalFiles.length === 0) { alert('请上传采购方式审批文件资料！'); return; }
+      if (approvalFiles.length === 0) { alert('请上传相关文件资料！'); return; }
     }
 
     // === 框架协议采购-随机抽取：6 字段必填 ===
@@ -1463,6 +1481,7 @@ export default function CompetitiveBiddingPage() {
                           <th className="px-3 py-2.5 text-left w-16 text-[13px] text-slate-600 font-semibold">单位</th>
                           <th className="px-3 py-2.5 text-left w-20 text-[13px] text-slate-600 font-semibold">税率</th>
                           <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">不含税单价</th>
+                          <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">单价备注</th>
                           <th className="px-3 py-2.5 text-left w-28 text-[13px] text-indigo-600 font-semibold">含税单价 (自动)</th>
                           <th className="px-3 py-2.5 text-left w-24 text-[13px] text-slate-600 font-semibold">不含税金额</th>
                           <th className="px-3 py-2.5 text-left w-24 text-[13px] text-purple-600 font-semibold">含税金额</th>
@@ -1506,6 +1525,12 @@ export default function CompetitiveBiddingPage() {
                                 value={row.unitPriceExcludingTax ?? ''}
                                 onChange={(e) => updateOfflineItem(idx, { unitPriceExcludingTax: Number(e.target.value) })} />
                             </td>
+                            <td className="px-3 py-2.5">
+                              <input className={commonInput}
+                                value={row.priceRemark || ''}
+                                placeholder="单价备注（可选）"
+                                onChange={(e) => updateOfflineItem(idx, { priceRemark: e.target.value })} />
+                            </td>
                             <td className="px-3 py-2.5 text-indigo-600 font-semibold text-[13px]">
                               ¥{(row.unitPriceIncludingTax ?? 0).toLocaleString()}
                             </td>
@@ -1520,7 +1545,7 @@ export default function CompetitiveBiddingPage() {
                       </tbody>
                       <tfoot>
                         <tr className="bg-gradient-to-r from-slate-100 to-indigo-50/40 border-t border-slate-200">
-                          <td colSpan={8} className="px-3 py-2.5 text-right text-slate-600 font-semibold text-[13px]">合计：</td>
+                          <td colSpan={9} className="px-3 py-2.5 text-right text-slate-600 font-semibold text-[13px]">合计：</td>
                           <td className="px-3 py-2.5 text-slate-700 font-semibold text-[13px]">¥{offlineTotals.ex.toLocaleString()}</td>
                           <td className="px-3 py-2.5 text-purple-700 font-bold text-[13px]">¥{offlineTotals.in.toLocaleString()}</td>
                           <td></td>
@@ -1982,6 +2007,35 @@ export default function CompetitiveBiddingPage() {
                     onChange={(e) => setEditItem({ ...editItem, procurementHandler: e.target.value })}
                     placeholder="经办人姓名" />
                 </div>
+                {/* 直接采购 + 电子商城专属：供应商字段 */}
+                {(editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') && (
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">供应商 <span className="text-[#f56c6c]">*</span></div>
+                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.supplier || ''}
+                    onChange={(e) => setEditItem({ ...editItem, supplier: e.target.value })}
+                    placeholder="请输入供应商名称" />
+                </div>
+                )}
+                {/* 直接采购 + 电子商城专属：含税/不含税总金额（至少必填一项，保存时比对清单合计） */}
+                {(editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') && (
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">含税总金额 <span className="text-[#909399] text-[11px]">(与清单自动合计比对)</span></div>
+                  <input type="number" step="0.01" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.taxTotalAmount ?? ''}
+                    onChange={(e) => setEditItem({ ...editItem, taxTotalAmount: e.target.value === '' ? undefined : Number(e.target.value) })}
+                    placeholder="请输入含税总金额（可留空）" />
+                </div>
+                )}
+                {(editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') && (
+                <div>
+                  <div className="mb-1 text-xs text-[#606266]">不含税总金额 <span className="text-[#909399] text-[11px]">(与清单自动合计比对)</span></div>
+                  <input type="number" step="0.01" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                    value={editItem.taxExclusiveTotalAmount ?? ''}
+                    onChange={(e) => setEditItem({ ...editItem, taxExclusiveTotalAmount: e.target.value === '' ? undefined : Number(e.target.value) })}
+                    placeholder="请输入不含税总金额（可留空）" />
+                </div>
+                )}
                 {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && (
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">招标人</div>
@@ -1992,9 +2046,13 @@ export default function CompetitiveBiddingPage() {
                 </div>
                 )}
               </div>
-              {/* 采购方式审批文件资料（直接采购/电子商城必填，其他方式可选） */}
+              {/* 相关文件资料（直接采购/电子商城必填，其他方式可选；直接/电子商城文案改为"相关文件资料"） */}
               {(isOfflineExecution(editItem.procurementMethod) || editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') &&
-                renderMaterialSlot('procurementApprovalFile', '采购方式审批文件资料', editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall')}
+                renderMaterialSlot(
+                  'procurementApprovalFile',
+                  (editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') ? '相关文件资料' : '采购方式审批文件资料',
+                  editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall'
+                )}
             </div>
             )}
 
@@ -2043,8 +2101,8 @@ export default function CompetitiveBiddingPage() {
             <div className="border border-[#409eff] rounded p-3 bg-[#ecf5ff]">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <div className="text-sm font-semibold text-[#303133]">竞价公告附件</div>
-                  <div className="text-xs text-[#909399]">上传竞价公告相关文件（PDF/Word/图片等）</div>
+                  <div className="text-sm font-semibold text-[#303133]">比价公告附件</div>
+                  <div className="text-xs text-[#909399]">上传比价公告相关文件（PDF/Word/图片等）</div>
                 </div>
                 <label className="inline-block">
                   <input
@@ -2091,11 +2149,12 @@ export default function CompetitiveBiddingPage() {
             </div>
             )}
 
-            {/* ============ 线下流程专属：招标公告与时间 ============ */}
+            {/* ============ 线下流程专属：招标/邀请公告与时间 ============ */}
             {isOfflineExecution(editItem.procurementMethod) && (
             <div className="space-y-3 pt-3 border-t border-slate-200">
               <div className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
-                <span>📢</span> 招标公告与时间
+                <span>📢</span>
+                {editItem.procurementMethod === 'inquiry_invited' ? '邀请公告与时间' : '招标公告与时间'}
                 <span className="text-xs text-slate-400 font-normal">（916 L21-30）</span>
               </div>
               <div className="grid grid-cols-3 gap-3">
@@ -2215,6 +2274,107 @@ export default function CompetitiveBiddingPage() {
                 )}
               </div>
               )}
+            </div>
+            )}
+
+            {/* ============ 询比采购专属：报名单位 ============ */}
+            {editItem.procurementMethod?.startsWith('inquiry') && (
+            <div className="space-y-3 pt-3 border-t border-slate-200">
+              <div className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
+                <span>👥</span> 报名单位
+                <span className="text-xs text-slate-400 font-normal">（可自行增减行项）</span>
+              </div>
+              <div className="border border-slate-200 rounded overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-slate-50 text-slate-600">
+                    <tr>
+                      <th className="px-2 py-2 text-left w-10">#</th>
+                      <th className="px-2 py-2 text-left">单位名称</th>
+                      <th className="px-2 py-2 text-left w-28">联系人</th>
+                      <th className="px-2 py-2 text-left w-28">联系电话</th>
+                      <th className="px-2 py-2 text-left">备注</th>
+                      <th className="px-2 py-2 text-center w-16">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(editItem.bidderList && editItem.bidderList.length > 0
+                      ? editItem.bidderList
+                      : [{ name: '', contactPerson: '', phone: '', remark: '' }]
+                    ).map((b, idx) => (
+                      <tr key={idx} className="border-t border-slate-100 hover:bg-slate-50">
+                        <td className="px-2 py-1.5 text-slate-500">{idx + 1}</td>
+                        <td className="px-2 py-1.5">
+                          <input className="w-full h-7 px-1.5 border border-slate-200 rounded text-xs"
+                            value={b.name}
+                            placeholder="单位名称（必填）"
+                            onChange={(e) => {
+                              const arr = [...((editItem.bidderList && editItem.bidderList.length > 0)
+                                ? editItem.bidderList
+                                : [{ name: '', contactPerson: '', phone: '', remark: '' }])];
+                              arr[idx] = { ...arr[idx], name: e.target.value };
+                              setEditItem({ ...editItem, bidderList: arr });
+                            }} />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input className="w-full h-7 px-1.5 border border-slate-200 rounded text-xs"
+                            value={b.contactPerson || ''}
+                            placeholder="联系人"
+                            onChange={(e) => {
+                              const arr = [...((editItem.bidderList && editItem.bidderList.length > 0)
+                                ? editItem.bidderList
+                                : [{ name: '', contactPerson: '', phone: '', remark: '' }])];
+                              arr[idx] = { ...arr[idx], contactPerson: e.target.value };
+                              setEditItem({ ...editItem, bidderList: arr });
+                            }} />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input className="w-full h-7 px-1.5 border border-slate-200 rounded text-xs"
+                            value={b.phone || ''}
+                            placeholder="联系电话"
+                            onChange={(e) => {
+                              const arr = [...((editItem.bidderList && editItem.bidderList.length > 0)
+                                ? editItem.bidderList
+                                : [{ name: '', contactPerson: '', phone: '', remark: '' }])];
+                              arr[idx] = { ...arr[idx], phone: e.target.value };
+                              setEditItem({ ...editItem, bidderList: arr });
+                            }} />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input className="w-full h-7 px-1.5 border border-slate-200 rounded text-xs"
+                            value={b.remark || ''}
+                            placeholder="备注"
+                            onChange={(e) => {
+                              const arr = [...((editItem.bidderList && editItem.bidderList.length > 0)
+                                ? editItem.bidderList
+                                : [{ name: '', contactPerson: '', phone: '', remark: '' }])];
+                              arr[idx] = { ...arr[idx], remark: e.target.value };
+                              setEditItem({ ...editItem, bidderList: arr });
+                            }} />
+                        </td>
+                        <td className="px-2 py-1.5 text-center">
+                          <button type="button" className="text-rose-500 hover:text-rose-600 text-xs"
+                            onClick={() => {
+                              const arr = (editItem.bidderList && editItem.bidderList.length > 0
+                                ? editItem.bidderList
+                                : [{ name: '' }]).filter((_, i) => i !== idx);
+                              setEditItem({ ...editItem, bidderList: arr });
+                            }}>删除</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <button type="button"
+                  className="w-full py-1.5 text-indigo-600 hover:text-indigo-700 text-xs bg-slate-50 border-t border-slate-200"
+                  onClick={() => {
+                    const base = (editItem.bidderList && editItem.bidderList.length > 0
+                      ? editItem.bidderList
+                      : [{ name: '', contactPerson: '', phone: '', remark: '' }]);
+                    setEditItem({ ...editItem, bidderList: [...base, { name: '', contactPerson: '', phone: '', remark: '' }] });
+                  }}>
+                  + 添加一行报名单位
+                </button>
+              </div>
             </div>
             )}
 
@@ -2348,9 +2508,13 @@ export default function CompetitiveBiddingPage() {
                 {editItem.procurementMethod?.startsWith('negotiation') && renderMaterialSlot('preContractReview', '前置审核合同文本')}
                 {/* 招标代理（询比/竞价/谈判） */}
                 {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && renderMaterialSlot('agentDrawResult', '招标代理抽取结果表')}
-                {/* 成交通知书 + 过程备案：4 种都要 */}
-                {renderMaterialSlot('awardNotice', '成交通知书')}
-                {renderMaterialSlot('processArchive', '招采过程备案')}
+                {/* 成交通知书 + 过程备案：询比必填，其他可选 */}
+                {editItem.procurementMethod?.startsWith('inquiry')
+                  ? renderMaterialSlot('awardNotice', '成交通知书', true)
+                  : renderMaterialSlot('awardNotice', '成交通知书')}
+                {editItem.procurementMethod?.startsWith('inquiry')
+                  ? renderMaterialSlot('processArchive', '招采过程备案', true)
+                  : renderMaterialSlot('processArchive', '招采过程备案')}
                 {/* 合资公司相关（可选，4 种都显示） */}
                 {renderMaterialSlot('jointMeetingMinutes', '合资公司会议纪要')}
                 {renderMaterialSlot('jointOnMeetingMaterials', '合资公司上会材料')}
@@ -2394,8 +2558,8 @@ export default function CompetitiveBiddingPage() {
             <div className="border border-[#e6a23c] rounded p-3 bg-[#fdf6ec]">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <div className="text-sm font-semibold text-[#303133]">竞价文件附件</div>
-                  <div className="text-xs text-[#909399]">上传竞价文件相关资料（PDF/Word/Excel等）</div>
+                  <div className="text-sm font-semibold text-[#303133]">比价文件附件</div>
+                  <div className="text-xs text-[#909399]">上传比价文件相关资料（PDF/Word/Excel等）</div>
                 </div>
                 <label className="inline-block">
                   <input
@@ -2810,7 +2974,7 @@ export default function CompetitiveBiddingPage() {
             {viewItem.procurementMethod === 'framework_catalog' && (
               <div className="border border-[#409eff] rounded p-3 bg-[#ecf5ff]">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="text-xs font-bold text-[#303133]">📎 竞价公告附件</div>
+                  <div className="text-xs font-bold text-[#303133]">📎 比价公告附件</div>
                   <div className="text-xs text-[#909399]">共 {viewItem.biddingAnnouncement?.length || 0} 个文件</div>
                 </div>
                 {!viewItem.biddingAnnouncement || viewItem.biddingAnnouncement.length === 0 ? (

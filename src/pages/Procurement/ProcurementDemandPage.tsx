@@ -983,6 +983,9 @@ export default function ProcurementDemandPage() {
                 const isNewSupplier = editItem.procurementType === 'new_supplier';
                 const unitLabel = isNonEngSvc ? '服务' : '货物';
                 const totalAmount = details.reduce((s, d) => s + ((d.amountExcludingTax || 0) as number), 0);
+                // 方案B：统一门控变量 — 单价备注全类型全开；库存数量仅货物类
+                const showPriceRemarkCol = true;
+                const showStockQtyCol = isNonEngGoods;
 
                 return (
                   <div className="flex flex-col overflow-hidden" key="non-eng">
@@ -1004,7 +1007,7 @@ export default function ProcurementDemandPage() {
                       </div>
                     </div>
 
-                    {/* 清单内：宽表（含合同相关列） */}
+                    {/* 清单内：宽表（含合同相关列 + 单价备注 + 库存数量） */}
                     {isWithin ? (
                       <div className="border border-slate-200 rounded-lg overflow-hidden">
                         <table className="w-full text-xs">
@@ -1018,6 +1021,8 @@ export default function ProcurementDemandPage() {
                               <th className="px-2 py-2 text-left w-14">单位</th>
                               <th className="px-2 py-2 text-right w-20">数量</th>
                               <th className="px-2 py-2 text-right w-24">不含税单价</th>
+                              {showPriceRemarkCol && <th className="px-2 py-2 text-left w-24">单价备注</th>}
+                              {showStockQtyCol && <th className="px-2 py-2 text-right w-20">库存数量</th>}
                               <th className="px-2 py-2 text-right w-24">不含税金额</th>
                               <th className="px-2 py-2 text-center w-24">合同清单内外</th>
                               <th className="px-2 py-2 text-left w-28">合同编号</th>
@@ -1028,7 +1033,7 @@ export default function ProcurementDemandPage() {
                           </thead>
                           <tbody>
                             {details.length === 0 && (
-                              <tr><td colSpan={14} className="px-3 py-8 text-center text-slate-400">暂无{unitLabel}明细，点击"+ 添加{unitLabel}"开始录入</td></tr>
+                              <tr><td colSpan={14 + (showPriceRemarkCol ? 1 : 0) + (showStockQtyCol ? 1 : 0)} className="px-3 py-8 text-center text-slate-400">暂无{unitLabel}明细，点击"+ 添加{unitLabel}"开始录入</td></tr>
                             )}
                             {details.map((d, idx) => (
                               <tr key={d.id} className="border-t border-slate-100 hover:bg-slate-50">
@@ -1040,6 +1045,16 @@ export default function ProcurementDemandPage() {
                                 <td className="px-2 py-1.5 text-slate-600">{d.unit || '-'}</td>
                                 <td className="px-2 py-1.5 text-right text-slate-800">{d.quantity}</td>
                                 <td className="px-2 py-1.5 text-right text-slate-800">{(d.unitPriceExcludingTax || 0).toFixed(2)}</td>
+                                {showPriceRemarkCol && (
+                                  <td className="px-2 py-1.5">
+                                    <input className="w-full h-6 px-1 border border-slate-200 rounded text-xs"
+                                      value={(d as any).unitPriceRemark || ''}
+                                      onChange={(e) => updateDetail(idx, 'unitPriceRemark', e.target.value)} />
+                                  </td>
+                                )}
+                                {showStockQtyCol && (
+                                  <td className="px-2 py-1.5 text-right text-amber-600 font-medium">{(d as any).stockQuantity ?? 0}</td>
+                                )}
                                 <td className="px-2 py-1.5 text-right text-slate-800 font-medium">{(d.amountExcludingTax || 0).toFixed(2)}</td>
                                 <td className="px-2 py-1.5 text-center">
                                   <span className={`px-1.5 py-0.5 rounded text-xs ${(d as any).contractInside ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
@@ -1058,7 +1073,7 @@ export default function ProcurementDemandPage() {
                           {details.length > 0 && (
                             <tfoot className="bg-slate-50 border-t border-slate-200">
                               <tr>
-                                <td colSpan={8} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
+                                <td colSpan={9 + (showPriceRemarkCol ? 1 : 0) + (showStockQtyCol ? 1 : 0)} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
                                 <td className="px-2 py-2 text-right text-red-500 font-semibold">¥ {totalAmount.toFixed(2)}</td>
                                 <td colSpan={5}></td>
                               </tr>
@@ -1067,7 +1082,7 @@ export default function ProcurementDemandPage() {
                         </table>
                       </div>
                     ) : (isNonEngGoods && isNewSupplier) ? (
-                      /* 新增供应商目录（非工程类-货物）：极简预算版（砍合同编号/合同有效期，改列名） */
+                      /* 新增供应商目录（非工程类-货物）：极简预算版 + 单价备注 */
                       <div className="border border-slate-200 rounded-lg overflow-hidden">
                         <table className="w-full text-xs">
                           <thead className="bg-slate-50 text-slate-600">
@@ -1080,6 +1095,8 @@ export default function ProcurementDemandPage() {
                               <th className="px-2 py-2 text-left w-14">单位</th>
                               <th className="px-2 py-2 text-center w-24">合同清单内外</th>
                               <th className="px-2 py-2 text-right w-32">不含税预算单价（元）</th>
+                              <th className="px-2 py-2 text-left w-24">单价备注</th>
+                              <th className="px-2 py-2 text-right w-20">库存数量</th>
                               <th className="px-2 py-2 text-right w-32">不含税预算金额</th>
                               <th className="px-2 py-2 text-left">备注</th>
                               <th className="px-2 py-2 text-center w-16">操作</th>
@@ -1087,7 +1104,7 @@ export default function ProcurementDemandPage() {
                           </thead>
                           <tbody>
                             {details.length === 0 && (
-                              <tr><td colSpan={11} className="px-3 py-8 text-center text-slate-400">暂无{unitLabel}明细，点击"+ 添加{unitLabel}"开始录入</td></tr>
+                              <tr><td colSpan={13} className="px-3 py-8 text-center text-slate-400">暂无{unitLabel}明细，点击"+ 添加{unitLabel}"开始录入</td></tr>
                             )}
                             {details.map((d, idx) => (
                               <tr key={d.id} className="border-t border-slate-100 hover:bg-slate-50">
@@ -1103,6 +1120,12 @@ export default function ProcurementDemandPage() {
                                   </span>
                                 </td>
                                 <td className="px-2 py-1.5 text-right text-slate-800">{(d.unitPriceExcludingTax || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1.5">
+                                  <input className="w-full h-6 px-1 border border-slate-200 rounded text-xs"
+                                    value={(d as any).unitPriceRemark || ''}
+                                    onChange={(e) => updateDetail(idx, 'unitPriceRemark', e.target.value)} />
+                                </td>
+                                <td className="px-2 py-1.5 text-right text-amber-600 font-medium">{(d as any).stockQuantity ?? 0}</td>
                                 <td className="px-2 py-1.5 text-right text-slate-800 font-medium">{(d.amountExcludingTax || 0).toFixed(2)}</td>
                                 <td className="px-2 py-1.5 text-slate-500">{d.remark || '-'}</td>
                                 <td className="px-2 py-1.5 text-center">
@@ -1114,16 +1137,16 @@ export default function ProcurementDemandPage() {
                           {details.length > 0 && (
                             <tfoot className="bg-slate-50 border-t border-slate-200">
                               <tr>
-                                <td colSpan={8} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
+                                <td colSpan={9} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
                                 <td className="px-2 py-2 text-right text-red-500 font-semibold">¥ {totalAmount.toFixed(2)}</td>
-                                <td colSpan={2}></td>
+                                <td colSpan={3}></td>
                               </tr>
                             </tfoot>
                           )}
                         </table>
                       </div>
                     ) : (
-                      /* 清单外（含新增供应商-服务）：窄表 */
+                      /* 清单外（含新增供应商-服务）：窄表 + 单价备注 + 库存数量(货物类) */
                       <div className="border border-slate-200 rounded-lg overflow-hidden">
                         <table className="w-full text-xs">
                           <thead className="bg-slate-50 text-slate-600">
@@ -1136,6 +1159,8 @@ export default function ProcurementDemandPage() {
                               <th className="px-2 py-2 text-left w-14">单位</th>
                               <th className="px-2 py-2 text-right w-20">数量</th>
                               <th className="px-2 py-2 text-right w-28">不含税预算单价</th>
+                              {showPriceRemarkCol && <th className="px-2 py-2 text-left w-24">单价备注</th>}
+                              {showStockQtyCol && <th className="px-2 py-2 text-right w-20">库存数量</th>}
                               <th className="px-2 py-2 text-right w-28">不含税预算金额</th>
                               <th className="px-2 py-2 text-left">备注</th>
                               <th className="px-2 py-2 text-center w-16">操作</th>
@@ -1143,7 +1168,7 @@ export default function ProcurementDemandPage() {
                           </thead>
                           <tbody>
                             {details.length === 0 && (
-                              <tr><td colSpan={11} className="px-3 py-8 text-center text-slate-400">暂无{unitLabel}明细，点击"+ 添加{unitLabel}"开始录入</td></tr>
+                              <tr><td colSpan={11 + (showPriceRemarkCol ? 1 : 0) + (showStockQtyCol ? 1 : 0)} className="px-3 py-8 text-center text-slate-400">暂无{unitLabel}明细，点击"+ 添加{unitLabel}"开始录入</td></tr>
                             )}
                             {details.map((d, idx) => (
                               <tr key={d.id} className="border-t border-slate-100 hover:bg-slate-50">
@@ -1155,6 +1180,16 @@ export default function ProcurementDemandPage() {
                                 <td className="px-2 py-1.5 text-slate-600">{d.unit || '-'}</td>
                                 <td className="px-2 py-1.5 text-right text-slate-800">{d.quantity}</td>
                                 <td className="px-2 py-1.5 text-right text-slate-800">{(d.unitPriceExcludingTax || 0).toFixed(2)}</td>
+                                {showPriceRemarkCol && (
+                                  <td className="px-2 py-1.5">
+                                    <input className="w-full h-6 px-1 border border-slate-200 rounded text-xs"
+                                      value={(d as any).unitPriceRemark || ''}
+                                      onChange={(e) => updateDetail(idx, 'unitPriceRemark', e.target.value)} />
+                                  </td>
+                                )}
+                                {showStockQtyCol && (
+                                  <td className="px-2 py-1.5 text-right text-amber-600 font-medium">{(d as any).stockQuantity ?? 0}</td>
+                                )}
                                 <td className="px-2 py-1.5 text-right text-slate-800 font-medium">{(d.amountExcludingTax || 0).toFixed(2)}</td>
                                 <td className="px-2 py-1.5 text-slate-500">{d.remark || '-'}</td>
                                 <td className="px-2 py-1.5 text-center">
@@ -1166,7 +1201,7 @@ export default function ProcurementDemandPage() {
                           {details.length > 0 && (
                             <tfoot className="bg-slate-50 border-t border-slate-200">
                               <tr>
-                                <td colSpan={7} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
+                                <td colSpan={8 + (showPriceRemarkCol ? 1 : 0) + (showStockQtyCol ? 1 : 0)} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
                                 <td className="px-2 py-2 text-right text-red-500 font-semibold">¥ {totalAmount.toFixed(2)}</td>
                                 <td colSpan={3}></td>
                               </tr>
@@ -1184,7 +1219,7 @@ export default function ProcurementDemandPage() {
                 const isWithin = editItem.procurementType === 'within_framework';
                 const isNewSupplier = editItem.procurementType === 'new_supplier';
 
-                // ========== 新增供应商目录：极简预算版（砍含税/合同列/是否在合同清单内/单价备注） ==========
+                // ========== 新增供应商目录：极简预算版 + 单价备注（砍含税/合同列） ==========
                 if (isNewSupplier) {
                   const totalAmount = details.reduce((s, d) => s + (d.amountExcludingTax || 0), 0);
                   return (
@@ -1203,17 +1238,17 @@ export default function ProcurementDemandPage() {
                         </div>
                       </div>
                       <div className="border border-[#dcdfe6] rounded overflow-auto" style={{ maxHeight: 'calc(100vh - 440px)', minHeight: '360px' }}>
-                        <table className="text-xs" style={{ minWidth: 1700 }}>
+                        <table className="text-xs" style={{ minWidth: 1800 }}>
                           <thead className="sticky top-0 bg-[#f5f7fa]">
                             {/* 第一层：分组表头 */}
                             <tr>
                               <th colSpan={2} className="px-2 py-2 text-left border border-[#dcdfe6]">项目信息</th>
-                              <th colSpan={7} className="px-2 py-2 text-left border border-[#dcdfe6]"></th>
+                              <th colSpan={8} className="px-2 py-2 text-left border border-[#dcdfe6]"></th>
                               <th colSpan={2} className="px-2 py-2 text-center border border-[#dcdfe6] font-semibold">采购申请</th>
                               <th colSpan={2} className="px-2 py-2 text-left border border-[#dcdfe6]"></th>
                               <th className="px-2 py-2 text-left border border-[#dcdfe6] w-20">操作</th>
                             </tr>
-                            {/* 第二层：列名（已砍：单价含税、税率、税额、含税金额、合同编号、合同有效期、是否在合同清单内、单价备注） */}
+                            {/* 第二层：列名（已砍：单价含税、税率、税额、含税金额、合同编号、合同有效期、是否在合同清单内） */}
                             <tr>
                               <th className="px-2 py-2 text-left border border-[#dcdfe6] w-24">项目编号</th>
                               <th className="px-2 py-2 text-left border border-[#dcdfe6] w-32">项目名称</th>
@@ -1224,6 +1259,7 @@ export default function ProcurementDemandPage() {
                               <th className="px-2 py-2 text-left border border-[#dcdfe6] w-28">规格型号/参数</th>
                               <th className="px-2 py-2 text-left border border-[#dcdfe6] w-14">单位</th>
                               <th className="px-2 py-2 text-left border border-[#dcdfe6] w-32">不含税预算单价（元）</th>
+                              <th className="px-2 py-2 text-left border border-[#dcdfe6] w-24">单价备注</th>
                               <th className="px-2 py-2 text-left border border-[#dcdfe6] w-20">采购数量</th>
                               <th className="px-2 py-2 text-left border border-[#dcdfe6] w-28">不含税预算金额</th>
                               <th className="px-2 py-2 text-left border border-[#dcdfe6] bg-[#fff9c4] w-20">库存数量</th>
@@ -1284,6 +1320,12 @@ export default function ProcurementDemandPage() {
                                     value={detail.unitPriceExcludingTax ?? 0}
                                     onChange={(e) => updateDetail(index, 'unitPriceExcludingTax', Number(e.target.value))} />
                                 </td>
+                                {/* 单价备注 */}
+                                <td className="px-2 py-1 border border-[#ebeef5]">
+                                  <input className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
+                                    value={(detail as any).unitPriceRemark || ''}
+                                    onChange={(e) => updateDetail(index, 'unitPriceRemark', e.target.value)} />
+                                </td>
                                 {/* 采购数量 */}
                                 <td className="px-2 py-1 border border-[#ebeef5]">
                                   <input type="number"
@@ -1315,7 +1357,7 @@ export default function ProcurementDemandPage() {
                           {details.length > 0 && (
                             <tfoot className="bg-[#f5f7fa] font-semibold">
                               <tr>
-                                <td colSpan={11} className="px-2 py-2 border border-[#dcdfe6] text-right text-[#303133]">
+                                <td colSpan={12} className="px-2 py-2 border border-[#dcdfe6] text-right text-[#303133]">
                                   不含税预算总金额
                                 </td>
                                 <td className="px-2 py-2 border border-[#dcdfe6] text-right text-[#f56c6c]">
@@ -1331,11 +1373,13 @@ export default function ProcurementDemandPage() {
                   );
                 }
 
-                // ========== 清单外：精简窄表（工程类/货物增 2 列：单价备注、库存数量） ==========
+                // ========== 清单外：精简窄表 + 单价备注(全开) + 库存数量(仅货物) ==========
                 if (!isWithin) {
-                  const isGoodsAddCols = editItem.subType === 'goods';
+                  // 方案B：单价备注全开；库存数量仅货物类（dt===material即为货物，isGoods=true）
+                  const showPriceRemarkCol = true;
+                  const showStockQtyCol = true; // dt==='material' 本身就是货物
                   const totalAmount = details.reduce((s, d) => s + (d.amountExcludingTax || 0), 0);
-                  const colCount = isGoodsAddCols ? 14 : 12;
+                  const colCount = 12 + (showPriceRemarkCol ? 1 : 0) + (showStockQtyCol ? 1 : 0);
                   return (
                     <div className="flex flex-col overflow-hidden" key="material-outside">
                       <div className="flex items-center justify-between mb-2">
@@ -1364,8 +1408,8 @@ export default function ProcurementDemandPage() {
                               <th className="px-2 py-2 text-left w-14">单位</th>
                               <th className="px-2 py-2 text-right w-20">采购数量</th>
                               <th className="px-2 py-2 text-right w-28">不含税预算单价（元）</th>
-                              {isGoodsAddCols && <th className="px-2 py-2 text-left w-24">单价备注</th>}
-                              {isGoodsAddCols && <th className="px-2 py-2 text-right w-20">库存数量</th>}
+                              {showPriceRemarkCol && <th className="px-2 py-2 text-left w-24">单价备注</th>}
+                              {showStockQtyCol && <th className="px-2 py-2 text-right w-20">库存数量</th>}
                               <th className="px-2 py-2 text-right w-28">不含税预算金额（元）</th>
                               <th className="px-2 py-2 text-left">采购情况说明</th>
                               <th className="px-2 py-2 text-center w-16">操作</th>
@@ -1386,14 +1430,14 @@ export default function ProcurementDemandPage() {
                                 <td className="px-2 py-1.5 text-slate-600">{d.unit || '-'}</td>
                                 <td className="px-2 py-1.5 text-right text-slate-800">{d.quantity}</td>
                                 <td className="px-2 py-1.5 text-right text-slate-800">{(d.unitPriceExcludingTax || 0).toFixed(2)}</td>
-                                {isGoodsAddCols && (
+                                {showPriceRemarkCol && (
                                   <td className="px-2 py-1.5">
                                     <input className="w-full h-6 px-1 border border-slate-200 rounded text-xs"
                                       value={d.unitPriceRemark || ''}
                                       onChange={(e) => updateDetail(idx, 'unitPriceRemark', e.target.value)} />
                                   </td>
                                 )}
-                                {isGoodsAddCols && (
+                                {showStockQtyCol && (
                                   <td className="px-2 py-1.5 text-right">
                                     <input type="number" min="0"
                                       className="w-full h-6 px-1 border border-slate-200 rounded text-xs text-right"
@@ -1418,7 +1462,7 @@ export default function ProcurementDemandPage() {
                           {details.length > 0 && (
                             <tfoot className="bg-slate-50 border-t border-slate-200">
                               <tr>
-                                <td colSpan={isGoodsAddCols ? 11 : 9} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
+                                <td colSpan={9 + (showPriceRemarkCol ? 1 : 0) + (showStockQtyCol ? 1 : 0)} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
                                 <td className="px-2 py-2 text-right text-red-500 font-semibold">¥ {totalAmount.toFixed(2)}</td>
                                 <td colSpan={2}></td>
                               </tr>

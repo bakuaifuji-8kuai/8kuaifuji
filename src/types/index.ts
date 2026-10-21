@@ -890,6 +890,46 @@ export interface ApprovalFlowConfig {
   updater?: string;
 }
 
+// 自由审批流程实例状态
+export type ApprovalFlowInstanceStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'returned';
+
+// 审批流程实例节点执行记录
+export interface ApprovalFlowInstanceNodeRecord {
+  nodeId: string;
+  nodeName: string;
+  nodeOrder: number;
+  approverRole: string;
+  approverName?: string;
+  status: 'pending' | 'approved' | 'rejected' | 'returned' | 'skipped';
+  approveTime?: string;
+  comment?: string;
+}
+
+// 审批流程实例（用户发起的自由审批申请）
+export interface ApprovalFlowInstance {
+  id: string;
+  instanceNo: string;              // LC + 年月日 + 3位序号
+  flowConfigId: string;            // 关联的流程配置
+  flowName: string;                // 冗余流程名，便于直接展示
+  businessType: string;
+
+  title: string;
+  content: string;
+  attachments?: string[];
+
+  applicant: string;
+  applicantDept?: string;
+  applyTime: string;
+
+  status: ApprovalFlowInstanceStatus;
+  currentNodeOrder: number;        // 当前流转到第几个节点（1-based）
+
+  nodeRecords: ApprovalFlowInstanceNodeRecord[];
+
+  returnReason?: string;
+  rejectReason?: string;
+}
+
 // 物资申请单状态
 export type ProductApplicationStatus = 'draft' | 'pending' | 'approved' | 'rejected';
 
@@ -1363,6 +1403,15 @@ export interface CatalogCompareItem {
  * 线下录入明细（询比/竞价/谈判/直接/电子商城）
  * 采购方自己填单价，含税/不含税双线
  */
+
+/** 报名单位（询比采购专属：open + invited 共用） */
+export interface BidderInfo {
+  name: string;
+  contactPerson?: string;
+  phone?: string;
+  remark?: string;
+}
+
 export interface OfflineDetailItem {
   rowNo: number;
   itemName: string;                   // 项目名称/物料名称
@@ -1372,6 +1421,7 @@ export interface OfflineDetailItem {
   taxRate?: number;                   // 税率（询比/竞价/谈判用）
   unitPriceExcludingTax?: number;     // 不含税单价
   unitPriceIncludingTax?: number;     // 含税单价（自动算或手填）
+  priceRemark?: string;               // 单价备注（询比需求）
   amountExcludingTax?: number;        // 不含税金额
   amountIncludingTax?: number;         // 含税金额
   taxAmount?: number;                 // 税额
@@ -1510,6 +1560,15 @@ export interface Bidding {
   preContractReview?: Attachment[];    // 前置审核合同文本
   jointMeetingMinutes?: Attachment[];  // 合资公司会议纪要（可选）
   jointOnMeetingMaterials?: Attachment[]; // 合资公司上会材料（可选）
+
+  // ====== 询比采购专属：报名单位 ======
+  bidderList?: BidderInfo[];               // 报名单位列表（询比 open/invited 共用）
+
+  // ====== 直接采购 + 电子商城采购专属 ======
+  supplier?: string;                        // 供应商（直接/电子商城手动填）
+  taxTotalAmount?: number;                 // 含税总金额（direct/ecommerce 页面输入，比对用）
+  taxExclusiveTotalAmount?: number;         // 不含税总金额（direct/ecommerce 页面输入，比对用）
+
   tenderer?: string;                    // 招标人
   implementationUnit?: string;         // 招采实施单位
   projectImplementationUnit?: string;  // 项目实施单位

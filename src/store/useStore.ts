@@ -12,7 +12,7 @@ import type {
   ContractLedger, ContractArchive, ArchiveChecklist, ContractStatus, ContractEvaluationBinding, EvaluationType,
   ProcurementOrder, ProcurementOrderChange, ProcurementInspection,
   Bidding, SupplierQuote, WebsiteInfo, ContractTemplate, ContractWarning,
-  ApprovalFlowConfig, SupplierQualification, SupplierChangeRequest,
+  ApprovalFlowConfig, ApprovalFlowInstance, SupplierQualification, SupplierChangeRequest,
   // 合同采购订单
   ContractPurchaseOrder, ContractPurchaseOrderChangeRecord,
   // 项目冻结
@@ -348,6 +348,13 @@ interface WarehouseState {
   addApprovalFlowConfig: (config: ApprovalFlowConfig) => void;
   updateApprovalFlowConfig: (id: string, data: Partial<ApprovalFlowConfig>) => void;
   deleteApprovalFlowConfig: (id: string) => void;
+
+  // 自由审批流程实例
+  approvalFlowInstances: ApprovalFlowInstance[];
+  setApprovalFlowInstances: (data: ApprovalFlowInstance[]) => void;
+  addApprovalFlowInstance: (inst: ApprovalFlowInstance) => void;
+  updateApprovalFlowInstance: (id: string, data: Partial<ApprovalFlowInstance>) => void;
+  deleteApprovalFlowInstance: (id: string) => void;
 
   // 采购需求申请
   procurementDemands: ProcurementDemand[];
@@ -1194,6 +1201,17 @@ export const useStore = create<WarehouseState>()(
   })),
   deleteApprovalFlowConfig: (id) => set((state) => ({
     approvalFlowConfigs: state.approvalFlowConfigs.filter((c) => c.id !== id)
+  })),
+
+  // 自由审批流程实例
+  approvalFlowInstances: mockData.approvalFlowInstances || [],
+  setApprovalFlowInstances: (data) => set({ approvalFlowInstances: data }),
+  addApprovalFlowInstance: (inst) => set((state) => ({ approvalFlowInstances: [...state.approvalFlowInstances, inst] })),
+  updateApprovalFlowInstance: (id, data) => set((state) => ({
+    approvalFlowInstances: state.approvalFlowInstances.map((i) => i.id === id ? { ...i, ...data } : i)
+  })),
+  deleteApprovalFlowInstance: (id) => set((state) => ({
+    approvalFlowInstances: state.approvalFlowInstances.filter((i) => i.id !== id)
   })),
 
   // 采购需求申请

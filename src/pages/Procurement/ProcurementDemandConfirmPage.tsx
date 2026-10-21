@@ -1193,7 +1193,7 @@ function ConfirmFormFields({
           </div>
         )}
 
-        {/* 物资类 × 采购项目申请表 */}
+        {/* 物资类 × 采购项目申请表 — 立项审批日期自动带入 */}
         {mode === 'application_form' && (
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -1205,8 +1205,17 @@ function ConfirmFormFields({
               <input type="number" className={inputCls} disabled={confirmLocked} placeholder="请输入预算审定金额" />
             </div>
             <div>
-              <div className={labelCls}>立项审批日期<span className={requiredCls}>*</span></div>
-              <input type="date" className={inputCls} disabled={confirmLocked} />
+              <div className={labelCls}>立项审批日期 <span className="text-xs text-slate-400 font-normal">(审批系统自动带入)</span></div>
+              <input
+                type="date"
+                className={inputCls}
+                disabled
+                value={(() => {
+                  const today = new Date();
+                  return today.toISOString().slice(0, 10);
+                })()}
+                title="采购项目申请表的立项审批日期由审批系统流程自动带入"
+              />
             </div>
           </div>
         )}
@@ -1234,7 +1243,8 @@ function ConfirmFormFields({
     const base = ['#', '需求部门*', '项目名称*', ['主要内容'], '不含税预算总金额*', '不含税预算审定总金额*'];
     if (mode === 'meeting') base.push('立项审批会议名称*', '立项审批日期*');
     if (mode === 'sign_report') base.push('立项审批日期*');
-    if (mode === 'application_form') base.push('立项审批日期*');
+    // application_form：立项审批日期由审批系统自动带入，不作为必填项
+    if (mode === 'application_form') base.push('立项审批日期（系统自动）');
     base.push('备注', '操作');
     return base;
   };
@@ -1285,7 +1295,17 @@ function ConfirmFormFields({
                   )}
                   {(mode === 'meeting' || mode === 'sign_report' || mode === 'application_form') && (
                     <td className="px-2 py-2">
-                      <input type="date" className={inputCls} disabled={confirmLocked} value={row.approvalDate || ''} onChange={(e) => updateProjectRow(idx, 'approvalDate', e.target.value)} />
+                      {mode === 'application_form' ? (
+                        <input
+                          type="date"
+                          className={inputCls + ' bg-slate-100 text-slate-500'}
+                          disabled
+                          value={row.approvalDate || new Date().toISOString().slice(0, 10)}
+                          title="采购项目申请表的立项审批日期由审批系统流程自动带入"
+                        />
+                      ) : (
+                        <input type="date" className={inputCls} disabled={confirmLocked} value={row.approvalDate || ''} onChange={(e) => updateProjectRow(idx, 'approvalDate', e.target.value)} />
+                      )}
                     </td>
                   )}
                   <td className="px-2 py-2">

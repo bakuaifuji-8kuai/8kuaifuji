@@ -185,23 +185,34 @@ export default function ContractTemplatePage() {
       key: 'op',
       title: '操作',
       width: '380',
-      render: (row) => (
+      render: (row) => {
+        const _hasStructure = (row.structure && row.structure.length > 0) || (row.content && row.content.trim().length > 0);
+        const isUploadedWord = !!row.templateFile && !_hasStructure;
+        return (
         <div className="flex items-center gap-2 flex-wrap">
           <TextButton onClick={() => openEditor(row)}>
             <FileEdit size={12} className="inline mr-0.5" />编辑
           </TextButton>
+          {!isUploadedWord && (
           <TextButton onClick={() => openPreview(row)}>
             <Eye size={12} className="inline mr-0.5" />预览
           </TextButton>
+          )}
+          {!isUploadedWord && (
           <TextButton onClick={() => openVersionHistory(row)}>
             <History size={12} className="inline mr-0.5" />版本历史
           </TextButton>
+          )}
+          {!isUploadedWord && (
           <TextButton onClick={() => openCompare(row)}>
             <GitCompare size={12} className="inline mr-0.5" />版本对比
           </TextButton>
+          )}
+          {!isUploadedWord && (
           <TextButton onClick={() => openAnnotation(row)}>
             <MessageSquare size={12} className="inline mr-0.5" />批注
           </TextButton>
+          )}
           <TextButton onClick={() => handleDownload(row)}>
             <Download size={12} className="inline mr-0.5" />下载
           </TextButton>
@@ -211,7 +222,8 @@ export default function ContractTemplatePage() {
             }}>删除</TextButton>
           )}
         </div>
-      ),
+        );
+      },
     },
   ];
 

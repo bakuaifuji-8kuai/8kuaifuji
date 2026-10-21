@@ -6,7 +6,7 @@
   WorkOrderProductConfig, Project, StockTransfer,
   // 采购管理类型
   ProcurementPlan, ProcurementDemand, ContractLedger, ProcurementOrder, ProcurementInspection,
-  ApprovalFlowConfig, ApprovalFlowNode, ContractPurchaseOrder,
+  ApprovalFlowConfig, ApprovalFlowNode, ApprovalFlowInstance, ApprovalFlowInstanceNodeRecord, ContractPurchaseOrder,
   // 履约评估
   EvaluationTemplate, EvaluationRecord,
   // 非工程类-服务独立类型（B 方案）
@@ -2924,6 +2924,75 @@ export const approvalFlowConfigs: ApprovalFlowConfig[] = [
     description: '简化版审批流程（用于小额月度计划）',
     createTime: '2024-01-01 09:00:00',
     creator: '系统管理员',
+  },
+];
+
+// 审批流程配置 — 自由审批流程实例（用户发起的示例）
+export const approvalFlowInstances: ApprovalFlowInstance[] = [
+  {
+    id: 'AFI001',
+    instanceNo: 'LC20261018001',
+    flowConfigId: 'AFC001',
+    flowName: '采购计划-月度标准审批流程',
+    businessType: 'procurement_plan',
+    title: '10月份展会物资采购计划审批',
+    content: '因11月展会需要，计划采购一批帐篷、展架等物资，预计总金额约 85 万元，具体明细见附件。',
+    attachments: ['采购计划明细.xlsx', '展会需求方案.pdf'],
+    applicant: '业务经理-王',
+    applicantDept: '展览业务部',
+    applyTime: '2026-10-18 09:30:00',
+    status: 'pending',
+    currentNodeOrder: 3,
+    nodeRecords: [
+      { nodeId: 'NODE01_001', nodeName: '部门负责人审批', nodeOrder: 1, approverRole: '部门负责人', approverName: '业务经理-王', status: 'approved', approveTime: '2026-10-18 09:35:00', comment: '同意，提交审批' },
+      { nodeId: 'NODE02_001', nodeName: '采购管理部审核', nodeOrder: 2, approverRole: '采购管理员', approverName: '采购主管-李', status: 'approved', approveTime: '2026-10-18 14:20:00', comment: '金额合理，审核通过' },
+      { nodeId: 'NODE03_001', nodeName: '分管领导审批', nodeOrder: 3, approverRole: '分管领导', approverName: '副总经理-陈', status: 'pending' },
+      { nodeId: 'NODE04_001', nodeName: '总经理审批', nodeOrder: 4, approverRole: '总经理', approverName: '总经理', status: 'pending' },
+    ],
+  },
+  {
+    id: 'AFI002',
+    instanceNo: 'LC20261019002',
+    flowConfigId: 'AFC002',
+    flowName: '采购计划-年度标准审批流程',
+    businessType: 'procurement_plan',
+    title: '2027年度会展服务采购预算审批',
+    content: '根据2027年度展会计划，全年预计需要采购会展服务（搭建、物流、安保等）预算约 580 万元，申请年度审批。',
+    attachments: ['2027年度预算草案.xlsx', '年度展会计划.pdf'],
+    applicant: '财务经理-刘',
+    applicantDept: '财务部',
+    applyTime: '2026-10-19 10:00:00',
+    status: 'pending',
+    currentNodeOrder: 1,
+    nodeRecords: [
+      { nodeId: 'NODE01_002', nodeName: '部门负责人编制', nodeOrder: 1, approverRole: '部门负责人', approverName: '业务经理-王', status: 'approved', approveTime: '2026-10-19 10:05:00', comment: '已编制完成' },
+      { nodeId: 'NODE02_002', nodeName: '采购管理部审核', nodeOrder: 2, approverRole: '采购管理员', approverName: '采购主管-李', status: 'pending' },
+      { nodeId: 'NODE03_002', nodeName: '财务部审核', nodeOrder: 3, approverRole: '财务', approverName: '财务经理-刘', status: 'pending' },
+      { nodeId: 'NODE04_002', nodeName: '分管领导审批', nodeOrder: 4, approverRole: '分管领导', approverName: '副总经理-陈', status: 'pending' },
+      { nodeId: 'NODE05_002', nodeName: '总经理审批', nodeOrder: 5, approverRole: '总经理', approverName: '总经理', status: 'pending' },
+      { nodeId: 'NODE06_002', nodeName: '董事会审批', nodeOrder: 6, approverRole: '董事会', approverName: '董事长', status: 'pending' },
+    ],
+  },
+  {
+    id: 'AFI003',
+    instanceNo: 'LC20261020003',
+    flowConfigId: 'AFC001',
+    flowName: '采购计划-月度标准审批流程',
+    businessType: 'procurement_plan',
+    title: '办公用品临时采购（驳回重提）',
+    content: '行政部申请采购一批办公耗材，金额约 2.3 万元。上次因预算明细不够具体被驳回，本次已补充。',
+    attachments: ['办公用品清单.xlsx'],
+    applicant: '行政-张',
+    applicantDept: '行政部',
+    applyTime: '2026-10-20 15:00:00',
+    status: 'approved',
+    currentNodeOrder: 4,
+    nodeRecords: [
+      { nodeId: 'NODE01_003', nodeName: '部门负责人审批', nodeOrder: 1, approverRole: '部门负责人', approverName: '行政经理', status: 'approved', approveTime: '2026-10-20 15:10:00', comment: '同意' },
+      { nodeId: 'NODE02_003', nodeName: '采购管理部审核', nodeOrder: 2, approverRole: '采购管理员', approverName: '采购主管-李', status: 'approved', approveTime: '2026-10-20 16:30:00', comment: '金额小，走简化流程' },
+      { nodeId: 'NODE03_003', nodeName: '分管领导审批', nodeOrder: 3, approverRole: '分管领导', approverName: '副总经理-陈', status: 'approved', approveTime: '2026-10-21 09:00:00', comment: '同意' },
+      { nodeId: 'NODE04_003', nodeName: '总经理审批', nodeOrder: 4, approverRole: '总经理', approverName: '总经理', status: 'approved', approveTime: '2026-10-21 11:20:00', comment: '批准' },
+    ],
   },
 ];
 
