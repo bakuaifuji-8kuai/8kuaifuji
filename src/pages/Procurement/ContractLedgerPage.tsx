@@ -1898,7 +1898,7 @@ export default function ContractLedgerPage() {
               </thead>
               <tbody>
                 {biddings
-                  .filter(b => b.status === 'completed' || b.status === 'evaluated')
+                  .filter(b => (b.status === 'completed' || b.status === 'evaluated') && b.procurementMethod !== 'e_mall') // 电子商城采购不签订合同
                   .map(b => {
                     const confirmedQuote = b.quotes?.find(q => q.confirmedSupplierId);
                     const supplierName = confirmedQuote?.confirmedSupplierName || b.winningSupplierName || '-';
@@ -1921,7 +1921,7 @@ export default function ContractLedgerPage() {
                       </tr>
                     );
                   })}
-                {biddings.filter(b => b.status === 'completed' || b.status === 'evaluated').length === 0 && (
+                {biddings.filter(b => (b.status === 'completed' || b.status === 'evaluated') && b.procurementMethod !== 'e_mall').length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-3 py-8 text-center text-[#909399]">
                       暂无已完成的采购工单可供选择

@@ -1421,6 +1421,7 @@ export default function CompetitiveBiddingPage() {
                             <th className="px-3 py-2.5 text-left w-16 text-[13px] text-slate-600 font-semibold">数量 *</th>
                             <th className="px-3 py-2.5 text-left w-14 text-[13px] text-slate-600 font-semibold">单位 *</th>
                             <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">不含税单价（元）</th>
+                            <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">单价备注</th>
                             <th className="px-3 py-2.5 text-left w-28 text-[13px] text-indigo-600 font-semibold">不含税金额（元）</th>
                             <th className="px-3 py-2.5 text-left w-32 text-[13px] text-slate-600 font-semibold">供应商名称</th>
                             <th className="px-3 py-2.5 text-center w-14 text-[13px] text-slate-600 font-semibold">操作</th>
@@ -1452,6 +1453,11 @@ export default function CompetitiveBiddingPage() {
                                   value={row.unitPriceExcludingTax ?? ''}
                                   onChange={(e) => updateOfflineItem(idx, { unitPriceExcludingTax: Number(e.target.value) })} />
                               </td>
+                              <td className="px-3 py-2">
+                                <input className={commonInput} value={row.priceRemark || ''}
+                                  placeholder="单价备注（可选）"
+                                  onChange={(e) => updateOfflineItem(idx, { priceRemark: e.target.value })} />
+                              </td>
                               <td className="px-3 py-2 text-indigo-600 font-semibold text-[13px]">
                                 ¥{(row.amountExcludingTax ?? 0).toLocaleString()}
                               </td>
@@ -1469,7 +1475,7 @@ export default function CompetitiveBiddingPage() {
                         </tbody>
                         <tfoot>
                           <tr className="bg-gradient-to-r from-emerald-50/40 to-teal-50/30 border-t border-slate-200">
-                            <td colSpan={6} className="px-3 py-2 text-right text-slate-600 font-semibold text-[13px]">不含税金额合计（元）：</td>
+                            <td colSpan={7} className="px-3 py-2 text-right text-slate-600 font-semibold text-[13px]">不含税金额合计（元）：</td>
                             <td className="px-3 py-2 text-indigo-600 font-bold text-[13px]">¥{offlineTotals.ex.toLocaleString()}</td>
                             <td colSpan={2}></td>
                           </tr>
