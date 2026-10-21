@@ -2225,7 +2225,7 @@ export default function CompetitiveBiddingPage() {
                     </label>
                   </div>
                 </div>
-                {editItem.procurementMethod?.startsWith('inquiry') && (
+                {editItem.procurementMethod?.startsWith('inquiry') && editItem.hasOwnerJudge && (
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">业主代表</div>
                   <div className="space-y-1.5">
