@@ -708,6 +708,17 @@ export default function CompetitiveBiddingPage() {
         alert('请输入整单含税上限总价！');
         return;
       }
+      // ===== 目录内比价：比价结果不含税总金额手填校验 + 与清单合计比对 =====
+      const cmpEx = editItem.frameworkCompareAmountExcludingTaxInput;
+      if (cmpEx == null || cmpEx <= 0) {
+        alert('请填写"比价结果汇总"不含税总金额！');
+        return;
+      }
+      const catalogSumEx = editItem.items.reduce((s, i) => s + (i.supplierAmountExTax || 0), 0);
+      if (Math.abs(cmpEx - catalogSumEx) > 0.01) {
+        alert(`比价结果不含税总金额与清单明细合计不一致！\n您填写：¥${cmpEx.toFixed(2)}\n清单合计：¥${catalogSumEx.toFixed(2)}\n请核对清单明细或修正输入值。`);
+        return;
+      }
     } else if (!isFrameworkRandom(procurementMethod)) {
       // === 线下录入类（排除随机抽取，它不用物资明细） ===
       if (!editItem.offlineDetails || editItem.offlineDetails.length === 0) {
@@ -1948,6 +1959,35 @@ export default function CompetitiveBiddingPage() {
                       </div>
                     </div>
                     )}
+
+                    {/* 目录内比价专属：比价结果汇总（不含税总金额手填 + 与清单明细比对） */}
+                    {isCatalogCompare(editItem.procurementMethod) && editItem.items && editItem.items.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-dashed border-slate-200">
+                      <div className="text-xs text-[#606266] mb-2 flex items-center gap-1.5">
+                        <span className="inline-block w-1 h-1 rounded-full bg-amber-500"></span>
+                        比价结果汇总（请填写不含税总金额，保存时将与清单明细合计比对，必须一致）
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <div className="text-[11px] text-slate-400 mb-1">不含税总金额（元）<span className="text-red-500">*</span></div>
+                          <input type="number" step="0.01" min="0"
+                            className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
+                            value={editItem.frameworkCompareAmountExcludingTaxInput ?? ''}
+                            onChange={(e) => setEditItem({
+                              ...editItem,
+                              frameworkCompareAmountExcludingTaxInput: e.target.value === '' ? undefined : Number(e.target.value),
+                            })}
+                            placeholder={`系统计算：¥${(editItem.items?.reduce((s, i) => s + (i.supplierAmountExTax || 0), 0) || 0).toLocaleString()}`} />
+                        </div>
+                        <div>
+                          <div className="text-[11px] text-slate-400 mb-1">清单明细不含税合计（自动）</div>
+                          <div className="w-full h-8 px-2 border border-slate-200 rounded text-sm bg-slate-50 flex items-center text-indigo-600 font-bold">
+                            ¥{(editItem.items?.reduce((s, i) => s + (i.supplierAmountExTax || 0), 0) || 0).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    )}
                     </>
                   )}
                 </div>
@@ -2225,7 +2265,7 @@ export default function CompetitiveBiddingPage() {
                     </label>
                   </div>
                 </div>
-                {editItem.procurementMethod?.startsWith('inquiry') && editItem.hasOwnerJudge && (
+                {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'negotiation_open' || editItem.procurementMethod === 'negotiation_invited') && editItem.hasOwnerJudge && (
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">业主代表</div>
                   <div className="space-y-1.5">
@@ -2277,8 +2317,8 @@ export default function CompetitiveBiddingPage() {
             </div>
             )}
 
-            {/* ============ 询比采购专属：报名单位 ============ */}
-            {editItem.procurementMethod?.startsWith('inquiry') && (
+            {/* ============ 线下采购通用：报名单位 ============ */}
+            {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'negotiation_open' || editItem.procurementMethod === 'negotiation_invited') && (
             <div className="space-y-3 pt-3 border-t border-slate-200">
               <div className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
                 <span>👥</span> 报名单位
@@ -2499,29 +2539,23 @@ export default function CompetitiveBiddingPage() {
                 <span className="text-xs text-slate-400 font-normal">（916 L46-55）</span>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                {/* 必须项：询比 */}
+                {/* 会议纪要 + 上会材料：询比/竞价/谈判-公开/谈判-邀请 全部必填 */}
                 {editItem.procurementMethod?.startsWith('inquiry') && renderMaterialSlot('meetingMinutes', '会议纪要', true)}
                 {editItem.procurementMethod?.startsWith('inquiry') && renderMaterialSlot('onMeetingMaterials', '上会材料', true)}
-                {/* 竞价 + 谈判 */}
-                {(editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && renderMaterialSlot('demandMaterial', '需求立项材料')}
-                {/* 谈判 */}
-                {editItem.procurementMethod?.startsWith('negotiation') && renderMaterialSlot('preContractReview', '前置审核合同文本')}
-                {/* 招标代理（询比/竞价/谈判） */}
+                {(editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'negotiation_open' || editItem.procurementMethod === 'negotiation_invited') && renderMaterialSlot('meetingMinutes', '会议纪要', true)}
+                {(editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'negotiation_open' || editItem.procurementMethod === 'negotiation_invited') && renderMaterialSlot('onMeetingMaterials', '上会材料', true)}
+                {/* 招标代理抽取结果表：询比/竞价/谈判 */}
                 {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && renderMaterialSlot('agentDrawResult', '招标代理抽取结果表')}
-                {/* 成交通知书 + 过程备案：询比必填，其他可选 */}
-                {editItem.procurementMethod?.startsWith('inquiry')
-                  ? renderMaterialSlot('awardNotice', '成交通知书', true)
-                  : renderMaterialSlot('awardNotice', '成交通知书')}
-                {editItem.procurementMethod?.startsWith('inquiry')
-                  ? renderMaterialSlot('processArchive', '招采过程备案', true)
-                  : renderMaterialSlot('processArchive', '招采过程备案')}
+                {/* 成交通知书 + 过程备案：询比/竞价/谈判-公开/谈判-邀请 全部必填 */}
+                {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'negotiation_open' || editItem.procurementMethod === 'negotiation_invited') && renderMaterialSlot('awardNotice', '成交通知书', true)}
+                {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'negotiation_open' || editItem.procurementMethod === 'negotiation_invited') && renderMaterialSlot('processArchive', '招采过程备案', true)}
                 {/* 合资公司相关（可选，4 种都显示） */}
                 {renderMaterialSlot('jointMeetingMinutes', '合资公司会议纪要')}
                 {renderMaterialSlot('jointOnMeetingMaterials', '合资公司上会材料')}
               </div>
 
-              {/* 流标（仅询比/竞价/谈判-公开，放在最下方一行） */}
-              {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod === 'negotiation_open') && (
+              {/* 流标（询比/竞价/谈判-公开/谈判-邀请，放在最下方一行） */}
+              {(editItem.procurementMethod?.startsWith('inquiry') || editItem.procurementMethod === 'competitive_bidding' || editItem.procurementMethod?.startsWith('negotiation')) && (
               <div className="pt-3 border-t border-slate-200">
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-[#606266] font-semibold">流标：</span>

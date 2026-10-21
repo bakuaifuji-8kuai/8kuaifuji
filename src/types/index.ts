@@ -1601,6 +1601,10 @@ export interface Bidding {
   failedReason?: string;               // 流标原因（多行，isFailed=true 时可填）
   hasOwnerJudge?: boolean;             // 是否委派业主评委（询比）
   judgeMethod?: string;                 // 评标办法
+
+  // ====== 框架协议采购-目录内比价：比价结果 ======
+  frameworkCompareAmountExcludingTaxInput?: number; // 页面手填不含税总金额（保存时与items.supplierAmountExTax合计比对）
+
   winningSupplierId?: string;           // 中标供应商
   winningSupplierName?: string;
   winningSupplierLegalPerson?: string; // 中标单位法人名字
