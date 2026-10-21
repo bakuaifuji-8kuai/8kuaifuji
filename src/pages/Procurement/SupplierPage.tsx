@@ -6,7 +6,7 @@ import Modal from '@/components/common/Modal';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
 import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 import { useStore } from '@/store/useStore';
-import type { Supplier, SupplierQualification, SupplierChangeRequest, SupplierChangeItem, QualificationType, ChangeFieldKey, Attachment } from '@/types';
+import type { Supplier, SupplierAccount, SupplierQualification, SupplierChangeRequest, SupplierChangeItem, QualificationType, ChangeFieldKey, Attachment } from '@/types';
 
 // 纸质证书类型字典
 const QUALIFICATION_TYPE_OPTIONS: { value: QualificationType; label: string }[] = [
@@ -60,6 +60,12 @@ export default function SupplierPage() {
   const addSupplierChangeRequest = useStore((s) => s.addSupplierChangeRequest);
   const updateSupplierChangeRequest = useStore((s) => s.updateSupplierChangeRequest);
   const currentUser = useStore((s) => s.currentUser);
+
+  // 供应商账号
+  const supplierAccounts = useStore((s) => s.supplierAccounts);
+  const addSupplierAccount = useStore((s) => s.addSupplierAccount);
+  const updateSupplierAccount = useStore((s) => s.updateSupplierAccount);
+  const deleteSupplierAccount = useStore((s) => s.deleteSupplierAccount);
 
   const [filterName, setFilterName] = useState('');
   const [filterCode, setFilterCode] = useState('');
@@ -148,6 +154,7 @@ export default function SupplierPage() {
           <TextButton onClick={() => openQualification(row)}>资质管理</TextButton>
           <TextButton onClick={() => openChangeRequest(row)}>变更申请</TextButton>
           <TextButton onClick={() => viewChangeHistory(row)}>变更记录</TextButton>
+          <TextButton onClick={() => openAccountManagement(row)}>账号管理</TextButton>
           <TextButton
             type="danger"
             onClick={() => {
@@ -170,6 +177,91 @@ export default function SupplierPage() {
   const [changeRequestSupplier, setChangeRequestSupplier] = useState<Supplier | null>(null);
   const [changeHistoryOpen, setChangeHistoryOpen] = useState(false);
   const [changeHistorySupplier, setChangeHistorySupplier] = useState<Supplier | null>(null);
+
+  // ============ 供应商账号管理 ============
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [accountSupplier, setAccountSupplier] = useState<Supplier | null>(null);
+  const [accountFormOpen, setAccountFormOpen] = useState(false);
+  const [accountForm, setAccountForm] = useState({ username: '', displayName: '', initialPassword: '' });
+  const [accountFormError, setAccountFormError] = useState('');
+  const [resetPwdTarget, setResetPwdTarget] = useState<SupplierAccount | null>(null);
+  const [resetPwdValue, setResetPwdValue] = useState('');
+
+  // 打开账号管理弹窗
+  const openAccountManagement = (supplier: Supplier) => {
+    setAccountSupplier(supplier);
+    setAccountFormOpen(false);
+    setAccountForm({ username: '', displayName: '', initialPassword: '' });
+    setAccountFormError('');
+    setAccountModalOpen(true);
+  };
+
+  // 过滤出当前供应商的账号
+  const currentSupplierAccounts = useMemo(() => {
+    if (!accountSupplier) return [];
+    return supplierAccounts
+      .filter((a) => a.supplierId === accountSupplier.id)
+      .sort((a, b) => (a.createTime < b.createTime ? 1 : -1));
+  }, [supplierAccounts, accountSupplier]);
+
+  // 账号状态 Badge
+  const accountStatusBadge = (s: string) =>
+    s === 'enabled'
+      ? <span className="px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">启用</span>
+      : <span className="px-2 py-0.5 rounded text-xs bg-slate-200 text-slate-500">禁用</span>;
+
+  // 新增账号提交
+  const submitAccountForm = () => {
+    setAccountFormError('');
+    if (!accountSupplier) return;
+    if (!accountForm.username.trim()) { setAccountFormError('请填写登录账号'); return; }
+    if (!accountForm.displayName.trim()) { setAccountFormError('请填写姓名'); return; }
+    if (!accountForm.initialPassword.trim() || accountForm.initialPassword.length < 6) {
+      setAccountFormError('初始密码不少于 6 位'); return;
+    }
+    // 账号唯一校验（同供应商下）
+    const dup = supplierAccounts.some(
+      (a) => a.supplierId === accountSupplier.id && a.username.toLowerCase() === accountForm.username.trim().toLowerCase()
+    );
+    if (dup) { setAccountFormError('该账号已存在'); return; }
+
+    const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const newAcc: SupplierAccount = {
+      id: 'SA' + Date.now(),
+      supplierId: accountSupplier.id,
+      supplierName: accountSupplier.name,
+      username: accountForm.username.trim(),
+      displayName: accountForm.displayName.trim(),
+      initialPassword: accountForm.initialPassword,
+      status: 'enabled',
+      createTime: nowStr,
+      creator: currentUser.name,
+    };
+    addSupplierAccount(newAcc);
+    setAccountFormOpen(false);
+    setAccountForm({ username: '', displayName: '', initialPassword: '' });
+  };
+
+  // 启用禁用切换
+  const toggleAccountStatus = (acc: SupplierAccount) => {
+    updateSupplierAccount(acc.id, { status: acc.status === 'enabled' ? 'disabled' : 'enabled' });
+  };
+
+  // 删除账号
+  const handleDeleteAccount = (acc: SupplierAccount) => {
+    if (confirm(`确认删除账号 "${acc.username}"？该账号将无法登录`)) {
+      deleteSupplierAccount(acc.id);
+    }
+  };
+
+  // 重置密码
+  const handleResetPwd = () => {
+    if (!resetPwdTarget || !resetPwdValue.trim()) return;
+    if (resetPwdValue.trim().length < 6) { alert('密码不少于 6 位'); return; }
+    updateSupplierAccount(resetPwdTarget.id, { initialPassword: resetPwdValue.trim() });
+    setResetPwdTarget(null);
+    setResetPwdValue('');
+  };
 
   // ============ 新增/编辑供应商 ============
   const openAdd = () => {
@@ -969,6 +1061,175 @@ export default function SupplierPage() {
             </div>
           );
         })()}
+      </Modal>
+
+      {/* ============ 供应商账号管理 Modal ============ */}
+      <Modal
+        open={accountModalOpen}
+        title={`账号管理 — ${accountSupplier?.name || ''}`}
+        onClose={() => { setAccountModalOpen(false); setAccountFormOpen(false); }}
+        footer={null}
+        width="820"
+      >
+        {accountSupplier && (
+          <div>
+            {/* 顶部统计 */}
+            <div className="flex gap-4 mb-4">
+              <div className="px-4 py-2 bg-slate-50 rounded-lg text-sm">
+                账号总数：<span className="font-bold text-slate-700">{currentSupplierAccounts.length}</span>
+              </div>
+              <div className="px-4 py-2 bg-green-50 rounded-lg text-sm">
+                启用：<span className="font-bold text-green-700">{currentSupplierAccounts.filter((a) => a.status === 'enabled').length}</span>
+              </div>
+              <div className="px-4 py-2 bg-slate-50 rounded-lg text-sm">
+                禁用：<span className="font-bold text-slate-500">{currentSupplierAccounts.filter((a) => a.status === 'disabled').length}</span>
+              </div>
+              <div className="flex-1 text-right">
+                <PrimaryButton onClick={() => setAccountFormOpen((v) => !v)} size="small">
+                  {accountFormOpen ? '取消新增' : '+ 新增账号'}
+                </PrimaryButton>
+              </div>
+            </div>
+
+            {/* 新增账号表单 */}
+            {accountFormOpen && (
+              <div className="mb-4 p-4 bg-indigo-50/50 border border-indigo-100 rounded-lg">
+                <div className="text-sm font-medium text-indigo-700 mb-3">新增供应商账号</div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">登录账号 <span className="text-red-500">*</span></label>
+                    <input
+                      className="w-full h-8 px-2 border border-slate-300 rounded text-sm"
+                      value={accountForm.username}
+                      onChange={(e) => setAccountForm({ ...accountForm, username: e.target.value })}
+                      placeholder="如 cg_manager"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">姓名 <span className="text-red-500">*</span></label>
+                    <input
+                      className="w-full h-8 px-2 border border-slate-300 rounded text-sm"
+                      value={accountForm.displayName}
+                      onChange={(e) => setAccountForm({ ...accountForm, displayName: e.target.value })}
+                      placeholder="如 王经理"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">初始密码 <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      className="w-full h-8 px-2 border border-slate-300 rounded text-sm"
+                      value={accountForm.initialPassword}
+                      onChange={(e) => setAccountForm({ ...accountForm, initialPassword: e.target.value })}
+                      placeholder="不少于6位"
+                    />
+                  </div>
+                </div>
+                {accountFormError && (
+                  <div className="text-xs text-red-500 mt-2">{accountFormError}</div>
+                )}
+                <div className="mt-3 flex justify-end gap-2">
+                  <DefaultButton onClick={() => setAccountFormOpen(false)}>取消</DefaultButton>
+                  <PrimaryButton onClick={submitAccountForm}>确认新增</PrimaryButton>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-2">
+                  💡 账号初始密码由管理员设置后交付给供应商，账号无自助修改密码能力。
+                </p>
+              </div>
+            )}
+
+            {/* 账号列表 */}
+            {currentSupplierAccounts.length === 0 ? (
+              <div className="py-12 text-center text-sm text-slate-400 border border-dashed border-slate-200 rounded-lg">
+                暂无账号，点右上角「新增账号」创建
+              </div>
+            ) : (
+              <table className="w-full text-sm border border-slate-200 rounded overflow-hidden">
+                <thead className="bg-slate-50 text-slate-600 text-xs">
+                  <tr>
+                    <th className="px-3 py-2 text-left">登录账号</th>
+                    <th className="px-3 py-2 text-left">姓名</th>
+                    <th className="px-3 py-2 text-left">状态</th>
+                    <th className="px-3 py-2 text-left">最后登录</th>
+                    <th className="px-3 py-2 text-left">创建人</th>
+                    <th className="px-3 py-2 text-center w-[200px]">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentSupplierAccounts.map((acc) => (
+                    <tr key={acc.id} className="border-t border-slate-100 hover:bg-slate-50/50">
+                      <td className="px-3 py-2 font-mono">{acc.username}</td>
+                      <td className="px-3 py-2">{acc.displayName}</td>
+                      <td className="px-3 py-2">{accountStatusBadge(acc.status)}</td>
+                      <td className="px-3 py-2 text-slate-500 text-xs">{acc.lastLoginTime || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-slate-500">{acc.creator}</td>
+                      <td className="px-3 py-2 text-center">
+                        <div className="inline-flex items-center gap-2">
+                          {/* 启用禁用 Switch */}
+                          <label className="inline-flex items-center gap-1 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={acc.status === 'enabled'}
+                              onChange={() => toggleAccountStatus(acc)}
+                              className="sr-only peer"
+                            />
+                            <span className="w-8 h-4 bg-slate-300 peer-checked:bg-indigo-500 rounded-full relative transition-colors">
+                              <span className="absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-4"></span>
+                            </span>
+                            <span className="text-xs text-slate-500">{acc.status === 'enabled' ? '启用' : '禁用'}</span>
+                          </label>
+                          <TextButton onClick={() => { setResetPwdTarget(acc); setResetPwdValue(''); }}>重置密码</TextButton>
+                          <TextButton
+                            type="danger"
+                            onClick={() => handleDeleteAccount(acc)}
+                          >删除</TextButton>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* ============ 重置密码子 Modal ============ */}
+      <Modal
+        open={!!resetPwdTarget}
+        title="重置密码"
+        onClose={() => setResetPwdTarget(null)}
+        footer={
+          <>
+            <DefaultButton onClick={() => setResetPwdTarget(null)}>取消</DefaultButton>
+            <PrimaryButton onClick={handleResetPwd}>确认重置</PrimaryButton>
+          </>
+        }
+        width="420"
+      >
+        {resetPwdTarget && (
+          <div className="space-y-3">
+            <div className="text-sm text-slate-600">
+              将为账号 <span className="font-mono font-bold text-slate-800">{resetPwdTarget.username}</span>（{resetPwdTarget.displayName}）重置密码。
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                新密码 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm"
+                value={resetPwdValue}
+                onChange={(e) => setResetPwdValue(e.target.value)}
+                placeholder="不少于 6 位"
+                autoFocus
+              />
+            </div>
+            <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+              ⚠ 重置后需由管理员口头通知新密码，账号无法自行找回或修改密码。
+            </p>
+          </div>
+        )}
       </Modal>
     </div>
   );

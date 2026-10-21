@@ -1,5 +1,5 @@
 ﻿import type {
-  Warehouse, Position, ProductCategory, Product, Supplier, SupplierAssessment, Customer,
+  Warehouse, Position, ProductCategory, Product, Supplier, SupplierAccount, SupplierAssessment, Customer,
   Inventory, InboundOrder, InboundApplication, OutboundOrder, CheckOrder, TransferOrder, ReturnOrder, PendingReturn,
   AssetEquipment, ScrappedRecord, DamagedRecord, StockTransaction, Employee, PurchaseOrder,
   ProductApplication, Contract, ProductContract, ExhibitionProject,
@@ -849,6 +849,81 @@ export const suppliers = [
       createTime: "2025-05-01"
     }
   ];
+
+// 供应商账号（平台管理员创建，账号无自助改密）
+export const supplierAccounts: SupplierAccount[] = [
+  {
+    id: 'SA001',
+    supplierId: 'SUP-001',
+    supplierName: '晨光办公用品有限公司',
+    username: 'cg_sales',
+    displayName: '晨光-销售专员',
+    initialPassword: 'Cg@888888',
+    status: 'enabled',
+    lastLoginTime: '2026-10-18 14:20:00',
+    createTime: '2026-08-10 10:00:00',
+    creator: '系统管理员',
+  },
+  {
+    id: 'SA002',
+    supplierId: 'SUP-001',
+    supplierName: '晨光办公用品有限公司',
+    username: 'cg_finance',
+    displayName: '晨光-财务对接',
+    initialPassword: 'Cg@666666',
+    status: 'enabled',
+    lastLoginTime: '2026-10-15 09:12:00',
+    createTime: '2026-08-10 10:05:00',
+    creator: '系统管理员',
+  },
+  {
+    id: 'SA003',
+    supplierId: 'SUP-003',
+    supplierName: '华展展览服务有限公司',
+    username: 'hz_manager',
+    displayName: '华展-李总',
+    initialPassword: 'Hz@123456',
+    status: 'enabled',
+    lastLoginTime: '2026-10-20 16:45:00',
+    createTime: '2026-06-20 11:00:00',
+    creator: '采购主管-李',
+  },
+  {
+    id: 'SA004',
+    supplierId: 'SUP-003',
+    supplierName: '华展展览服务有限公司',
+    username: 'hz_worker01',
+    displayName: '华展-现场对接员',
+    initialPassword: 'Hz@worker01',
+    status: 'disabled',
+    createTime: '2026-06-22 09:30:00',
+    creator: '采购主管-李',
+  },
+  {
+    id: 'SA005',
+    supplierId: 'SUP-005',
+    supplierName: '启程餐饮管理有限公司',
+    username: 'qc_admin',
+    displayName: '启程-陈经理',
+    initialPassword: 'Qc@999999',
+    status: 'enabled',
+    lastLoginTime: '2026-10-19 11:08:00',
+    createTime: '2026-09-05 14:00:00',
+    creator: '系统管理员',
+  },
+  {
+    id: 'SA006',
+    supplierId: 'SUP-008',
+    supplierName: '宏远临时会务服务有限公司',
+    username: 'hy_ep',
+    displayName: '宏远-吴经理',
+    initialPassword: 'Hy@ep2026',
+    status: 'enabled',
+    lastLoginTime: '2026-10-20 08:50:00',
+    createTime: '2026-10-08 10:00:00',
+    creator: '系统管理员',
+  },
+];
 
 // 客户数据
 export const customers: Customer[] = [

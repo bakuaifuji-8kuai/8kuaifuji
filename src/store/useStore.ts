@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
-  Warehouse, Position, ProductCategory, Product, Supplier, SupplierAssessment, Customer,
+  Warehouse, Position, ProductCategory, Product, Supplier, SupplierAccount, SupplierAssessment, Customer,
   Inventory, InboundOrder, InboundApplication, OutboundOrder, CheckOrder, TransferOrder, ReturnOrder, PendingReturn,
   AssetEquipment, ScrappedRecord, DamagedRecord,
   BatchInventory, BatchOutboundDetail, StockTransaction, Employee, PurchaseOrder,
@@ -129,6 +129,13 @@ interface WarehouseState {
   addSupplier: (supplier: Supplier) => void;
   updateSupplier: (id: string, supplier: Partial<Supplier>) => void;
   deleteSupplier: (id: string) => void;
+
+  // 供应商账号（管理员创建，账号无自助改密）
+  supplierAccounts: SupplierAccount[];
+  setSupplierAccounts: (data: SupplierAccount[]) => void;
+  addSupplierAccount: (acc: SupplierAccount) => void;
+  updateSupplierAccount: (id: string, data: Partial<SupplierAccount>) => void;
+  deleteSupplierAccount: (id: string) => void;
 
   // 供应商考核评估
   supplierAssessments: SupplierAssessment[];
@@ -540,6 +547,17 @@ export const useStore = create<WarehouseState>()(
   })),
   deleteSupplier: (id) => set((state) => ({
     suppliers: state.suppliers.filter((s) => s.id !== id)
+  })),
+
+  // 供应商账号
+  supplierAccounts: mockData.supplierAccounts || [],
+  setSupplierAccounts: (data) => set({ supplierAccounts: data }),
+  addSupplierAccount: (acc) => set((state) => ({ supplierAccounts: [...state.supplierAccounts, acc] })),
+  updateSupplierAccount: (id, data) => set((state) => ({
+    supplierAccounts: state.supplierAccounts.map((a) => a.id === id ? { ...a, ...data } : a)
+  })),
+  deleteSupplierAccount: (id) => set((state) => ({
+    supplierAccounts: state.supplierAccounts.filter((a) => a.id !== id)
   })),
 
   // 客户

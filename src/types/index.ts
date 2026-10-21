@@ -143,6 +143,23 @@ export interface Supplier {
   qualifications?: SupplierQualification[]; // 资质证书列表
 }
 
+// 供应商账号（由平台管理员创建，账号无自助改密能力）
+export interface SupplierAccount {
+  id: string;
+  supplierId: string;           // 关联供应商
+  supplierName?: string;
+
+  username: string;              // 登录账号（同一供应商下唯一）
+  displayName: string;           // 姓名
+  initialPassword: string;       // 初始密码（管理员设置；首次创建展示，之后脱敏）
+
+  status: 'enabled' | 'disabled';  // 启用/禁用
+  lastLoginTime?: string;
+
+  createTime: string;
+  creator: string;
+}
+
 // 供应商考核记录
 export interface SupplierAssessment {
   id: string;
