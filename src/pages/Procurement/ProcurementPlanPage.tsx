@@ -689,7 +689,7 @@ export default function ProcurementPlanPage() {
             </div>
             <div className="mb-2 p-2 bg-[#fef3c7]/30 border border-[#fef3c7] rounded text-xs text-[#92400e]">
               <div className="mb-1"><span className="text-[#ef4444]">*</span> 标红字段为必填项</div>
-              <div>• "项目名称、需求类型、项目概况、项目估（预）算、招标采购前置阶段"由需求部门填写</div>
+              <div>• "项目基本信息 + 招标采购前置阶段 + 招标采购准备阶段"由需求部门填写</div>
               <div>• "招标采购阶段"由综合管理部填写</div>
             </div>
             <div className="border border-[#dcdfe6] rounded max-h-96 overflow-auto">
@@ -698,7 +698,8 @@ export default function ProcurementPlanPage() {
                   <tr>
                     <th colSpan={6} className="px-2 py-1 text-xs text-center border-r border-[#dcdfe6]">项目基本信息</th>
                     <th colSpan={3} className="px-2 py-1 text-xs text-center border-r border-[#dcdfe6] bg-[#fef3c7]">招标采购前置阶段</th>
-                    <th colSpan={5} className="px-2 py-1 text-xs text-center bg-[#dbeafe]">招标采购阶段</th>
+                    <th colSpan={2} className="px-2 py-1 text-xs text-center border-r border-[#dcdfe6] bg-[#dcfce7]">招标采购准备阶段</th>
+                    <th colSpan={3} className="px-2 py-1 text-xs text-center bg-[#dbeafe]">招标采购阶段</th>
                     <th rowSpan={2} className="px-2 py-2 text-xs text-left w-20 whitespace-nowrap">操作</th>
                   </tr>
                   <tr>
@@ -711,8 +712,8 @@ export default function ProcurementPlanPage() {
                     <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap bg-[#fef3c7]"><span className="text-[#ef4444]">*</span>用户需求书编制计划完成时间</th>
                     <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap bg-[#fef3c7]"><span className="text-[#ef4444]">*</span>预算编制审批计划完成时间</th>
                     <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap bg-[#fef3c7]"><span className="text-[#ef4444]">*</span>合同前置审核计划完成时间</th>
-                    <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap bg-[#dbeafe]">需求审批全套佐证资料</th>
-                    <th className="px-2 py-2 text-xs text-left w-32 whitespace-nowrap bg-[#dbeafe]">采购方式</th>
+                    <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap bg-[#dcfce7]">需求审批全套佐证资料</th>
+                    <th className="px-2 py-2 text-xs text-left w-32 whitespace-nowrap bg-[#dcfce7]">采购方式</th>
                     <th className="px-2 py-2 text-xs text-left w-28 whitespace-nowrap bg-[#dbeafe]"><span className="text-[#ef4444]">*</span>计划采购启动时间</th>
                     <th className="px-2 py-2 text-xs text-left w-28 whitespace-nowrap bg-[#dbeafe]"><span className="text-[#ef4444]">*</span>计划采购完成时间</th>
                     <th className="px-2 py-2 text-xs text-left w-32 whitespace-nowrap bg-[#dbeafe]">备注</th>
