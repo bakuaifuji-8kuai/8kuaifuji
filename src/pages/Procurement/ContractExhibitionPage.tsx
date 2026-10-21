@@ -688,53 +688,7 @@ function ContractExhibitionForm({ form, update, biddings, procurementDemands, is
 
       {/* ========== 916文档 五、招采类独有设置 ========== */}
       <Section title="⭐ 招采类独有设置（916文档L17-18）" tone="amber">
-        <div className="grid grid-cols-4 gap-4">
-          {/* 履约评价（是/否）— 审批通过后自动关联合同履约评价流程 */}
-          <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-lg">
-            <label className="flex items-center gap-2 cursor-pointer pt-6">
-              <input
-                type="checkbox"
-                checked={form.guaranteeEvaluation?.isOpen ?? false}
-                onChange={(e) =>
-                  update({
-                    guaranteeEvaluation: {
-                      ...(form.guaranteeEvaluation || { isOpen: false }),
-                      isOpen: e.target.checked,
-                    },
-                  })
-                }
-                className="w-4 h-4 rounded"
-              />
-              <span className="text-sm font-medium text-amber-800">履约评价(保证金/质保金)</span>
-            </label>
-          </div>
-          {/* 考核管理 */}
-          <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-lg">
-            <Select
-              label="考核管理"
-              options={ASSESSMENT_OPTIONS}
-              value={form.assessmentManagement || ''}
-              onChange={(e) =>
-                update({
-                  assessmentManagement: e.target.value
-                    ? (e.target.value as ContractLedger['assessmentManagement'])
-                    : null,
-                })
-              }
-            />
-          </div>
-          {/* 年度评价 */}
-          <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-lg">
-            <label className="flex items-center gap-2 cursor-pointer pt-6">
-              <input
-                type="checkbox"
-                checked={form.yearlyEvaluation ?? false}
-                onChange={(e) => update({ yearlyEvaluation: e.target.checked })}
-                className="w-4 h-4 rounded"
-              />
-              <span className="text-sm font-medium text-amber-800">年度评价</span>
-            </label>
-          </div>
+        <div className="grid grid-cols-1 gap-4">
           {/* 合同到期预警 */}
           <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-lg">
             <label className="flex items-center gap-2 cursor-pointer pt-6">
@@ -749,7 +703,7 @@ function ContractExhibitionForm({ form, update, biddings, procurementDemands, is
           </div>
         </div>
         <p className="text-xs text-amber-600 mt-2">
-          💡 勾选履约评价/考核/年度评价后自动关联后续流程；关闭"合同到期预警"则合同台账顶部到期预警条不显示该合同。
+          💡 关闭"合同到期预警"后合同台账顶部到期预警条不显示该合同。
         </p>
       </Section>
 
