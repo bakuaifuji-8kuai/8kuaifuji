@@ -381,6 +381,8 @@ export default function ProcurementPlanPage() {
     const savePlan = {
       ...editItem,
       details,
+      // 需求部门根据当前经办人（currentUser）自动带出
+      department: currentUser.department || editItem.department,
       // 审批过程中修改，自动记录
       isModifiedDuringApproval: isApprovalMod ? true : editItem.isModifiedDuringApproval,
     };
@@ -700,23 +702,13 @@ export default function ProcurementPlanPage() {
             </div>
           ) : null}
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <div className="mb-1 text-[#606266]">需求部门</div>
-              <input
-                className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
-                value={editItem?.department || ''}
-                onChange={(e) => editItem && setEditItem({ ...editItem, department: e.target.value })}
-              />
-            </div>
-            <div>
-              <div className="mb-1 text-[#606266]">备注</div>
-              <input
-                className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
-                value={editItem?.remark || ''}
-                onChange={(e) => editItem && setEditItem({ ...editItem, remark: e.target.value })}
-              />
-            </div>
+          <div>
+            <div className="mb-1 text-[#606266]">备注</div>
+            <input
+              className="w-full h-8 px-2 border border-[#dcdfe6] rounded"
+              value={editItem?.remark || ''}
+              onChange={(e) => editItem && setEditItem({ ...editItem, remark: e.target.value })}
+            />
           </div>
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -773,7 +765,7 @@ export default function ProcurementPlanPage() {
                       <td className="px-2 py-1">
                         <input
                           className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
-                          value={editItem?.department || ''}
+                          value={currentUser?.department || editItem?.department || ''}
                           readOnly
                         />
                       </td>
