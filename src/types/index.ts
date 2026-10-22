@@ -863,7 +863,8 @@ export interface ProductApplicationDetail {
   id: string;
   applicationId: string;
   productName: string; // 物资名称
-  categoryName?: string; // 物资分类
+  categoryId?: string; // 物资类别ID
+  categoryName?: string; // 物资分类名称
   specification?: string; // 规格型号
   unit?: string; // 单位
   reason?: string; // 申请理由

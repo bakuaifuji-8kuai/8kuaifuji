@@ -13,7 +13,7 @@ import FeatureHelpButton from '@/components/common/FeatureHelpButton';
 import { useStore } from '@/store/useStore';
 import { generateId } from '@/utils';
 import * as XLSX from 'xlsx';
-import type { ProductApplication, ProductApplicationDetail, ProductApplicationStatus, Attachment } from '@/types';
+import type { Product, ProductApplication, ProductApplicationDetail, ProductApplicationStatus, Attachment } from '@/types';
 
 const helpContent = {
   title: '物资申请审批 - 功能操作说明',
@@ -142,6 +142,9 @@ export default function ProductApplicationPage() {
     updateProductApplication,
     deleteProductApplication,
     employees,
+    categories,
+    products,
+    addProduct,
   } = useStore();
 
   // 筛选状态
@@ -338,6 +341,20 @@ export default function ProductApplicationPage() {
     setApproveModal(true);
   };
 
+  // 生成物资编码：前缀（类别 codePrefix）+ 5位数字后缀（全局唯一）
+  const generateProductCode = (prefix: string, existingProducts: Product[]) => {
+    const allNumericSuffixes = existingProducts
+      .map(p => {
+        const match = p.code.match(/(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter(n => n > 0);
+    const maxNum = allNumericSuffixes.length > 0 ? Math.max(...allNumericSuffixes) : 0;
+    const nextNum = maxNum + 1;
+    const suffix = nextNum.toString().padStart(5, '0');
+    return { prefix, suffix, code: prefix + suffix };
+  };
+
   // 确认审批
   const handleApproveConfirm = () => {
     if (!viewItem) return;
@@ -362,9 +379,35 @@ export default function ProductApplicationPage() {
       approvalHistory: history,
     });
 
+    // 审批通过 → 自动添加到物资档案并生成物资编码
+    if (approveStatus === 'approved') {
+      viewItem.details.forEach((d) => {
+        if (!d.productName?.trim()) return; // 跳过空行
+        const cat = categories.find((c: any) => c.id === d.categoryId);
+        const prefix = cat?.codePrefix || 'P';
+        const { code } = generateProductCode(prefix, products);
+        addProduct({
+          id: 'PRD' + generateId(),
+          code,
+          name: d.productName.trim(),
+          categoryId: cat?.id || d.categoryId || '',
+          categoryName: cat?.name || d.categoryName || '',
+          unit: d.unit || '',
+          specification: d.specification || '',
+          brand: '',
+          origin: '',
+          material: '',
+          weight: '',
+          dimensions: '',
+          isContractItem: false,
+          status: 'enabled',
+        });
+      });
+    }
+
     setApproveModal(false);
     setViewItem(null);
-    alert(approveStatus === 'approved' ? '已通过审批' : '已驳回');
+    alert(approveStatus === 'approved' ? '已通过审批，物资已同步至物资档案' : '已驳回');
   };
 
   // 删除
@@ -388,6 +431,7 @@ export default function ProductApplicationPage() {
       id: 'PAD' + Date.now(),
       applicationId: '',
       productName: '',
+      categoryId: '',
       categoryName: '',
       specification: '',
       unit: '',
@@ -395,10 +439,19 @@ export default function ProductApplicationPage() {
     }]);
   };
 
-  // 更新明细行
+  // 更新明细行（类别联动：选 categoryId 自动同步 categoryName）
   const handleUpdateDetail = (index: number, field: keyof ProductApplicationDetail, value: string | number) => {
     const newDetails = [...details];
-    (newDetails[index] as any)[field] = value;
+    if (field === 'categoryId') {
+      const cat = (categories as any[]).find((c: any) => c.id === value);
+      newDetails[index] = {
+        ...newDetails[index],
+        categoryId: String(value),
+        categoryName: cat?.name || '',
+      };
+    } else {
+      (newDetails[index] as any)[field] = value;
+    }
     setDetails(newDetails);
   };
 
@@ -410,16 +463,16 @@ export default function ProductApplicationPage() {
   // 下载导入模板
   const handleDownloadTemplate = () => {
     const templateData = [
-      { '物资名称': '', '规格型号': '', '单位': '', '申请理由': '' },
-      { '物资名称': 'LED显示屏', '规格型号': 'P2.5高清', '单位': '平方米', '申请理由': '展会项目需要' },
-      { '物资名称': '音响设备', '规格型号': '专业级', '单位': '套', '申请理由': '展会使用' },
+      { '类别': '', '物资名称': '', '规格型号': '', '单位': '', '申请理由': '' },
+      { '类别': '展会物资', '物资名称': 'LED显示屏', '规格型号': 'P2.5高清', '单位': '平方米', '申请理由': '展会项目需要' },
+      { '类别': '展会物资', '物资名称': '音响设备', '规格型号': '专业级', '单位': '套', '申请理由': '展会使用' },
     ];
 
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '物资申请导入模板');
     ws['!cols'] = [
-      { wch: 20 }, { wch: 20 }, { wch: 10 }, { wch: 20 },
+      { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 10 }, { wch: 20 },
     ];
     XLSX.writeFile(wb, '物资申请导入模板.xlsx');
   };
@@ -442,10 +495,15 @@ export default function ProductApplicationPage() {
           const name = row['物资名称'];
           if (!name) return;
 
+          const categoryName = row['类别'] || '';
+          const cat = categoryName ? (categories as any[]).find((c: any) => c.name === categoryName) : null;
+
           previewData.push({
             id: 'PAD' + Date.now() + index,
             applicationId: '',
             productName: name,
+            categoryId: cat?.id || '',
+            categoryName: categoryName,
             specification: row['规格型号'] || '',
             unit: row['单位'] || '',
             reason: row['申请理由'] || '',
@@ -655,6 +713,7 @@ export default function ProductApplicationPage() {
               <table className="w-full text-xs">
                 <thead className="bg-slate-50">
                   <tr>
+                    <th className="px-3 py-2 text-left w-36">类别</th>
                     <th className="px-3 py-2 text-left">物资名称</th>
                     <th className="px-3 py-2 text-left w-24">规格</th>
                     <th className="px-3 py-2 text-left w-16">单位</th>
@@ -665,6 +724,18 @@ export default function ProductApplicationPage() {
                 <tbody>
                   {details.map((detail, index) => (
                     <tr key={detail.id} className="border-t border-slate-100">
+                      <td className="px-2 py-1">
+                        <select
+                          className="w-full h-8 px-2 border border-slate-200 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-400 transition-all"
+                          value={detail.categoryId || ''}
+                          onChange={(e) => handleUpdateDetail(index, 'categoryId', e.target.value)}
+                        >
+                          <option value="">请选择类别</option>
+                          {(categories as any[]).map((c: any) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </td>
                       <td className="px-2 py-1">
                         <Input
                           value={detail.productName}
@@ -823,6 +894,7 @@ export default function ProductApplicationPage() {
                 <table className="w-full text-xs">
                   <thead className="bg-slate-50">
                     <tr>
+                      <th className="px-3 py-2 text-left">类别</th>
                       <th className="px-3 py-2 text-left">物资名称</th>
                       <th className="px-3 py-2 text-left">规格</th>
                       <th className="px-3 py-2 text-left">单位</th>
@@ -832,6 +904,7 @@ export default function ProductApplicationPage() {
                   <tbody>
                     {viewItem.details.map((detail) => (
                       <tr key={detail.id} className="border-t border-slate-100">
+                        <td className="px-3 py-2">{detail.categoryName || '-'}</td>
                         <td className="px-3 py-2">{detail.productName}</td>
                         <td className="px-3 py-2">{detail.specification || '-'}</td>
                         <td className="px-3 py-2">{detail.unit || '-'}</td>
