@@ -174,6 +174,43 @@ export default function ProductApplicationPage() {
   // 附件
   const [attachments, setAttachments] = useState<Attachment[]>([]);
 
+  // 重复物资检测弹窗
+  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
+  const [duplicateModalIndex, setDuplicateModalIndex] = useState(-1);
+  const [duplicateModalKeyword, setDuplicateModalKeyword] = useState('');
+  const [duplicateMatches, setDuplicateMatches] = useState<Product[]>([]);
+
+  // 检查物资名称是否在系统中存在（模糊匹配）
+  const handleCheckProductDuplicate = (index: number) => {
+    const keyword = details[index]?.productName?.trim();
+    if (!keyword) return;
+    const matches = products.filter((p: Product) =>
+      p.name.toLowerCase().includes(keyword.toLowerCase()) ||
+      keyword.toLowerCase().includes(p.name.toLowerCase())
+    );
+    if (matches.length === 0) return; // 无匹配不弹窗
+    setDuplicateModalIndex(index);
+    setDuplicateModalKeyword(keyword);
+    setDuplicateMatches(matches);
+    setDuplicateModalOpen(true);
+  };
+
+  // 使用已有物资：回填 name/unit/specification/category
+  const handleUseExistingProduct = (existing: Product) => {
+    if (duplicateModalIndex < 0) return;
+    const newDetails = [...details];
+    newDetails[duplicateModalIndex] = {
+      ...newDetails[duplicateModalIndex],
+      productName: existing.name,
+      unit: existing.unit || newDetails[duplicateModalIndex].unit,
+      specification: existing.specification || newDetails[duplicateModalIndex].specification,
+      categoryId: existing.categoryId || newDetails[duplicateModalIndex].categoryId,
+      categoryName: existing.categoryName || newDetails[duplicateModalIndex].categoryName,
+    };
+    setDetails(newDetails);
+    setDuplicateModalOpen(false);
+  };
+
   // 审批弹窗
   const [approveModal, setApproveModal] = useState(false);
   const [approveRemark, setApproveRemark] = useState('');
@@ -463,21 +500,25 @@ export default function ProductApplicationPage() {
   // 下载导入模板
   const handleDownloadTemplate = () => {
     const templateData = [
-      { '类别': '', '物资名称': '', '规格型号': '', '单位': '', '申请理由': '' },
-      { '类别': '展会物资', '物资名称': 'LED显示屏', '规格型号': 'P2.5高清', '单位': '平方米', '申请理由': '展会项目需要' },
-      { '类别': '展会物资', '物资名称': '音响设备', '规格型号': '专业级', '单位': '套', '申请理由': '展会使用' },
+      { '类别': '', '物资名称': '', '规格': '', '单位': '', '理由': '' },
+      { '类别': '展会物资', '物资名称': 'LED显示屏', '规格': 'P2.5高清', '单位': '平方米', '理由': '展会项目需要' },
+      { '类别': '展会物资', '物资名称': '音响设备', '规格': '专业级', '单位': '套', '理由': '展会使用' },
     ];
 
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '物资申请导入模板');
     ws['!cols'] = [
-      { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 10 }, { wch: 20 },
+      { wch: 14 }, { wch: 20 }, { wch: 16 }, { wch: 10 }, { wch: 16 },
     ];
     XLSX.writeFile(wb, '物资申请导入模板.xlsx');
   };
 
-  // 处理文件上传
+  // 导入错误弹窗 state
+  const [importErrors, setImportErrors] = useState<{ row: number; message: string }[]>([]);
+  const [importErrorModalOpen, setImportErrorModalOpen] = useState(false);
+
+  // 处理文件上传（带强校验）
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -490,25 +531,53 @@ export default function ProductApplicationPage() {
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         const jsonData = XLSX.utils.sheet_to_json(firstSheet) as any[];
 
+        const errors: { row: number; message: string }[] = [];
         const previewData: ProductApplicationDetail[] = [];
-        jsonData.forEach((row, index) => {
-          const name = row['物资名称'];
-          if (!name) return;
 
-          const categoryName = row['类别'] || '';
-          const cat = categoryName ? (categories as any[]).find((c: any) => c.name === categoryName) : null;
+        jsonData.forEach((row, index) => {
+          const rowNum = index + 2; // Excel 表头在第1行，数据从第2行开始
+          const categoryName = String(row['类别'] || '').trim();
+          const name = String(row['物资名称'] || '').trim();
+
+          // 校验：类别必填
+          if (!categoryName) {
+            errors.push({ row: rowNum, message: '类别不能为空' });
+            return;
+          }
+          // 校验：类别名称必须在系统中存在
+          const cat = (categories as any[]).find((c: any) => c.name === categoryName);
+          if (!cat) {
+            errors.push({ row: rowNum, message: `类别"${categoryName}"在系统中不存在` });
+            return;
+          }
+          // 校验：物资名称必填
+          if (!name) {
+            errors.push({ row: rowNum, message: '物资名称不能为空' });
+            return;
+          }
 
           previewData.push({
             id: 'PAD' + Date.now() + index,
             applicationId: '',
             productName: name,
-            categoryId: cat?.id || '',
-            categoryName: categoryName,
-            specification: row['规格型号'] || '',
-            unit: row['单位'] || '',
-            reason: row['申请理由'] || '',
+            categoryId: cat.id,
+            categoryName: cat.name,
+            specification: String(row['规格'] || '').trim(),
+            unit: String(row['单位'] || '').trim(),
+            reason: String(row['理由'] || '').trim(),
           });
         });
+
+        if (errors.length > 0) {
+          setImportErrors(errors);
+          setImportErrorModalOpen(true);
+          return;
+        }
+
+        if (previewData.length === 0) {
+          alert('未找到有效数据行，请检查模板填写');
+          return;
+        }
 
         setImportPreview(previewData);
         setImportModalOpen(true);
@@ -740,6 +809,7 @@ export default function ProductApplicationPage() {
                         <Input
                           value={detail.productName}
                           onChange={(e) => handleUpdateDetail(index, 'productName', e.target.value)}
+                          onBlur={() => handleCheckProductDuplicate(index)}
                           placeholder="物资名称"
                         />
                       </td>
@@ -989,6 +1059,91 @@ export default function ProductApplicationPage() {
               确认导入
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* 导入校验错误弹窗 */}
+      <Modal
+        open={importErrorModalOpen}
+        onClose={() => setImportErrorModalOpen(false)}
+        title="导入校验错误"
+        width="600"
+      >
+        <div className="text-sm text-slate-600 mb-3">
+          共发现 <span className="font-semibold text-red-500">{importErrors.length}</span> 处错误，请修正后重新导入：
+        </div>
+        <div className="border border-red-200 rounded-lg overflow-hidden max-h-64 overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-red-50 text-red-600">
+              <tr>
+                <th className="px-3 py-2 text-left w-20">行号</th>
+                <th className="px-3 py-2 text-left">错误描述</th>
+              </tr>
+            </thead>
+            <tbody>
+              {importErrors.map((err, i) => (
+                <tr key={i} className="border-t border-red-100">
+                  <td className="px-3 py-2 font-mono text-red-500">{err.row}</td>
+                  <td className="px-3 py-2 text-slate-700">{err.message}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="primary" onClick={() => setImportErrorModalOpen(false)}>知道了</Button>
+        </div>
+      </Modal>
+
+      {/* 重复物资检测弹窗 */}
+      <Modal
+        open={duplicateModalOpen}
+        onClose={() => setDuplicateModalOpen(false)}
+        title="⚠️ 系统中已存在相似物资"
+        width="800"
+      >
+        <div className="text-sm text-slate-600 mb-3">
+          关键字「<span className="font-semibold text-indigo-600">{duplicateModalKeyword}</span>」匹配到
+          <span className="font-semibold text-amber-600 mx-1">{duplicateMatches.length}</span>条相似物资，请确认：
+        </div>
+        <div className="border border-slate-200 rounded-lg overflow-hidden max-h-72 overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-slate-600">
+              <tr>
+                <th className="px-3 py-2 text-left">物资编码</th>
+                <th className="px-3 py-2 text-left">物资名称</th>
+                <th className="px-3 py-2 text-left">类别</th>
+                <th className="px-3 py-2 text-left">规格</th>
+                <th className="px-3 py-2 text-left">单位</th>
+                <th className="px-3 py-2 text-center w-20">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {duplicateMatches.map((p) => (
+                <tr key={p.id} className="border-t border-slate-100 hover:bg-slate-50">
+                  <td className="px-3 py-2 font-mono text-indigo-600">{p.code}</td>
+                  <td className="px-3 py-2 font-medium text-slate-800">{p.name}</td>
+                  <td className="px-3 py-2 text-slate-600">{p.categoryName || '-'}</td>
+                  <td className="px-3 py-2 text-slate-600">{p.specification || '-'}</td>
+                  <td className="px-3 py-2 text-slate-600">{p.unit || '-'}</td>
+                  <td className="px-3 py-2 text-center">
+                    <button
+                      className="text-indigo-600 hover:text-indigo-700 text-xs font-medium"
+                      onClick={() => handleUseExistingProduct(p)}
+                    >
+                      使用已有
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-3 text-xs text-slate-500">
+          💡 点击「使用已有」可自动带入该物资的名称、规格、单位、类别；或直接关闭弹窗保留当前输入。
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="primary" onClick={() => setDuplicateModalOpen(false)}>保留当前输入</Button>
         </div>
       </Modal>
     </div>
