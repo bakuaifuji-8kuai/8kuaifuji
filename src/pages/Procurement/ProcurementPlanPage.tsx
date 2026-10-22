@@ -5,7 +5,7 @@ import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
-import type { ProcurementPlan, ProcurementPlanDetail, ProjectNature, ProcurementMethod, BidEvaluationMethod, ApprovalRecord, ApprovalFlowConfig } from '@/types';
+import type { ProcurementPlan, ProcurementPlanDetail, ProjectNature, ProcurementMethod, BidEvaluationMethod, ApprovalRecord, ApprovalFlowConfig, Attachment } from '@/types';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
 import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 
@@ -125,6 +125,37 @@ export default function ProcurementPlanPage() {
   const [newPlanType, setNewPlanType] = useState<'annual' | 'monthly'>('monthly');
   const [newPlanMode, setNewPlanMode] = useState<'approval' | 'filing'>('approval');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // 佐证资料附件管理（每行明细独立）
+  const [attachmentRowIndex, setAttachmentRowIndex] = useState(-1);
+  const [attachmentModalOpen, setAttachmentModalOpen] = useState(false);
+  const rowAttachmentRef = useRef<HTMLInputElement>(null);
+
+  // 上传某行的佐证资料附件
+  const handleUploadRowAttachment = (rowIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const newAttachments: Attachment[] = files.map((f) => ({
+      id: 'ATT' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      fileName: f.name,
+      filePath: URL.createObjectURL(f),
+      fileSize: f.size,
+      fileType: f.type,
+      uploadTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    }));
+    const newDetails = [...details];
+    const current = newDetails[rowIndex].approvalSupportDocs || [];
+    newDetails[rowIndex].approvalSupportDocs = [...current, ...newAttachments];
+    setDetails(newDetails);
+    if (rowAttachmentRef.current) rowAttachmentRef.current.value = '';
+  };
+
+  // 删除某行的某个附件
+  const handleRemoveRowAttachment = (rowIndex: number, attId: string) => {
+    const newDetails = [...details];
+    const current = newDetails[rowIndex].approvalSupportDocs || [];
+    newDetails[rowIndex].approvalSupportDocs = current.filter((a) => a.id !== attId);
+    setDetails(newDetails);
+  };
 
   const openAdd = () => {
     setNewPlanMode('approval');
@@ -149,6 +180,14 @@ export default function ProcurementPlanPage() {
   };
 
   const handleSubmit = (plan: ProcurementPlan) => {
+    // 校验：每行采购方式必填
+    for (let i = 0; i < (plan.details || []).length; i++) {
+      const d = plan.details[i];
+      if (!d.procurementMethod) {
+        alert(`第 ${i + 1} 行「${d.projectName || '(未填项目)'}」采购方式必填，请先编辑补全`);
+        return;
+      }
+    }
     updateProcurementPlan(plan.id, { status: 'pending' });
   };
 
@@ -326,6 +365,14 @@ export default function ProcurementPlanPage() {
 
   const handleSave = () => {
     if (!editItem) return;
+    // 校验：每行采购方式必填
+    for (let i = 0; i < details.length; i++) {
+      const d = details[i];
+      if (!d.procurementMethod) {
+        alert(`第 ${i + 1} 行「${d.projectName || '(未填项目)'}」采购方式必填`);
+        return;
+      }
+    }
     // 新增时才生成编号，编辑保留原编号
     if (isNew && !editItem.planNo) {
       editItem.planNo = genSerialNo(SERIAL_CONFIG.PLAN, procurementPlans.map(p => p.planNo));
@@ -389,7 +436,7 @@ export default function ProcurementPlanPage() {
     const rows = plan.details.map((d, i) => [
       i + 1, plan.department, d.projectName, d.projectNature, d.projectOverview, d.budgetAmount,
       d.userRequirementDocDate || '', d.budgetApprovalDate || '', d.contractReviewDate || '',
-      d.approvalSupportDocs || '', d.procurementMethod || '',
+      d.approvalSupportDocs?.length ? `(附件${d.approvalSupportDocs.length}个)` : '', d.procurementMethod || '',
       d.planProcurementStartDate || '', d.planProcurementEndDate || '', d.remark || ''
     ]);
 
@@ -478,7 +525,7 @@ export default function ProcurementPlanPage() {
           userRequirementDocDate: values[6] || '',
           budgetApprovalDate: values[7] || '',
           contractReviewDate: values[8] || '',
-          approvalSupportDocs: values[9] || '',
+          approvalSupportDocs: [], // 附件无法从 Excel 导入，留空
           procurementMethod: (values[10] || '') as ProcurementMethod | '',
           planProcurementStartDate: values[11] || '',
           planProcurementEndDate: values[12] || '',
@@ -791,13 +838,34 @@ export default function ProcurementPlanPage() {
                         />
                       </td>
                       <td className="px-2 py-1 bg-[#dbeafe]/30">
-                        <textarea
-                          rows={1}
-                          className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs resize-none"
-                          value={detail.approvalSupportDocs || ''}
-                          onChange={(e) => updateDetail(index, 'approvalSupportDocs', e.target.value)}
-                          placeholder="佐证资料清单"
-                        />
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="text-xs text-slate-500">
+                            📎 {(detail.approvalSupportDocs?.length || 0)}个
+                          </span>
+                          <input
+                            ref={rowAttachmentRef}
+                            type="file"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => handleUploadRowAttachment(index, e)}
+                          />
+                          <button
+                            type="button"
+                            className="text-xs text-indigo-600 hover:text-indigo-700 px-1"
+                            onClick={() => rowAttachmentRef.current?.click()}
+                          >
+                            上传
+                          </button>
+                          {(detail.approvalSupportDocs?.length || 0) > 0 && (
+                            <button
+                              type="button"
+                              className="text-xs text-slate-500 hover:text-slate-700 px-1"
+                              onClick={() => { setAttachmentRowIndex(index); setAttachmentModalOpen(true); }}
+                            >
+                              管理
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="px-2 py-1 bg-[#dbeafe]/30">
                         <select
@@ -1041,6 +1109,54 @@ export default function ProcurementPlanPage() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* 佐证资料附件管理弹窗（每行明细独立） */}
+      <Modal
+        open={attachmentModalOpen}
+        onClose={() => setAttachmentModalOpen(false)}
+        title={`佐证资料附件管理${attachmentRowIndex >= 0 && details[attachmentRowIndex]?.projectName ? ` — ${details[attachmentRowIndex].projectName}` : ''}`}
+        width="600"
+      >
+        {attachmentRowIndex >= 0 && details[attachmentRowIndex]?.approvalSupportDocs?.length ? (
+          <div className="border border-slate-200 rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="px-3 py-2 text-left">文件名</th>
+                  <th className="px-3 py-2 text-left w-20">大小</th>
+                  <th className="px-3 py-2 text-left w-40">上传时间</th>
+                  <th className="px-3 py-2 text-center w-16">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {details[attachmentRowIndex].approvalSupportDocs!.map((a) => (
+                  <tr key={a.id} className="border-t border-slate-100 hover:bg-slate-50">
+                    <td className="px-3 py-2 text-indigo-600">{a.fileName}</td>
+                    <td className="px-3 py-2 text-slate-500 text-xs">
+                      {a.fileSize < 1024 ? `${a.fileSize}B` : a.fileSize < 1024 * 1024 ? `${(a.fileSize / 1024).toFixed(1)}KB` : `${(a.fileSize / 1024 / 1024).toFixed(1)}MB`}
+                    </td>
+                    <td className="px-3 py-2 text-slate-500 text-xs">{a.uploadTime}</td>
+                    <td className="px-3 py-2 text-center">
+                      <button
+                        className="text-red-500 hover:text-red-600 text-xs"
+                        onClick={() => handleRemoveRowAttachment(attachmentRowIndex, a.id)}
+                      >
+                        删除
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-slate-400">暂无附件</div>
+        )}
+        <div className="mt-4 flex justify-end gap-2">
+          <DefaultButton onClick={() => setAttachmentModalOpen(false)}>关闭</DefaultButton>
+        </div>
+        <div className="mt-2 text-xs text-slate-400">💡 如需继续上传，请关闭弹窗后点击该行的「上传」按钮</div>
       </Modal>
     </div>
   );

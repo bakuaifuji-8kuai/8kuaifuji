@@ -1095,7 +1095,7 @@ export interface ProcurementPlanDetail {
   // ==================== 招标采购阶段 ====================
   planProcurementStartDate?: string; // 计划采购启动时间
   planProcurementEndDate?: string; // 计划采购完成时间
-  approvalSupportDocs?: string; // 需求审批全套佐证资料（新增，描述资料齐套情况）
+  approvalSupportDocs?: Attachment[]; // 需求审批全套佐证资料附件（支持多条）
   // ==================== 原有保留字段 ====================
   estimatedCost?: number; // 项目控制价（万元）
   plannedStartDate?: string; // 计划启动时间
