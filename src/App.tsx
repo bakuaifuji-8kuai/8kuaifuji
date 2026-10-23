@@ -63,6 +63,7 @@ import SupplierPage from "@/pages/Procurement/SupplierPage";
 import ProcurementInspectionPage from "@/pages/Procurement/ProcurementInspectionPage";
 import CompetitiveBiddingPage from "@/pages/Procurement/CompetitiveBiddingPage";
 import SupplierQuotePage from "@/pages/Procurement/SupplierQuotePage";
+import SupplierQuoteSimulator from "@/pages/Procurement/SupplierQuoteSimulator";
 import WebsiteInfoPage from "@/pages/Procurement/WebsiteInfoPage";
 import ContractTemplatePage from "@/pages/Procurement/ContractTemplatePage";
 import ProcurementAlertDashboard from "@/pages/Procurement/ProcurementAlertDashboard";
@@ -147,6 +148,7 @@ export default function App() {
           <Route path="procurement/inspection" element={<ProcurementInspectionPage />} />
           <Route path="procurement/bidding" element={<CompetitiveBiddingPage />} />
           <Route path="procurement/supplier-quote" element={<SupplierQuotePage />} />
+          <Route path="procurement/supplier-quote/simulator" element={<SupplierQuoteSimulator />} />
           <Route path="procurement/bidding-ledger" element={<ProcurementBiddingLedgerPage />} />
           <Route path="procurement/website-info" element={<WebsiteInfoPage />} />
           <Route path="alert/dashboard" element={<ProcurementAlertDashboard />} />

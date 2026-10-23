@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
@@ -12,6 +13,7 @@ import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 // ======== 测试数据已抽离到 @/mock/biddingMockData ========
 
 export default function SupplierQuotePage() {
+  const navigate = useNavigate();
   const supplierQuotes = useStore((s) => s.supplierQuotes) as SupplierQuote[];
   const setSupplierQuotes = useStore((s) => s.setSupplierQuotes) as ((data: SupplierQuote[]) => void) | undefined;
   const updateSupplierQuote = useStore((s) => s.updateSupplierQuote) as ((id: string, data: Partial<SupplierQuote>) => void) | undefined;
@@ -618,6 +620,9 @@ export default function SupplierQuotePage() {
           <h2 className="text-sm font-semibold text-[#303133]">目录内供应商报价管理</h2>
         </div>
         <div className="flex items-center gap-2">
+          <DefaultButton onClick={() => navigate('/procurement/supplier-quote/simulator')}>
+            📱 进入供应商端模拟
+          </DefaultButton>
           <FeatureHelpButton content={PROCUREMENT_HELP.supplierQuote} />
         </div>
       </div>

@@ -39,7 +39,7 @@ const menuItems: MenuItem[] = [
         { title: '招采计划', path: '/procurement/plan' },
         { title: '招采计划汇总', path: '/procurement/plan-summary' },
       ]},
-      { title: '招采流程管理', path: '/procurement/flow-instance', icon: GitBranch },
+      { title: '自定义内容区', path: '/procurement/flow-instance', icon: GitBranch },
       { title: '招采需求管理', path: '/procurement/demand-group', children: [
         { title: '招采需求申请管理', path: '/procurement/demand' },
         { title: '招采需求确认管理', path: '/procurement/demand-confirm' },
@@ -47,7 +47,8 @@ const menuItems: MenuItem[] = [
       ]},
       { title: '招采实施过程管理', path: '/procurement/process-group', children: [
         { title: '招采执行', path: '/procurement/bidding' },
-        { title: '目录内供应商报价', path: '/procurement/supplier-quote' },
+        { title: '报价管理', path: '/procurement/supplier-quote' },
+        { title: '📱 供应商端模拟', path: '/procurement/supplier-quote/simulator' },
         { title: '招采执行台账', path: '/procurement/bidding-ledger' },
       ]},
       { title: '合约管理', path: '/procurement/contract-group', children: [
