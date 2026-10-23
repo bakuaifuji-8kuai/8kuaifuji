@@ -517,12 +517,20 @@ export default function ProductPage() {
   };
 
   const handleDownloadTemplate = () => {
+    const availableCategories = categories
+      .filter((c: any) => c?.name)
+      .map((c: any) => c.name);
+    const categoryHint = availableCategories.length > 0
+      ? `可选值：${availableCategories.join('、')}`
+      : '请先在基础资料中创建物资类别';
+
     const templateData = [
       {
-        '物资名称': '',
+        '类别(必填)': '',
+        '物资名称(必填)': '',
         '品牌': '',
         '规格型号': '',
-        '单位': '',
+        '单位(必填)': '',
         '产地': '',
         '材质': '',
         '重量': '',
@@ -530,10 +538,11 @@ export default function ProductPage() {
         '状态': '启用/禁用',
       },
       {
-        '物资名称': '示例物资1',
+        '类别(必填)': availableCategories[0] || '(请填真实类别名称)',
+        '物资名称(必填)': '示例物资1',
         '品牌': '得力',
         '规格型号': '1m*2m',
-        '单位': '块',
+        '单位(必填)': '块',
         '产地': '浙江',
         '材质': '铝合金+PVC',
         '重量': '',
@@ -546,10 +555,12 @@ export default function ProductPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '物资导入模板');
     ws['!cols'] = [
-      { wch: 20 }, { wch: 15 }, { wch: 15 },
-      { wch: 10 }, { wch: 15 }, { wch: 15 },
-      { wch: 10 }, { wch: 15 }, { wch: 10 },
+      { wch: 18 }, { wch: 20 }, { wch: 15 }, { wch: 15 },
+      { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 10 },
+      { wch: 15 }, { wch: 10 },
     ];
+    // 在 A1 插入一行说明
+    XLSX.utils.sheet_add_aoa(ws, [[`说明：类别列填写类别名称（${categoryHint}），系统会自动匹配对应编码前缀生成物资编码。`]], { origin: 'A1' });
     XLSX.writeFile(wb, '物资导入模板.xlsx');
   };
 
@@ -563,34 +574,73 @@ export default function ProductPage() {
         const data = new Uint8Array(event.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet) as any[];
+        let jsonData = XLSX.utils.sheet_to_json(firstSheet) as any[];
+
+        // 跳过模板说明行（A1的说明文字可能被解析成行数据）
+        jsonData = jsonData.filter(row => {
+          const firstVal = Object.values(row)[0];
+          if (!firstVal) return true;
+          // 说明行特征：第一列包含"说明"或"可选值"
+          const str = String(firstVal);
+          return !str.includes('说明') && !str.includes('可选值') && !str.includes('类别列填写');
+        });
 
         const errors: string[] = [];
         const previewData: any[] = [];
-        // 跟踪导入批次中已生成的编码，用于确保唯一性
         let lastGeneratedSuffix = 0;
+
+        // 表头兼容函数：支持新旧表头
+        const getVal = (row: any, keys: string[]) => {
+          for (const k of keys) {
+            if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== '') {
+              return String(row[k]).trim();
+            }
+          }
+          return '';
+        };
 
         jsonData.forEach((row, index) => {
           const rowNum = index + 2;
-          const name = row['物资名称'];
-          const brand = row['品牌'];
-          const specification = row['规格型号'];
-          const unit = row['单位'];
-          const origin = row['产地'];
-          const material = row['材质'];
-          const weight = row['重量'];
-          const dimensions = row['尺寸'];
-          const status = row['状态'];
+          // 兼容新旧表头
+          const categoryName = getVal(row, ['类别(必填)', '类别']);
+          const name = getVal(row, ['物资名称(必填)', '物资名称']);
+          const brand = getVal(row, ['品牌']);
+          const specification = getVal(row, ['规格型号']);
+          const unit = getVal(row, ['单位(必填)', '单位']);
+          const origin = getVal(row, ['产地']);
+          const material = getVal(row, ['材质']);
+          const weight = getVal(row, ['重量']);
+          const dimensions = getVal(row, ['尺寸']);
+          const status = getVal(row, ['状态']);
 
+          // 校验
+          if (!categoryName) {
+            errors.push(`第${rowNum}行：类别不能为空`);
+            return;
+          }
           if (!name) {
             errors.push(`第${rowNum}行：物资名称不能为空`);
             return;
           }
+          if (!unit) {
+            errors.push(`第${rowNum}行：单位不能为空`);
+            return;
+          }
 
-          const productStatus = status?.includes('禁用') ? 'disabled' : 'enabled';
+          // 用类别名匹配类别 → 拿 categoryId 和 codePrefix
+          const matchedCategory = categories.find(
+            (c: any) => c?.name?.trim() === categoryName
+          );
+          if (!matchedCategory) {
+            errors.push(`第${rowNum}行：类别"${categoryName}"不存在，请先在基础资料中创建该类别`);
+            return;
+          }
 
-          // 使用默认前缀'P'生成唯一编码
-          const prefix = 'P';
+          const productStatus = status.includes('禁用') ? 'disabled' : 'enabled';
+          // 使用类别对应的编码前缀
+          const prefix = (matchedCategory.codePrefix || 'P').toUpperCase();
+
+          // 全局 suffix 递增，确保唯一
           const allCodes = [...products.map(p => p.code), ...previewData.map(p => p.code)];
           const allNumericSuffixes = allCodes
             .map((c: string) => {
@@ -609,13 +659,16 @@ export default function ProductPage() {
             codePrefix: prefix,
             codeSuffix: suffix,
             name,
-            brand: brand || '',
-            specification: specification || '',
-            unit: unit || '',
-            origin: origin || '',
-            material: material || '',
-            weight: weight || '',
-            dimensions: dimensions || '',
+            brand,
+            specification,
+            unit,
+            origin,
+            material,
+            weight,
+            dimensions,
+            categoryId: matchedCategory.id,
+            categoryName: matchedCategory.name,
+            isContractItem: false,
             status: productStatus,
           });
         });
@@ -656,6 +709,7 @@ export default function ProductPage() {
 
     const exportData = filteredData.map(item => ({
       '物资编码': item.code,
+      '类别': item.categoryName || '-',
       '物资名称': item.name,
       '品牌': item.brand || '-',
       '规格型号': item.specification || '-',
