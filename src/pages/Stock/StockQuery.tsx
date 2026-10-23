@@ -6,7 +6,7 @@ import MultiSelect from '@/components/common/MultiSelect';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
-import { Layers, Package, Edit3, Download, FileText } from 'lucide-react';
+import { Layers, Package, Edit3, Download, FileText, Upload } from 'lucide-react';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
 import type { BatchInventory } from '@/types';
 import * as XLSX from 'xlsx';
@@ -77,6 +77,7 @@ interface SummaryItem {
 
 export default function StockQueryPage() {
   const batchInventories = useStore((s) => s.batchInventories);
+  const addBatchInventory = useStore((s) => s.addBatchInventory);
   const updateBatchInventory = useStore((s) => s.updateBatchInventory);
   const warehouses = useStore((s) => s.warehouses);
   const positions = useStore((s) => s.positions);
@@ -104,6 +105,12 @@ export default function StockQueryPage() {
   const [batchEditOpen, setBatchEditOpen] = useState(false);
   const [batchNewPositionId, setBatchNewPositionId] = useState('');
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+
+  // ==== 库存导入（系统初始化） ====
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importPreview, setImportPreview] = useState<BatchInventory[]>([]);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
 
   const filteredBatchData = useMemo(() => {
     return batchInventories.filter((b) => {
@@ -360,6 +367,193 @@ export default function StockQueryPage() {
     XLSX.writeFile(wb, `库存查询_${activeTab === 'summary' ? '汇总' : '批次'}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
+  // ========== 期初库存导入（系统初始化） ==========
+  const handleDownloadTemplate = () => {
+    const warehouseNames = warehouses.map((w) => w.name).join('、') || '(请先在基础资料创建仓库)';
+    const productCodes = products.slice(0, 5).map((p) => p.code).join('、') || '(请先在物资档案创建物资)';
+
+    const today = new Date().toISOString().slice(0, 10);
+    const templateData = [
+      {
+        '物资编码(必填)': '',
+        '物资名称': '',
+        '规格型号': '',
+        '仓库名称(必填)': '',
+        '仓位名称': '',
+        '批次号': '',
+        '数量(必填)': '',
+        '入库日期(必填)': '',
+        '备注': '',
+      },
+      {
+        '物资编码(必填)': products[0]?.code || 'P10001',
+        '物资名称': products[0]?.name || '示例物资',
+        '规格型号': products[0]?.specification || '',
+        '仓库名称(必填)': warehouses[0]?.name || '示例仓库',
+        '仓位名称': '',
+        '批次号': '',
+        '数量(必填)': 100,
+        '入库日期(必填)': today,
+        '备注': '系统初始化导入',
+      },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '期初库存导入');
+    ws['!cols'] = [
+      { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 14 },
+      { wch: 14 }, { wch: 12 }, { wch: 16 }, { wch: 14 },
+    ];
+    // A1 插入说明行
+    XLSX.utils.sheet_add_aoa(ws, [[
+      `说明：这是系统初始化用的期初库存导入模板。` +
+      `仓库可选值：${warehouseNames}。` +
+      `物资编码示例：${productCodes}。` +
+      `批次号留空则自动生成(BT+日期+序号)。` +
+      `仓位留空表示未分配仓位。` +
+      `入库日期格式 yyyy-MM-dd。`
+    ]], { origin: 'A1' });
+    XLSX.writeFile(wb, '期初库存导入模板.xlsx');
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = new Uint8Array(event.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        let jsonData = XLSX.utils.sheet_to_json(firstSheet) as any[];
+
+        // 跳过模板说明行
+        jsonData = jsonData.filter((row) => {
+          const firstVal = Object.values(row)[0];
+          if (!firstVal) return true;
+          const str = String(firstVal);
+          return !(str.includes('说明') && str.includes('模板'));
+        });
+
+        const errors: string[] = [];
+        const previewData: BatchInventory[] = [];
+        let batchSeq = 0; // 自动批次号序号
+
+        const getVal = (row: any, keys: string[]) => {
+          for (const k of keys) {
+            if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== '') {
+              return String(row[k]).trim();
+            }
+          }
+          return '';
+        };
+
+        jsonData.forEach((row, index) => {
+          const rowNum = index + 2;
+          const productCode = getVal(row, ['物资编码(必填)', '物资编码']);
+          const warehouseName = getVal(row, ['仓库名称(必填)', '仓库名称']);
+          const positionName = getVal(row, ['仓位名称']);
+          const batchNoInput = getVal(row, ['批次号']);
+          const quantityStr = getVal(row, ['数量(必填)', '数量']);
+          const inboundTimeStr = getVal(row, ['入库日期(必填)', '入库日期']);
+          const remark = getVal(row, ['备注']);
+
+          // 校验
+          if (!productCode) { errors.push(`第${rowNum}行：物资编码不能为空`); return; }
+          if (!warehouseName) { errors.push(`第${rowNum}行：仓库名称不能为空`); return; }
+          const qty = parseFloat(quantityStr);
+          if (!quantityStr || isNaN(qty) || qty <= 0) { errors.push(`第${rowNum}行：数量必须为大于 0 的数字`); return; }
+
+          // 匹配物资
+          const product = products.find((p) => p.code?.trim() === productCode);
+          if (!product) { errors.push(`第${rowNum}行：物资编码「${productCode}」不存在，请先在物资档案创建`); return; }
+
+          // 匹配仓库
+          const warehouse = warehouses.find((w) => w.name?.trim() === warehouseName);
+          if (!warehouse) { errors.push(`第${rowNum}行：仓库「${warehouseName}」不存在`); return; }
+
+          // 匹配仓位（留空允许）
+          let position: typeof positions[0] | undefined;
+          if (positionName) {
+            position = positions.find((p) => p.warehouseId === warehouse.id && p.name?.trim() === positionName);
+            if (!position) { errors.push(`第${rowNum}行：仓位「${positionName}」不属于仓库「${warehouseName}」或不存在`); return; }
+          }
+
+          // 批次号：空则自动生成
+          let batchNo = batchNoInput;
+          if (!batchNo) {
+            batchSeq++;
+            batchNo = 'BT' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + batchSeq.toString().padStart(3, '0');
+          } else {
+            // 检查重复（同仓库+同物资+同批次号）
+            const dup = [...batchInventories, ...previewData].find(
+              (b) => b.warehouseId === warehouse.id && b.productId === product.id && b.batchNo === batchNo
+            );
+            if (dup) { errors.push(`第${rowNum}行：批次号「${batchNo}」在该仓库+物资下已存在`); return; }
+          }
+
+          // 入库日期：空则默认今天
+          let inboundTime = inboundTimeStr;
+          if (!inboundTime) {
+            inboundTime = new Date().toISOString().slice(0, 10);
+          }
+
+          previewData.push({
+            id: 'BI' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) + index,
+            batchNo,
+            productId: product.id,
+            productName: product.name,
+            productCode: product.code,
+            specification: product.specification || '',
+            categoryId: product.categoryId,
+            categoryName: product.categoryName,
+            warehouseId: warehouse.id,
+            warehouseName: warehouse.name,
+            positionId: position?.id || '',
+            positionName: position?.name || '',
+            quantity: qty,
+            originalQuantity: qty,
+            inboundOrderId: undefined,
+            inboundOrderNo: undefined,
+            inboundTime,
+            remark: remark || '',
+          });
+        });
+
+        setImportPreview(previewData);
+        setImportErrors(errors);
+        setImportModalOpen(true);
+      } catch (error) {
+        alert('文件解析失败，请检查文件格式');
+        console.error(error);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleConfirmImport = () => {
+    if (importErrors.length > 0) {
+      alert(`存在 ${importErrors.length} 条校验错误，请修正后重新导入`);
+      return;
+    }
+    if (importPreview.length === 0) {
+      alert('没有可导入的数据');
+      return;
+    }
+    let count = 0;
+    importPreview.forEach((item) => {
+      addBatchInventory(item);
+      count++;
+    });
+    alert(`✅ 成功导入 ${count} 条期初库存数据`);
+    setImportModalOpen(false);
+    setImportPreview([]);
+    setImportErrors([]);
+  };
+
   const handleExportReport = () => {
     if (appliedFilter.warehouses.length === 0) {
       alert('请先选择一个仓库');
@@ -538,6 +732,20 @@ export default function StockQueryPage() {
         <h2 className="text-sm font-semibold text-[#303133]">库存查询</h2>
         <div className="flex items-center gap-2">
           <FeatureHelpButton content={helpContent} />
+          {/* 隐藏的文件选择 */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            style={{ display: 'none' }}
+            onChange={handleFileUpload}
+          />
+          <DefaultButton onClick={handleDownloadTemplate}>
+            下载模板
+          </DefaultButton>
+          <DefaultButton onClick={() => fileInputRef.current?.click()} icon={<Upload size={14} />}>
+            导入
+          </DefaultButton>
           {activeTab === 'summary' && (
             <DefaultButton onClick={handleExportReport} icon={<FileText size={14} />}>
               导出报表
@@ -735,6 +943,97 @@ export default function StockQueryPage() {
             setBatchNewPositionId('');
           }}>取消</DefaultButton>
           <PrimaryButton onClick={handleSaveBatchPosition}>保存</PrimaryButton>
+        </div>
+      </Modal>
+
+      {/* 期初库存导入预览弹窗 */}
+      <Modal
+        open={importModalOpen}
+        onClose={() => {
+          setImportModalOpen(false);
+          setImportPreview([]);
+          setImportErrors([]);
+        }}
+        title="期初库存导入预览"
+        width="max-w-[900px]"
+      >
+        <div className="text-xs text-[#606266] mb-3">
+          模板导入完成，请核对以下数据后点击"确认导入"。导入后不可撤销。
+        </div>
+
+        {/* 错误列表 */}
+        {importErrors.length > 0 && (
+          <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-xs max-h-40 overflow-y-auto">
+            <div className="font-semibold mb-1">⚠️ 校验错误（{importErrors.length} 条，需修正后重新导入）：</div>
+            <ul className="list-disc list-inside space-y-0.5">
+              {importErrors.map((err, i) => <li key={i}>{err}</li>)}
+            </ul>
+          </div>
+        )}
+
+        {/* 空数据 */}
+        {importPreview.length === 0 && importErrors.length === 0 && (
+          <div className="py-8 text-center text-[#909399] text-xs">未解析到任何有效数据</div>
+        )}
+
+        {/* 预览表格 */}
+        {importPreview.length > 0 && (
+          <div className="mb-3 max-h-[400px] overflow-auto border border-[#ebeef5] rounded">
+            <table className="w-full text-xs">
+              <thead className="bg-[#fafafa] sticky top-0">
+                <tr className="text-[#606266]">
+                  <th className="px-2 py-2 text-left font-medium border-b border-[#ebeef5]">物资编码</th>
+                  <th className="px-2 py-2 text-left font-medium border-b border-[#ebeef5]">物资名称</th>
+                  <th className="px-2 py-2 text-left font-medium border-b border-[#ebeef5]">仓库</th>
+                  <th className="px-2 py-2 text-left font-medium border-b border-[#ebeef5]">仓位</th>
+                  <th className="px-2 py-2 text-left font-medium border-b border-[#ebeef5]">批次号</th>
+                  <th className="px-2 py-2 text-right font-medium border-b border-[#ebeef5]">数量</th>
+                  <th className="px-2 py-2 text-left font-medium border-b border-[#ebeef5]">入库日期</th>
+                  <th className="px-2 py-2 text-left font-medium border-b border-[#ebeef5]">备注</th>
+                </tr>
+              </thead>
+              <tbody>
+                {importPreview.map((item) => (
+                  <tr key={item.id} className="hover:bg-[#fafafa]">
+                    <td className="px-2 py-1.5 border-b border-[#f0f2f5] text-[#303133]">{item.productCode}</td>
+                    <td className="px-2 py-1.5 border-b border-[#f0f2f5] text-[#303133]">{item.productName}</td>
+                    <td className="px-2 py-1.5 border-b border-[#f0f2f5] text-[#303133]">{item.warehouseName}</td>
+                    <td className="px-2 py-1.5 border-b border-[#f0f2f5] text-[#909399]">
+                      {item.positionName || <span className="italic">未分配</span>}
+                    </td>
+                    <td className="px-2 py-1.5 border-b border-[#f0f2f5] text-[#303133]">{item.batchNo}</td>
+                    <td className="px-2 py-1.5 border-b border-[#f0f2f5] text-right text-[#303133] font-medium">{item.quantity}</td>
+                    <td className="px-2 py-1.5 border-b border-[#f0f2f5] text-[#303133]">{item.inboundTime}</td>
+                    <td className="px-2 py-1.5 border-b border-[#f0f2f5] text-[#909399] truncate max-w-[120px]">{item.remark || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* 统计 */}
+        <div className="text-xs text-[#606266] mb-3">
+          共 <span className="font-semibold text-[#303133]">{importPreview.length}</span> 条待导入
+          {importErrors.length > 0 && <span className="text-red-600">，{importErrors.length} 条需修正</span>}
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <DefaultButton
+            onClick={() => {
+              setImportModalOpen(false);
+              setImportPreview([]);
+              setImportErrors([]);
+            }}
+          >
+            取消
+          </DefaultButton>
+          <PrimaryButton
+            onClick={handleConfirmImport}
+            disabled={importErrors.length > 0 || importPreview.length === 0}
+          >
+            确认导入
+          </PrimaryButton>
         </div>
       </Modal>
     </div>
