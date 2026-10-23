@@ -1043,7 +1043,12 @@ export default function ProcurementDemandPage() {
                                 <td className="px-2 py-1.5 text-slate-600">{d.productType || d.productAttribute || '-'}</td>
                                 <td className="px-2 py-1.5 text-slate-600">{d.specification || '-'}</td>
                                 <td className="px-2 py-1.5 text-slate-600">{d.unit || '-'}</td>
-                                <td className="px-2 py-1.5 text-right text-slate-800">{d.quantity}</td>
+                                <td className="px-2 py-1.5 text-right">
+                                  <input type="number" min="0" step="1"
+                                    className="w-full h-6 px-1 border border-slate-200 rounded text-xs text-right"
+                                    value={d.quantity}
+                                    onChange={(e) => updateDetail(idx, 'quantity', Number(e.target.value))} />
+                                </td>
                                 <td className="px-2 py-1.5 text-right text-slate-800">{(d.unitPriceExcludingTax || 0).toFixed(2)}</td>
                                 {showPriceRemarkCol && (
                                   <td className="px-2 py-1.5">
@@ -1178,7 +1183,12 @@ export default function ProcurementDemandPage() {
                                 <td className="px-2 py-1.5 text-slate-600">{d.productType || d.productAttribute || '-'}</td>
                                 <td className="px-2 py-1.5 text-slate-600">{d.specification || '-'}</td>
                                 <td className="px-2 py-1.5 text-slate-600">{d.unit || '-'}</td>
-                                <td className="px-2 py-1.5 text-right text-slate-800">{d.quantity}</td>
+                                <td className="px-2 py-1.5 text-right">
+                                  <input type="number" min="0" step="1"
+                                    className="w-full h-6 px-1 border border-slate-200 rounded text-xs text-right"
+                                    value={d.quantity}
+                                    onChange={(e) => updateDetail(idx, 'quantity', Number(e.target.value))} />
+                                </td>
                                 <td className="px-2 py-1.5 text-right text-slate-800">{(d.unitPriceExcludingTax || 0).toFixed(2)}</td>
                                 {showPriceRemarkCol && (
                                   <td className="px-2 py-1.5">
@@ -1428,7 +1438,12 @@ export default function ProcurementDemandPage() {
                                 <td className="px-2 py-1.5 text-slate-800">{d.productName}</td>
                                 <td className="px-2 py-1.5 text-slate-600">{d.specification || '-'}</td>
                                 <td className="px-2 py-1.5 text-slate-600">{d.unit || '-'}</td>
-                                <td className="px-2 py-1.5 text-right text-slate-800">{d.quantity}</td>
+                                <td className="px-2 py-1.5 text-right">
+                                  <input type="number" min="0" step="1"
+                                    className="w-full h-6 px-1 border border-slate-200 rounded text-xs text-right"
+                                    value={d.quantity}
+                                    onChange={(e) => updateDetail(idx, 'quantity', Number(e.target.value))} />
+                                </td>
                                 <td className="px-2 py-1.5 text-right text-slate-800">{(d.unitPriceExcludingTax || 0).toFixed(2)}</td>
                                 {showPriceRemarkCol && (
                                   <td className="px-2 py-1.5">
