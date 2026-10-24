@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" font-family="Microsoft YaHei, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="800" fill="#f8fafc"/>
+  <text x="600" y="42" text-anchor="middle" font-size="24" font-weight="bold" fill="#1e293b">出库管理流程图</text>
+
+  <text x="200" y="78" text-anchor="middle" font-size="16" font-weight="bold" fill="#3b82f6">低值易耗领用出库（LY）</text>
+  <text x="600" y="78" text-anchor="middle" font-size="16" font-weight="bold" fill="#3b82f6">报废出库（BF）</text>
+  <text x="1000" y="78" text-anchor="middle" font-size="16" font-weight="bold" fill="#3b82f6">报损出库（BS）</text>
+
+  <!-- 列1：领用出库 -->
+  <circle cx="200" cy="115" r="25" fill="#10b981" stroke="#059669" stroke-width="2"/>
+  <text x="200" y="120" text-anchor="middle" font-size="14" fill="white">开始</text>
+
+  <rect x="120" y="155" width="160" height="45" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="200" y="183" text-anchor="middle" font-size="14" fill="#1e293b">创建领用单</text>
+
+  <rect x="120" y="215" width="160" height="45" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="200" y="243" text-anchor="middle" font-size="14" fill="#1e293b">选择物资</text>
+
+  <polygon points="135,275 295,275 280,320 120,320" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="207" y="303" text-anchor="middle" font-size="13" fill="#1e293b">填写领用数量</text>
+
+  <polygon points="135,335 295,335 280,380 120,380" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="207" y="363" text-anchor="middle" font-size="13" fill="#1e293b">选择领用人</text>
+
+  <rect x="120" y="395" width="160" height="45" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="200" y="423" text-anchor="middle" font-size="14" fill="#1e293b">保存</text>
+
+  <rect x="120" y="455" width="160" height="45" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="200" y="483" text-anchor="middle" font-size="14" fill="#1e293b">提交</text>
+
+  <rect x="120" y="515" width="160" height="45" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="200" y="543" text-anchor="middle" font-size="14" fill="#1e293b">确认出库</text>
+
+  <!-- 列2：报废出库 -->
+  <circle cx="600" cy="115" r="25" fill="#10b981" stroke="#059669" stroke-width="2"/>
+  <text x="600" y="120" text-anchor="middle" font-size="14" fill="white">开始</text>
+
+  <rect x="520" y="155" width="160" height="45" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="600" y="183" text-anchor="middle" font-size="14" fill="#1e293b">创建报废单</text>
+
+  <rect x="520" y="215" width="160" height="45" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="600" y="243" text-anchor="middle" font-size="14" fill="#1e293b">选择物资</text>
+
+  <polygon points="535,275 695,275 680,320 520,320" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="607" y="303" text-anchor="middle" font-size="13" fill="#1e293b">填写报废数量</text>
+
+  <polygon points="535,335 695,335 680,380 520,380" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="607" y="363" text-anchor="middle" font-size="13" fill="#1e293b">填写报废原因</text>
+
+  <rect x="520" y="395" width="160" height="45" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="600" y="423" text-anchor="middle" font-size="14" fill="#1e293b">保存</text>
+
+  <rect x="520" y="455" width="160" height="45" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="600" y="483" text-anchor="middle" font-size="14" fill="#1e293b">提交</text>
+
+  <rect x="520" y="515" width="160" height="45" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="600" y="543" text-anchor="middle" font-size="14" fill="#1e293b">确认出库</text>
+
+  <!-- 列3：报损出库 -->
+  <circle cx="1000" cy="115" r="25" fill="#10b981" stroke="#059669" stroke-width="2"/>
+  <text x="1000" y="120" text-anchor="middle" font-size="14" fill="white">开始</text>
+
+  <rect x="920" y="155" width="160" height="45" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="1000" y="183" text-anchor="middle" font-size="14" fill="#1e293b">创建报损单</text>
+
+  <rect x="920" y="215" width="160" height="45" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="1000" y="243" text-anchor="middle" font-size="14" fill="#1e293b">选择物资</text>
+
+  <polygon points="935,275 1095,275 1080,320 920,320" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="1007" y="303" text-anchor="middle" font-size="13" fill="#1e293b">填写报损数量</text>
+
+  <polygon points="935,335 1095,335 1080,380 920,380" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="1007" y="363" text-anchor="middle" font-size="13" fill="#1e293b">填写报损原因</text>
+
+  <rect x="920" y="395" width="160" height="45" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="1000" y="423" text-anchor="middle" font-size="14" fill="#1e293b">保存</text>
+
+  <rect x="920" y="455" width="160" height="45" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="1000" y="483" text-anchor="middle" font-size="14" fill="#1e293b">提交</text>
+
+  <rect x="920" y="515" width="160" height="45" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="1000" y="543" text-anchor="middle" font-size="14" fill="#1e293b">确认出库</text>
+
+  <!-- 库存扣减（汇聚） -->
+  <rect x="500" y="600" width="200" height="50" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="600" y="630" text-anchor="middle" font-size="15" fill="#1e293b" font-weight="bold">库存扣减</text>
+
+  <circle cx="600" cy="690" r="25" fill="#10b981" stroke="#059669" stroke-width="2"/>
+  <text x="600" y="695" text-anchor="middle" font-size="14" fill="white">完成</text>
+
+  <!-- 汇聚连接线 -->
+  <path d="M 200 560 L 200 585 L 540 585 L 540 598" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="600" y1="560" x2="600" y2="598" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 1000 560 L 1000 585 L 660 585 L 660 598" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <line x1="600" y1="650" x2="600" y2="665" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 打印说明 -->
+  <rect x="400" y="735" width="400" height="45" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="600" y="763" text-anchor="middle" font-size="14" fill="#1e293b">所有单据生成后即可打印</text>
+
+  <!-- 列1连接线 -->
+  <line x1="200" y1="140" x2="200" y2="153" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="200" y1="200" x2="200" y2="213" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="200" y1="260" x2="200" y2="273" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="200" y1="320" x2="200" y2="333" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="200" y1="380" x2="200" y2="393" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="200" y1="440" x2="200" y2="453" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="200" y1="500" x2="200" y2="513" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 列2连接线 -->
+  <line x1="600" y1="140" x2="600" y2="153" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="600" y1="200" x2="600" y2="213" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="600" y1="260" x2="600" y2="273" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="600" y1="320" x2="600" y2="333" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="600" y1="380" x2="600" y2="393" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="600" y1="440" x2="600" y2="453" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="600" y1="500" x2="600" y2="513" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 列3连接线 -->
+  <line x1="1000" y1="140" x2="1000" y2="153" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="200" x2="1000" y2="213" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="260" x2="1000" y2="273" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="320" x2="1000" y2="333" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="380" x2="1000" y2="393" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="440" x2="1000" y2="453" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="500" x2="1000" y2="513" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+</svg>
