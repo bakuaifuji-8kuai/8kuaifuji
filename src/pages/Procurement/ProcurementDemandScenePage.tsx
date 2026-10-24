@@ -533,17 +533,15 @@ export default function ProcurementDemandScenePage() {
   const params = useParams();
   // params['*'] 形如 "engineering-goods/within"
   const slug = params['*'] || ''; // 兼容 React Router v6 的 path="*"
-  // 从 URL 解析 framework：路径最后一段是 within/outside/new
+  // framework：路径最后一段
   const framework = slug.endsWith('/within') ? 'within_framework'
     : slug.endsWith('/outside') ? 'outside_framework'
     : slug.endsWith('/new') ? 'new_supplier'
     : undefined;
-  // group 去掉最后的 framework 段
-  const group = framework ? slug.slice(0, slug.lastIndexOf('/')) : slug;
-  const key = framework ? `${group}/${slug.split('/').pop()}` : slug;
+  // key：把 URL 的 "/" 全部换成 "-"，匹配 SCENE_MOCKS 的三段式 key（如 engineering-goods-within）
+  const key = slug.replace(/\//g, '-');
 
-  // 也直接试 key 作为 index
-  const mock = SCENE_MOCKS[key] || SCENE_MOCKS[slug];
+  const mock = SCENE_MOCKS[key] || SCENE_MOCKS[slug] || SCENE_MOCKS[key.replace(/-(within|outside|new)$/, '') + '-new'];
 
   if (!mock) {
     return (
