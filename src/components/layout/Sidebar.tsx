@@ -44,6 +44,31 @@ const menuItems: MenuItem[] = [
         { title: '招采需求申请管理', path: '/procurement/demand' },
         { title: '招采需求确认管理', path: '/procurement/demand-confirm' },
         { title: '招采需求台账', path: '/procurement/demand-ledger' },
+        { title: '🎨 需求场景模板', path: '/procurement/demand-scene-group', children: [
+          { title: '工程类 / 货物（物资采购）', path: '/procurement/demand-scene-group-eg', children: [
+            { title: '清单内采购', path: '/procurement/demand-scene/engineering-goods/within' },
+            { title: '清单外采购', path: '/procurement/demand-scene/engineering-goods/outside' },
+            { title: '新增供应商目录', path: '/procurement/demand-scene/engineering-goods/new' },
+          ]},
+          { title: '工程类 / 施工（实施项目）', path: '/procurement/demand-scene-group-ec', children: [
+            { title: '新增供应商目录', path: '/procurement/demand-scene/engineering-construction/new' },
+          ]},
+          { title: '工程类 / 服务（服务项目）', path: '/procurement/demand-scene-group-es', children: [
+            { title: '清单内采购', path: '/procurement/demand-scene/engineering-service/within' },
+            { title: '清单外采购', path: '/procurement/demand-scene/engineering-service/outside' },
+            { title: '新增供应商目录', path: '/procurement/demand-scene/engineering-service/new' },
+          ]},
+          { title: '非工程类 / 货物', path: '/procurement/demand-scene-group-neg', children: [
+            { title: '清单内采购', path: '/procurement/demand-scene/noneng-goods/within' },
+            { title: '清单外采购', path: '/procurement/demand-scene/noneng-goods/outside' },
+            { title: '新增供应商目录', path: '/procurement/demand-scene/noneng-goods/new' },
+          ]},
+          { title: '非工程类 / 服务', path: '/procurement/demand-scene-group-nes', children: [
+            { title: '清单内采购', path: '/procurement/demand-scene/noneng-service/within' },
+            { title: '清单外采购', path: '/procurement/demand-scene/noneng-service/outside' },
+            { title: '新增供应商目录', path: '/procurement/demand-scene/noneng-service/new' },
+          ]},
+        ]},
       ]},
       { title: '招采实施过程管理', path: '/procurement/process-group', children: [
         { title: '招采执行', path: '/procurement/bidding' },

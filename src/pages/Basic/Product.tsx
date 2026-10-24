@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo } from 'react';
-import { Plus, Upload, Download, FileSpreadsheet, Eye, X, FileText } from 'lucide-react';
+import { Upload, Download, FileSpreadsheet, Eye, X } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
-import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
+import { DefaultButton, TextButton } from '@/components/common/Button';
 import Button from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import DataTable from '@/components/common/DataTable';
@@ -12,12 +12,12 @@ import Badge from '@/components/common/Badge';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
 import { useStore } from '@/store/useStore';
 import { cn, generateId } from '@/utils';
-import type { Product, Contract, ProductContract, ProductApplication, ProductApplicationDetail } from '@/types';
+import type { Product, Contract, ProductContract } from '@/types';
 import * as XLSX from 'xlsx';
 
 const helpContent = {
   title: '物资档案管理 - 功能操作说明',
-  description: '物资档案是仓库管理系统的基础数据模块，用于管理所有物资的基本信息、合同关联和申请记录。物资档案支持新增、编辑、删除、导入导出等完整CRUD操作。',
+  description: '物资档案是仓库管理系统的基础数据模块，用于管理所有物资的基本信息、合同关联和申请记录。物资由物资申请审批通过后自动生成，也可通过 Excel 批量导入。本页面支持编辑、删除、导入、导出等操作。',
   sections: [
     {
       heading: '一、物资档案概述',
@@ -26,7 +26,8 @@ const helpContent = {
         '记录内容：包含物资编码、名称、品牌、规格型号、单位、产地、材质、重量、尺寸等基本信息',
         '编码规则：物资编码由前缀（可自定义）+ 5位数字后缀组成，如 QD00001、P00002',
         '类别管理：每个物资必须归属一个类别，类别决定物资编码的前缀（如 QD 开头）',
-        '状态控制：物资有启用/禁用两种状态，禁用的物资理论上不可在业务中使用'
+        '状态控制：物资有启用/禁用两种状态，禁用的物资理论上不可在业务中使用',
+        '新增方式：物资由物资申请审批通过后自动生成（根据申请单明细 + 分类编码前缀），也可通过 Excel 批量导入'
       ]
     },
     {
@@ -51,19 +52,7 @@ const helpContent = {
       ]
     },
     {
-      heading: '四、新增物资功能',
-      items: [
-        '操作入口：点击页面右上角「新增物资」按钮',
-        '必填字段：类别（必选）、物资名称（必填）、单位（必填）',
-        '类别选择：下拉选择物资类别，选择后物资编码前缀自动替换为该类别的codePrefix',
-        '快速新增类别：类别下拉框旁有「+ 新增」按钮，可快速创建新类别（需填写名称和编码前缀）',
-        '编码生成：前缀可自定义修改，后缀（5位数字）系统自动生成，确保全局唯一',
-        '可选字段：品牌、规格型号、产地、材质、重量、尺寸等',
-        '保存逻辑：验证必填项后保存，保存后弹窗关闭，列表自动刷新'
-      ]
-    },
-    {
-      heading: '五、编辑物资功能',
+      heading: '四、编辑物资功能',
       items: [
         '操作入口：点击列表操作列的「编辑」按钮',
         '不可编辑字段：类别、物资编码 不可修改（以灰色只读方式显示）',
@@ -73,19 +62,7 @@ const helpContent = {
       ]
     },
     {
-      heading: '六、从申请单添加物资',
-      items: [
-        '操作入口：点击页面右上角「从申请单添加」按钮',
-        '申请单筛选：仅显示「已通过」的物资申请单',
-        '申请单选择：点击列表中的申请单行进行选择，选中后高亮显示',
-        '明细选择：选择申请单后，可选择其中的某条物资明细进行编辑',
-        '明细编辑：选中的明细行的物资名称、规格、单位可修改',
-        '生成新物资：点击「确定」后，将以编辑后的内容填充到新增物资表单，使用系统默认前缀生成新编码',
-        '后续流程：弹出新增物资弹窗，可进一步编辑后保存'
-      ]
-    },
-    {
-      heading: '七、导入导出功能',
+      heading: '五、导入导出功能',
       items: [
         '导入操作：点击「导入」按钮，选择 Excel 文件（.xlsx 或 .xls）',
         '模板下载：点击「下载模板」获取标准导入模板，包含所有字段说明和示例行',
@@ -98,7 +75,7 @@ const helpContent = {
       ]
     },
     {
-      heading: '八、合同管理功能',
+      heading: '六、合同管理功能',
       items: [
         '操作入口：点击列表「合同信息」列的「查看合同」链接',
         '合同类型：显示采购合同信息，包括合同编号、名称、有效期、单价等',
@@ -109,7 +86,7 @@ const helpContent = {
       ]
     },
     {
-      heading: '九、注意事项与边界',
+      heading: '七、注意事项与边界',
       items: [
         '编码稳定性：物资编码生成后不可修改，请确保编码规则合理规划',
         '类别不可改：编辑物资时类别不可修改，如需修改只能删除后重新新增',
@@ -123,17 +100,8 @@ const helpContent = {
 };
 
 export default function ProductPage() {
-  const { products, addProduct, updateProduct, deleteProduct, contracts, productContracts, productApplications, categories, addCategory } = useStore();
+  const { products, addProduct, updateProduct, deleteProduct, contracts, productContracts, categories, addCategory } = useStore();
   const [searchText, setSearchText] = useState('');
-  const [applicationModalOpen, setApplicationModalOpen] = useState(false);
-  const [selectedApplication, setSelectedApplication] = useState<ProductApplication | null>(null);
-  const [selectedDetail, setSelectedDetail] = useState<ProductApplicationDetail | null>(null);
-  // 编辑中的物资信息
-  const [editingDetailForm, setEditingDetailForm] = useState<{
-    productName: string;
-    specification: string;
-    unit: string;
-  }>({ productName: '', specification: '', unit: '' });
   const [statusFilter, setStatusFilter] = useState('');
   const [brandFilter, setBrandFilter] = useState('');
   const [contractItemFilter, setContractItemFilter] = useState('');
@@ -358,29 +326,6 @@ export default function ProductPage() {
       brandFilter: '',
       contractItemFilter: '',
     });
-  };
-
-  const handleAdd = () => {
-    setEditingItem(null);
-    const { prefix, suffix, code } = generateProductCode('P', products);
-    setFormData({
-      code,
-      codePrefix: prefix,
-      codeSuffix: suffix,
-      name: '',
-      unit: '',
-      specification: '',
-      brand: '',
-      origin: '',
-      material: '',
-      weight: '',
-      dimensions: '',
-      categoryId: '',
-      categoryName: '',
-      isContractItem: false,
-      status: 'enabled',
-    });
-    setModalOpen(true);
   };
 
   // 生成唯一编码：前缀（用户定义）+ 后缀（系统自动生成，全局唯一）
@@ -757,12 +702,6 @@ export default function ProductPage() {
           <DefaultButton onClick={handleExport} icon={<Download size={16} />}>
             导出
           </DefaultButton>
-          <DefaultButton onClick={() => setApplicationModalOpen(true)} icon={<FileText size={16} />}>
-            从申请单添加
-          </DefaultButton>
-          <PrimaryButton onClick={handleAdd} icon={<Plus size={16} />}>
-            新增物资
-          </PrimaryButton>
         </div>
       </div>
 
@@ -1290,205 +1229,6 @@ export default function ProductPage() {
               disabled={importPreview.length === 0}
             >
               确认导入
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* 从申请单添加物资弹窗 */}
-      <Modal
-        open={applicationModalOpen}
-        onClose={() => {
-          setApplicationModalOpen(false);
-          setSelectedApplication(null);
-          setSelectedDetail(null);
-        }}
-        title="从申请单添加物资"
-        size="max-w-4xl"
-      >
-        <div className="space-y-4">
-          {/* 申请单选择 */}
-          <div>
-            <label className="text-sm font-medium text-slate-700 mb-2 block">选择申请单（仅显示已通过的申请）</label>
-            <div className="border border-slate-200 rounded max-h-[200px] overflow-y-auto">
-              {productApplications.filter(pa => pa.status === 'approved').length === 0 ? (
-                <div className="p-6 text-center text-slate-400">
-                  暂无已通过的申请单
-                </div>
-              ) : (
-                <table className="w-full text-xs">
-                  <thead className="bg-slate-50 sticky top-0">
-                    <tr>
-                      <th className="px-3 py-2 text-left">选择</th>
-                      <th className="px-3 py-2 text-left">申请单号</th>
-                      <th className="px-3 py-2 text-left">申请人</th>
-                      <th className="px-3 py-2 text-left">申请部门</th>
-                      <th className="px-3 py-2 text-left">物资种类</th>
-                      <th className="px-3 py-2 text-left">通过时间</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {productApplications.filter(pa => pa.status === 'approved').map(app => (
-                      <tr
-                        key={app.id}
-                        className={`border-t border-slate-100 cursor-pointer hover:bg-slate-50 ${selectedApplication?.id === app.id ? 'bg-blue-50' : ''}`}
-                        onClick={() => setSelectedApplication(app)}
-                      >
-                        <td className="px-3 py-2">
-                          <input
-                            type="radio"
-                            checked={selectedApplication?.id === app.id}
-                            onChange={() => setSelectedApplication(app)}
-                          />
-                        </td>
-                        <td className="px-3 py-2">{app.applicationNo}</td>
-                        <td className="px-3 py-2">{app.applicant}</td>
-                        <td className="px-3 py-2">{app.applicantDept || '-'}</td>
-                        <td className="px-3 py-2">{app.details.length} 种</td>
-                        <td className="px-3 py-2">{app.approveTime || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-
-          {/* 物资明细选择与编辑 */}
-          {selectedApplication && (
-            <div>
-              <label className="text-sm font-medium text-slate-700 mb-2 block">选择并编辑物资明细</label>
-              <div className="border border-slate-200 rounded overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-3 py-2 text-left">选择</th>
-                      <th className="px-3 py-2 text-left">物资名称</th>
-                      <th className="px-3 py-2 text-left">规格</th>
-                      <th className="px-3 py-2 text-left">单位</th>
-                      <th className="px-3 py-2 text-left">理由</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedApplication.details.map((detail) => (
-                      <tr
-                        key={detail.id}
-                        className={`border-t border-slate-100 cursor-pointer hover:bg-slate-50 ${selectedDetail?.id === detail.id ? 'bg-blue-50' : ''}`}
-                        onClick={() => {
-                          setSelectedDetail(detail);
-                          setEditingDetailForm({
-                            productName: detail.productName,
-                            specification: detail.specification || '',
-                            unit: detail.unit || '',
-                          });
-                        }}
-                      >
-                        <td className="px-3 py-2">
-                          <input
-                            type="radio"
-                            checked={selectedDetail?.id === detail.id}
-                            onChange={() => {
-                              setSelectedDetail(detail);
-                              setEditingDetailForm({
-                                productName: detail.productName,
-                                specification: detail.specification || '',
-                                unit: detail.unit || '',
-                              });
-                            }}
-                          />
-                        </td>
-                        {selectedDetail?.id === detail.id ? (
-                          <>
-                            <td className="px-2 py-1">
-                              <input
-                                type="text"
-                                className="w-full h-7 px-2 border border-slate-300 rounded text-xs focus:outline-none focus:border-blue-500"
-                                value={editingDetailForm.productName}
-                                onChange={(e) => setEditingDetailForm({ ...editingDetailForm, productName: e.target.value })}
-                              />
-                            </td>
-                            <td className="px-2 py-1">
-                              <input
-                                type="text"
-                                className="w-full h-7 px-2 border border-slate-300 rounded text-xs focus:outline-none focus:border-blue-500"
-                                value={editingDetailForm.specification}
-                                onChange={(e) => setEditingDetailForm({ ...editingDetailForm, specification: e.target.value })}
-                              />
-                            </td>
-                            <td className="px-2 py-1">
-                              <input
-                                type="text"
-                                className="w-full h-7 px-2 border border-slate-300 rounded text-xs focus:outline-none focus:border-blue-500"
-                                value={editingDetailForm.unit}
-                                onChange={(e) => setEditingDetailForm({ ...editingDetailForm, unit: e.target.value })}
-                              />
-                            </td>
-                            <td className="px-2 py-1">{detail.reason || '-'}</td>
-                          </>
-                        ) : (
-                          <>
-                            <td className="px-3 py-2">{detail.productName}</td>
-                            <td className="px-3 py-2">{detail.specification || '-'}</td>
-                            <td className="px-3 py-2">{detail.unit || '-'}</td>
-                            <td className="px-3 py-2">{detail.reason || '-'}</td>
-                          </>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button variant="secondary" onClick={() => {
-              setApplicationModalOpen(false);
-              setSelectedApplication(null);
-              setSelectedDetail(null);
-              setEditingDetailForm({ productName: '', specification: '', unit: '' });
-            }}>
-              取消
-            </Button>
-            <Button
-              onClick={() => {
-                if (!selectedDetail) {
-                  alert('请选择物资明细');
-                  return;
-                }
-                if (!editingDetailForm.productName.trim()) {
-                  alert('请填写物资名称');
-                  return;
-                }
-                // 根据编辑后的内容填充表单，使用默认前缀'P'生成唯一编码
-                const { prefix, suffix, code } = generateProductCode('P', products);
-                setFormData({
-                  code,
-                  codePrefix: prefix,
-                  codeSuffix: suffix,
-                  name: editingDetailForm.productName,
-                  unit: editingDetailForm.unit || '',
-                  specification: editingDetailForm.specification || '',
-                  brand: '',
-                  origin: '',
-                  material: '',
-                  weight: '',
-                  dimensions: '',
-                  categoryId: '',
-                  categoryName: '',
-                  isContractItem: false,
-                  status: 'enabled',
-                });
-                setEditingItem(null);
-                setApplicationModalOpen(false);
-                setSelectedApplication(null);
-                setSelectedDetail(null);
-                setEditingDetailForm({ productName: '', specification: '', unit: '' });
-                setModalOpen(true);
-              }}
-              disabled={!selectedDetail}
-            >
-              确定
             </Button>
           </div>
         </div>

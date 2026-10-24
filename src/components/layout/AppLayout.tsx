@@ -64,6 +64,20 @@ const pathLabelMap: Record<string, string> = {
   '/procurement/website-info': '网站信息',
   '/procurement/contract-template': '合同模板',
   '/procurement/approval-flow': '审批流程配置',
+  // 需求场景模板（14 种组合）
+  '/procurement/demand-scene/engineering-goods/within': '场景·工程类货物-清单内',
+  '/procurement/demand-scene/engineering-goods/outside': '场景·工程类货物-清单外',
+  '/procurement/demand-scene/engineering-goods/new': '场景·工程类货物-新增供应商',
+  '/procurement/demand-scene/engineering-construction/new': '场景·工程类施工-新增供应商',
+  '/procurement/demand-scene/engineering-service/within': '场景·工程类服务-清单内',
+  '/procurement/demand-scene/engineering-service/outside': '场景·工程类服务-清单外',
+  '/procurement/demand-scene/engineering-service/new': '场景·工程类服务-新增供应商',
+  '/procurement/demand-scene/noneng-goods/within': '场景·非工程类货物-清单内',
+  '/procurement/demand-scene/noneng-goods/outside': '场景·非工程类货物-清单外',
+  '/procurement/demand-scene/noneng-goods/new': '场景·非工程类货物-新增供应商',
+  '/procurement/demand-scene/noneng-service/within': '场景·非工程类服务-清单内',
+  '/procurement/demand-scene/noneng-service/outside': '场景·非工程类服务-清单外',
+  '/procurement/demand-scene/noneng-service/new': '场景·非工程类服务-新增供应商',
 };
 
 export default function AppLayout() {

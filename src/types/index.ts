@@ -978,6 +978,7 @@ export interface ServiceApplicationDetail {
   applicationId: string;
   productName: string;
   serviceName?: string;
+  categoryId?: string;
   categoryName?: string;
   specification?: string;
   unit?: string;

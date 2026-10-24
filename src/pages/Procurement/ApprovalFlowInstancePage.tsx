@@ -533,7 +533,7 @@ export default function ApprovalFlowInstancePage() {
     <div className="p-4">
       {/* 页面标题 */}
       <div className="mb-4">
-        <h1 className="text-xl font-bold text-[#1E40AF]">招采流程管理</h1>
+        <h1 className="text-xl font-bold text-[#1E40AF]">自定义内容区</h1>
         <p className="text-xs text-[#909399] mt-1">
           按已配置的审批流程模板，发起自由审批申请。流程节点、审批人由基础系统配置，发起后自动流转。
         </p>

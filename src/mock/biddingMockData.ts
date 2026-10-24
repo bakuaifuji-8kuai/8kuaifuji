@@ -209,6 +209,147 @@ const PROJ = [
 // =====================================================================
 
 export const MOCK_BIDDINGS: Bidding[] = [
+  // =====================================================================
+  // 🆕 目录内比价 —— 5 种需求类型全覆盖（2026-10-24 新增，给模拟器用）
+  // 排在数组最前，刚好对应 DEMAND_TYPES[0-4] 的 5 种类型：
+  //   index 0 → material          (工程类-货物，物资视角)
+  //   index 1 → material_non_engineering (非工程类-货物，物资视角)
+  //   index 2 → implementation_project   (工程类-施工，项目明细视角)
+  //   index 3 → service_project          (工程类-服务，项目明细视角)
+  //   index 4 → service_non_engineering  (非工程类-服务，项目明细视角)
+  // invite 覆盖模拟器里的 6 家供应商，endTime 在未来，quotes: [] 空
+  // =====================================================================
+  {
+    id: 'FM-CAT-005',
+    demandId: 'DEM-FM-CAT-005',
+    biddingNo: 'FM-CAT-005',
+    biddingName: '春季会展展台搭建物资框架协议采购',
+    procurementMethod: 'framework_catalog',
+    approvalStatus: 'approved',
+    demandNo: 'XQ20261020001',
+    projectName: PROJ[0].name,
+    items: [
+      mkCatalogItem('展台铝型材', '40×40铝型材，3米长', 500, '根', 85, 0.13, '固定单价'),
+      mkCatalogItem('展台扣板', '60cm白色扣板', 800, '块', 65, 0.13, '固定单价'),
+      mkCatalogItem('射灯', 'LED射灯 30W', 200, '盏', 180, 0.13, '固定单价'),
+    ],
+    totalAmountExcludingTax: 86300,
+    totalAmountIncludingTax: 97519,
+    totalTaxAmount: 11219,
+    inviteSupplierIds: [S.s2.id, S.s5.id, S.s8.id],
+    startTime: mkTime(-1, 10),
+    endTime: mkTime(30, 18),
+    status: 'published',
+    announcementPublishTime: mkTime(-1, 9),
+    creator: '采购部',
+    createTime: mkTime(-2, 9),
+    quotes: [],
+  },
+  {
+    id: 'FM-CAT-006',
+    demandId: 'DEM-FM-CAT-006',
+    biddingNo: 'FM-CAT-006',
+    biddingName: '展会办公用品框架协议采购',
+    procurementMethod: 'framework_catalog',
+    approvalStatus: 'approved',
+    demandNo: 'XQ20261020002',
+    projectName: PROJ[1].name,
+    items: [
+      mkCatalogItem('打印纸', 'A4/80g/500张', 200, '包', 45, 0.13, '固定单价'),
+      mkCatalogItem('签字笔', '按动中性笔 黑色', 500, '支', 3.5, 0.13, '固定单价'),
+      mkCatalogItem('文件夹', 'A4双夹文件夹', 150, '个', 18, 0.13, '固定单价'),
+      mkCatalogItem('白板笔', '可擦白板笔 套装', 100, '套', 28, 0.13, '固定单价'),
+    ],
+    totalAmountExcludingTax: 24000,
+    totalAmountIncludingTax: 27120,
+    totalTaxAmount: 3120,
+    inviteSupplierIds: [S.s3.id, S.s7.id, S.s9.id],
+    startTime: mkTime(-2, 10),
+    endTime: mkTime(45, 18),
+    status: 'published',
+    announcementPublishTime: mkTime(-2, 9),
+    creator: '行政部',
+    createTime: mkTime(-3, 9),
+    quotes: [],
+  },
+  {
+    id: 'FM-CAT-007',
+    demandId: 'DEM-FM-CAT-007',
+    biddingNo: 'FM-CAT-007',
+    biddingName: '展厅空调安装施工框架协议采购',
+    procurementMethod: 'framework_catalog',
+    approvalStatus: 'approved',
+    demandNo: 'XQ20261020003',
+    projectName: PROJ[3].name,
+    items: [
+      mkCatalogItem('空调主机安装', '大金多联机外机安装（含冷媒管铺设）', 8, '台', 6800, 0.09, '固定单价'),
+      mkCatalogItem('室内机安装', '大金室内机安装（含吊杆、风口）', 32, '台', 1800, 0.09, '固定单价'),
+      mkCatalogItem('风管制作安装', '镀锌钢板风管 1.2mm', 1200, '㎡', 520, 0.09, '固定单价'),
+    ],
+    totalAmountExcludingTax: 1184000,
+    totalAmountIncludingTax: 1290560,
+    totalTaxAmount: 106560,
+    inviteSupplierIds: [S.s2.id, S.s5.id, S.s8.id],
+    startTime: mkTime(-3, 10),
+    endTime: mkTime(60, 18),
+    status: 'published',
+    announcementPublishTime: mkTime(-3, 9),
+    creator: '工程部',
+    createTime: mkTime(-4, 9),
+    quotes: [],
+  },
+  {
+    id: 'FM-CAT-008',
+    demandId: 'DEM-FM-CAT-008',
+    biddingNo: 'FM-CAT-008',
+    biddingName: '展会现场安保服务框架协议采购',
+    procurementMethod: 'framework_catalog',
+    approvalStatus: 'approved',
+    demandNo: 'XQ20261020004',
+    projectName: PROJ[0].name,
+    items: [
+      mkCatalogItem('VIP通道安保', 'VIP区域安保服务（4人/天，含制服装备）', 20, '人天', 380, 0.06, '固定单价'),
+      mkCatalogItem('出入口安检', '出入口安检岗（8人/天，含安检设备）', 40, '人天', 320, 0.06, '固定单价'),
+      mkCatalogItem('巡逻岗', '场内流动巡逻（6人/天）', 30, '人天', 260, 0.06, '固定单价'),
+    ],
+    totalAmountExcludingTax: 31800,
+    totalAmountIncludingTax: 33708,
+    totalTaxAmount: 1908,
+    inviteSupplierIds: [S.s2.id, S.s5.id, S.s8.id],
+    startTime: mkTime(-1, 10),
+    endTime: mkTime(90, 18),
+    status: 'published',
+    announcementPublishTime: mkTime(-1, 9),
+    creator: '综合部',
+    createTime: mkTime(-2, 9),
+    quotes: [],
+  },
+  {
+    id: 'FM-CAT-009',
+    demandId: 'DEM-FM-CAT-009',
+    biddingNo: 'FM-CAT-009',
+    biddingName: '会议茶水服务框架协议采购',
+    procurementMethod: 'framework_catalog',
+    approvalStatus: 'approved',
+    demandNo: 'XQ20261020005',
+    projectName: PROJ[2].name,
+    items: [
+      mkCatalogItem('会议茶水套餐', '30人份套餐（含茶歇、矿泉水、纸巾）', 30, '套', 180, 0.06, '固定单价'),
+      mkCatalogItem('VIP茶歇升级', 'VIP茶歇（含进口咖啡、鲜切水果、点心）', 15, '套', 480, 0.06, '固定单价'),
+    ],
+    totalAmountExcludingTax: 12600,
+    totalAmountIncludingTax: 13356,
+    totalTaxAmount: 756,
+    inviteSupplierIds: [S.s3.id, S.s7.id, S.s9.id],
+    startTime: mkTime(0, 10),
+    endTime: mkTime(120, 18),
+    status: 'published',
+    announcementPublishTime: mkTime(0, 9),
+    creator: '行政部',
+    createTime: mkTime(-1, 9),
+    quotes: [],
+  },
+
   // ==================== 1. 框架协议采购-目录内比价 ====================
   // 状态覆盖：approved/published/bidding/evaluated/completed/cancelled
   {
@@ -1301,7 +1442,13 @@ export const MOCK_SUPPLIER_QUOTES: SupplierQuote[] = (() => {
 
 const DEMAND_APPLICANTS = ['张三', '李四', '王五', '赵六'];
 const DEMAND_MODES: Array<'meeting' | 'sign_report' | 'application_form'> = ['meeting', 'sign_report', 'application_form'];
-const DEMAND_TYPES: ProcurementDemandType[] = ['material', 'service_project', 'material', 'implementation_project', 'service_non_engineering'];
+const DEMAND_TYPES: ProcurementDemandType[] = [
+  'material',                 // 物资采购（工程类-货物）
+  'material_non_engineering', // 物资采购（非工程类-货物）
+  'implementation_project',   // 实施项目（工程类-施工）
+  'service_project',          // 服务项目（工程类-服务）
+  'service_non_engineering',  // 非工程类-服务
+];
 
 // 精简 biddingName 得到 projectName
 const mkSimpleProjectName = (name?: string): string => {

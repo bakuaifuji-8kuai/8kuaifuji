@@ -48,11 +48,21 @@ const BUSINESS_TYPE_LABEL: Record<string, string> = {
   'non_engineering/goods': '非工程类 / 货物',
 };
 
+const DEMAND_TYPE_LABEL: Record<string, string> = {
+  material: '工程类 / 货物（含材料和设备）',
+  implementation_project: '工程类 / 施工',
+  service_project: '工程类 / 服务',
+  service_non_engineering: '非工程类 / 服务',
+  material_non_engineering: '非工程类 / 货物',
+};
+
 function getBusinessTypeLabel(d: ProcurementDemand): string {
   if (d.businessCategory && d.subType) {
-    return BUSINESS_TYPE_LABEL[`${d.businessCategory}/${d.subType}`] || d.demandType;
+    const key = `${d.businessCategory}/${d.subType}`;
+    if (BUSINESS_TYPE_LABEL[key]) return BUSINESS_TYPE_LABEL[key];
   }
-  return d.demandType;
+  // 兜底：用 demandType 枚举值 → 中文
+  return DEMAND_TYPE_LABEL[d.demandType] || d.demandType;
 }
 
 // 立项方式选项
