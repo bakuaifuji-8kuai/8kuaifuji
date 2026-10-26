@@ -481,10 +481,11 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
     ...procurementDemands
       .filter((d) => (d.needContract ?? 'yes') !== 'no') // 默认 yes，兼容老数据
       .filter((d) => d.status === 'confirm_approved')
-      // 电子商城采购不签订合同：关联工单采购方式为 e_mall 的需求不进入招采合同签订
+      // 电子商城 / 直接采购 不签订合同：这两种采购方式不进入招采合同签订流程
       .filter((d) => {
         const linkedBidding = biddings.find((b) => b.id === d.relatedOrderId || b.demandId === d.id);
-        return linkedBidding?.procurementMethod !== 'e_mall';
+        const m = linkedBidding?.procurementMethod;
+        return m !== 'e_mall' && m !== 'direct';
       })
       .map((d) => ({
         value: d.id,

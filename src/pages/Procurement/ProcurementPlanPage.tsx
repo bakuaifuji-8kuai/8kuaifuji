@@ -99,7 +99,7 @@ export default function ProcurementPlanPage() {
           {row.status === 'pending' && (
             <>
               <TextButton onClick={() => handleApproveNode(row)}>通过</TextButton>
-              <TextButton onClick={() => openComment(row)}>意见批注</TextButton>
+              {/* <TextButton onClick={() => openComment(row)}>意见批注</TextButton> */}
               <TextButton onClick={() => openReturn(row)}>退回</TextButton>
               <TextButton type="danger" onClick={() => handleReject(row)}>驳回</TextButton>
             </>

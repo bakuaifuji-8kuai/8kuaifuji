@@ -1898,7 +1898,7 @@ export default function ContractLedgerPage() {
               </thead>
               <tbody>
                 {biddings
-                  .filter(b => (b.status === 'completed' || b.status === 'evaluated') && b.procurementMethod !== 'e_mall') // 电子商城采购不签订合同
+                  .filter(b => (b.status === 'completed' || b.status === 'evaluated') && b.procurementMethod !== 'e_mall' && b.procurementMethod !== 'direct') // 电子商城 / 直接采购 不签订合同
                   .map(b => {
                     const confirmedQuote = b.quotes?.find(q => q.confirmedSupplierId);
                     const supplierName = confirmedQuote?.confirmedSupplierName || b.winningSupplierName || '-';
