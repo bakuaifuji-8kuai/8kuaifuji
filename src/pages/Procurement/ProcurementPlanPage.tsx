@@ -622,6 +622,14 @@ export default function ProcurementPlanPage() {
               )}
             </div>
             <div>
+              <div className="mb-1 text-[#606266]">需求部门</div>
+              <input
+                className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-[#606266] bg-[#f5f7fa]"
+                value={currentUser?.department || editItem?.department || ''}
+                readOnly
+              />
+            </div>
+            <div>
                 <div className="mb-1 text-[#606266]">计划方式</div>
                 {isNew ? (
                   <select
@@ -735,7 +743,7 @@ export default function ProcurementPlanPage() {
               <table className="w-full" style={{ minWidth: '2000px' }}>
                 <thead className="sticky top-0 bg-[#f5f7fa]">
                   <tr>
-                    <th colSpan={6} className="px-2 py-1 text-xs text-center border-r border-[#dcdfe6]">项目基本信息</th>
+                    <th colSpan={5} className="px-2 py-1 text-xs text-center border-r border-[#dcdfe6]">项目基本信息</th>
                     <th colSpan={3} className="px-2 py-1 text-xs text-center border-r border-[#dcdfe6] bg-[#fef3c7]">招标采购前置阶段</th>
                     <th colSpan={2} className="px-2 py-1 text-xs text-center border-r border-[#dcdfe6] bg-[#dcfce7]">招标采购准备阶段</th>
                     <th colSpan={3} className="px-2 py-1 text-xs text-center bg-[#dbeafe]">招标采购阶段</th>
@@ -743,7 +751,6 @@ export default function ProcurementPlanPage() {
                   </tr>
                   <tr>
                     <th className="px-2 py-2 text-xs text-left w-12 whitespace-nowrap">序号</th>
-                    <th className="px-2 py-2 text-xs text-left w-32 whitespace-nowrap"><span className="text-[#ef4444]">*</span>需求部门</th>
                     <th className="px-2 py-2 text-xs text-left w-36 whitespace-nowrap"><span className="text-[#ef4444]">*</span>项目名称</th>
                     <th className="px-2 py-2 text-xs text-left w-28 whitespace-nowrap"><span className="text-[#ef4444]">*</span>项目类别</th>
                     <th className="px-2 py-2 text-xs text-left w-40 whitespace-nowrap"><span className="text-[#ef4444]">*</span>项目概况</th>
@@ -762,13 +769,6 @@ export default function ProcurementPlanPage() {
                   {details.map((detail, index) => (
                     <tr key={detail.id} className="border-t border-[#ebeef5]">
                       <td className="px-2 py-1 text-xs whitespace-nowrap">{detail.seq}</td>
-                      <td className="px-2 py-1">
-                        <input
-                          className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
-                          value={currentUser?.department || editItem?.department || ''}
-                          readOnly
-                        />
-                      </td>
                       <td className="px-2 py-1">
                         <input
                           className="w-full h-6 px-1 border border-[#dcdfe6] rounded text-xs"
