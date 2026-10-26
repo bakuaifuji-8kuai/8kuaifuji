@@ -431,7 +431,6 @@ export default function ProductApplicationPage() {
           categoryName: cat?.name || d.categoryName || '',
           unit: d.unit || '',
           specification: d.specification || '',
-          brand: '',
           origin: '',
           material: '',
           weight: '',

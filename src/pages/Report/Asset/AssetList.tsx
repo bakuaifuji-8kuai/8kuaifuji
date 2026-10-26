@@ -243,14 +243,19 @@ export default function AssetList() {
   const [codeFilter, setCodeFilter] = useState('');
   const [nameFilter, setNameFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
   const [appliedFilter, setAppliedFilter] = useState({
     code: '',
     name: '',
     status: '',
+    assetTag: '',
   });
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [batchTagModalOpen, setBatchTagModalOpen] = useState(false);
+  const [batchTagValue, setBatchTagValue] = useState<'general' | 'fixed' | 'clear' | ''>('');
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [viewingAsset, setViewingAsset] = useState<AssetEquipment | null>(null);
   const [editingAsset, setEditingAsset] = useState<AssetEquipment | null>(null);
   const [printAssets, setPrintAssets] = useState<AssetEquipment[]>([]);
@@ -268,11 +273,26 @@ export default function AssetList() {
   const filteredData = assetEquipments
     .filter(a => !appliedFilter.code || a.code.toLowerCase().includes(appliedFilter.code.toLowerCase()))
     .filter(a => !appliedFilter.name || a.name.toLowerCase().includes(appliedFilter.name.toLowerCase()))
-    .filter(a => !appliedFilter.status || a.status === appliedFilter.status);
+    .filter(a => !appliedFilter.status || a.status === appliedFilter.status)
+    .filter(a => {
+      if (!appliedFilter.assetTag) return true;
+      if (appliedFilter.assetTag === 'none') return !a.assetTag;
+      return a.assetTag === appliedFilter.assetTag;
+    });
 
   const columns: ColumnDef<AssetEquipment, unknown>[] = [
     { accessorKey: 'code', header: '设备编码' },
     { accessorKey: 'name', header: '设备名称' },
+    {
+      accessorKey: 'assetTag',
+      header: '标识',
+      cell: ({ row }) => {
+        const tag = row.original.assetTag;
+        if (tag === 'fixed') return <Badge variant="primary">固定资产</Badge>;
+        if (tag === 'general') return <Badge variant="warning">通用资产</Badge>;
+        return <Badge variant="default">未标识</Badge>;
+      },
+    },
     { accessorKey: 'specification', header: '规格型号' },
     { accessorKey: 'unit', header: '单位' },
     {
@@ -361,6 +381,13 @@ export default function AssetList() {
     { value: 'written_off', label: '已报损' },
   ];
 
+  const tagOptions = [
+    { value: '', label: '全部标识' },
+    { value: 'fixed', label: '固定资产' },
+    { value: 'general', label: '通用资产' },
+    { value: 'none', label: '未标识' },
+  ];
+
   const statusBadgeVariants: Record<string, 'default' | 'success' | 'danger' | 'warning'> = {
     in_storage: 'default',
     in_use: 'success',
@@ -390,16 +417,19 @@ export default function AssetList() {
             code: codeFilter,
             name: nameFilter,
             status: statusFilter,
+            assetTag: tagFilter,
           })
         }
         onReset={() => {
           setCodeFilter('');
           setNameFilter('');
           setStatusFilter('');
+          setTagFilter('');
           setAppliedFilter({
             code: '',
             name: '',
             status: '',
+            assetTag: '',
           });
         }}
       >
@@ -424,6 +454,14 @@ export default function AssetList() {
           value={statusFilter}
           onChange={setStatusFilter}
           placeholder="全部状态"
+        />
+        <SearchField
+          label="标识"
+          type="select"
+          options={tagOptions}
+          value={tagFilter}
+          onChange={setTagFilter}
+          placeholder="全部标识"
         />
       </SearchBar>
 
@@ -457,7 +495,39 @@ export default function AssetList() {
       </div>
 
       <div className="bg-white rounded shadow-sm border border-[#e4e7ed]">
-        <DataTable data={filteredData} columns={columns} pageSize={10} />
+        {/* 批量操作工具栏（始终可见） */}
+        <div className="px-4 py-2.5 bg-slate-50/60 border-b border-slate-100 flex items-center justify-between">
+          <div className="text-sm text-slate-500">
+            已选择 <span className={`font-semibold ${selectedKeys.length > 0 ? 'text-indigo-600' : 'text-slate-400'}`}>{selectedKeys.length}</span> 项
+            {selectedKeys.length > 0 && (
+              <button
+                type="button"
+                className="ml-3 text-xs text-slate-400 hover:text-slate-600 underline"
+                onClick={() => setSelectedKeys([])}
+              >
+                清空选择
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <PrimaryButton
+              disabled={selectedKeys.length === 0}
+              onClick={() => { setBatchTagValue(''); setBatchTagModalOpen(true); }}
+              title={selectedKeys.length === 0 ? '请先勾选要打标签的资产' : ''}
+            >
+              🏷️ 批量打标签
+            </PrimaryButton>
+          </div>
+        </div>
+        <DataTable
+          data={filteredData as AssetEquipment[]}
+          columns={columns}
+          pageSize={10}
+          selectable
+          rowKey={(row) => row.id}
+          selectedKeys={selectedKeys}
+          onSelectChange={(keys) => setSelectedKeys(keys)}
+        />
       </div>
 
       {/* 查看详情模态框 */}
@@ -474,6 +544,12 @@ export default function AssetList() {
               <div><span className="text-slate-500">设备名称：</span>{viewingAsset.name}</div>
               <div><span className="text-slate-500">规格型号：</span>{viewingAsset.specification || '-'}</div>
               <div><span className="text-slate-500">计量单位：</span>{viewingAsset.unit}</div>
+              <div>
+                <span className="text-slate-500">资产标识：</span>
+                {viewingAsset.assetTag === 'fixed' && <Badge variant="primary">固定资产</Badge>}
+                {viewingAsset.assetTag === 'general' && <Badge variant="warning">通用资产</Badge>}
+                {!viewingAsset.assetTag && <Badge variant="default">未标识</Badge>}
+              </div>
               <div><span className="text-slate-500">金额：</span>¥{viewingAsset.amount.toLocaleString()}</div>
               <div><span className="text-slate-500">存放地点：</span>{viewingAsset.storageLocation}</div>
               <div><span className="text-slate-500">状态：</span>
@@ -556,6 +632,63 @@ export default function AssetList() {
           onClose={() => setPrintModalOpen(false)}
         />
       )}
+
+      {/* 批量打标签 Modal */}
+      <Modal
+        open={batchTagModalOpen}
+        title={`批量打标签（已选 ${selectedKeys.length} 项）`}
+        size="sm"
+        onClose={() => setBatchTagModalOpen(false)}
+        footer={
+          <div className="flex justify-end gap-2">
+            <DefaultButton variant="secondary" onClick={() => setBatchTagModalOpen(false)}>
+              取消
+            </DefaultButton>
+            <PrimaryButton
+              disabled={!batchTagValue}
+              onClick={() => {
+                if (!batchTagValue) return;
+                selectedKeys.forEach((id) => {
+                  const a = assetEquipments.find((x) => x.id === id);
+                  if (!a) return;
+                  const newTag = batchTagValue === 'clear' ? undefined : batchTagValue;
+                  updateAssetEquipment(id, { assetTag: newTag } as any);
+                });
+                setSelectedKeys([]);
+                setBatchTagModalOpen(false);
+                setBatchTagValue('');
+              }}
+            >
+              确认
+            </PrimaryButton>
+          </div>
+        }
+      >
+        <div className="space-y-3 py-1">
+          <div className="text-sm text-slate-600 mb-2">
+            选择一个标签，将覆盖到已选中的 <span className="font-semibold text-indigo-600">{selectedKeys.length}</span> 条资产：
+          </div>
+          {[
+            { v: 'fixed', label: '固定资产', desc: '金额较大、需折旧、纳入年度盘点', badge: 'primary' as const },
+            { v: 'general', label: '通用资产', desc: '办公家具、小型工具等灵活调配', badge: 'warning' as const },
+            { v: 'clear', label: '清除标识', desc: '恢复为"未标识"状态', badge: 'default' as const },
+          ].map((opt) => (
+            <button
+              key={opt.v}
+              type="button"
+              onClick={() => setBatchTagValue(opt.v as any)}
+              className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
+                batchTagValue === opt.v
+                  ? 'border-indigo-500 bg-indigo-50'
+                  : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'
+              }`}
+            >
+              <Badge variant={opt.badge}>{opt.label}</Badge>
+              <span className="text-xs text-slate-500">{opt.desc}</span>
+            </button>
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 }

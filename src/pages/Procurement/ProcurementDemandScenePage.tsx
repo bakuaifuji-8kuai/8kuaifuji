@@ -66,7 +66,7 @@ function FormReadOnlySection({ mock }: { mock: SceneMock }) {
         <FormField label="申请人" value={form.applicant} />
         <FormField label="申请部门" value={form.applicantDept} />
         <FormField label="业务分类" value={`${form.businessCategory === 'engineering' ? '工程类' : '非工程类'} / ${form.subType === 'construction' ? '施工' : form.subType === 'service' ? '服务' : '货物'}`} />
-        <FormField label="采购方式" value={
+        <FormField label="框架合同清单内/外采购" value={
           mock.procurementType === 'within_framework' ? '框架合同清单内'
           : mock.procurementType === 'outside_framework' ? '框架合同清单外'
           : '新增供应商目录'
@@ -557,9 +557,114 @@ export default function ProcurementDemandScenePage() {
   return (
     <div className="max-w-[1600px] mx-auto">
       <SceneHeaderCard mock={mock} />
+      <BusinessRulesSummary mock={mock} />
       <FormReadOnlySection mock={mock} />
       <DetailSection mock={mock} />
     </div>
+  );
+}
+
+// ============ 业务门控规则速查面板 ============
+function BusinessRulesSummary({ mock }: { mock: SceneMock }) {
+  const currentDt = mock.demandType;
+  const currentFt = mock.procurementType;
+
+  // 5种需求类型 × 3种框架清单 = 允许矩阵
+  // C1=within, C2=outside, C3=new_supplier
+  const matrix: Array<{ label: string; dt: string; rows: Array<{ c1: boolean; c2: boolean; c3: boolean; detail: string }> }> = [
+    {
+      label: '工程类 / 施工（实施项目）', dt: 'implementation_project',
+      rows: [{ c1: false, c2: false, c3: true, detail: '施工内容不确定性高（工程量、工期可变），没法提前锁框架合同单价 → 只能走新增供应商目录直接招标' }],
+    },
+    {
+      label: '工程类 / 服务（服务项目）', dt: 'service_project',
+      rows: [{ c1: true, c2: true, c3: true, detail: '服务项目按"项目多行表"逐行填：需求部门/项目名称/主要内容/不含税预算总金额' }],
+    },
+    {
+      label: '工程类 / 货物（物资采购）', dt: 'material',
+      rows: [{ c1: true, c2: true, c3: true, detail: '清单内：22列宽表（双表头分组）+ 合同物资锁价；清单外：14列窄表单价可改；新增供应商：15列极简预算版' }],
+    },
+    {
+      label: '非工程类 / 货物', dt: 'material_non_engineering',
+      rows: [{ c1: true, c2: true, c3: true, detail: '与工程类货物结构相同，但按非工程类规则门控；⚠️ 货物类全部有"库存数量"列（要从仓库领料）' }],
+    },
+    {
+      label: '非工程类 / 服务', dt: 'service_non_engineering',
+      rows: [{ c1: true, c2: true, c3: true, detail: '与工程类货物结构相同，⚠️ 服务类**没有**"库存数量"列（服务不占仓库库存，如法律咨询/翻译等）' }],
+    },
+  ];
+
+  const nowAllowed = matrix.find(m => m.dt === currentDt)?.rows[0];
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm mb-4 overflow-hidden">
+      <div className="px-5 py-3 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-indigo-50/40 rounded-t-xl flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+          <span className="w-1 h-4 bg-gradient-to-b from-amber-500 to-orange-500 rounded-full"></span>
+          📖 业务门控规则速查表（演示时可直接照此说明）
+        </h2>
+        <span className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+          当前场景：<b>{nowAllowed?.detail?.slice(0, 25)}...</b>
+        </span>
+      </div>
+      <div className="p-4">
+        <table className="w-full text-xs border border-slate-200">
+          <thead>
+            <tr className="bg-slate-50 text-slate-700">
+              <th className="px-3 py-2 text-left border border-slate-200 w-48">需求类型（5种）</th>
+              <th className="px-3 py-2 text-center border border-slate-200 w-32">📋 清单内</th>
+              <th className="px-3 py-2 text-center border border-slate-200 w-32">📋 清单外</th>
+              <th className="px-3 py-2 text-center border border-slate-200 w-32">📋 新增供应商</th>
+              <th className="px-3 py-2 text-left border border-slate-200">业务含义（为什么允许/禁止）</th>
+            </tr>
+          </thead>
+          <tbody>
+            {matrix.map((row) => {
+              const highlight = row.dt === currentDt;
+              return row.rows.map((r, idx) => (
+                <tr key={row.dt + idx} className={`border-t border-slate-100 ${highlight ? 'bg-indigo-50/40 font-medium' : ''}`}>
+                  {idx === 0 && (
+                    <td rowSpan={row.rows.length} className="px-3 py-2 border border-slate-200 align-middle text-slate-800 font-medium">
+                      {row.label}
+                    </td>
+                  )}
+                  <Cell allowed={r.c1} active={currentFt === 'within_framework' && highlight} />
+                  <Cell allowed={r.c2} active={currentFt === 'outside_framework' && highlight} />
+                  <Cell allowed={r.c3} active={currentFt === 'new_supplier' && highlight} />
+                  <td className="px-3 py-2 border border-slate-200 text-slate-600 leading-relaxed">{r.detail}</td>
+                </tr>
+              ));
+            })}
+          </tbody>
+        </table>
+        <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-slate-500">
+          <span>🔒 清单内合同物资行 <b className="text-slate-700">单价/税率/合同编号锁定不可编辑</b>（isContractItem=true 自动锁价）</span>
+          <span>📦 货物类（工程+非工程）全部有 <b className="text-slate-700">库存数量列</b>（黄色高亮，参考仓库现有量决定采购量）</span>
+          <span>🚫 服务类 <b className="text-slate-700">没有库存列</b>（服务不占仓库库存）</span>
+          <span>📊 工程类施工/服务的明细表是 <b className="text-slate-700">项目多行表</b>（每行一个子项目，不是物资表）</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Cell({ allowed, active }: { allowed: boolean; active: boolean }) {
+  if (active) {
+    return (
+      <td className="px-3 py-2 border border-slate-200 text-center">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-green-100 text-green-700 border border-green-300 font-semibold shadow-sm">
+          ✓ 允许 ⬅当前
+        </span>
+      </td>
+    );
+  }
+  return (
+    <td className="px-3 py-2 border border-slate-200 text-center">
+      {allowed
+        ? <span className="text-green-600 font-semibold">✓ 允许</span>
+        : <span className="text-red-400">✗ 禁止</span>
+      }
+    </td>
   );
 }
 

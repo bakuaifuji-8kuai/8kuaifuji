@@ -60,7 +60,8 @@ const pathLabelMap: Record<string, string> = {
   '/procurement/supplier': '供应商管理',
   '/procurement/inspection': '采购检验',
   '/procurement/bidding': '招投标管理',
-  '/procurement/supplier-quote': '供应商报价',
+  '/procurement/supplier-quote': '报价管理',
+  '/procurement/supplier-quote/simulator': '供应商端模拟',
   '/procurement/website-info': '网站信息',
   '/procurement/contract-template': '合同模板',
   '/procurement/approval-flow': '审批流程配置',
@@ -78,6 +79,16 @@ const pathLabelMap: Record<string, string> = {
   '/procurement/demand-scene/noneng-service/within': '场景·非工程类服务-清单内',
   '/procurement/demand-scene/noneng-service/outside': '场景·非工程类服务-清单外',
   '/procurement/demand-scene/noneng-service/new': '场景·非工程类服务-新增供应商',
+  // 招采执行场景模板（9 种采购方式）
+  '/procurement/bidding-scene/framework-catalog': '场景·目录内比价',
+  '/procurement/bidding-scene/framework-random': '场景·随机抽取',
+  '/procurement/bidding-scene/inquiry-open': '场景·询比-公开',
+  '/procurement/bidding-scene/inquiry-invited': '场景·询比-邀请',
+  '/procurement/bidding-scene/competitive-bidding': '场景·竞价采购',
+  '/procurement/bidding-scene/negotiation-open': '场景·谈判-公开',
+  '/procurement/bidding-scene/negotiation-invited': '场景·谈判-邀请',
+  '/procurement/bidding-scene/direct': '场景·直接采购',
+  '/procurement/bidding-scene/e-mall': '场景·电子商城采购',
 };
 
 export default function AppLayout() {

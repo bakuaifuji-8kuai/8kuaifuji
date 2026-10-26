@@ -217,7 +217,8 @@ export const MOCK_BIDDINGS: Bidding[] = [
   //   index 2 → implementation_project   (工程类-施工，项目明细视角)
   //   index 3 → service_project          (工程类-服务，项目明细视角)
   //   index 4 → service_non_engineering  (非工程类-服务，项目明细视角)
-  // invite 覆盖模拟器里的 6 家供应商，endTime 在未来，quotes: [] 空
+  // invite 覆盖模拟器里的 6 家供应商（宏远/星辰/长沙展架/会展设备/湖南展台/视界投影）
+  // 这样切换任何一家供应商，都能看到全部 5 种需求类型的待报价工单
   // =====================================================================
   {
     id: 'FM-CAT-005',
@@ -236,7 +237,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
     totalAmountExcludingTax: 86300,
     totalAmountIncludingTax: 97519,
     totalTaxAmount: 11219,
-    inviteSupplierIds: [S.s2.id, S.s5.id, S.s8.id],
+    inviteSupplierIds: [S.s2.id, S.s3.id, S.s5.id, S.s7.id, S.s8.id, S.s9.id],
     startTime: mkTime(-1, 10),
     endTime: mkTime(30, 18),
     status: 'published',
@@ -263,7 +264,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
     totalAmountExcludingTax: 24000,
     totalAmountIncludingTax: 27120,
     totalTaxAmount: 3120,
-    inviteSupplierIds: [S.s3.id, S.s7.id, S.s9.id],
+    inviteSupplierIds: [S.s2.id, S.s3.id, S.s5.id, S.s7.id, S.s8.id, S.s9.id],
     startTime: mkTime(-2, 10),
     endTime: mkTime(45, 18),
     status: 'published',
@@ -289,7 +290,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
     totalAmountExcludingTax: 1184000,
     totalAmountIncludingTax: 1290560,
     totalTaxAmount: 106560,
-    inviteSupplierIds: [S.s2.id, S.s5.id, S.s8.id],
+    inviteSupplierIds: [S.s2.id, S.s3.id, S.s5.id, S.s7.id, S.s8.id, S.s9.id],
     startTime: mkTime(-3, 10),
     endTime: mkTime(60, 18),
     status: 'published',
@@ -315,7 +316,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
     totalAmountExcludingTax: 31800,
     totalAmountIncludingTax: 33708,
     totalTaxAmount: 1908,
-    inviteSupplierIds: [S.s2.id, S.s5.id, S.s8.id],
+    inviteSupplierIds: [S.s2.id, S.s3.id, S.s5.id, S.s7.id, S.s8.id, S.s9.id],
     startTime: mkTime(-1, 10),
     endTime: mkTime(90, 18),
     status: 'published',
@@ -340,7 +341,7 @@ export const MOCK_BIDDINGS: Bidding[] = [
     totalAmountExcludingTax: 12600,
     totalAmountIncludingTax: 13356,
     totalTaxAmount: 756,
-    inviteSupplierIds: [S.s3.id, S.s7.id, S.s9.id],
+    inviteSupplierIds: [S.s2.id, S.s3.id, S.s5.id, S.s7.id, S.s8.id, S.s9.id],
     startTime: mkTime(0, 10),
     endTime: mkTime(120, 18),
     status: 'published',

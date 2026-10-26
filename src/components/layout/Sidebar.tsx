@@ -24,7 +24,10 @@ const menuItems: MenuItem[] = [
   {
     title: '功能说明',
     icon: FileText,
-    path: '/procurement/function-docs',
+    children: [
+      { title: '功能文档', path: '/procurement/function-docs' },
+      { title: '变更记录', path: '/changelog' },
+    ],
   },
   {
     title: '全景预警',
@@ -72,6 +75,17 @@ const menuItems: MenuItem[] = [
       ]},
       { title: '招采实施过程管理', path: '/procurement/process-group', children: [
         { title: '招采执行', path: '/procurement/bidding' },
+        { title: '🎨 招采执行场景模板', path: '/procurement/bidding-scene-group', children: [
+          { title: '框架协议采购-目录内比价', path: '/procurement/bidding-scene/framework-catalog' },
+          { title: '框架协议采购-随机抽取', path: '/procurement/bidding-scene/framework-random' },
+          { title: '询比采购-公开', path: '/procurement/bidding-scene/inquiry-open' },
+          { title: '询比采购-邀请', path: '/procurement/bidding-scene/inquiry-invited' },
+          { title: '竞价采购', path: '/procurement/bidding-scene/competitive-bidding' },
+          { title: '谈判采购-公开', path: '/procurement/bidding-scene/negotiation-open' },
+          { title: '谈判采购-邀请', path: '/procurement/bidding-scene/negotiation-invited' },
+          { title: '直接采购', path: '/procurement/bidding-scene/direct' },
+          { title: '电子商城采购', path: '/procurement/bidding-scene/e-mall' },
+        ]},
         { title: '报价管理', path: '/procurement/supplier-quote' },
         { title: '📱 供应商端模拟', path: '/procurement/supplier-quote/simulator' },
         { title: '招采执行台账', path: '/procurement/bidding-ledger' },

@@ -53,7 +53,6 @@ export interface Product {
   categoryName?: string;
   unit: string;
   specification?: string;
-  brand?: string;
   imageUrl?: string;
   origin?: string;
   material?: string;
@@ -767,6 +766,8 @@ export interface AssetEquipment {
   positionId?: string;
   positionName?: string;
   storageLocation: string;
+  // 资产标识：通用资产 / 固定资产 / 未标识
+  assetTag?: 'general' | 'fixed';
   // 状态：在仓/领用中/已报废/已报损
   status: 'in_storage' | 'in_use' | 'scrapped' | 'written_off';
   // 领用信息

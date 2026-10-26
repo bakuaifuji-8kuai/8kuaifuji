@@ -6,10 +6,11 @@ type BadgeVariant = 'default' | 'primary' | 'secondary' | 'success' | 'warning' 
 interface BadgeProps {
   children: ReactNode;
   variant?: BadgeVariant;
+  size?: 'sm' | 'md';
   className?: string;
 }
 
-export default function Badge({ children, variant = 'default', className }: BadgeProps) {
+export default function Badge({ children, variant = 'default', size = 'md', className }: BadgeProps) {
   const variants: Record<BadgeVariant, string> = {
     default: 'bg-slate-100 text-slate-700 shadow-sm',
     primary: 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm shadow-indigo-500/25',
@@ -20,10 +21,16 @@ export default function Badge({ children, variant = 'default', className }: Badg
     info: 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-sm shadow-blue-500/25',
   };
 
+  const sizes = {
+    sm: 'px-1.5 py-0.5 text-[10px] leading-none',
+    md: 'px-2.5 py-1 text-xs font-medium',
+  };
+
   return (
     <span
       className={cn(
-        'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium',
+        'inline-flex items-center rounded-full font-medium',
+        sizes[size],
         variants[variant],
         className
       )}

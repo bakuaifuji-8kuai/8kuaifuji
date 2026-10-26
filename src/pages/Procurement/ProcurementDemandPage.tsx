@@ -479,7 +479,7 @@ export default function ProcurementDemandPage() {
     console.log('[handleSave] START isNew=', isNew, 'editItem=', JSON.stringify(editItem).substring(0, 300));
     if (!editItem) return;
     // 申请事由（框架合同清单内/外采购）+ reason 均必填
-    if (!editItem.procurementType) { alert('请选择【申请事由（框架合同清单内/外采购）】'); return; }
+    if (!editItem.procurementType) { alert('请选择【框架合同清单内/外采购】'); return; }
     if (!editItem.reason || !editItem.reason.trim()) { alert('请填写【申请事由】说明'); return; }
     // 新增时才生成编号，编辑保留原编号
     if (isNew && !editItem.demandNo) {
@@ -850,7 +850,7 @@ export default function ProcurementDemandPage() {
                   </select>
                 </div>
                 <div>
-                  <div className="mb-1 text-xs text-[#606266]">申请事由（框架合同清单内/外采购）<span className="text-[#f56c6c] ml-0.5">*</span></div>
+                  <div className="mb-1 text-xs text-[#606266]">框架合同清单内/外采购<span className="text-[#f56c6c] ml-0.5">*</span></div>
                   <select
                     className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-sm"
                     value={editItem.procurementType || ''}

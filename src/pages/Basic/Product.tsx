@@ -23,7 +23,7 @@ const helpContent = {
       heading: '一、物资档案概述',
       items: [
         '数据性质：物资档案是仓库管理系统的基础数据，是所有入库、出库、调拨等业务的数据基础',
-        '记录内容：包含物资编码、名称、品牌、规格型号、单位、产地、材质、重量、尺寸等基本信息',
+        '记录内容：包含物资编码、名称、规格型号、单位、产地、材质、重量、尺寸等基本信息',
         '编码规则：物资编码由前缀（可自定义）+ 5位数字后缀组成，如 QD00001、P00002',
         '类别管理：每个物资必须归属一个类别，类别决定物资编码的前缀（如 QD 开头）',
         '状态控制：物资有启用/禁用两种状态，禁用的物资理论上不可在业务中使用',
@@ -43,7 +43,6 @@ const helpContent = {
       heading: '三、数据筛选功能',
       items: [
         '关键词搜索：支持模糊匹配物资编码和物资名称，不区分大小写',
-        '品牌筛选：下拉选择品牌进行精确筛选，支持动态获取已有品牌列表',
         '状态筛选：下拉选择「启用」或「禁用」进行精确筛选',
         '合同清单筛选：下拉选择「合同清单内」或「合同清单外」进行精确筛选',
         '组合筛选：多个筛选条件同时生效，取交集',
@@ -56,7 +55,7 @@ const helpContent = {
       items: [
         '操作入口：点击列表操作列的「编辑」按钮',
         '不可编辑字段：类别、物资编码 不可修改（以灰色只读方式显示）',
-        '可编辑字段：物资名称、品牌、规格型号、单位、产地、材质、重量、尺寸、状态等均可编辑',
+        '可编辑字段：物资名称、规格型号、单位、产地、材质、重量、尺寸、状态等均可编辑',
         '编码说明：编辑时物资编码只读显示，不可修改，这是为了保证编码的稳定性和可追溯性',
         '保存逻辑：点击「保存」后立即更新列表数据'
       ]
@@ -103,12 +102,10 @@ export default function ProductPage() {
   const { products, addProduct, updateProduct, deleteProduct, contracts, productContracts, categories, addCategory } = useStore();
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [brandFilter, setBrandFilter] = useState('');
   const [contractItemFilter, setContractItemFilter] = useState('');
   const [appliedFilter, setAppliedFilter] = useState({
     searchText: '',
     statusFilter: '',
-    brandFilter: '',
     contractItemFilter: '',
   });
   const [modalOpen, setModalOpen] = useState(false);
@@ -129,7 +126,6 @@ export default function ProductPage() {
     name: string;
     unit: string;
     specification: string;
-    brand: string;
     origin: string;
     material: string;
     weight: string;
@@ -145,7 +141,6 @@ export default function ProductPage() {
     name: '',
     unit: '',
     specification: '',
-    brand: '',
     origin: '',
     material: '',
     weight: '',
@@ -155,11 +150,6 @@ export default function ProductPage() {
     isContractItem: false,
     status: 'enabled',
   });
-
-  const brandOptions: { value: string; label: string }[] = useMemo(() => {
-    const brands = [...new Set(products.map(p => p.brand).filter(Boolean))] as string[];
-    return brands.map(b => ({ value: b, label: b }));
-  }, [products]);
 
   const getValidContract = (productId: string): Contract | null => {
     const pc = productContracts.find(pc => pc.productId === productId);
@@ -221,11 +211,10 @@ export default function ProductPage() {
           item.code.toLowerCase().includes(appliedFilter.searchText.toLowerCase()) ||
           item.name.toLowerCase().includes(appliedFilter.searchText.toLowerCase());
         const matchStatus = !appliedFilter.statusFilter || item.status === appliedFilter.statusFilter;
-        const matchBrand = !appliedFilter.brandFilter || (item.brand || '').toLowerCase().includes(appliedFilter.brandFilter.toLowerCase());
         const matchContractItem = !appliedFilter.contractItemFilter ||
           (appliedFilter.contractItemFilter === 'yes' && item.isContractItem) ||
           (appliedFilter.contractItemFilter === 'no' && !item.isContractItem);
-        return matchSearch && matchStatus && matchBrand && matchContractItem;
+        return matchSearch && matchStatus && matchContractItem;
       });
   }, [products, contracts, productContracts, appliedFilter]);
 
@@ -237,7 +226,6 @@ export default function ProductPage() {
       header: '类别',
       cell: ({ row }) => row.original.categoryName || '-',
     },
-    { accessorKey: 'brand', header: '品牌', cell: ({ row }) => row.original.brand || '-' },
     { accessorKey: 'specification', header: '规格型号' },
     { accessorKey: 'unit', header: '单位' },
     {
@@ -310,7 +298,6 @@ export default function ProductPage() {
     setAppliedFilter({
       searchText,
       statusFilter,
-      brandFilter,
       contractItemFilter,
     });
   };
@@ -318,12 +305,10 @@ export default function ProductPage() {
   const handleReset = () => {
     setSearchText('');
     setStatusFilter('');
-    setBrandFilter('');
     setContractItemFilter('');
     setAppliedFilter({
       searchText: '',
       statusFilter: '',
-      brandFilter: '',
       contractItemFilter: '',
     });
   };
@@ -372,7 +357,6 @@ export default function ProductPage() {
       name: item.name,
       unit: item.unit,
       specification: item.specification || '',
-      brand: item.brand || '',
       origin: item.origin || '',
       material: item.material || '',
       weight: item.weight || '',
@@ -473,7 +457,6 @@ export default function ProductPage() {
       {
         '类别(必填)': '',
         '物资名称(必填)': '',
-        '品牌': '',
         '规格型号': '',
         '单位(必填)': '',
         '产地': '',
@@ -485,7 +468,6 @@ export default function ProductPage() {
       {
         '类别(必填)': availableCategories[0] || '(请填真实类别名称)',
         '物资名称(必填)': '示例物资1',
-        '品牌': '得力',
         '规格型号': '1m*2m',
         '单位(必填)': '块',
         '产地': '浙江',
@@ -549,7 +531,6 @@ export default function ProductPage() {
           // 兼容新旧表头
           const categoryName = getVal(row, ['类别(必填)', '类别']);
           const name = getVal(row, ['物资名称(必填)', '物资名称']);
-          const brand = getVal(row, ['品牌']);
           const specification = getVal(row, ['规格型号']);
           const unit = getVal(row, ['单位(必填)', '单位']);
           const origin = getVal(row, ['产地']);
@@ -604,7 +585,6 @@ export default function ProductPage() {
             codePrefix: prefix,
             codeSuffix: suffix,
             name,
-            brand,
             specification,
             unit,
             origin,
@@ -656,7 +636,6 @@ export default function ProductPage() {
       '物资编码': item.code,
       '类别': item.categoryName || '-',
       '物资名称': item.name,
-      '品牌': item.brand || '-',
       '规格型号': item.specification || '-',
       '单位': item.unit,
       '产地': item.origin || '-',
@@ -713,13 +692,6 @@ export default function ProductPage() {
           onChange={setSearchText}
           type="input"
           width="w-[260px]"
-        />
-        <SearchField
-          label="品牌"
-          value={brandFilter}
-          onChange={setBrandFilter}
-          options={brandOptions}
-          type="select"
         />
         <SearchField
           label="状态"
@@ -820,11 +792,6 @@ export default function ProductPage() {
                 {editingItem ? '' : '前缀可修改，后缀系统自动生成'}
               </div>
             </div>
-            <Input
-              label="品牌"
-              value={formData.brand}
-              onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-            />
             <Input
               label="单位 *"
               value={formData.unit}
@@ -941,10 +908,6 @@ export default function ProductPage() {
               <div>
                 <span className="text-slate-500">物资名称：</span>
                 <span className="font-medium">{viewingItem.name}</span>
-              </div>
-              <div>
-                <span className="text-slate-500">品牌：</span>
-                <span>{viewingItem.brand || '-'}</span>
               </div>
               <div>
                 <span className="text-slate-500">单位：</span>
@@ -1184,7 +1147,6 @@ export default function ProductPage() {
                     <tr>
                       <th className="px-3 py-2 text-left font-medium">系统编码</th>
                       <th className="px-3 py-2 text-left font-medium">物资名称</th>
-                      <th className="px-3 py-2 text-left font-medium">品牌</th>
                       <th className="px-3 py-2 text-left font-medium">规格型号</th>
                       <th className="px-3 py-2 text-left font-medium">单位</th>
                       <th className="px-3 py-2 text-left font-medium">状态</th>
@@ -1195,7 +1157,6 @@ export default function ProductPage() {
                       <tr key={i} className="border-t border-slate-100">
                         <td className="px-3 py-2">{item.code}</td>
                         <td className="px-3 py-2">{item.name}</td>
-                        <td className="px-3 py-2">{item.brand || '-'}</td>
                         <td className="px-3 py-2">{item.specification || '-'}</td>
                         <td className="px-3 py-2">{item.unit || '-'}</td>
                         <td className="px-3 py-2">

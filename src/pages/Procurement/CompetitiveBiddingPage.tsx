@@ -30,8 +30,6 @@ import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
  * 需求背景：916 文档列 10 种，框架协议采购拆为目录内比价 / 随机抽取两种子模式
  */
 const PROCUREMENT_OPTIONS: Array<{ value: BiddingProcurementMethod; label: string }> = [
-  { value: 'legal_bidding', label: '法定招标' },
-  { value: 'voluntary_bidding', label: '自愿招标' },
   { value: 'inquiry_open', label: '询比采购-公开' },
   { value: 'inquiry_invited', label: '询比采购-邀请' },
   { value: 'competitive_bidding', label: '竞价采购' },
@@ -1679,6 +1677,8 @@ export default function CompetitiveBiddingPage() {
                   '📋 模式：目录内比价（线上报价）— 供应商在小程序报价，你只需设置单品上限和整单上限。'
                 ) : isFrameworkRandom(editItem.procurementMethod) ? (
                   '🎲 模式：随机抽取（线下录入）— 系统仅记录抽取结果，抽取动作不在本系统进行。可选择是否关联采购需求。'
+                ) : isDirectOrMall(editItem.procurementMethod) ? (
+                  '📝 模式：线下录入（简化无税率）— 你自己填写清单、不含税单价，走审批流程。无税率/含税列。'
                 ) : (
                   '📝 模式：线下录入 — 你自己填写清单、单价、税率，走审批流程。'
                 )}
@@ -1875,7 +1875,9 @@ export default function CompetitiveBiddingPage() {
                     <span className="text-sm font-medium text-slate-700">
                       清单明细
                       <span className="ml-1.5 text-xs text-slate-400 font-normal">
-                        （{editItem.offlineDetails?.length || 0} 项）· 填写不含税单价和税率，含税自动计算
+                        （{editItem.offlineDetails?.length || 0} 项）· {isDirectOrMall(editItem.procurementMethod)
+                          ? '填写不含税单价，自动计算不含税金额（无税率/含税列）'
+                          : '填写不含税单价和税率，含税自动计算'}
                       </span>
                     </span>
                   </div>
@@ -1903,6 +1905,8 @@ export default function CompetitiveBiddingPage() {
                           <div className="text-[11px] text-slate-400">不含税合计</div>
                           <div className="text-sm font-semibold text-slate-800">¥{offlineTotals.ex.toLocaleString()}</div>
                         </div>
+                        {!isDirectOrMall(editItem.procurementMethod) && (
+                        <>
                         <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md">
                           <div className="text-[11px] text-slate-400">含税合计</div>
                           <div className="text-sm font-semibold text-purple-700">¥{offlineTotals.in.toLocaleString()}</div>
@@ -1911,6 +1915,8 @@ export default function CompetitiveBiddingPage() {
                           <div className="text-[11px] text-slate-400">税额</div>
                           <div className="text-sm font-semibold text-slate-800">¥{offlineTotals.tax.toLocaleString()}</div>
                         </div>
+                        </>
+                        )}
                         <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md">
                           <div className="text-[11px] text-slate-400">已填不含税单价</div>
                           <div className="text-sm font-semibold text-slate-800">{offlineFilledCount} / {editItem.offlineDetails.length}</div>
@@ -2888,6 +2894,42 @@ export default function CompetitiveBiddingPage() {
                 <div className="border border-slate-200 rounded-lg bg-slate-50/50 p-2">
                   {viewItem.offlineDetails && viewItem.offlineDetails.length > 0 ? (
                     <div className="border border-slate-200 rounded bg-white overflow-x-auto">
+                      {isDirectOrMall(viewItem.procurementMethod) ? (
+                      /* B 表：直接采购/电子商城 — 只读无税率 */
+                      <table className="w-full">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th className="px-3 py-2 text-xs text-left text-slate-600 border-b border-slate-200">序号</th>
+                            <th className="px-3 py-2 text-xs text-left text-slate-600 border-b border-slate-200">项目名称</th>
+                            <th className="px-3 py-2 text-xs text-left text-slate-600 border-b border-slate-200">规格描述</th>
+                            <th className="px-3 py-2 text-xs text-left text-slate-600 border-b border-slate-200">供应商名称</th>
+                            <th className="px-3 py-2 text-xs text-right text-slate-600 border-b border-slate-200">不含税单价</th>
+                            <th className="px-3 py-2 text-xs text-right text-slate-600 border-b border-slate-200">数量</th>
+                            <th className="px-3 py-2 text-xs text-center text-slate-600 border-b border-slate-200">单位</th>
+                            <th className="px-3 py-2 text-xs text-right text-slate-600 border-b border-slate-200">不含税金额</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {viewItem.offlineDetails.map((row: any, idx: number) => (
+                            <tr key={idx} className="border-t border-slate-200">
+                              <td className="px-3 py-2 text-xs text-slate-400">{idx + 1}</td>
+                              <td className="px-3 py-2 text-xs font-medium text-slate-800">{row.itemName || '-'}</td>
+                              <td className="px-3 py-2 text-xs text-slate-500">{row.description || '-'}</td>
+                              <td className="px-3 py-2 text-xs text-slate-700">{row.supplierName || '-'}</td>
+                              <td className="px-3 py-2 text-xs text-right text-slate-700">
+                                {row.unitPriceExcludingTax != null ? `¥${row.unitPriceExcludingTax.toLocaleString()}` : '-'}
+                              </td>
+                              <td className="px-3 py-2 text-xs text-right text-slate-700">{row.quantity ?? '-'}</td>
+                              <td className="px-3 py-2 text-xs text-center text-slate-700">{row.unit || '-'}</td>
+                              <td className="px-3 py-2 text-xs text-right font-semibold text-indigo-600">
+                                {row.amountExcludingTax != null ? `¥${row.amountExcludingTax.toLocaleString()}` : '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      ) : (
+                      /* C 表：询比/竞价/谈判 — 完整税率互算 */
                       <table className="w-full">
                         <thead className="bg-slate-50">
                           <tr>
@@ -2932,6 +2974,7 @@ export default function CompetitiveBiddingPage() {
                           ))}
                         </tbody>
                       </table>
+                      )}
                     </div>
                   ) : (
                     <div className="py-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded bg-white">

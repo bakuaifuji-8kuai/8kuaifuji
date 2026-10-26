@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import type { Bidding, CatalogCompareItem, SupplierQuote, SupplierQuoteDetail, ProcurementDemandType } from '@/types';
+import { MOCK_BIDDINGS, MOCK_SUPPLIER_QUOTES } from '@/mock/biddingMockData';
 import { ChevronLeft, ChevronDown, FileText, AlertTriangle, CheckCircle2, Clock, User, Building2, MapPin, Calendar, Hash } from 'lucide-react';
 
 // ========== Mock 供应商身份（localStorage 切换） ==========
@@ -417,6 +418,8 @@ export default function SupplierQuoteSimulator() {
   const biddings = useStore((s) => s.biddings || []) as Bidding[];
   const demands = useStore((s) => s.procurementDemands || []);
   const supplierQuotes = useStore((s) => s.supplierQuotes || []) as SupplierQuote[];
+  const setBiddings = useStore((s) => s.setBiddings);
+  const setSupplierQuotes = useStore((s) => s.setSupplierQuotes);
   const addSupplierQuote = useStore((s) => s.addSupplierQuote);
   const updateBidding = useStore((s) => s.updateBidding);
 
@@ -432,6 +435,21 @@ export default function SupplierQuoteSimulator() {
     }
     return MOCK_SUPPLIER_USERS[0];
   });
+
+  // 初始化：确保 mock 数据注入
+  // 条件：store 为空，或 framework_catalog 工单里没有任何一条邀请了当前供应商（说明是旧版本持久化数据）
+  useEffect(() => {
+    const hasFrameworkInvite = biddings.some(
+      (b) => b.procurementMethod === 'framework_catalog' && b.inviteSupplierIds?.includes(currentSupplier.id)
+    );
+    if (biddings.length === 0 || !hasFrameworkInvite) {
+      setBiddings?.(MOCK_BIDDINGS);
+    }
+    if (supplierQuotes.length === 0) {
+      setSupplierQuotes?.(MOCK_SUPPLIER_QUOTES as any);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSupplier.id, biddings.length, supplierQuotes.length]);
 
   const [activeTab, setActiveTab] = useState<'pending' | 'submitted'>('pending');
   const [supplierPickerOpen, setSupplierPickerOpen] = useState(false);

@@ -63,12 +63,14 @@ import ProcurementOrderPage from "@/pages/Procurement/ProcurementOrderPage";
 import SupplierPage from "@/pages/Procurement/SupplierPage";
 import ProcurementInspectionPage from "@/pages/Procurement/ProcurementInspectionPage";
 import CompetitiveBiddingPage from "@/pages/Procurement/CompetitiveBiddingPage";
+import BiddingScenePage from "@/pages/Procurement/BiddingScenePage";
 import SupplierQuotePage from "@/pages/Procurement/SupplierQuotePage";
 import SupplierQuoteSimulator from "@/pages/Procurement/SupplierQuoteSimulator";
 import WebsiteInfoPage from "@/pages/Procurement/WebsiteInfoPage";
 import ContractTemplatePage from "@/pages/Procurement/ContractTemplatePage";
 import ProcurementAlertDashboard from "@/pages/Procurement/ProcurementAlertDashboard";
 import ProcurementFunctionDocs from "@/pages/Procurement/ProcurementFunctionDocs";
+import ChangelogPage from "@/pages/ChangelogPage";
 import ApprovalFlowConfigPage from "@/pages/Procurement/ApprovalFlowConfigPage";
 import ApprovalFlowInstancePage from "@/pages/Procurement/ApprovalFlowInstancePage";
 import ContractPurchaseOrderPage from "@/pages/Procurement/ContractPurchaseOrderPage";
@@ -149,6 +151,7 @@ export default function App() {
           <Route path="procurement/supplier" element={<SupplierPage />} />
           <Route path="procurement/inspection" element={<ProcurementInspectionPage />} />
           <Route path="procurement/bidding" element={<CompetitiveBiddingPage />} />
+          <Route path="procurement/bidding-scene/*" element={<BiddingScenePage />} />
           <Route path="procurement/supplier-quote" element={<SupplierQuotePage />} />
           <Route path="procurement/supplier-quote/simulator" element={<SupplierQuoteSimulator />} />
           <Route path="procurement/bidding-ledger" element={<ProcurementBiddingLedgerPage />} />
@@ -156,6 +159,7 @@ export default function App() {
           <Route path="alert/dashboard" element={<ProcurementAlertDashboard />} />
           <Route path="procurement/contract-template" element={<ContractTemplatePage />} />
           <Route path="procurement/function-docs" element={<ProcurementFunctionDocs />} />
+          <Route path="changelog" element={<ChangelogPage />} />
           <Route path="procurement/approval-flow" element={<ApprovalFlowConfigPage />} />
           <Route path="procurement/evaluation-template" element={<EvaluationTemplatePage />} />
           <Route path="procurement/evaluation-execute" element={<EvaluationExecutePage />} />
