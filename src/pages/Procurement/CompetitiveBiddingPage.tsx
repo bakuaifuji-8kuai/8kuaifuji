@@ -2022,8 +2022,8 @@ export default function CompetitiveBiddingPage() {
                     onChange={(e) => setEditItem({ ...editItem, procurementApprovalMethod: e.target.value })}>
                     <option value="">请选择</option>
                     <option value="meeting">会议审批</option>
-                    <option value="written">签报审批</option>
-                    <option value="form">采购项目申请表</option>
+                    <option value="sign_report">签报审批</option>
+                    <option value="application_form">采购项目申请表</option>
                   </select>
                 </div>
                 <div>
@@ -2148,13 +2148,19 @@ export default function CompetitiveBiddingPage() {
             </div>
             )}
 
-            {/* 竞价公告附件（仅框架协议采购） */}
-            {editItem?.procurementMethod === 'framework_catalog' && (
+            {/* 公告附件（框架协议目录内比价 / 竞价采购） */}
+            {(editItem?.procurementMethod === 'framework_catalog' || editItem?.procurementMethod === 'competitive_bidding') && (
             <div className="border border-[#409eff] rounded p-3 bg-[#ecf5ff]">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <div className="text-sm font-semibold text-[#303133]">比价公告附件</div>
-                  <div className="text-xs text-[#909399]">上传比价公告相关文件（PDF/Word/图片等）</div>
+                  <div className="text-sm font-semibold text-[#303133]">
+                    {editItem.procurementMethod === 'competitive_bidding' ? '竞价公告附件' : '比价公告附件'}
+                  </div>
+                  <div className="text-xs text-[#909399]">
+                    {editItem.procurementMethod === 'competitive_bidding'
+                      ? '上传竞价公告相关文件（PDF/Word/图片等）'
+                      : '上传比价公告相关文件（PDF/Word/图片等）'}
+                  </div>
                 </div>
                 <label className="inline-block">
                   <input
@@ -2599,13 +2605,19 @@ export default function CompetitiveBiddingPage() {
             </div>
             )}
 
-            {/* 竞价文件附件（仅框架协议采购） */}
-            {editItem?.procurementMethod === 'framework_catalog' && (
+            {/* 文件附件（框架协议目录内比价 / 竞价采购） */}
+            {(editItem?.procurementMethod === 'framework_catalog' || editItem?.procurementMethod === 'competitive_bidding') && (
             <div className="border border-[#e6a23c] rounded p-3 bg-[#fdf6ec]">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <div className="text-sm font-semibold text-[#303133]">比价文件附件</div>
-                  <div className="text-xs text-[#909399]">上传比价文件相关资料（PDF/Word/Excel等）</div>
+                  <div className="text-sm font-semibold text-[#303133]">
+                    {editItem.procurementMethod === 'competitive_bidding' ? '竞价文件附件' : '比价文件附件'}
+                  </div>
+                  <div className="text-xs text-[#909399]">
+                    {editItem.procurementMethod === 'competitive_bidding'
+                      ? '上传竞价文件相关资料（PDF/Word/Excel等）'
+                      : '上传比价文件相关资料（PDF/Word/Excel等）'}
+                  </div>
                 </div>
                 <label className="inline-block">
                   <input

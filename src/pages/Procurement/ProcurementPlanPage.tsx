@@ -664,7 +664,7 @@ export default function ProcurementPlanPage() {
                   newPlanMode === 'filing' ? (
                     <input
                       className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-[#c0c4cc] bg-[#f5f7fa]"
-                      value="—"
+                      value="月度计划"
                       readOnly
                     />
                   ) : (
