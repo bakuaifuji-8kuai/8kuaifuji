@@ -568,6 +568,12 @@ export default function SupplierQuoteSimulator() {
     const totalAmount = details.reduce((s, d) => s + d.amount, 0);
     const totalTax = details.reduce((s, d) => s + (d.taxAmount || 0), 0);
 
+    // 兜底：整单上限总价校验
+    if (currentBidding.totalPriceLimit && totalAmount > currentBidding.totalPriceLimit) {
+      alert(`报价总金额 ¥${Math.round(totalAmount * 100) / 100} 超过整单上限总价 ¥${currentBidding.totalPriceLimit}，请调整报价！`);
+      return;
+    }
+
     const quoteNo = `SQ${Date.now().toString().slice(-8)}`;
     const now = new Date().toISOString();
 
