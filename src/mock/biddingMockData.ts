@@ -244,6 +244,9 @@ export const MOCK_BIDDINGS: Bidding[] = [
     announcementPublishTime: mkTime(-1, 9),
     creator: '采购部',
     createTime: mkTime(-2, 9),
+    totalPriceLimit: 100000,
+    biddingAnnouncement: [mkAttach('春季会展展台搭建比价公告.pdf')],
+    biddingDocuments: [mkAttach('展台搭建技术方案.docx'), mkAttach('展品运输要求.pdf')],
     quotes: [],
   },
   {
@@ -300,6 +303,9 @@ export const MOCK_BIDDINGS: Bidding[] = [
     announcementPublishTime: mkTime(-3, 9),
     creator: '工程部',
     createTime: mkTime(-4, 9),
+    totalPriceLimit: 1500000,
+    biddingAnnouncement: [mkAttach('展厅空调安装比价公告.pdf')],
+    biddingDocuments: [mkAttach('空调安装施工图.pdf'), mkAttach('材料清单.xlsx')],
     quotes: [],
   },
   {
@@ -326,6 +332,9 @@ export const MOCK_BIDDINGS: Bidding[] = [
     announcementPublishTime: mkTime(-1, 9),
     creator: '综合部',
     createTime: mkTime(-2, 9),
+    totalPriceLimit: 50000,
+    biddingAnnouncement: [mkAttach('安保服务比价公告.pdf')],
+    biddingDocuments: [mkAttach('安保岗位配置表.xlsx'), mkAttach('应急预案.pdf')],
     quotes: [],
   },
   {
@@ -385,6 +394,9 @@ export const MOCK_BIDDINGS: Bidding[] = [
     announcementPublishTime: mkTime(-2, 9),
     creator: '采购部',
     createTime: mkTime(-3, 9),
+    totalPriceLimit: 130000,
+    biddingAnnouncement: [mkAttach('LED显示设备比价公告.pdf')],
+    biddingDocuments: [mkAttach('LED屏技术规格书.pdf')],
     quotes: [],
   },
   {
@@ -415,6 +427,9 @@ export const MOCK_BIDDINGS: Bidding[] = [
     awardTime: mkTime(0, 14),
     creator: '采购部',
     createTime: mkTime(-7, 9),
+    totalPriceLimit: 160000,
+    biddingAnnouncement: [mkAttach('办公家具比价公告.pdf')],
+    biddingDocuments: [mkAttach('家具款式图册.pdf'), mkAttach('环保检测报告.pdf')],
     quotes: [],
   },
   {
@@ -442,6 +457,9 @@ export const MOCK_BIDDINGS: Bidding[] = [
     awardTime: mkTime(-25, 14),
     creator: '采购部',
     createTime: mkTime(-35, 9),
+    totalPriceLimit: 70000,
+    biddingAnnouncement: [mkAttach('钢材比价公告.pdf')],
+    biddingDocuments: [mkAttach('钢材材质证明.pdf')],
     quotes: [],
   },
   {
@@ -465,6 +483,9 @@ export const MOCK_BIDDINGS: Bidding[] = [
     announcementPublishTime: mkTime(-20, 9),
     creator: '采购部',
     createTime: mkTime(-22, 9),
+    totalPriceLimit: 70000,
+    biddingAnnouncement: [mkAttach('投影仪比价公告.pdf')],
+    biddingDocuments: [mkAttach('投影仪参数对比表.xlsx')],
     quotes: [],
   },
 

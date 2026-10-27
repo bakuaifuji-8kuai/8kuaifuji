@@ -438,7 +438,8 @@ export default function SupplierQuoteSimulator() {
 
   // ========== Mock 数据版本号：升级时强制补齐新字段 ==========
   // 版本 2（2026-10-27）：framework_catalog 工单新增 biddingAnnouncement / biddingDocuments / totalPriceLimit
-  const MOCK_VERSION = 2;
+  // 版本 3（2026-10-27）：所有 9 个 framework_catalog 工单全部补齐上述三字段
+  const MOCK_VERSION = 3;
 
   // 初始化：确保 mock 数据注入 + 升级时补齐新字段
   useEffect(() => {
