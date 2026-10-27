@@ -271,6 +271,9 @@ export const MOCK_BIDDINGS: Bidding[] = [
     announcementPublishTime: mkTime(-2, 9),
     creator: '行政部',
     createTime: mkTime(-3, 9),
+    totalPriceLimit: 30000,
+    biddingAnnouncement: [mkAttach('展会办公用品比价公告.pdf')],
+    biddingDocuments: [mkAttach('办公用品清单及技术要求.docx'), mkAttach('报价说明.pdf')],
     quotes: [],
   },
   {
@@ -348,6 +351,9 @@ export const MOCK_BIDDINGS: Bidding[] = [
     announcementPublishTime: mkTime(0, 9),
     creator: '行政部',
     createTime: mkTime(-1, 9),
+    totalPriceLimit: 15000,
+    biddingAnnouncement: [mkAttach('会议茶水服务比价公告.pdf')],
+    biddingDocuments: [mkAttach('茶歇菜单模板.xlsx'), mkAttach('服务质量标准.pdf')],
     quotes: [],
   },
 

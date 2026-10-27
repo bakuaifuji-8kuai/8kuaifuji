@@ -1,8 +1,8 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
-import type { Bidding, CatalogCompareItem, SupplierQuote, SupplierQuoteDetail, ProcurementDemandType } from '@/types';
+import type { Bidding, CatalogCompareItem, SupplierQuote, SupplierQuoteDetail, ProcurementDemandType, Attachment } from '@/types';
 import { MOCK_BIDDINGS, MOCK_SUPPLIER_QUOTES } from '@/mock/biddingMockData';
-import { ChevronLeft, ChevronDown, FileText, AlertTriangle, CheckCircle2, Clock, User, Building2, MapPin, Calendar, Hash } from 'lucide-react';
+import { ChevronLeft, ChevronDown, FileText, AlertTriangle, CheckCircle2, Clock, User, Building2, MapPin, Calendar, Hash, Paperclip, FileDown, Upload } from 'lucide-react';
 
 // ========== Mock 供应商身份（localStorage 切换） ==========
 interface MockSupplierUser {
@@ -458,6 +458,7 @@ export default function SupplierQuoteSimulator() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [currentBidding, setCurrentBidding] = useState<Bidding | null>(null);
   const [quoteRows, setQuoteRows] = useState<QuoteInputRow[]>([]);
+  const [supplierAttachments, setSupplierAttachments] = useState<Attachment[]>([]);
 
   // 工单 → demandType
   const getDemandType = (demandId?: string): ProcurementDemandType | undefined => {
@@ -521,6 +522,7 @@ export default function SupplierQuoteSimulator() {
       times: item.priceDescription === '按次计费' ? 1 : undefined,
     }));
     setQuoteRows(rows);
+    setSupplierAttachments([]);
     setDetailOpen(true);
   };
 
@@ -586,6 +588,7 @@ export default function SupplierQuoteSimulator() {
       submittedAt: now,
       status: 'submitted',
       details,
+      attachments: supplierAttachments.length > 0 ? supplierAttachments : undefined,
     };
 
     // 写入 store
@@ -815,6 +818,44 @@ export default function SupplierQuoteSimulator() {
           )}
         </div>
 
+        {/* PC 端下发的附件（比价公告 + 比价文件） */}
+        {(currentBidding.biddingAnnouncement?.length || currentBidding.biddingDocuments?.length) ? (
+          <div className="bg-white px-4 py-3 border-b border-slate-100 space-y-2">
+            {currentBidding.biddingAnnouncement?.length ? (
+              <div>
+                <div className="flex items-center gap-1 text-[11px] font-medium text-blue-600 mb-1.5">
+                  <Paperclip size={11} /> 比价公告附件（{currentBidding.biddingAnnouncement.length}）
+                </div>
+                <div className="space-y-1">
+                  {currentBidding.biddingAnnouncement.map((att) => (
+                    <div key={att.id} className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-blue-50 rounded px-2 py-1">
+                      <span>📄</span>
+                      <span className="flex-1 truncate">{att.fileName}</span>
+                      <FileDown size={11} className="text-blue-500 shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {currentBidding.biddingDocuments?.length ? (
+              <div>
+                <div className="flex items-center gap-1 text-[11px] font-medium text-amber-600 mb-1.5">
+                  <Paperclip size={11} /> 比价文件附件（{currentBidding.biddingDocuments.length}）
+                </div>
+                <div className="space-y-1">
+                  {currentBidding.biddingDocuments.map((att) => (
+                    <div key={att.id} className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-amber-50 rounded px-2 py-1">
+                      <span>📁</span>
+                      <span className="flex-1 truncate">{att.fileName}</span>
+                      <FileDown size={11} className="text-amber-500 shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* 明细列表 */}
         <div className="flex-1 overflow-y-auto bg-slate-50 px-3 py-3">
           {items.map((item, idx) => (
@@ -843,14 +884,58 @@ export default function SupplierQuoteSimulator() {
               placeholder="交货时间、特殊说明等"
             />
           </div>
+
+          {/* 供应商上传附件（选填） */}
+          <div className="bg-white rounded-xl p-3 border border-slate-100 mt-3">
+            <label className="text-[12px] text-slate-600 font-medium flex items-center gap-1">
+              <Upload size={12} /> 供应商附件（选填）
+            </label>
+            <label className="mt-2 flex items-center justify-center gap-1 h-9 border border-dashed border-slate-300 rounded-lg text-[11px] text-slate-500 cursor-pointer hover:border-indigo-300 hover:text-indigo-500 transition">
+              <input
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  const now = new Date().toLocaleString('zh-CN');
+                  const newAtts: Attachment[] = files.map((f) => ({
+                    id: `sup-att-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                    fileName: f.name,
+                    filePath: `mock://sup/${f.name}`,
+                    fileSize: f.size,
+                    fileType: f.type || f.name.split('.').pop() || '',
+                    uploadTime: now,
+                  }));
+                  setSupplierAttachments((prev) => [...prev, ...newAtts]);
+                  e.target.value = '';
+                }}
+              />
+              <Upload size={12} /> 点击选择文件（PDF/Word/图片等）
+            </label>
+            {supplierAttachments.length > 0 && (
+              <div className="mt-2 space-y-1 max-h-32 overflow-auto">
+                {supplierAttachments.map((att) => (
+                  <div key={att.id} className="flex items-center justify-between text-[11px] bg-slate-50 rounded px-2 py-1.5">
+                    <span className="flex-1 truncate text-slate-600">📎 {att.fileName}</span>
+                    <span
+                      className="text-red-500 hover:underline cursor-pointer ml-2"
+                      onClick={() => setSupplierAttachments((prev) => prev.filter((a) => a.id !== att.id))}
+                    >删除</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 底部汇总 + 提交 */}
         <div className="bg-white border-t border-slate-100 px-4 py-3">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <div>
               <div className="text-[11px] text-slate-400">报价总金额（含税）</div>
-              <div className="text-[20px] font-bold text-slate-800">
+              <div className={`text-[20px] font-bold ${
+                currentBidding.totalPriceLimit && totalAmount > currentBidding.totalPriceLimit ? 'text-red-500' : 'text-slate-800'
+              }`}>
                 ¥{Math.round(totalAmount * 100) / 100 < Number.POSITIVE_INFINITY ? totalAmount.toLocaleString() : '0'}
               </div>
             </div>
@@ -859,11 +944,28 @@ export default function SupplierQuoteSimulator() {
               <div className="text-[13px] text-slate-600">¥{totalTax.toLocaleString()}</div>
             </div>
           </div>
+          {currentBidding.totalPriceLimit ? (
+            <div className={`flex items-center justify-between mb-3 px-2.5 py-2 rounded-lg text-[11px] ${
+              totalAmount > currentBidding.totalPriceLimit
+                ? 'bg-red-50 text-red-600 font-medium border border-red-200'
+                : 'bg-slate-50 text-slate-500'
+            }`}>
+              <span className="flex items-center gap-1">
+                {totalAmount > currentBidding.totalPriceLimit ? <AlertTriangle size={12} /> : <span>🏷️</span>}
+                整单上限总价（含税）
+              </span>
+              <span>
+                ¥{currentBidding.totalPriceLimit.toLocaleString()}
+                {totalAmount > currentBidding.totalPriceLimit && ' · 已超上限'}
+              </span>
+            </div>
+          ) : null}
           <button
             onClick={submitQuote}
-            className="w-full h-11 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl shadow-sm active:scale-[0.98] transition-all"
+            disabled={!!currentBidding.totalPriceLimit && totalAmount > currentBidding.totalPriceLimit}
+            className="w-full h-11 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl shadow-sm active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            提交报价
+            {currentBidding.totalPriceLimit && totalAmount > currentBidding.totalPriceLimit ? '报价已超整单上限，无法提交' : '提交报价'}
           </button>
         </div>
       </div>
