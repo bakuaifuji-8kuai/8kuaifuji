@@ -436,20 +436,43 @@ export default function SupplierQuoteSimulator() {
     return MOCK_SUPPLIER_USERS[0];
   });
 
-  // 初始化：确保 mock 数据注入
-  // 条件：store 为空，或 framework_catalog 工单里没有任何一条邀请了当前供应商（说明是旧版本持久化数据）
+  // ========== Mock 数据版本号：升级时强制补齐新字段 ==========
+  // 版本 2（2026-10-27）：framework_catalog 工单新增 biddingAnnouncement / biddingDocuments / totalPriceLimit
+  const MOCK_VERSION = 2;
+
+  // 初始化：确保 mock 数据注入 + 升级时补齐新字段
   useEffect(() => {
-    const hasFrameworkInvite = biddings.some(
-      (b) => b.procurementMethod === 'framework_catalog' && b.inviteSupplierIds?.includes(currentSupplier.id)
-    );
-    if (biddings.length === 0 || !hasFrameworkInvite) {
+    const LS_KEY = 'sim_mock_version';
+    const storedVer = parseInt(localStorage.getItem(LS_KEY) || '0', 10);
+
+    if (biddings.length === 0) {
+      // 首次：全量注入
       setBiddings?.(MOCK_BIDDINGS);
+      localStorage.setItem(LS_KEY, String(MOCK_VERSION));
+    } else if (storedVer < MOCK_VERSION) {
+      // 升级：定向 merge framework_catalog 工单的新字段，其他类型保持不变
+      const mockFC = MOCK_BIDDINGS.filter((m) => m.procurementMethod === 'framework_catalog');
+      const mockFCMap = new Map(mockFC.map((m) => [m.biddingNo, m]));
+      const merged = biddings.map((b) => {
+        const mock = mockFCMap.get(b.biddingNo);
+        if (!mock) return b; // 非 framework_catalog 或 mock 里不存在，保持原样
+        // 只补齐缺失字段，不覆盖用户可能已改动的其他字段
+        return {
+          ...b,
+          biddingAnnouncement: b.biddingAnnouncement?.length ? b.biddingAnnouncement : mock.biddingAnnouncement,
+          biddingDocuments: b.biddingDocuments?.length ? b.biddingDocuments : mock.biddingDocuments,
+          totalPriceLimit: b.totalPriceLimit ?? mock.totalPriceLimit,
+        };
+      });
+      setBiddings?.(merged);
+      localStorage.setItem(LS_KEY, String(MOCK_VERSION));
     }
+
     if (supplierQuotes.length === 0) {
       setSupplierQuotes?.(MOCK_SUPPLIER_QUOTES as any);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSupplier.id, biddings.length, supplierQuotes.length]);
+  }, [currentSupplier.id]);
 
   const [activeTab, setActiveTab] = useState<'pending' | 'submitted'>('pending');
   const [supplierPickerOpen, setSupplierPickerOpen] = useState(false);
