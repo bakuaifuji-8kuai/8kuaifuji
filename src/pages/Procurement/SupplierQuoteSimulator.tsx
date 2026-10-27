@@ -568,10 +568,12 @@ export default function SupplierQuoteSimulator() {
     const totalAmount = details.reduce((s, d) => s + d.amount, 0);
     const totalTax = details.reduce((s, d) => s + (d.taxAmount || 0), 0);
 
-    // 兜底：整单上限总价校验
+    // 整单上限总价：超限警告但允许继续（confirm 弹窗让用户自选）
     if (currentBidding.totalPriceLimit && totalAmount > currentBidding.totalPriceLimit) {
-      alert(`报价总金额 ¥${Math.round(totalAmount * 100) / 100} 超过整单上限总价 ¥${currentBidding.totalPriceLimit}，请调整报价！`);
-      return;
+      const ok = confirm(
+        `⚠️ 报价总金额 ¥${Math.round(totalAmount * 100) / 100} 已超过整单上限总价 ¥${currentBidding.totalPriceLimit}。\n\n是否仍要提交报价？`
+      );
+      if (!ok) return;
     }
 
     const quoteNo = `SQ${Date.now().toString().slice(-8)}`;
@@ -968,10 +970,9 @@ export default function SupplierQuoteSimulator() {
           ) : null}
           <button
             onClick={submitQuote}
-            disabled={!!currentBidding.totalPriceLimit && totalAmount > currentBidding.totalPriceLimit}
-            className="w-full h-11 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl shadow-sm active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full h-11 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl shadow-sm active:scale-[0.98] transition-all"
           >
-            {currentBidding.totalPriceLimit && totalAmount > currentBidding.totalPriceLimit ? '报价已超整单上限，无法提交' : '提交报价'}
+            提交报价
           </button>
         </div>
       </div>
