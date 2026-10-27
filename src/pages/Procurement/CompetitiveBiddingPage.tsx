@@ -742,14 +742,20 @@ export default function CompetitiveBiddingPage() {
         alert(`含税总金额与清单明细合计不一致！\n您填写：¥${inclInput.toFixed(2)}\n清单合计：¥${offlineTotals.in.toFixed(2)}\n请核对清单明细或修正输入值。`);
         return;
       }
+      // ===== 线下流程专属必填（询比/竞价/谈判，不含直接采购/电子商城）=====
+      if (isOfflineExecution(procurementMethod)) {
+        if (!editItem.announcementPublishTime) { alert('请填写公告发布时间！'); return; }
+        if (!editItem.bidOpeningTime) { alert('请填写开标时间！'); return; }
+        if (!editItem.judgeMethod?.trim()) { alert('请填写评标办法！'); return; }
+      }
     }
 
-    // === 直接采购/电子商城：7 个基础执行信息必填 + 金额比对 ===
+    // === 直接采购/电子商城：基础执行信息必填 ===
     if (procurementMethod === 'direct' || procurementMethod === 'e_mall') {
       if (!editItem.procurementApprovalMethod) { alert('请选择采购方式审批方式！'); return; }
       if (!editItem.procurementApprovalDate) { alert('请选择采购方式审批日期！'); return; }
       if (!editItem.implementationUnit?.trim()) { alert('请填写招采实施单位！'); return; }
-      if (!editItem.projectImplementationUnit?.trim()) { alert('请填写项目实施单位！'); return; }
+      if (!editItem.projectImplementationUnit?.trim()) { alert('请选择项目实施单位！'); return; }
       if (!editItem.procurementHandler?.trim()) { alert('请填写招采经办人！'); return; }
       if (!editItem.supplier?.trim()) { alert('请填写供应商！'); return; }
       // 含税/不含税总金额至少填一项

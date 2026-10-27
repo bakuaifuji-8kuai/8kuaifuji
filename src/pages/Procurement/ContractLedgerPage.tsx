@@ -274,7 +274,7 @@ export default function ContractLedgerPage() {
   const stats = useMemo(() => {
     const total = ledgerData.length;
     const totalAmount = ledgerData.reduce((s, c) => s + (c.accumulatedAmount || 0), 0);
-    const totalPaid = ledgerData.reduce((s, c) => s + (c.paidAmount || 0), 0);
+    const totalPaid = ledgerData.reduce((s, c) => s + getAutoPaidAmount(c as ContractLedger, procurementDemands, biddings), 0);
     const activeCount = ledgerData.filter((c) => c.status === 'active').length;
     const pendingCount = ledgerData.filter((c) => c.status === 'pending').length;
     const expiringCount = ledgerData.filter((c) =>
@@ -389,7 +389,7 @@ export default function ContractLedgerPage() {
       // 1) 已支付金额占比提醒 — 分母用累计额
       if (!isAlertPermanentlyOff(c, 'paid') && !findActiveOverride(c, 'paid', today)) {
         const total = (c as ContractLedgerWithAccumulated).accumulatedAmount || c.amount || 0;
-        const paid = Number((c as any).paidAmount || c.paidAmount || 0);
+        const paid = getAutoPaidAmount(c as ContractLedger, procurementDemands, biddings) * 10000; // 万元→元，与 total 单位一致
         if (total > 0) {
           const ratio = (paid / total) * 100;
           if (ratio >= (reminderSettings?.paidThreshold ?? 80)) {
@@ -495,7 +495,7 @@ export default function ContractLedgerPage() {
       (c as any).projectName || '-',
       c.accumulatedAmount?.toLocaleString() || '0.00',
       c.amount?.toLocaleString() || '0.00',
-      c.paidAmount?.toLocaleString() || '0.00',
+      getAutoPaidAmount(c as ContractLedger, procurementDemands, biddings).toLocaleString(),
       c.settlementAmount?.toLocaleString() || '0.00',
       c.signingDate || '-',
       c.effectiveDate || '-',
@@ -508,7 +508,7 @@ export default function ContractLedgerPage() {
     // 汇总行
     const totalAmountAcc = ledgerData.reduce((s, c) => s + (c.accumulatedAmount || 0), 0);
     const totalAmountOrig = ledgerData.reduce((s, c) => s + (c.amount || 0), 0);
-    const totalPaid = ledgerData.reduce((s, c) => s + (c.paidAmount || 0), 0);
+    const totalPaid = ledgerData.reduce((s, c) => s + getAutoPaidAmount(c as ContractLedger, procurementDemands, biddings), 0);
     const totalSettlement = ledgerData.reduce((s, c) => s + (c.settlementAmount || 0), 0);
     const summaryRow = [
       `合计(${ledgerData.length}份)`, '', '', '', '', '', '', '', '', '',
@@ -541,7 +541,7 @@ export default function ContractLedgerPage() {
     }
     // 计算汇总
     const totalAmountAcc = ledgerData.reduce((s, c) => s + (c.accumulatedAmount || 0), 0);
-    const totalPaid = ledgerData.reduce((s, c) => s + (c.paidAmount || 0), 0);
+    const totalPaid = ledgerData.reduce((s, c) => s + getAutoPaidAmount(c as ContractLedger, procurementDemands, biddings), 0);
     const totalSettlement = ledgerData.reduce((s, c) => s + (c.settlementAmount || 0), 0);
 
     const rowsHtml = ledgerData.map((c, i) => `
@@ -554,7 +554,7 @@ export default function ContractLedgerPage() {
         <td>${c.counterpartyName || '-'}</td>
         <td>${c.handlingDepartment || '-'}</td>
         <td>${c.accumulatedAmount?.toLocaleString() || '0.00'}</td>
-        <td>${c.paidAmount?.toLocaleString() || '0.00'}</td>
+        <td>${getAutoPaidAmount(c as ContractLedger, procurementDemands, biddings).toLocaleString()}</td>
         <td>${c.settlementAmount?.toLocaleString() || '0.00'}</td>
         <td>${c.signingDate || '-'}</td>
         <td>${statusMap[c.status]?.label || c.status}</td>
@@ -675,16 +675,20 @@ export default function ContractLedgerPage() {
 
   const handleSave = () => {
     if (!editItem) return;
-    if (!editItem.contractNo) {
-      alert('请填写合同编码');
-      return;
-    }
     if (!editItem.contractName) {
       alert('请填写合同名称');
       return;
     }
     if (isNew) {
-      addContractLedger(editItem);
+      // 新建合同自动生成编号（HT + YYYYMMDD + 3位），除非用户手动填了
+      let newItem = { ...editItem };
+      if (!newItem.contractNo?.trim()) {
+        const existingNos = contractLedgers.map((c) => c.contractNo).filter(Boolean);
+        const autoNo = genSerialNo(SERIAL_CONFIG.CONTRACT, existingNos);
+        newItem.contractNo = autoNo;
+        newItem.contractId = autoNo;
+      }
+      addContractLedger(newItem);
     } else {
       updateContractLedger(editItem.id, editItem);
     }
@@ -942,10 +946,10 @@ export default function ContractLedgerPage() {
       const ratio = getRequisitionRatio(row);
       return ratio !== null ? `${ratio}%` : '-';
     }, footer: '' },
-    // 19. 已支付金额（元）— ⚠️ 展示值 = paidAmountBase + Σ(linkedDemandIds 需求金额)
+    // 19. 已支付金额（万元）— ⚠️ 展示值 = paidAmountBase + Σ(linkedDemandIds 需求金额)
     //    聚合函数 getAutoPaidAmount 在 utils/contractAggregate.ts
     {
-      key: 'paidAmount', title: '已支付金额(元)', align: 'right',
+      key: 'paidAmount', title: '已支付金额(万元)', align: 'right',
       render: (row) => getAutoPaidAmount(row as ContractLedger, procurementDemands, biddings).toLocaleString(),
       footer: (data) => {
         const sum = data.reduce((s, c) => s + getAutoPaidAmount(c as ContractLedger, procurementDemands, biddings), 0);
@@ -1285,7 +1289,7 @@ export default function ContractLedgerPage() {
                   {[
                     { label: '合同总数', value: stats.total, unit: '份', color: '#3b82f6', bg: '#eff6ff' },
                     { label: '合同总金额', value: stats.totalAmount.toLocaleString(), unit: '元', color: '#22c55e', bg: '#f0fdf4' },
-                    { label: '已支付金额', value: stats.totalPaid.toLocaleString(), unit: '元', color: '#f59e0b', bg: '#fffbeb' },
+                    { label: '已支付金额', value: stats.totalPaid.toFixed(2), unit: '万元', color: '#f59e0b', bg: '#fffbeb' },
                     { label: '执行中', value: stats.activeCount, unit: '份', color: '#22c55e', bg: '#f0fdf4' },
                     { label: '待审批', value: stats.pendingCount, unit: '份', color: '#f59e0b', bg: '#fffbeb' },
                     { label: '即将到期(30天)', value: stats.expiringCount, unit: '份', color: '#ef4444', bg: '#fef2f2' },
@@ -1781,7 +1785,7 @@ export default function ContractLedgerPage() {
                    </span>
                  )}
                </div>
-              <div><span className="text-[#909399]">已支付：</span><span className="text-[#67c23a] font-medium">{viewItem.paidAmount?.toLocaleString()} 元</span></div>
+              <div><span className="text-[#909399]">已支付：</span><span className="text-[#67c23a] font-medium">{getAutoPaidAmount(viewItem as ContractLedger, procurementDemands, biddings).toLocaleString()} 万元</span></div>
               <div><span className="text-[#909399]">结算金额：</span>{viewItem.settlementAmount?.toLocaleString() || '-'} 元</div>
               <div><span className="text-[#909399]">签订日期：</span>{viewItem.signingDate || '-'}</div>
               <div><span className="text-[#909399]">生效日期：</span>{viewItem.effectiveDate || '-'}</div>

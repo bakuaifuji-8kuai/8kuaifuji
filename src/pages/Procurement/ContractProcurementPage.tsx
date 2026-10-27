@@ -23,6 +23,7 @@ import Select from '@/components/common/Select';
 import ContractTierField from '@/components/business/ContractTierField';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
 import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
+import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 
 // ============== 状态 → Badge 样式映射 ==============
 const STATUS_BADGE: Record<string, { text: string; variant: 'default' | 'primary' | 'success' | 'warning' | 'danger' }> = {
@@ -175,10 +176,14 @@ export default function ContractProcurementPage() {
     if (editing) {
       updateContractLedger(editing.id, finalForm);
     } else {
+      // 自动生成合同编号（HT + YYYYMMDD + 3位），除非用户手动填了
+      const existingNos = contractLedgers.map((c) => c.contractNo).filter(Boolean);
+      const autoContractNo = finalForm.contractNo?.trim() || genSerialNo(SERIAL_CONFIG.CONTRACT, existingNos);
+
       const newLedger: ContractLedger = {
         id: 'CL' + Date.now() + Math.random().toString(36).slice(2, 7),
-        contractId: finalForm.contractNo || '',
-        contractNo: finalForm.contractNo || '',
+        contractId: autoContractNo,
+        contractNo: autoContractNo,
         contractName: finalForm.contractName || '未命名合同',
         contractNature: 'procurement',
         category: 'procurement',
