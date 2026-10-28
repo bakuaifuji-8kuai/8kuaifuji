@@ -2047,7 +2047,7 @@ export default function ContractLedgerPage() {
                 </div>
               </div>
             </div>
-            {/* 5 行独立配置 */}
+            {/* 6 行独立配置 */}
             <div className="space-y-2">
               {([
                 { key: 'monthly',            label: '月度考核',   defaultDays: 7,  desc: '每月固定循环' },
@@ -2055,6 +2055,7 @@ export default function ContractLedgerPage() {
                 { key: 'yearly',             label: '年度评价',   defaultDays: 30, desc: '每年固定循环' },
                 { key: 'project_single',     label: '项目考核',   defaultDays: 7,  desc: '单个项目结束后一次性考核' },
                 { key: 'contract_performance', label: '履约评价',   defaultDays: 15, desc: '合同履约保证金/质保金评估' },
+                { key: 'warranty',           label: '质保期评估', defaultDays: 15, desc: '质保期满前进行质保金退还评估' },
               ] as const).map((item) => {
                 const cfg = draftEval[item.key] ?? { enabled: true, days: item.defaultDays };
                 return (
@@ -2217,20 +2218,18 @@ export default function ContractLedgerPage() {
                   <tr className="text-[#606266]">
                     <th className="text-left py-2 px-3 border-b">考核类型</th>
                     <th className="text-left py-2 px-3 border-b">考核模板</th>
-                    <th className="text-left py-2 px-3 border-b">提醒频率</th>
                     <th className="text-left py-2 px-3 border-b">下次提醒</th>
                     <th className="text-left py-2 px-3 border-b">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(evalTarget.contractEvaluations || []).length === 0 && (
-                    <tr><td colSpan={5} className="text-center py-6 text-[#c0c4cc]">暂无考核绑定，点击右上角新增</td></tr>
+                    <tr><td colSpan={4} className="text-center py-6 text-[#c0c4cc]">暂无考核绑定，点击右上角新增</td></tr>
                   )}
                   {(evalTarget.contractEvaluations || []).map((b) => (
                     <tr key={b.id} className="border-b border-[#ebeef5] hover:bg-[#f5f7fa]">
                       <td className="py-2 px-3">{EVAL_KIND_LABEL[b.kind] || b.kind}</td>
                       <td className="py-2 px-3">{b.templateName || '-'}</td>
-                      <td className="py-2 px-3">{EVAL_FREQ_LABEL[b.frequency] || b.frequency}</td>
                       <td className="py-2 px-3">
                         {b.nextRemindDate ? (
                           <span className={new Date(b.nextRemindDate) < new Date() ? 'text-[#f56c6c]' : 'text-[#606266]'}>
@@ -2289,18 +2288,6 @@ export default function ContractLedgerPage() {
                         .map((t) => (
                           <option key={t.id} value={t.id}>{t.name}</option>
                         ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-[#606266] mb-1">提醒频率</label>
-                    <select
-                      className="w-full border border-[#dcdfe6] rounded px-2 py-1.5 text-sm bg-white"
-                      value={evalEditItem.frequency}
-                      onChange={(e) => setEvalEditItem({ ...evalEditItem, frequency: e.target.value as any })}
-                    >
-                      {Object.entries(EVAL_FREQ_LABEL).map(([v, l]) => (
-                        <option key={v} value={v}>{l}</option>
-                      ))}
                     </select>
                   </div>
                   <div>
