@@ -292,10 +292,10 @@ function OfflineExtraSection({
       )}
 
       {/* 报名单位 */}
-      {section.bidders.length > 0 && (
+      {(section.bidders || []).length > 0 && (
         <>
           <Divider />
-          <SectionHeader icon="👥" title="报名单位" sub={`共 ${section.bidders.length} 家`} tone="slate" />
+          <SectionHeader icon="👥" title="报名单位" sub={`共 ${(section.bidders || []).length} 家`} tone="slate" />
           <div className="px-5 pb-4 overflow-x-auto">
             <table className="w-full text-xs border border-slate-200 min-w-[600px]">
               <thead className="bg-slate-50 text-slate-700">
@@ -308,7 +308,7 @@ function OfflineExtraSection({
                 </tr>
               </thead>
               <tbody>
-                {section.bidders.map((b, i) => (
+                {(section.bidders || []).map((b, i) => (
                   <tr key={i} className="border-t border-slate-100">
                     <td className="px-2 py-1.5 border border-slate-200 text-slate-400">{i + 1}</td>
                     <td className="px-2 py-1.5 border border-slate-200 font-medium text-slate-800">{b.name}</td>

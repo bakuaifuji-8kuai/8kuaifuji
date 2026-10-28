@@ -85,8 +85,8 @@ export interface OfflineExecutionSection {
   judgeMethod?: string;
   hasAgency?: boolean;
   agencyName?: string;
-  bidders: { name: string; contact: string; phone: string; remark?: string }[];
-  winningSupplier: string;
+  bidders?: { name: string; contact: string; phone: string; remark?: string }[];
+  winningSupplier?: string;
   winningSupplierLegal?: string;
   winningSupplierScore?: number;
   winningContractAmount?: number;
@@ -285,6 +285,27 @@ export const BIDDING_SCENE_MOCKS: Record<BiddingSceneKey, BiddingSceneMock> = {
       { id: 'o1', supplierName: '悦享保洁服务有限公司', itemName: '展会期间标准保洁（4名/天×12天）', quantity: 48, unit: '人天', taxRate: 0.06, unitPriceExcludingTax: 280, priceRemark: '含清洁剂、工具' },
       { id: 'o2', supplierName: '悦享保洁服务有限公司', itemName: '撤展后深度保洁（地毯清洗）', quantity: 8000, unit: '㎡', taxRate: 0.06, unitPriceExcludingTax: 4.5, priceRemark: '热洗+吹干' },
     ],
+    offlineSection: {
+      approvalMethod: '签报审批', approvalDate: '2026-10-22',
+      implementationUnit: '长沙国际会展中心综合采购部', projectImplementationUnit: '运营部',
+      handler: '陈军', tenderer: '长沙国际会展中心',
+      listAutoTotalExTax: 49440, listAutoTotalInclTax: 52406.4,
+      manualTotalExTax: 49440, manualTotalInclTax: 52406.4,
+      announcementPublishDate: '2026-10-23', bidOpeningTime: '2026-10-29 14:00',
+      judgeMethod: '低价法：合格供应商中最低报价者中标', hasAgency: false,
+      bidders: [
+        { name: '悦享保洁服务有限公司', contact: '赵经理', phone: '13800002001', remark: '合作过3次展会保洁' },
+        { name: '洁雅环境服务', contact: '孙总', phone: '13800002002', remark: '备选' },
+        { name: '绿之源清洁有限公司', contact: '周主管', phone: '13800002003', remark: '备选' },
+      ],
+      winningSupplier: '悦享保洁服务有限公司', winningSupplierLegal: '赵云',
+      winningSupplierScore: 95.0, winningContractAmount: 52406.4,
+      winningDate: '2026-10-30', hasDispute: false,
+      loser1: { name: '洁雅环境服务', legal: '孙明', score: 88.0 },
+      loser2: { name: '绿之源清洁有限公司', legal: '周强', score: 82.5 },
+      awardNoticeFiles: ['成交通知书-展会临时保洁.pdf'],
+      approvalFileFiles: ['采购方式审批文件-展会保洁.pdf'],
+    },
   },
 
   // ══════════════════════════════════════════════════════════════
@@ -307,6 +328,27 @@ export const BIDDING_SCENE_MOCKS: Record<BiddingSceneKey, BiddingSceneMock> = {
       { id: 'o1', supplierName: '博瑞会展服务', itemName: '标准展位 3×3m（含 4 种配置）', quantity: 20, unit: '套', taxRate: 0.13, unitPriceExcludingTax: 2800, priceRemark: '含楣板、桌椅、射灯' },
       { id: 'o2', supplierName: '博瑞会展服务', itemName: '洽谈区沙发组合（3+2+茶几）', quantity: 10, unit: '套', taxRate: 0.13, unitPriceExcludingTax: 650, priceRemark: '白色布艺' },
     ],
+    offlineSection: {
+      approvalMethod: '采购项目申请表', approvalDate: '2026-10-25',
+      implementationUnit: '长沙国际会展中心综合采购部', projectImplementationUnit: '展览部',
+      handler: '张伟', tenderer: '长沙国际会展中心',
+      listAutoTotalExTax: 62500, listAutoTotalInclTax: 70625,
+      manualTotalExTax: 62500, manualTotalInclTax: 70625,
+      announcementPublishDate: '2026-10-26', bidOpeningTime: '2026-11-01 09:00',
+      judgeMethod: '最低价中标法', hasAgency: false,
+      bidders: [
+        { name: '博瑞会展服务', contact: '吴经理', phone: '13800003001', remark: '本地会展服务商' },
+        { name: '华展展具租赁', contact: '郑总', phone: '13800003002', remark: '备选' },
+        { name: '国际会展租赁公司', contact: '冯工', phone: '13800003003', remark: '备选' },
+      ],
+      winningSupplier: '博瑞会展服务', winningSupplierLegal: '吴博',
+      winningSupplierScore: 90.0, winningContractAmount: 70625,
+      winningDate: '2026-11-02', hasDispute: false,
+      loser1: { name: '华展展具租赁', legal: '郑华', score: 82.0 },
+      loser2: { name: '国际会展租赁公司', legal: '冯国', score: 76.5 },
+      awardNoticeFiles: ['成交通知书-展具租赁采购.pdf'],
+      approvalFileFiles: ['采购方式审批文件-展具租赁.pdf'],
+    },
   },
 
   // ══════════════════════════════════════════════════════════════
@@ -329,6 +371,25 @@ export const BIDDING_SCENE_MOCKS: Record<BiddingSceneKey, BiddingSceneMock> = {
       { id: 'o1', supplierName: '智导科技（北京）', itemName: 'AI 导览系统定制开发费', quantity: 1, unit: '套', taxRate: 0.06, unitPriceExcludingTax: 98000, priceRemark: '含 20 台导览机硬件+1年维护' },
       { id: 'o2', supplierName: '智导科技（北京）', itemName: '导览问答库定制（展会场景）', quantity: 1, unit: '项', taxRate: 0.06, unitPriceExcludingTax: 28000, priceRemark: '覆盖展馆介绍+10 类常见问题' },
     ],
+    offlineSection: {
+      approvalMethod: '会议审批', approvalDate: '2026-10-28',
+      implementationUnit: '长沙国际会展中心综合采购部', projectImplementationUnit: '信息技术部',
+      handler: '黄涛', tenderer: '长沙国际会展中心',
+      listAutoTotalExTax: 126000, listAutoTotalInclTax: 133560,
+      manualTotalExTax: 126000, manualTotalInclTax: 133560,
+      announcementPublishDate: '2026-10-29', bidOpeningTime: '2026-11-08 10:00',
+      judgeMethod: '综合评估法：技术方案50%+报价30%+团队经验20%', hasAgency: false,
+      bidders: [
+        { name: '智导科技（北京）', contact: '陈博士', phone: '13800004001', remark: 'AI导览头部供应商' },
+        { name: '未来科技股份', contact: '林CTO', phone: '13800004002', remark: '备选方案' },
+      ],
+      winningSupplier: '智导科技（北京）', winningSupplierLegal: '陈智',
+      winningSupplierScore: 96.0, winningContractAmount: 133560,
+      winningDate: '2026-11-10', hasDispute: false,
+      loser1: { name: '未来科技股份', legal: '林来', score: 83.5 },
+      awardNoticeFiles: ['成交通知书-AI导览系统.pdf'],
+      approvalFileFiles: ['采购方式审批文件-AI导览系统.pdf', '技术方案评审纪要.docx'],
+    },
   },
 
   // ══════════════════════════════════════════════════════════════
@@ -351,6 +412,25 @@ export const BIDDING_SCENE_MOCKS: Record<BiddingSceneKey, BiddingSceneMock> = {
       { id: 'o1', supplierName: '湖南消安建设工程', itemName: '喷淋系统更换（1200 个+管网改造）', quantity: 1, unit: '项', taxRate: 0.09, unitPriceExcludingTax: 108000, priceRemark: '含人工、材料、机械、试压' },
       { id: 'o2', supplierName: '湖南消安建设工程', itemName: '烟感报警器更换（800 个）', quantity: 1, unit: '项', taxRate: 0.09, unitPriceExcludingTax: 72000, priceRemark: '含消防主机升级+3年质保' },
     ],
+    offlineSection: {
+      approvalMethod: '会议审批', approvalDate: '2026-10-30',
+      implementationUnit: '长沙国际会展中心综合采购部', projectImplementationUnit: '工程部',
+      handler: '李强', tenderer: '长沙国际会展中心',
+      listAutoTotalExTax: 180000, listAutoTotalInclTax: 196200,
+      manualTotalExTax: 180000, manualTotalInclTax: 196200,
+      announcementPublishDate: '2026-10-31', bidOpeningTime: '2026-11-13 09:30',
+      judgeMethod: '综合评估法：施工方案40%+报价40%+资质业绩20%', hasAgency: false,
+      bidders: [
+        { name: '湖南消安建设工程', contact: '谭总', phone: '13800005001', remark: '消防一级资质' },
+        { name: '中消建设集团', contact: '彭工', phone: '13800005002', remark: '备选' },
+      ],
+      winningSupplier: '湖南消安建设工程', winningSupplierLegal: '谭消',
+      winningSupplierScore: 94.5, winningContractAmount: 196200,
+      winningDate: '2026-11-15', hasDispute: false,
+      loser1: { name: '中消建设集团', legal: '彭安', score: 85.0 },
+      awardNoticeFiles: ['成交通知书-消防升级工程.pdf'],
+      approvalFileFiles: ['采购方式审批文件-消防升级.pdf', '消防资质审核表.pdf'],
+    },
   },
 
   // ══════════════════════════════════════════════════════════════
@@ -373,6 +453,19 @@ export const BIDDING_SCENE_MOCKS: Record<BiddingSceneKey, BiddingSceneMock> = {
       { id: 's1', itemName: '美心月饼（双黄白莲蓉 740g）', description: '礼盒装 含手提袋', quantity: 80, unit: '盒', unitPriceExcludingTax: 165, priceRemark: '老客户价，原价 180', supplierName: '美心月饼长沙总代理' },
       { id: 's2', itemName: '定制月饼礼盒（印公司 logo）', description: '6 枚装 + 手提袋加印', quantity: 80, unit: '套', unitPriceExcludingTax: 42, priceRemark: '加印 3 元/套', supplierName: '美心月饼长沙总代理' },
     ],
+    offlineSection: {
+      approvalMethod: '签报审批', approvalDate: '2026-09-05',
+      implementationUnit: '长沙国际会展中心综合采购部', projectImplementationUnit: '人力资源部',
+      handler: '徐芳',
+      listAutoTotalExTax: 16560, listAutoTotalInclTax: 16560,
+      manualTotalExTax: 16560, manualTotalInclTax: 16560,
+      approvalFileFiles: ['采购方式审批文件-月饼采购.pdf'],
+    },
+    directMallSection: {
+      supplier: '美心月饼长沙总代理',
+      taxTotalAmount: 16560, taxExclusiveTotalAmount: 16560,
+      awardNoticeFiles: ['成交通知书-中秋月饼采购.pdf', '月饼样品确认单.pdf'],
+    },
   },
 
   // ══════════════════════════════════════════════════════════════
@@ -395,6 +488,19 @@ export const BIDDING_SCENE_MOCKS: Record<BiddingSceneKey, BiddingSceneMock> = {
       { id: 's1', itemName: 'ThinkPad X1 Carbon Gen12（i7-1360P / 16GB / 1TB）', description: '商务本 黑色', quantity: 5, unit: '台', unitPriceExcludingTax: 10299, priceRemark: '企业购专属价，送 3 年上门', supplierName: '京东企业购-联想旗舰店' },
       { id: 's2', itemName: 'ThinkPad 原装扩展坞（4K 输出）', description: 'USB-C 接口', quantity: 5, unit: '个', unitPriceExcludingTax: 899, priceRemark: '搭配笔记本同批次', supplierName: '京东企业购-联想旗舰店' },
     ],
+    offlineSection: {
+      approvalMethod: '采购项目申请表', approvalDate: '2026-10-24',
+      implementationUnit: '长沙国际会展中心综合采购部', projectImplementationUnit: '信息技术部',
+      handler: '赵磊',
+      listAutoTotalExTax: 55990, listAutoTotalInclTax: 55990,
+      manualTotalExTax: 55990, manualTotalInclTax: 55990,
+      approvalFileFiles: ['采购方式审批文件-IT设备紧急采购.pdf'],
+    },
+    directMallSection: {
+      supplier: '京东企业购-联想旗舰店',
+      taxTotalAmount: 55990, taxExclusiveTotalAmount: 55990,
+      awardNoticeFiles: ['成交通知书-IT设备采购.pdf', '京东企业购订单截图.pdf'],
+    },
   },
 };
 
