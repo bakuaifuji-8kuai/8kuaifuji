@@ -17,10 +17,25 @@ import {
 // =====================================================================
 const SCENE_MOCKS_ARRAY = Object.values(BIDDING_SCENE_MOCKS);
 const isCatalog = (k?: string) => k === 'framework_catalog';
+const isRandom = (k?: string) => k === 'framework_random';
 const isOffline = (k?: string) =>
   k === 'inquiry_open' || k === 'inquiry_invited' ||
   k === 'competitive_bidding' || k === 'negotiation_open' || k === 'negotiation_invited';
 const isSimple = (k?: string) => k === 'direct' || k === 'e_mall';
+// 辅助：精确匹配线下子类型
+const isInquiry = (k?: string) => k === 'inquiry_open' || k === 'inquiry_invited';
+const isCompetitive = (k?: string) => k === 'competitive_bidding';
+const isNegotiation = (k?: string) => k === 'negotiation_open' || k === 'negotiation_invited';
+const hasAnnounceTime = (k?: string) => isInquiry(k) || k === 'competitive_bidding' || k === 'negotiation_open';
+const hasBidOpening = (k?: string) => isInquiry(k) || isCompetitive(k);
+const hasJudgeMethod = (k?: string) => isInquiry(k) || isCompetitive(k);
+const hasOwnerJudge = (k?: string) => isInquiry(k) || isCompetitive(k);
+const hasLosers = (k?: string) => isInquiry(k) || isCompetitive(k);
+const hasWinnerScore = (k?: string) => isInquiry(k) || isCompetitive(k);
+const hasNegotiator = (k?: string) => isInquiry(k) || isCompetitive(k) || isNegotiation(k);
+
+// 项目部门下拉（从 CompetitiveBiddingPage 同步）
+const PROJECT_DEPARTMENTS = ['展览部', '市场部', '宣传部', '活动部', '行政部', '技术部', '工程部'];
 
 // =====================================================================
 // 顶部场景说明卡片（保留）
@@ -376,6 +391,49 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
         </div>
       </FieldRow>
 
+      {/* ====== 框架协议采购-随机抽取 专属区块 ====== */}
+      {isRandom(methodKey) && (
+        <>
+          <div className="h-px bg-slate-200 my-2" />
+          <SectionHeader icon="🎲" title="随机抽取结果录入" sub="框架随机抽取独有 · 6 字段" tone="emerald" />
+          <div className="px-5 py-2">
+            <div className="flex items-center gap-2 py-1">
+              <span className="text-xs text-slate-600">是否关联采购需求</span>
+              <Switch checked={true} label="关联后基础信息的关联采购计划单才会显示" />
+            </div>
+          </div>
+          <FieldRow cols={3}>
+            <div>
+              <FormLabel label="抽取时间" required />
+              <DateInput />
+            </div>
+            <div>
+              <FormLabel label="供应商" required />
+              <TextInput placeholder="输入关键字模糊匹配供应商" />
+            </div>
+            <div>
+              <FormLabel label="供应商单位联系人" required />
+              <TextInput placeholder="联系人姓名" />
+            </div>
+          </FieldRow>
+          <FieldRow cols={2}>
+            <div>
+              <FormLabel label="关联合同编号" required />
+              <TextInput placeholder="输入关键字，从供应商框架合同中匹配" />
+            </div>
+            <div>
+              <FormLabel label="备注" />
+              <TextArea rows={1} placeholder="（选填）" />
+            </div>
+          </FieldRow>
+          <div className="px-5 pb-3">
+            <div className="text-[11px] text-slate-400 py-1">
+              📌 框架随机抽取 <b className="text-rose-500">不生成任何明细清单</b>，也不进入招采模拟器。抽取动作不在本系统进行。
+            </div>
+          </div>
+        </>
+      )}
+
       {/* ====== 目录内比价专属区块 ====== */}
       {isCatalog(methodKey) && (
         <>
@@ -414,7 +472,7 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
           <FieldRow cols={3}>
             <div>
               <FormLabel label="整单上限总价（元）" required />
-              <NumberInput min={0} placeholder="如：760000" />
+              <NumberInput min={0} placeholder="如：760000（参考：条目上限合计 ¥xxx）" />
             </div>
             <div>
               <FormLabel label="报价窗口开始" required />
@@ -425,6 +483,25 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
               <DateInput />
             </div>
           </FieldRow>
+
+          <div className="px-5 pb-3 border-t border-dashed border-slate-200 mt-2 pt-3">
+            <div className="text-xs text-slate-600 mb-2 flex items-center gap-1.5">
+              <span className="inline-block w-1 h-1 rounded-full bg-amber-500"></span>
+              比价结果汇总（请填写不含税总金额，保存时将与清单明细合计比对，必须一致）
+            </div>
+            <FieldRow cols={2}>
+              <div>
+                <FormLabel label="不含税总金额（元）" required />
+                <NumberInput step="0.01" min={0} placeholder="手填最终比价结果" />
+              </div>
+              <div>
+                <FormLabel label="清单明细不含税合计（自动）" />
+                <div className="w-full h-8 px-2 border border-slate-200 rounded text-sm bg-slate-50 flex items-center text-indigo-600 font-bold">
+                  ¥ 自动计算
+                </div>
+              </div>
+            </FieldRow>
+          </div>
         </>
       )}
 
@@ -432,7 +509,7 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
       {isOffline(methodKey) && (
         <>
           <div className="h-px bg-slate-200 my-2" />
-          <SectionHeader icon="🏗️" title="基础执行信息" sub="6 项必填" tone="slate" />
+          <SectionHeader icon="🏗️" title="基础执行信息" sub="基础审批 + 部门 + 经办人" tone="slate" />
           <FieldRow cols={3}>
             <div>
               <FormLabel label="审批方式" required />
@@ -440,64 +517,137 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
             </div>
             <div>
               <FormLabel label="实施单位" required />
-              <TextInput placeholder="如：长沙国际会展中心采购部" />
+              <TextInput placeholder="如：长沙国际会展中心综合采购部" />
             </div>
             <div>
               <FormLabel label="经办人" required />
-              <TextInput placeholder="如：张三" />
+              <TextInput placeholder="经办人姓名" />
             </div>
             <div>
               <FormLabel label="采购方式审批日期" required />
               <DateInput />
             </div>
+            {/* 项目实施单位：询比/竞价/谈判有 */}
+            {hasNegotiator(methodKey) && (
             <div>
-              <FormLabel label="招标实施单位" required />
+              <FormLabel label="项目实施单位" required />
+              <SelectInput options={PROJECT_DEPARTMENTS.map((d) => ({ label: d, value: d }))} placeholder="请选择部门" />
+            </div>
+            )}
+            {/* 招标人：询比/竞价/谈判 有 */}
+            {hasNegotiator(methodKey) && (
+            <div>
+              <FormLabel label="招标人" />
               <TextInput placeholder="如：长沙国际会展中心" />
             </div>
-            <div>
-              <FormLabel label="招标人" required />
-              <TextInput placeholder="如：李四" />
-            </div>
+            )}
           </FieldRow>
 
-          <SectionHeader icon="📢" title="招标公告与时间" sub="3 项" tone="blue" />
+          {/* 采购方式审批文件资料附件（所有线下都有） */}
+          <div className="px-5 pb-3">
+            <AttachmentSlot label="采购方式审批文件资料" hint="采购项目申请表/上会材料等" />
+          </div>
+
+          <SectionHeader icon="📢" title={methodKey === 'inquiry_invited' ? '邀请公告与时间' : '招标公告与时间'} sub="按采购方式条件渲染字段" tone="blue" />
           <FieldRow cols={3}>
+            {/* 是否有招标代理机构：询比/竞价/谈判 */}
+            {hasNegotiator(methodKey) && (
             <div>
-              <FormLabel label="招标公告发布时间" required />
+              <FormLabel label="是否有招标代理机构" />
+              <div className="flex gap-3 pt-1">
+                <label className="text-xs cursor-pointer"><input type="radio" name="hasAgent" /> 是</label>
+                <label className="text-xs cursor-pointer"><input type="radio" name="hasAgent" defaultChecked /> 否</label>
+              </div>
+            </div>
+            )}
+            {/* 代理机构名称：条件显示（选了代理后） */}
+            {hasNegotiator(methodKey) && (
+            <div>
+              <FormLabel label="招标代理机构名称" />
+              <TextInput placeholder="如：湖南招标代理公司" />
+            </div>
+            )}
+            {/* 公告发布时间：询比/竞价/谈判-公开 */}
+            {hasAnnounceTime(methodKey) && (
+            <div>
+              <FormLabel label="公告发布时间" />
               <DateInput />
             </div>
+            )}
+            {/* 开标时间：询比/竞价 */}
+            {hasBidOpening(methodKey) && (
             <div>
-              <FormLabel label="开标时间" required />
+              <FormLabel label="开标时间" />
               <DateInput />
             </div>
+            )}
+            {/* 评标办法：询比/竞价（谈判用技术方案） */}
+            {hasJudgeMethod(methodKey) && (
             <div>
-              <FormLabel label="评标办法" required />
+              <FormLabel label="评标办法" />
               <SelectInput options={EVAL_METHOD_OPTIONS} />
             </div>
+            )}
           </FieldRow>
+
+          {/* 是否委派业主评委 + 业主代表（询比/竞价） */}
+          {hasOwnerJudge(methodKey) && (
+            <div className="px-5 pb-2">
+              <FieldRow cols={2}>
+                <div>
+                  <FormLabel label="是否委派业主评委" />
+                  <div className="flex gap-3 pt-1">
+                    <label className="text-xs cursor-pointer"><input type="radio" name="hasOwnerJudge" /> 是</label>
+                    <label className="text-xs cursor-pointer"><input type="radio" name="hasOwnerJudge" defaultChecked /> 否</label>
+                  </div>
+                </div>
+                <div>
+                  <FormLabel label="业主代表（可多个）" />
+                  <div className="space-y-1.5">
+                    <TextInput placeholder="业主代表 1" />
+                    <TextInput placeholder="业主代表 2（可选）" />
+                    <button type="button" className="text-xs text-indigo-600 hover:text-indigo-700">+ 添加业主代表</button>
+                  </div>
+                </div>
+              </FieldRow>
+            </div>
+          )}
 
           <SectionHeader icon="📦" title="物料明细" sub="12 列" tone="slate" />
           <EmptyTable
             columns={['物料编号', '名称', '规格型号', '单位', '预估数量', '不含税单价', '不含税小计', '含税单价', '含税小计', '品牌', '备注', '交付周期']}
           />
 
-          <SectionHeader icon="🧮" title="清单合计金额" sub="4 项自动计算" tone="amber" />
+          <SectionHeader icon="🧮" title="清单合计金额" sub="系统自动计算 + 手填比对" tone="amber" />
           <FieldRow cols={4}>
             <div>
               <FormLabel label="不含税合计（元）" />
-              <NumberInput placeholder="自动计算" />
+              <NumberInput placeholder="系统计算" />
             </div>
             <div>
               <FormLabel label="含税合计（元）" />
-              <NumberInput placeholder="自动计算" />
+              <NumberInput placeholder="系统计算" />
             </div>
             <div>
-              <FormLabel label="预算金额（元）" />
-              <NumberInput placeholder="如：800000" />
+              <FormLabel label="税额（元）" />
+              <NumberInput placeholder="系统计算" />
             </div>
             <div>
-              <FormLabel label="差额（元）" />
-              <NumberInput placeholder="含税 - 预算" />
+              <FormLabel label="已填单价 / 总数" />
+              <div className="w-full h-8 px-2 border border-slate-200 rounded text-sm bg-slate-50 flex items-center text-slate-600 font-semibold">
+                0 / 0
+              </div>
+            </div>
+          </FieldRow>
+          {/* 手填合计（保存时与系统比对，必须一致） */}
+          <FieldRow cols={2}>
+            <div>
+              <FormLabel label="手填不含税总金额（元）" />
+              <NumberInput step="0.01" min={0} placeholder="至少填一项，保存时比对" />
+            </div>
+            <div>
+              <FormLabel label="手填含税总金额（元）" />
+              <NumberInput step="0.01" min={0} placeholder="至少填一项，保存时比对" />
             </div>
           </FieldRow>
 
@@ -536,35 +686,76 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
             </div>
           </div>
 
-          <SectionHeader icon="🏆" title="中标结果" sub="7 项中标 + 评标小组成员" tone="green" />
+          <SectionHeader icon="🏆" title="中标结果" sub="中标信息 + 答疑/投诉 + 未中标单位" tone="green" />
           <FieldRow cols={3}>
             <div>
-              <FormLabel label="中标供应商名称" required />
+              <FormLabel label="中标供应商姓名" />
               <TextInput placeholder="中标单位全称" />
             </div>
             <div>
               <FormLabel label="中标单位法人" />
               <TextInput placeholder="法人姓名" />
             </div>
-            {(methodKey.startsWith('inquiry') || methodKey === 'competitive_bidding') && (
-              <div>
-                <FormLabel label="中标单位得分" />
-                <NumberInput step="0.01" placeholder="如：92.50" />
-              </div>
+            {hasWinnerScore(methodKey) && (
+            <div>
+              <FormLabel label="中标单位得分" />
+              <NumberInput step="0.01" placeholder="如：92.50" />
+            </div>
             )}
             <div>
-              <FormLabel label="中标/合同金额（元）" required />
+              <FormLabel label="中标/合同金额（元）" />
               <NumberInput step="0.01" placeholder="如：756000" />
             </div>
             <div>
-              <FormLabel label="未中标单位 1" />
-              <TextInput placeholder="单位名称" />
+              <FormLabel label="中标时间" />
+              <DateInput />
             </div>
             <div>
-              <FormLabel label="未中标单位 2" />
-              <TextInput placeholder="单位名称" />
+              <FormLabel label="是否存在答疑/质疑/投诉" />
+              <div className="flex gap-3 pt-1">
+                <label className="text-xs cursor-pointer"><input type="radio" name="hasDispute" /> 是</label>
+                <label className="text-xs cursor-pointer"><input type="radio" name="hasDispute" defaultChecked /> 否</label>
+              </div>
             </div>
           </FieldRow>
+          {/* 答疑/投诉原因（选了"是"后显示） */}
+          <FieldRow cols={1}>
+            <div>
+              <FormLabel label="答疑/质疑/投诉情况" />
+              <TextArea rows={2} placeholder="请简要说明答疑/质疑/投诉情况（选「是」时才需要填）" />
+            </div>
+          </FieldRow>
+
+          {/* 未中标单位 1 / 未中标单位 2（询比/竞价 有完整字段；谈判只有名称） */}
+          <div className="px-5 pb-2">
+            <div className="text-xs text-slate-500 mb-1">未中标单位</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="border border-slate-200 rounded p-2.5 space-y-2">
+                <div className="text-xs font-medium text-slate-600">未中标单位 1</div>
+                {hasLosers(methodKey) ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    <TextInput placeholder="单位名称" />
+                    <TextInput placeholder="法人" />
+                    <NumberInput step="0.01" placeholder="得分" />
+                  </div>
+                ) : (
+                  <TextInput placeholder="单位名称" />
+                )}
+              </div>
+              <div className="border border-slate-200 rounded p-2.5 space-y-2">
+                <div className="text-xs font-medium text-slate-600">未中标单位 2</div>
+                {hasLosers(methodKey) ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    <TextInput placeholder="单位名称" />
+                    <TextInput placeholder="法人" />
+                    <NumberInput step="0.01" placeholder="得分" />
+                  </div>
+                ) : (
+                  <TextInput placeholder="单位名称" />
+                )}
+              </div>
+            </div>
+          </div>
 
           <SectionHeader icon="📎" title="审批材料附件（7 槽）" sub="必填 * / 选填 代理抽取·合资两项" tone="rose" />
           <div className="px-5 pb-3 grid grid-cols-2 gap-3">
@@ -597,7 +788,7 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
       {isSimple(methodKey) && (
         <>
           <div className="h-px bg-slate-200 my-2" />
-          <SectionHeader icon="🏗️" title="基础执行信息" sub="6 项必填（直接/商城独有）" tone="emerald" />
+          <SectionHeader icon="🏗️" title="基础执行信息" sub="直接/商城独有 · 简化字段" tone="emerald" />
           <FieldRow cols={3}>
             <div>
               <FormLabel label="审批方式" required />
@@ -605,23 +796,19 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
             </div>
             <div>
               <FormLabel label="实施单位" required />
-              <TextInput />
+              <TextInput placeholder="如：长沙国际会展中心综合采购部" />
             </div>
             <div>
               <FormLabel label="经办人" required />
-              <TextInput />
+              <TextInput placeholder="经办人姓名" />
             </div>
             <div>
               <FormLabel label="采购方式审批日期" required />
               <DateInput />
             </div>
             <div>
-              <FormLabel label="采购实施单位" required />
-              <TextInput />
-            </div>
-            <div>
-              <FormLabel label="招标人" required />
-              <TextInput />
+              <FormLabel label="项目实施单位" required />
+              <SelectInput options={PROJECT_DEPARTMENTS.map((d) => ({ label: d, value: d }))} placeholder="请选择部门" />
             </div>
           </FieldRow>
 
