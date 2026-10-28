@@ -117,10 +117,13 @@ function BusinessRulesSummary({ currentKey }: { currentKey: BiddingSceneKey }) {
 }
 
 // =====================================================================
-// 表单只读展示
+// 表单只读展示 —— 按采购方式门控渲染完整字段
 // =====================================================================
 function FormReadOnlySection({ mock }: { mock: BiddingSceneMock }) {
   const { form } = mock;
+  const isOfflineFamily = ['inquiry_open','inquiry_invited','competitive_bidding','negotiation_open','negotiation_invited','direct','e_mall'].includes(mock.key);
+  const hasAnnouncementInfo = ['inquiry_open','inquiry_invited','competitive_bidding','negotiation_open','negotiation_invited'].includes(mock.key);
+
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-sm mb-4">
       <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/60 rounded-t-xl flex items-center justify-between">
@@ -128,8 +131,10 @@ function FormReadOnlySection({ mock }: { mock: BiddingSceneMock }) {
           <span className="w-1 h-4 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-full"></span>
           招采执行工单（只读演示）
         </h2>
-        <span className="text-xs text-slate-400">表单区 · 全部字段预置演示数据</span>
+        <span className="text-xs text-slate-400">表单区 · 全部字段预置演示数据（对齐新增弹窗）</span>
       </div>
+
+      {/* ===== 基础信息（所有 9 种方式共有） ===== */}
       <div className="p-5 grid grid-cols-3 gap-y-4 gap-x-6">
         <FormField label="工单编号" value={form.biddingNo} />
         <FormField label="项目名称" value={form.projectName} />
@@ -139,22 +144,298 @@ function FormReadOnlySection({ mock }: { mock: BiddingSceneMock }) {
         <FormField label="关联采购需求" value={form.demandNo || '（无）'} />
         <FormField label="申请事由" value={form.applyReason} fullWidth />
       </div>
-      {/* 框架随机抽取专用字段 */}
+
+      {/* ===== ① 目录内比价独有区块 ===== */}
+      {mock.catalogSection && (
+        <CatalogExtraSection section={mock.catalogSection} />
+      )}
+
+      {/* ===== ② 框架随机抽取专用字段 ===== */}
       {mock.randomOnly && (
+        <RandomOnlySection data={mock.randomOnly} />
+      )}
+
+      {/* ===== ③ 线下 9 种通用区块 ===== */}
+      {isOfflineFamily && mock.offlineSection && (
+        <OfflineExtraSection
+          section={mock.offlineSection}
+          keyLabel={mock.key}
+          showAnnouncement={hasAnnouncementInfo}
+          isDirectMall={mock.key === 'direct' || mock.key === 'e_mall'}
+        />
+      )}
+
+      {/* ===== ④ 直接采购/电子商城独有 ===== */}
+      {mock.directMallSection && (
+        <DirectMallExtraSection section={mock.directMallSection} />
+      )}
+    </div>
+  );
+}
+
+// --- 子区块 1：目录内比价独有 ---
+function CatalogExtraSection({ section }: { section: NonNullable<BiddingSceneMock['catalogSection']> }) {
+  return (
+    <>
+      <Divider />
+      <SectionHeader icon="🏗️" title="受邀供应商" sub="目录内比价独有：弹窗多选框架供应商库中的受邀对象" tone="amber" />
+      <div className="px-5 pb-4">
+        <div className="flex flex-wrap gap-2">
+          {section.invitedSuppliers.map((s) => (
+            <span key={s.name} className="px-2.5 py-1 bg-amber-50 text-amber-800 text-xs rounded-md border border-amber-200">
+              {s.name} · <span className="text-amber-600">{s.contact}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="px-5 pb-4 grid grid-cols-3 gap-y-4 gap-x-6">
+        <FormField label="整单含税上限总价（元）" value={`¥ ${section.totalPriceLimitTaxIncl.toLocaleString()}`} />
+        <FormField label="报价窗口开始" value={section.bidWindowStart} />
+        <FormField label="报价窗口结束" value={section.bidWindowEnd} />
+      </div>
+      <div className="px-5 pb-4 grid grid-cols-2 gap-x-6">
+        <FileListBlock title="📎 比价公告附件" files={section.biddingAnnouncementFiles} color="blue" />
+        <FileListBlock title="📎 比价文件附件（逐行）" files={section.biddingDocumentFiles} color="amber" />
+      </div>
+    </>
+  );
+}
+
+// --- 子区块 2：随机抽取 ---
+function RandomOnlySection({ data }: { data: NonNullable<BiddingSceneMock['randomOnly']> }) {
+  return (
+    <>
+      <Divider />
+      <div className="px-5 py-3 bg-rose-50 border-b border-rose-200 text-xs text-rose-700">
+        ⚠️ 框架协议采购-随机抽取 专用字段（此方式**无**明细清单表，以下 6 个字段为必填）
+      </div>
+      <div className="p-5 grid grid-cols-3 gap-y-4 gap-x-6">
+        <FormField label="抽取时间" value={data.drawTime} />
+        <FormField label="供应商" value={data.randomSupplierName} />
+        <FormField label="供应商单位联系人" value={data.randomSupplierContact} />
+        <FormField label="关联合同编号" value={data.randomContractNo} />
+        <FormField label="是否关联采购需求" value={data.linkDemand ? '✓ 是' : '✗ 否'} />
+        {data.linkDemand && <FormField label="关联需求名称" value={data.demandName || ''} />}
+      </div>
+    </>
+  );
+}
+
+// --- 子区块 3：线下通用（询比/竞价/谈判/直接/商城） ---
+function OfflineExtraSection({
+  section, showAnnouncement, isDirectMall,
+}: {
+  section: NonNullable<BiddingSceneMock['offlineSection']>;
+  keyLabel: string;
+  showAnnouncement: boolean;
+  isDirectMall: boolean;
+}) {
+  return (
+    <>
+      {/* 基础执行信息 */}
+      <Divider />
+      <SectionHeader icon="📋" title="基础执行信息" sub="审批方式、实施单位、经办人（直接/商城 6 项强制必填）" tone="slate" />
+      <div className="px-5 pb-4 grid grid-cols-3 gap-y-4 gap-x-6">
+        <FormField label="采购方式审批方式" value={section.approvalMethod} />
+        <FormField label="采购方式审批日期" value={section.approvalDate} />
+        <FormField label="招采实施单位" value={section.implementationUnit} />
+        {section.projectImplementationUnit && <FormField label="项目实施单位" value={section.projectImplementationUnit} />}
+        <FormField label="招采经办人" value={section.handler} />
+        {section.tenderer && <FormField label="招标人" value={section.tenderer} />}
+      </div>
+
+      {/* 线下清单合计金额（直接/商城显示在 directMallSection 里了） */}
+      {!isDirectMall && (
         <>
-          <div className="border-t border-slate-200 mx-5"></div>
-          <div className="px-5 py-3 bg-rose-50 border-b border-rose-200 text-xs text-rose-700">
-            ⚠️ 框架协议采购-随机抽取 专用字段（此方式**无**明细清单表，以下 6 个字段为必填）
-          </div>
-          <div className="p-5 grid grid-cols-3 gap-y-4 gap-x-6">
-            <FormField label="抽取时间" value={mock.randomOnly.drawTime} />
-            <FormField label="供应商" value={mock.randomOnly.randomSupplierName} />
-            <FormField label="供应商单位联系人" value={mock.randomOnly.randomSupplierContact} />
-            <FormField label="关联合同编号" value={mock.randomOnly.randomContractNo} />
-            <FormField label="是否关联采购需求" value={mock.randomOnly.linkDemand ? '✓ 是' : '✗ 否'} />
-            {mock.randomOnly.linkDemand && <FormField label="关联需求名称" value={mock.randomOnly.demandName || ''} />}
+          <div className="px-5 pb-4 grid grid-cols-4 gap-x-6">
+            <div className="px-3 py-2 bg-slate-50 rounded border border-slate-200 text-center">
+              <div className="text-[11px] text-slate-500">清单不含税自动合计</div>
+              <div className="text-sm font-semibold text-slate-700">¥ {section.listAutoTotalExTax.toLocaleString()}</div>
+            </div>
+            <div className="px-3 py-2 bg-slate-50 rounded border border-slate-200 text-center">
+              <div className="text-[11px] text-slate-500">清单含税自动合计</div>
+              <div className="text-sm font-semibold text-slate-700">¥ {section.listAutoTotalInclTax.toLocaleString()}</div>
+            </div>
+            {section.manualTotalExTax !== undefined && (
+              <div className="px-3 py-2 bg-indigo-50 rounded border border-indigo-200 text-center">
+                <div className="text-[11px] text-indigo-600">手填不含税合计</div>
+                <div className="text-sm font-semibold text-indigo-700">¥ {section.manualTotalExTax.toLocaleString()}</div>
+              </div>
+            )}
+            {section.manualTotalInclTax !== undefined && (
+              <div className="px-3 py-2 bg-purple-50 rounded border border-purple-200 text-center">
+                <div className="text-[11px] text-purple-600">手填含税合计</div>
+                <div className="text-sm font-semibold text-purple-700">¥ {section.manualTotalInclTax.toLocaleString()}</div>
+              </div>
+            )}
           </div>
         </>
+      )}
+
+      {/* 招标公告与时间（询比/竞价/谈判 5 种） */}
+      {showAnnouncement && section.announcementPublishDate && (
+        <>
+          <Divider />
+          <SectionHeader icon="📢" title="招标公告与时间" sub="发布时间、开标时间、评标办法" tone="blue" />
+          <div className="px-5 pb-4 grid grid-cols-3 gap-y-4 gap-x-6">
+            <FormField label="招标公告发布时间" value={section.announcementPublishDate} />
+            <FormField label="开标时间" value={section.bidOpeningTime || '-'} />
+            <FormField label="评标办法" value={section.judgeMethod || '-'} />
+          </div>
+          {section.hasAgency && (
+            <div className="px-5 pb-4 grid grid-cols-3 gap-y-4 gap-x-6">
+              <FormField label="是否委托招标代理机构" value={section.hasAgency ? '✓ 是' : '✗ 否'} />
+              {section.agencyName && <FormField label="招标代理机构" value={section.agencyName} />}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* 报名单位 */}
+      {section.bidders.length > 0 && (
+        <>
+          <Divider />
+          <SectionHeader icon="👥" title="报名单位" sub={`共 ${section.bidders.length} 家`} tone="slate" />
+          <div className="px-5 pb-4 overflow-x-auto">
+            <table className="w-full text-xs border border-slate-200 min-w-[600px]">
+              <thead className="bg-slate-50 text-slate-700">
+                <tr>
+                  <th className="px-2 py-2 border border-slate-200 text-left w-10">#</th>
+                  <th className="px-2 py-2 border border-slate-200 text-left">单位名称</th>
+                  <th className="px-2 py-2 border border-slate-200 text-left">联系人</th>
+                  <th className="px-2 py-2 border border-slate-200 text-left">联系电话</th>
+                  <th className="px-2 py-2 border border-slate-200 text-left">备注</th>
+                </tr>
+              </thead>
+              <tbody>
+                {section.bidders.map((b, i) => (
+                  <tr key={i} className="border-t border-slate-100">
+                    <td className="px-2 py-1.5 border border-slate-200 text-slate-400">{i + 1}</td>
+                    <td className="px-2 py-1.5 border border-slate-200 font-medium text-slate-800">{b.name}</td>
+                    <td className="px-2 py-1.5 border border-slate-200">{b.contact}</td>
+                    <td className="px-2 py-1.5 border border-slate-200 font-mono text-slate-600">{b.phone}</td>
+                    <td className="px-2 py-1.5 border border-slate-200 text-slate-500">{b.remark || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* 中标结果 */}
+      {section.winningSupplier && (
+        <>
+          <Divider />
+          <SectionHeader icon="🏆" title="中标结果" sub="中标单位、得分、合同金额" tone="green" />
+          <div className="px-5 pb-4 grid grid-cols-3 gap-y-4 gap-x-6">
+            <FormField label="中标供应商全称" value={section.winningSupplier} />
+            {section.winningSupplierLegal && <FormField label="中标单位法人" value={section.winningSupplierLegal} />}
+            {section.winningSupplierScore !== undefined && <FormField label="中标单位得分" value={section.winningSupplierScore.toString()} />}
+            {section.winningContractAmount !== undefined && <FormField label="中标合同金额（元）" value={`¥ ${section.winningContractAmount.toLocaleString()}`} />}
+            {section.winningDate && <FormField label="中标时间" value={section.winningDate} />}
+            {section.hasDispute !== undefined && <FormField label="是否存在纠纷/质疑/投诉" value={section.hasDispute ? '⚠ 是' : '✗ 否'} />}
+          </div>
+          {(section.loser1 || section.loser2) && (
+            <div className="px-5 pb-4 grid grid-cols-2 gap-x-6">
+              {section.loser1 && (
+                <div className="px-3 py-2 bg-slate-50 rounded border border-slate-200">
+                  <div className="text-[11px] text-slate-500 mb-1">未中标单位 1</div>
+                  <div className="text-sm font-medium text-slate-700">{section.loser1.name}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">法人：{section.loser1.legal || '-'} · 得分：{section.loser1.score ?? '-'}</div>
+                </div>
+              )}
+              {section.loser2 && (
+                <div className="px-3 py-2 bg-slate-50 rounded border border-slate-200">
+                  <div className="text-[11px] text-slate-500 mb-1">未中标单位 2</div>
+                  <div className="text-sm font-medium text-slate-700">{section.loser2.name}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">法人：{section.loser2.legal || '-'} · 得分：{section.loser2.score ?? '-'}</div>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* 审批材料附件 */}
+      {(section.awardNoticeFiles?.length || section.approvalFileFiles?.length) && (
+        <>
+          <Divider />
+          <SectionHeader icon="📎" title="审批材料附件" sub={isDirectMall ? '直接/商城：相关文件资料（成交通知书必填）' : '线下方式：成交通知书 + 采购方式审批文件'} tone="slate" />
+          <div className="px-5 pb-4 grid grid-cols-2 gap-x-6">
+            {section.awardNoticeFiles && section.awardNoticeFiles.length > 0 && (
+              <FileListBlock title={isDirectMall ? '📎 成交通知书（必填）' : '📎 成交通知书（必填）'} files={section.awardNoticeFiles} color="green" />
+            )}
+            {section.approvalFileFiles && section.approvalFileFiles.length > 0 && (
+              <FileListBlock title={isDirectMall ? '📎 相关文件资料' : '📎 采购方式审批文件'} files={section.approvalFileFiles} color="slate" />
+            )}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+// --- 子区块 4：直接采购/电子商城独有 ---
+function DirectMallExtraSection({ section }: { section: NonNullable<BiddingSceneMock['directMallSection']> }) {
+  return (
+    <>
+      <Divider />
+      <SectionHeader icon="⚠️" title="直接/商城 独有字段" sub="6 项强制必填（供应商、含税/不含税总金额、成交通知书附件）" tone="emerald" />
+      <div className="px-5 pb-4 grid grid-cols-3 gap-y-4 gap-x-6">
+        <FormField label="供应商" value={section.supplier} highlight />
+        {section.taxTotalAmount !== undefined && <FormField label="含税总金额（元）" value={`¥ ${section.taxTotalAmount.toLocaleString()}`} />}
+        {section.taxExclusiveTotalAmount !== undefined && <FormField label="不含税总金额（元）" value={`¥ ${section.taxExclusiveTotalAmount.toLocaleString()}`} />}
+      </div>
+      <div className="px-5 pb-4">
+        <FileListBlock title="📎 成交通知书附件（强制必填）" files={section.awardNoticeFiles} color="emerald" />
+      </div>
+    </>
+  );
+}
+
+// --- 通用小组件 ---
+function Divider() {
+  return <div className="border-t border-slate-200 mx-5"></div>;
+}
+function SectionHeader({ icon, title, sub, tone }: { icon: string; title: string; sub?: string; tone: 'amber' | 'blue' | 'slate' | 'green' | 'emerald' | 'rose' }) {
+  const toneMap: Record<string, string> = {
+    amber: 'bg-amber-50 border-amber-200 text-amber-800',
+    blue: 'bg-blue-50 border-blue-200 text-blue-800',
+    slate: 'bg-slate-50 border-slate-200 text-slate-700',
+    green: 'bg-green-50 border-green-200 text-green-800',
+    emerald: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+    rose: 'bg-rose-50 border-rose-200 text-rose-800',
+  };
+  return (
+    <div className={`px-5 py-3 border-b ${toneMap[tone]}`}>
+      <span className="text-sm font-semibold">{icon} {title}</span>
+      {sub && <span className="ml-2 text-xs opacity-70">{sub}</span>}
+    </div>
+  );
+}
+function FileListBlock({ title, files, color }: { title: string; files: string[]; color: 'blue' | 'amber' | 'green' | 'slate' | 'emerald' }) {
+  const colorMap: Record<string, string> = {
+    blue: 'bg-blue-50 border-blue-200 text-blue-800',
+    amber: 'bg-amber-50 border-amber-200 text-amber-800',
+    green: 'bg-green-50 border-green-200 text-green-800',
+    slate: 'bg-slate-50 border-slate-200 text-slate-700',
+    emerald: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+  };
+  return (
+    <div className={`rounded-lg border p-3 ${colorMap[color]}`}>
+      <div className="text-xs font-semibold mb-2">{title}</div>
+      {files.length === 0 ? (
+        <div className="text-[11px] opacity-60">（无附件）</div>
+      ) : (
+        <div className="space-y-1">
+          {files.map((f, i) => (
+            <div key={i} className="text-xs flex items-center gap-1.5">
+              <span>📄</span>
+              <span className="font-mono">{f}</span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

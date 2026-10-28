@@ -54,6 +54,58 @@ export interface SimpleDetailRow {
   supplierName: string;
 }
 
+// =====================================================================
+// 扩展区块：按采购方式门控展示的额外字段（对齐 CompetitiveBiddingPage 新增弹窗）
+// =====================================================================
+
+// 目录内比价独有：受邀供应商 + 公告/文件附件 + 整单上限 + 报价窗口
+export interface CatalogSection {
+  invitedSuppliers: { name: string; contact: string }[];
+  biddingAnnouncementFiles: string[];
+  biddingDocumentFiles: string[];
+  totalPriceLimitTaxIncl: number;
+  bidWindowStart: string;
+  bidWindowEnd: string;
+}
+
+// 线下 9 种通用：基础执行信息 + 招标公告时间 + 报名单位 + 中标结果
+export interface OfflineExecutionSection {
+  approvalMethod: string;
+  approvalDate: string;
+  implementationUnit: string;
+  projectImplementationUnit?: string;
+  handler: string;
+  tenderer?: string;
+  listAutoTotalExTax: number;
+  listAutoTotalInclTax: number;
+  manualTotalExTax?: number;
+  manualTotalInclTax?: number;
+  announcementPublishDate?: string;
+  bidOpeningTime?: string;
+  judgeMethod?: string;
+  hasAgency?: boolean;
+  agencyName?: string;
+  bidders: { name: string; contact: string; phone: string; remark?: string }[];
+  winningSupplier: string;
+  winningSupplierLegal?: string;
+  winningSupplierScore?: number;
+  winningContractAmount?: number;
+  winningDate?: string;
+  hasDispute?: boolean;
+  loser1?: { name: string; legal?: string; score?: number };
+  loser2?: { name: string; legal?: string; score?: number };
+  awardNoticeFiles?: string[];
+  approvalFileFiles?: string[];
+}
+
+// 直接采购/电子商城独有
+export interface DirectMallSection {
+  supplier: string;
+  taxTotalAmount?: number;
+  taxExclusiveTotalAmount?: number;
+  awardNoticeFiles: string[];
+}
+
 // 场景 mock
 export interface BiddingSceneMock {
   key: BiddingSceneKey;
@@ -81,6 +133,10 @@ export interface BiddingSceneMock {
     linkDemand: boolean;
     demandName?: string;
   };
+  // 扩展区块：按采购方式门控
+  catalogSection?: CatalogSection;
+  offlineSection?: OfflineExecutionSection;
+  directMallSection?: DirectMallSection;
 }
 
 export const BIDDING_SCENE_MOCKS: Record<BiddingSceneKey, BiddingSceneMock> = {
@@ -115,6 +171,18 @@ export const BIDDING_SCENE_MOCKS: Record<BiddingSceneKey, BiddingSceneMock> = {
         quantity: 150, unit: '㎡', supplierUnitPrice: 475, supplierAmountExTax: 71250,
         winningSupplierName: '湖南铝业集团', contractNo: 'CHT-2025-008' },
     ],
+    catalogSection: {
+      invitedSuppliers: [
+        { name: '立邦涂料（长沙）经销商', contact: '张经理 / 13900001111' },
+        { name: '龙牌建材贸易公司', contact: '李总 / 13900002222' },
+        { name: '湖南铝业集团', contact: '王工 / 13900003333' },
+      ],
+      biddingAnnouncementFiles: ['比价公告-展厅装修材料采购.pdf'],
+      biddingDocumentFiles: ['竞价文件-涂料.pdf', '竞价文件-龙骨.pdf', '竞价文件-断桥铝窗.pdf'],
+      totalPriceLimitTaxIncl: 115000,
+      bidWindowStart: '2026-10-28 09:00',
+      bidWindowEnd: '2026-10-30 17:00',
+    },
   },
 
   // ══════════════════════════════════════════════════════════════
@@ -164,6 +232,37 @@ export const BIDDING_SCENE_MOCKS: Record<BiddingSceneKey, BiddingSceneMock> = {
       { id: 'o2', supplierName: '文泰办公设备有限公司', itemName: 'HP CF217A 硒鼓', quantity: 80, unit: '个', taxRate: 0.13, unitPriceExcludingTax: 315, priceRemark: '含税含上门安装' },
       { id: 'o3', supplierName: '得力集团湖南办事处', itemName: '会议中性笔 0.5mm 黑色', quantity: 100, unit: '盒', taxRate: 0.13, unitPriceExcludingTax: 14.5, priceRemark: '12支/盒' },
     ],
+    offlineSection: {
+      approvalMethod: '会议审批',
+      approvalDate: '2026-10-20',
+      implementationUnit: '长沙国际会展中心综合采购部',
+      projectImplementationUnit: '行政部',
+      handler: '刘明',
+      tenderer: '长沙国际会展中心',
+      listAutoTotalExTax: 42550,
+      listAutoTotalInclTax: 48081.5,
+      manualTotalExTax: 42550,
+      manualTotalInclTax: 48081.5,
+      announcementPublishDate: '2026-10-21',
+      bidOpeningTime: '2026-10-27 10:00',
+      judgeMethod: '综合评分法：价格分 60% + 质量分 30% + 服务分 10%',
+      hasAgency: false,
+      bidders: [
+        { name: '文泰办公设备有限公司', contact: '张经理', phone: '13800001001', remark: '本地供应商，合作 3 年' },
+        { name: '得力集团湖南办事处', contact: '李主任', phone: '13800001002', remark: '品牌代理商' },
+        { name: '晨光文具长沙分公司', contact: '王总', phone: '13800001003', remark: '备选' },
+      ],
+      winningSupplier: '文泰办公设备有限公司',
+      winningSupplierLegal: '张建国',
+      winningSupplierScore: 92.5,
+      winningContractAmount: 48081.5,
+      winningDate: '2026-10-28',
+      hasDispute: false,
+      loser1: { name: '得力集团湖南办事处', legal: '李明', score: 85.3 },
+      loser2: { name: '晨光文具长沙分公司', legal: '王志', score: 78.0 },
+      awardNoticeFiles: ['成交通知书-办公耗材Q4采购.pdf'],
+      approvalFileFiles: ['采购方式审批文件-办公耗材Q4采购.pdf', '上会材料-办公耗材Q4采购.docx'],
+    },
   },
 
   // ══════════════════════════════════════════════════════════════
