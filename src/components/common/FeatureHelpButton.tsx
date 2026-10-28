@@ -137,8 +137,8 @@ export default function FeatureHelpButton({ content }: Props) {
                 )}
                 {content.businessSummary.scope && (
                   <div className="flex gap-2">
-                    <span className="shrink-0 text-indigo-600 font-medium w-14">能做什么：</span>
-                    <span className="text-slate-800 leading-relaxed font-medium">{content.businessSummary.scope}</span>
+                    <span className="shrink-0 text-indigo-600 font-medium w-14 pt-0.5">能做什么：</span>
+                    <span className="text-slate-800 leading-relaxed font-medium whitespace-pre-wrap">{content.businessSummary.scope}</span>
                   </div>
                 )}
                 {content.businessSummary.notDo && content.businessSummary.notDo.length > 0 && (
