@@ -10,8 +10,27 @@ const path = require('path');
 
 // ============== ⚠️ 密钥在这里填 ⚠️ ==============
 // 腾讯云控制台 → 访问管理 → API 密钥管理 里获取
-const SECRET_ID = process.env.COS_SECRET_ID || '请在这里填你的 SecretId';
-const SECRET_KEY = process.env.COS_SECRET_KEY || '请在这里填你的 SecretKey';
+// 密钥优先级：环境变量 COS_SECRET_ID/COS_SECRET_KEY > .env.cos 文件 > 提示填值
+function loadCosEnv() {
+  // 先加载 .env.cos 文件（如果存在）
+  try {
+    const envPath = path.join(__dirname, '.env.cos');
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8');
+      content.split('\n').forEach(line => {
+        const m = line.match(/^\s*([A-Z_]+)\s*=\s*(.+?)\s*$/);
+        if (m && !process.env[m[1]]) {
+          let v = m[2];
+          if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
+          process.env[m[1]] = v;
+        }
+      });
+    }
+  } catch (_) {}
+}
+loadCosEnv();
+const SECRET_ID = process.env.COS_SECRET_ID || '请在 .env.cos 里填 COS_SECRET_ID';
+const SECRET_KEY = process.env.COS_SECRET_KEY || '请在 .env.cos 里填 COS_SECRET_KEY';
 const BUCKET = 'bkfj-1306169712';
 const REGION = 'ap-guangzhou';
 const LOCAL_DIR = path.join(__dirname, 'dist');
