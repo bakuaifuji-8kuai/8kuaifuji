@@ -1070,11 +1070,11 @@ function FormBody({
 
         return (
           <div>
-            {/* 订单/明细来源提示 */}
+            {/* 无订单：正常路径提示（非异常，无需警告色） */}
             {!order && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs mb-3 flex items-center gap-2 text-amber-700">
-                <AlertTriangle className="w-4 h-4" />
-                本需求尚未生成采购订单，当前明细数据来自需求填报，{form.goodsDetails.length > 0 ? '可直接验收' : '请先补全需求明细或去招采执行创建订单'}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-xs mb-3 flex items-center gap-2 text-emerald-700">
+                <span className="text-sm">🏷️</span>
+                <span>本需求未生成采购订单，当前明细数据来自需求填报——这是正常路径，可直接验收。如需走仓库入库核对，请先在招采执行（目录内比价）生成采购订单</span>
               </div>
             )}
 
