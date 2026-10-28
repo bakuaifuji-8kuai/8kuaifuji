@@ -29,10 +29,12 @@ const isNegotiation = (k?: string) => k === 'negotiation_open' || k === 'negotia
 const hasAnnounceTime = (k?: string) => isInquiry(k) || k === 'competitive_bidding' || k === 'negotiation_open';
 const hasBidOpening = (k?: string) => isInquiry(k) || isCompetitive(k);
 const hasJudgeMethod = (k?: string) => isInquiry(k) || isCompetitive(k);
-const hasOwnerJudge = (k?: string) => isInquiry(k) || isCompetitive(k);
+const hasOwnerJudge = (k?: string) => isInquiry(k) || isCompetitive(k) || isNegotiation(k);
 const hasLosers = (k?: string) => isInquiry(k) || isCompetitive(k);
 const hasWinnerScore = (k?: string) => isInquiry(k) || isCompetitive(k);
 const hasNegotiator = (k?: string) => isInquiry(k) || isCompetitive(k) || isNegotiation(k);
+// 项目实施部门 select：仅 inquiry* / competitive / direct / e_mall 有，negotiation 没有
+const hasProjectUnit = (k?: string) => isInquiry(k) || isCompetitive(k) || isSimple(k);
 
 // 项目部门下拉（从 CompetitiveBiddingPage 同步）
 const PROJECT_DEPARTMENTS = ['展览部', '市场部', '宣传部', '活动部', '行政部', '技术部', '工程部'];
@@ -527,14 +529,14 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
               <FormLabel label="采购方式审批日期" required />
               <DateInput />
             </div>
-            {/* 项目实施单位：询比/竞价/谈判有 */}
-            {hasNegotiator(methodKey) && (
+            {/* 项目实施单位：仅询比/竞价有（谈判公开/邀请没有这个字段） */}
+            {(isInquiry(methodKey) || isCompetitive(methodKey)) && (
             <div>
               <FormLabel label="项目实施单位" required />
               <SelectInput options={PROJECT_DEPARTMENTS.map((d) => ({ label: d, value: d }))} placeholder="请选择部门" />
             </div>
             )}
-            {/* 招标人：询比/竞价/谈判 有 */}
+            {/* 招标人：询比/竞价/谈判 5 种都有 */}
             {hasNegotiator(methodKey) && (
             <div>
               <FormLabel label="招标人" />
@@ -611,6 +613,26 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
                 </div>
               </FieldRow>
             </div>
+          )}
+
+          {/* 竞价采购专属：竞价公告附件（蓝色块）+ 竞价文件附件（橙色块）*/}
+          {isCompetitive(methodKey) && (
+            <>
+              <div className="px-5 pb-3 border border-blue-200 rounded bg-blue-50">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-semibold text-slate-800">📢 竞价公告附件</span>
+                </div>
+                <div className="text-[11px] text-slate-500 mb-2">上传竞价公告相关文件（PDF/Word/图片等）</div>
+                <AttachmentSlot label="竞价公告附件" hint="支持 PDF/DOC/图片，多文件" />
+              </div>
+              <div className="px-5 pb-3 border border-amber-200 rounded bg-amber-50 mt-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-semibold text-slate-800">📄 竞价文件附件</span>
+                </div>
+                <div className="text-[11px] text-slate-500 mb-2">上传竞价文件相关资料（PDF/Word/Excel等）</div>
+                <AttachmentSlot label="竞价文件附件" hint="支持 PDF/DOC/Excel，多文件" />
+              </div>
+            </>
           )}
 
           <SectionHeader icon="📦" title="物料明细" sub="12 列" tone="slate" />
@@ -768,16 +790,25 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
             <AttachmentSlot label="合资公司上会材料" hint="合资方上会材料（如有）" />
           </div>
 
-          {/* 流标区 */}
+          {/* 流标区（radio 是/否，和 CompetitiveBiddingPage 一致） */}
           <div className="px-5 pb-4 border-t border-slate-200 pt-3">
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-xs font-semibold text-slate-700">⚠️ 流标</span>
-              <Switch checked={flowBid.isFlow} onChange={(v) => setFlowBid({ ...flowBid, isFlow: v })} label={flowBid.isFlow ? '● 已流标' : '○ 正常采购'} />
+              <span className="text-xs font-semibold text-slate-700">流标：</span>
+              <label className="inline-flex items-center gap-1 cursor-pointer">
+                <input type="radio" name="isFailed" checked={flowBid.isFlow}
+                  onChange={() => setFlowBid({ ...flowBid, isFlow: true, reason: '' })} />
+                <span className="text-xs text-slate-700">是</span>
+              </label>
+              <label className="inline-flex items-center gap-1 cursor-pointer">
+                <input type="radio" name="isFailed" checked={!flowBid.isFlow}
+                  onChange={() => setFlowBid({ ...flowBid, isFlow: false, reason: '' })} />
+                <span className="text-xs text-slate-700">否</span>
+              </label>
             </div>
             {flowBid.isFlow && (
               <div>
                 <FormLabel label="流标原因" required />
-                <TextArea rows={2} placeholder="说明流标原因（如：有效投标人不足 3 家、报价均超预算等）" />
+                <TextArea rows={2} placeholder="请填写流标原因（如：投标供应商不足3家、报价均超出预算、有效标不足等）" />
               </div>
             )}
           </div>
@@ -839,10 +870,9 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
             </div>
           </FieldRow>
 
-          <SectionHeader icon="📎" title="附件（直接/商城）" sub="2 槽" tone="blue" />
-          <div className="px-5 pb-3 grid grid-cols-2 gap-3">
-            <AttachmentSlot label="成交通知书" required />
-            <AttachmentSlot label="采购方式审批文件" />
+          <SectionHeader icon="📎" title="附件（直接/商城）" sub="1 槽必填" tone="blue" />
+          <div className="px-5 pb-3">
+            <AttachmentSlot label="相关文件资料" required hint="直接/商城场景的采购审批文件（必填）" />
           </div>
         </>
       )}
