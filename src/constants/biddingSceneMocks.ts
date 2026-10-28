@@ -66,6 +66,7 @@ export interface CatalogSection {
   totalPriceLimitTaxIncl: number;
   bidWindowStart: string;
   bidWindowEnd: string;
+  evaluationResultFiles?: string[];  // 竞价小组评定结果附件（目录内比价独有）
 }
 
 // 线下 9 种通用：基础执行信息 + 招标公告时间 + 报名单位 + 中标结果
@@ -96,6 +97,11 @@ export interface OfflineExecutionSection {
   loser2?: { name: string; legal?: string; score?: number };
   awardNoticeFiles?: string[];
   approvalFileFiles?: string[];
+  // 审批材料附件槽位（复刻 CompetitiveBiddingPage 新增弹窗的 7 个槽位）
+  // key 取值: meetingMinutes | onMeetingMaterials | agentDrawResult | awardNotice | processArchive | jointMeetingMinutes | jointOnMeetingMaterials
+  attachmentSlots?: { key: string; label: string; required?: boolean; files: string[] }[];
+  // 流标（询比/竞价/谈判 5 种方式显示）
+  flowBid?: { isFlow: boolean; reason?: string };
 }
 
 // 直接采购/电子商城独有
@@ -182,6 +188,7 @@ export const BIDDING_SCENE_MOCKS: Record<BiddingSceneKey, BiddingSceneMock> = {
       totalPriceLimitTaxIncl: 115000,
       bidWindowStart: '2026-10-28 09:00',
       bidWindowEnd: '2026-10-30 17:00',
+      evaluationResultFiles: ['竞价小组评定结果-A馆装修材料-20261031.pdf'],
     },
   },
 
@@ -262,6 +269,16 @@ export const BIDDING_SCENE_MOCKS: Record<BiddingSceneKey, BiddingSceneMock> = {
       loser2: { name: '晨光文具长沙分公司', legal: '王志', score: 78.0 },
       awardNoticeFiles: ['成交通知书-办公耗材Q4采购.pdf'],
       approvalFileFiles: ['采购方式审批文件-办公耗材Q4采购.pdf', '上会材料-办公耗材Q4采购.docx'],
+      attachmentSlots: [
+        { key: 'meetingMinutes', label: '会议纪要', required: true, files: ['会议纪要-评审-20261025.pdf'] },
+        { key: 'onMeetingMaterials', label: '上会材料', required: true, files: ['上会材料-20261025.docx'] },
+        { key: 'agentDrawResult', label: '招标代理抽取结果表', files: ['招标代理抽取结果.pdf'] },
+        { key: 'awardNotice', label: '成交通知书', required: true, files: ['成交通知书.pdf'] },
+        { key: 'processArchive', label: '招采过程备案', required: true, files: ['招采过程备案表.pdf'] },
+        { key: 'jointMeetingMinutes', label: '合资公司会议纪要', files: [] },
+        { key: 'jointOnMeetingMaterials', label: '合资公司上会材料', files: [] }
+      ],
+      flowBid: { isFlow: false },
     },
   },
 
@@ -305,6 +322,16 @@ export const BIDDING_SCENE_MOCKS: Record<BiddingSceneKey, BiddingSceneMock> = {
       loser2: { name: '绿之源清洁有限公司', legal: '周强', score: 82.5 },
       awardNoticeFiles: ['成交通知书-展会临时保洁.pdf'],
       approvalFileFiles: ['采购方式审批文件-展会保洁.pdf'],
+      attachmentSlots: [
+        { key: 'meetingMinutes', label: '会议纪要', required: true, files: ['会议纪要-评审-20261025.pdf'] },
+        { key: 'onMeetingMaterials', label: '上会材料', required: true, files: ['上会材料-20261025.docx'] },
+        { key: 'agentDrawResult', label: '招标代理抽取结果表', files: ['招标代理抽取结果.pdf'] },
+        { key: 'awardNotice', label: '成交通知书', required: true, files: ['成交通知书.pdf'] },
+        { key: 'processArchive', label: '招采过程备案', required: true, files: ['招采过程备案表.pdf'] },
+        { key: 'jointMeetingMinutes', label: '合资公司会议纪要', files: [] },
+        { key: 'jointOnMeetingMaterials', label: '合资公司上会材料', files: [] }
+      ],
+      flowBid: { isFlow: false },
     },
   },
 
@@ -348,6 +375,16 @@ export const BIDDING_SCENE_MOCKS: Record<BiddingSceneKey, BiddingSceneMock> = {
       loser2: { name: '国际会展租赁公司', legal: '冯国', score: 76.5 },
       awardNoticeFiles: ['成交通知书-展具租赁采购.pdf'],
       approvalFileFiles: ['采购方式审批文件-展具租赁.pdf'],
+      attachmentSlots: [
+        { key: 'meetingMinutes', label: '会议纪要', required: true, files: ['会议纪要-评审-20261025.pdf'] },
+        { key: 'onMeetingMaterials', label: '上会材料', required: true, files: ['上会材料-20261025.docx'] },
+        { key: 'agentDrawResult', label: '招标代理抽取结果表', files: ['招标代理抽取结果.pdf'] },
+        { key: 'awardNotice', label: '成交通知书', required: true, files: ['成交通知书.pdf'] },
+        { key: 'processArchive', label: '招采过程备案', required: true, files: ['招采过程备案表.pdf'] },
+        { key: 'jointMeetingMinutes', label: '合资公司会议纪要', files: [] },
+        { key: 'jointOnMeetingMaterials', label: '合资公司上会材料', files: [] }
+      ],
+      flowBid: { isFlow: false },
     },
   },
 
@@ -389,6 +426,16 @@ export const BIDDING_SCENE_MOCKS: Record<BiddingSceneKey, BiddingSceneMock> = {
       loser1: { name: '未来科技股份', legal: '林来', score: 83.5 },
       awardNoticeFiles: ['成交通知书-AI导览系统.pdf'],
       approvalFileFiles: ['采购方式审批文件-AI导览系统.pdf', '技术方案评审纪要.docx'],
+      attachmentSlots: [
+        { key: 'meetingMinutes', label: '会议纪要', required: true, files: ['会议纪要-评审-20261025-AI导览.pdf'] },
+        { key: 'onMeetingMaterials', label: '上会材料', required: true, files: ['上会材料-20261025-AI导览.docx'] },
+        { key: 'agentDrawResult', label: '招标代理抽取结果表', files: ['招标代理抽取结果-AI导览.pdf'] },
+        { key: 'awardNotice', label: '成交通知书', required: true, files: ['成交通知书-AI导览.pdf'] },
+        { key: 'processArchive', label: '招采过程备案', required: true, files: ['招采过程备案表-AI导览.pdf'] },
+        { key: 'jointMeetingMinutes', label: '合资公司会议纪要', files: [] },
+        { key: 'jointOnMeetingMaterials', label: '合资公司上会材料', files: [] }
+      ],
+      flowBid: { isFlow: false },
     },
   },
 
@@ -430,6 +477,16 @@ export const BIDDING_SCENE_MOCKS: Record<BiddingSceneKey, BiddingSceneMock> = {
       loser1: { name: '中消建设集团', legal: '彭安', score: 85.0 },
       awardNoticeFiles: ['成交通知书-消防升级工程.pdf'],
       approvalFileFiles: ['采购方式审批文件-消防升级.pdf', '消防资质审核表.pdf'],
+      attachmentSlots: [
+        { key: 'meetingMinutes', label: '会议纪要', required: true, files: ['会议纪要-评审-20261025-消防升级.pdf'] },
+        { key: 'onMeetingMaterials', label: '上会材料', required: true, files: ['上会材料-20261025.docx'] },
+        { key: 'agentDrawResult', label: '招标代理抽取结果表', files: ['招标代理抽取结果-消防升级.pdf'] },
+        { key: 'awardNotice', label: '成交通知书', required: true, files: ['成交通知书-消防升级.pdf'] },
+        { key: 'processArchive', label: '招采过程备案', required: true, files: ['招采过程备案表-消防升级.pdf'] },
+        { key: 'jointMeetingMinutes', label: '合资公司会议纪要', files: [] },
+        { key: 'jointOnMeetingMaterials', label: '合资公司上会材料', files: [] }
+      ],
+      flowBid: { isFlow: false },
     },
   },
 

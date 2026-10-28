@@ -197,6 +197,11 @@ function CatalogExtraSection({ section }: { section: NonNullable<BiddingSceneMoc
         <FileListBlock title="📎 比价公告附件" files={section.biddingAnnouncementFiles} color="blue" />
         <FileListBlock title="📎 比价文件附件（逐行）" files={section.biddingDocumentFiles} color="amber" />
       </div>
+      {section.evaluationResultFiles && section.evaluationResultFiles.length > 0 && (
+        <div className="px-5 pb-4">
+          <FileListBlock title="📎 竞价小组评定结果附件" files={section.evaluationResultFiles} color="green" />
+        </div>
+      )}
     </>
   );
 }
@@ -357,19 +362,59 @@ function OfflineExtraSection({
         </>
       )}
 
-      {/* 审批材料附件 */}
-      {(section.awardNoticeFiles?.length || section.approvalFileFiles?.length) && (
+      {/* 审批材料附件（复刻 CompetitiveBiddingPage 新增弹窗：7 槽双列 + 流标） */}
+      {section.attachmentSlots && section.attachmentSlots.length > 0 && (
         <>
           <Divider />
-          <SectionHeader icon="📎" title="审批材料附件" sub={isDirectMall ? '直接/商城：相关文件资料（成交通知书必填）' : '线下方式：成交通知书 + 采购方式审批文件'} tone="slate" />
-          <div className="px-5 pb-4 grid grid-cols-2 gap-x-6">
-            {section.awardNoticeFiles && section.awardNoticeFiles.length > 0 && (
-              <FileListBlock title={isDirectMall ? '📎 成交通知书（必填）' : '📎 成交通知书（必填）'} files={section.awardNoticeFiles} color="green" />
-            )}
-            {section.approvalFileFiles && section.approvalFileFiles.length > 0 && (
-              <FileListBlock title={isDirectMall ? '📎 相关文件资料' : '📎 采购方式审批文件'} files={section.approvalFileFiles} color="slate" />
-            )}
+          <SectionHeader icon="📎" title="审批材料附件" sub={`共 ${section.attachmentSlots.length} 个槽位 · 必填项带 *`} tone="slate" />
+          <div className="px-5 py-3 grid grid-cols-2 gap-3">
+            {section.attachmentSlots.map((slot) => (
+              <div key={slot.key} className={`rounded-lg border p-3 ${slot.required ? 'border-rose-200 bg-rose-50/40' : 'border-slate-200 bg-white'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded bg-slate-100 flex items-center justify-center text-[10px] text-slate-500">📎</span>
+                    {slot.label}
+                    {slot.required && <span className="text-rose-500 text-[11px]">（必填）</span>}
+                  </span>
+                  <span className="text-[11px] text-slate-400">{slot.files.length} 个文件</span>
+                </div>
+                {slot.files.length === 0 ? (
+                  <div className="text-[11px] text-slate-400 py-1.5 text-center border border-dashed border-slate-200 rounded bg-slate-50">暂无附件</div>
+                ) : (
+                  <div className="space-y-1">
+                    {slot.files.map((f, i) => (
+                      <div key={i} className="text-[11px] flex items-center gap-1.5">
+                        <span className="text-slate-400">📄</span>
+                        <span className="font-mono text-slate-700 truncate">{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
+
+          {/* 流标区 */}
+          {section.flowBid && (
+            <div className="px-5 pb-4">
+              <div className="pt-3 border-t border-slate-200">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-slate-600 font-semibold">流标：</span>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] ${section.flowBid.isFlow ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
+                    {section.flowBid.isFlow ? '● 是' : '○ 否'}
+                  </span>
+                  {section.flowBid.isFlow && section.flowBid.reason && (
+                    <span className="text-[11px] text-rose-600 truncate">原因：{section.flowBid.reason}</span>
+                  )}
+                </div>
+                {section.flowBid.isFlow && section.flowBid.reason && (
+                  <div className="mt-2 px-3 py-2 bg-rose-50 border border-rose-200 rounded text-[11px] text-rose-700">
+                    {section.flowBid.reason}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </>
       )}
     </>
