@@ -59,10 +59,10 @@ const lanes: SwimLane[] = [
       },
       {
         id: 'plan-summary',
-        name: '采购计划汇总',
+        name: '招采计划汇总',
         description: '按部门/采购方式/期间等维度汇总计划',
         menuPath: '/procurement/plan-summary',
-        menuTitle: '采购计划汇总',
+        menuTitle: '招采计划汇总',
         color: 'text-[#3dbd7d]',
         bg: 'bg-[#e8f7ee]',
         border: 'border-[#9edcb7]',

@@ -51,7 +51,7 @@ const pathLabelMap: Record<string, string> = {
   '/report/sluggish': '呆滞分析',
   '/report/business-flow': '业务流程',
   '/procurement/plan': '采购计划',
-  '/procurement/plan-summary': '采购计划汇总',
+  '/procurement/plan-summary': '招采计划汇总',
   '/procurement/demand': '采购需求',
   '/procurement/contract': '合同台账',
   '/procurement/contract-archive': '合同档案',

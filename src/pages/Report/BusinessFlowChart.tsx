@@ -195,7 +195,7 @@ const flowCharts: FlowChartItem[] = [
     type: 'flowchart',
     code: `flowchart TD
     start([开始]):::startEnd --> plan[制定采购计划]:::process
-    plan --> summary[采购计划汇总]:::process
+    plan --> summary[招采计划汇总]:::process
     summary --> demand[采购需求申请]:::process
     demand --> approve1[部门审批]:::decision
     approve1 -->|通过| order[生成采购工单]:::process

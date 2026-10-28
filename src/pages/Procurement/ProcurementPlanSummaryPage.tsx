@@ -159,7 +159,7 @@ export default function ProcurementPlanSummaryPage() {
     const remark = '备注：项目预算为概算金额，实际以立项批复后金额为准。';
     const csv = [
       ['长沙国际会展中心管理有限责任公司'],
-      ['采购计划汇总表'],
+      ['招采计划汇总表'],
       [`统计期间：${filterYear || '全部'}年${filterMonth ? filterMonth + '月' : ''}，按${groupLabel}汇总`],
       [remark],
       headers,
@@ -168,7 +168,7 @@ export default function ProcurementPlanSummaryPage() {
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `采购计划汇总_${groupBy}_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `招采计划汇总_${groupBy}_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
   };
 
@@ -216,7 +216,7 @@ export default function ProcurementPlanSummaryPage() {
       <div className="mb-3">
         <h1 className="text-xl font-bold text-[#1E40AF] flex items-center gap-2">
           <BarChart3 size={20} />
-          采购计划汇总
+          招采计划汇总
         </h1>
         <p className="text-xs text-[#909399] mt-1">按部门、采购类型、时间等维度对采购计划进行汇总统计和导出</p>
       </div>
