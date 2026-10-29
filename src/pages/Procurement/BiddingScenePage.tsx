@@ -968,44 +968,11 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
   );
 }
 
-// key → URL slug 转换（下划线→短横线），和 Sidebar 路由一致
-const keyToSlug = (k: string) => k.replace(/_/g, '-');
-
-// =====================================================================
-// 9 种方式切换标签
-// =====================================================================
-function SceneTabs({ current }: { current: string }) {
-  return (
-    <div className="mb-4 flex flex-wrap gap-2">
-      {SCENE_MOCKS_ARRAY.map((m) => (
-        <a
-          key={m.key}
-          href={`/procurement/bidding-scene/${keyToSlug(m.key)}`}
-          className={`px-3 py-1.5 text-xs rounded-md border transition ${
-            current === m.key || sceneParamMatches(m.key, current)
-              ? 'bg-indigo-500 text-white border-indigo-500 shadow-sm'
-              : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
-          }`}
-        >
-          {m.label}
-        </a>
-      ))}
-    </div>
-  );
-}
-
-// URL param 可能是 slug（framework-catalog）或原始 key（framework_catalog），都能匹配
-function sceneParamMatches(key: string, param?: string) {
-  if (!param) return false;
-  return key === param || keyToSlug(key) === param;
-}
-
 // =====================================================================
 // 主页面
 // =====================================================================
 export default function BiddingScenePage() {
   const { sceneKey } = useParams<{ sceneKey: string }>();
-  // URL 可能是 framework-catalog（slug）或 framework_catalog（原始），统一转成原始 key
   const methodKey = (sceneKey || 'framework_catalog').replace(/-/g, '_');
   const mock = useMemo(() => SCENE_MOCKS_ARRAY.find((m) => m.key === methodKey), [methodKey]);
   if (!mock) {
@@ -1018,7 +985,6 @@ export default function BiddingScenePage() {
   return (
     <div className="p-5 max-w-[1280px] mx-auto">
       <SceneHeaderCard methodKey={methodKey} />
-      <SceneTabs current={methodKey} />
       <FormInteractiveSection methodKey={methodKey} />
     </div>
   );
