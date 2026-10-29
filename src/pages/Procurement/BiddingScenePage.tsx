@@ -71,7 +71,7 @@ function SceneHeaderCard({ methodKey }: { methodKey: string }) {
 }
 
 // =====================================================================
-// 附件槽位（复刻弹窗的 renderMaterialSlot + 弹窗里的虚线框样式）
+// 附件槽位（复刻弹窗的虚线框样式）
 // =====================================================================
 function MaterialSlot({ label, required }: { label: string; required?: boolean }) {
   return (
@@ -88,15 +88,13 @@ function MaterialSlot({ label, required }: { label: string; required?: boolean }
 }
 
 // =====================================================================
-// 主表单：完全复刻 CompetitiveBiddingPage 弹窗（1611-2610 行）
+// 主表单 —— 条件渲染全部用 form.procurementMethod (pm)
+// 和 CompetitiveBiddingPage 弹窗完全对齐
 // =====================================================================
 function FormInteractiveSection({ methodKey }: { methodKey: string }) {
-  const [isNew] = useState(true);
   const [selectedSuppliers] = useState<string[]>([]);
   const [selectedDemandId] = useState<number | null>(null);
   const itemsTotalLimit = 0;
-  const offlineTotals = { ex: 0, in: 0, tax: 0 };
-  const offlineFilledCount = 0;
 
   const [form, setForm] = useState<any>({
     biddingNo: '', projectName: '', procurementMethod: methodKey,
@@ -116,50 +114,50 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
     drawTime: '', randomSupplierName: '', randomSupplierContact: '', randomContractNo: '', remark: '',
   });
   const upd = (k: string, v: any) => setForm((prev: any) => ({ ...prev, [k]: v }));
+  // 关键：所有条件渲染用 form.procurementMethod（跟随用户在表单里选的采购方式变化）
+  const pm: string = form.procurementMethod || methodKey;
 
   const [bidderList, setBidderList] = useState<any[]>([{ name: '', contactPerson: '', phone: '', remark: '' }]);
 
   return (
     <div className="space-y-3">
 
-      {/* ========== 基础信息（弹窗 1626-1671 行，3 字段 grid-cols-3） ========== */}
+      {/* ========== 基础信息（所有方式都有） ========== */}
       <div className="grid grid-cols-3 gap-3">
         <div>
           <div className="mb-1 text-xs text-[#606266]">工单编号</div>
           <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa] text-sm"
-            value={form.biddingNo || ''} placeholder={isNew ? '保存后自动生成' : undefined} disabled />
+            value={form.biddingNo || ''} placeholder="保存后自动生成" disabled />
         </div>
         <div>
           <div className="mb-1 text-xs text-[#606266]">采购方式 <span className="text-[#f56c6c]">*</span></div>
           <select className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-            value={form.procurementMethod || methodKey}
-            onChange={(e) => upd('procurementMethod', e.target.value)}>
+            value={pm} onChange={(e) => upd('procurementMethod', e.target.value)}>
             {PROCUREMENT_METHOD_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         <div>
-          <div className="mb-1 text-xs text-[#606266]">项目名称 <span className="text-[#f56c6c]">*</span><span className="text-slate-400 ml-1">(从需求自动带出，可编辑)</span></div>
+          <div className="mb-1 text-xs text-[#606266]">项目名称 <span className="text-[#f56c6c]">*</span>
+            <span className="text-slate-400 ml-1">(从需求自动带出，可编辑)</span></div>
           <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
             value={form.projectName || ''} onChange={(e) => upd('projectName', e.target.value)} placeholder="请输入项目名称" />
         </div>
       </div>
 
-      {/* ========== 当前采购方式提示条（弹窗 1673-1692 行） ========== */}
-      {form.procurementMethod && (
-        <div className={`text-xs px-3 py-2 rounded border ${
-          isCatalog(methodKey) ? 'bg-blue-50 border-blue-200 text-blue-700'
-            : isRandom(methodKey) ? 'bg-purple-50 border-purple-200 text-purple-700'
-            : 'bg-slate-50 border-slate-200 text-slate-600'
-        }`}>
-          {isCatalog(methodKey) ? '📋 模式：目录内比价（线上报价）— 供应商在小程序报价，你只需设置单品上限和整单上限。'
-            : isRandom(methodKey) ? '🎲 模式：随机抽取（线下录入）— 系统仅记录抽取结果，抽取动作不在本系统进行。可选择是否关联采购需求。'
-            : isSimple(methodKey) ? '📝 模式：线下录入（简化无税率）— 你自己填写清单、不含税单价，走审批流程。无税率/含税列。'
-            : '📝 模式：线下录入 — 你自己填写清单、单价、税率，走审批流程。'}
-        </div>
-      )}
+      {/* ========== 模式提示条（所有方式都有） ========== */}
+      <div className={`text-xs px-3 py-2 rounded border ${
+        isCatalog(pm) ? 'bg-blue-50 border-blue-200 text-blue-700'
+          : isRandom(pm) ? 'bg-purple-50 border-purple-200 text-purple-700'
+          : 'bg-slate-50 border-slate-200 text-slate-600'
+      }`}>
+        {isCatalog(pm) ? '📋 模式：目录内比价（线上报价）— 供应商在小程序报价，你只需设置单品上限和整单上限。'
+          : isRandom(pm) ? '🎲 模式：随机抽取（线下录入）— 系统仅记录抽取结果，抽取动作不在本系统进行。可选择是否关联采购需求。'
+          : isSimple(pm) ? '📝 模式：线下录入（简化无税率）— 你自己填写清单、不含税单价，走审批流程。无税率/含税列。'
+          : '📝 模式：线下录入 — 你自己填写清单、单价、税率，走审批流程。'}
+      </div>
 
-      {/* ========== 关联采购需求（弹窗 1694-1721 行） ========== */}
-      {(!isRandom(methodKey)) && (
+      {/* ========== 关联采购需求（排除 framework_random ========== */}
+      {!isRandom(pm) && (
         <div>
           <div className="mb-1 flex items-center justify-between">
             <span className="text-xs text-[#606266]">
@@ -183,20 +181,11 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
         </div>
       )}
 
-      {/* ========== 框架协议采购-随机抽取 专属表单（弹窗 1723-1811 行） ========== */}
-      {isRandom(methodKey) && (
+      {/* ========== 框架协议采购-随机抽取 专属表单 ========== */}
+      {isRandom(pm) && (
         <div className="space-y-3 pt-3 border-t border-slate-200">
           <div className="text-sm font-semibold text-purple-700 flex items-center gap-2">
             <span>🎲</span> 随机抽取结果录入
-            <span className="text-xs text-slate-400 font-normal">(截图 L1-6 字段 + linkDemand 开关)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[#606266]">是否关联采购需求</span>
-            <label className="inline-flex items-center cursor-pointer">
-              <input type="checkbox" className="sr-only peer" defaultChecked />
-              <div className="relative w-9 h-5 bg-slate-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-500"></div>
-            </label>
-            <span className="text-xs text-slate-500">关闭后下方"关联采购需求"将隐藏（展会现场相关需求通常不关联）</span>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
@@ -224,7 +213,6 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
               <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
                 value={form.randomContractNo || ''} onChange={(e) => upd('randomContractNo', e.target.value)}
                 placeholder="输入关键字，从供应商框架合同中匹配" />
-              <div className="text-[11px] text-slate-400 mt-0.5">提示：先选择供应商，下拉将自动筛选该供应商的合同</div>
             </div>
             <div>
               <div className="mb-1 text-xs text-[#606266]">备注</div>
@@ -235,15 +223,12 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
         </div>
       )}
 
-      {/* ========== 明细摘要卡（弹窗 1813-2013 行，目录内比价 vs 线下录入） ========== */}
-      {isCatalog(methodKey) ? (
+      {/* ========== 明细区块：目录内比价 vs 其他 ========== */}
+      {isCatalog(pm) ? (
         <>
-          {/* 目录内比价：邀请供应商 + 物资明细摘要卡 + 整单上限 */}
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <span className="text-xs text-[#606266]">
-                物资明细（0项）- 对每条物资设置「单品上限单价(含税)」
-              </span>
+              <span className="text-xs text-[#606266]">物资明细（0项）- 对每条物资设置「单品上限单价(含税)」</span>
             </div>
             <div className="border border-dashed border-[#dcdfe6] rounded p-6 text-center text-sm text-[#909399]">
               请先在上方选择一条已通过的采购需求，需求中的物资将自动带入。
@@ -259,12 +244,11 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
               </div>
             </div>
             <div className="flex gap-2 flex-wrap mt-2">
-              <button type="button" className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg hover:from-indigo-600 hover:to-purple-700 active:scale-[0.97] transition-all duration-200">
+              <button type="button" className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg hover:from-indigo-600 hover:to-purple-700 transition">
                 📋 查看 / 编辑清单（0）
               </button>
             </div>
           </div>
-          {/* 整单上限 */}
           <div>
             <div className="mb-1 text-xs text-[#606266]">
               整单上限总价(含税) <span className="text-[#f56c6c]">*</span>
@@ -276,31 +260,31 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
               placeholder="请输入整单含税上限" />
           </div>
         </>
-      ) : (
+      ) : !isRandom(pm) ? (
         <>
-          {/* 线下录入类：清单明细摘要卡 */}
+          {/* 线下录入类：清单明细 */}
           <div>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-medium text-slate-700">
-                清单明细
+                清单明细（0 项）
                 <span className="ml-1.5 text-xs text-slate-400 font-normal">
-                  （0 项）· {isSimple(methodKey) ? '填写不含税单价，自动计算不含税金额（无税率/含税列）' : '填写不含税单价和税率，含税自动计算'}
+                  · {isSimple(pm) ? '填写不含税单价，自动计算不含税金额（无税率/含税列）' : '填写不含税单价和税率，含税自动计算'}
                 </span>
               </span>
             </div>
             <div className="border border-dashed border-slate-300 bg-slate-50/50 rounded-xl p-8 text-center">
               <div className="text-slate-400 text-sm mb-3">请先在上方选择采购需求自动带入，或点击下方按钮导入 / 录入清单</div>
               <div className="flex items-center justify-center gap-2">
-                <button type="button" className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-300 text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all duration-200">📥 导入清单</button>
-                <button type="button" className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg hover:from-indigo-600 hover:to-purple-700 active:scale-[0.97] transition-all duration-200">+ 录入清单条目</button>
+                <button type="button" className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-300 text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition">📥 导入清单</button>
+                <button type="button" className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg transition">+ 录入清单条目</button>
               </div>
             </div>
           </div>
         </>
-      )}
+      ) : null}
 
-      {/* ========== 受邀供应商（仅 framework_catalog，弹窗 2117-2155 行） ========== */}
-      {isCatalog(methodKey) && (
+      {/* ========== 受邀供应商（仅 framework_catalog ========== */}
+      {isCatalog(pm) && (
         <div>
           <div className="mb-1 flex items-center justify-between">
             <span className="text-xs text-[#606266]">受邀供应商</span>
@@ -324,12 +308,12 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
         </div>
       )}
 
-      {/* ========== 公告附件蓝框（framework_catalog + competitive_bidding，弹窗 2157-2214 行） ========== */}
-      {(isCatalog(methodKey) || isCompetitive(methodKey)) && (
+      {/* ========== 公告附件蓝框（framework_catalog + competitive_bidding ========== */}
+      {(isCatalog(pm) || isCompetitive(pm)) && (
         <div className="border border-[#409eff] rounded p-3 bg-[#ecf5ff]">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <div className="text-sm font-semibold text-[#303133]">{isCompetitive(methodKey) ? '竞价公告附件' : '比价公告附件'}</div>
+              <div className="text-sm font-semibold text-[#303133]">{isCompetitive(pm) ? '竞价公告附件' : '比价公告附件'}</div>
               <div className="text-xs text-[#909399]">上传相关文件（PDF/Word/图片等）</div>
             </div>
           </div>
@@ -337,12 +321,11 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
         </div>
       )}
 
-      {/* ========== 线下流程专属：基础执行信息（弹窗 2016-2115 行） ========== */}
-      {(isOffline(methodKey) || isSimple(methodKey)) && (
+      {/* ========== 基础执行信息（线下5种 + direct + e_mall ========== */}
+      {(isOffline(pm) || isSimple(pm)) && (
         <div className="space-y-3 pt-3 border-t border-slate-200">
           <div className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
             <span>📋</span> 基础执行信息
-            <span className="text-xs text-slate-400 font-normal">(916 L12-20)</span>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
@@ -366,10 +349,10 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
                 value={form.implementationUnit || ''} onChange={(e) => upd('implementationUnit', e.target.value)} placeholder="如：国金招标采购中心" />
             </div>
             {/* 项目实施单位：inquiry + competitive + direct + e_mall 有 */}
-            {(isInquiry(methodKey) || isCompetitive(methodKey) || isSimple(methodKey)) && (
+            {(isInquiry(pm) || isCompetitive(pm) || isSimple(pm)) && (
               <div>
                 <div className="mb-1 text-xs text-[#606266]">项目实施单位
-                  {isSimple(methodKey) && <span className="text-[#f56c6c]">*</span>}
+                  {isSimple(pm) && <span className="text-[#f56c6c]">*</span>}
                 </div>
                 <select className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
                   value={form.projectImplementationUnit || ''} onChange={(e) => upd('projectImplementationUnit', e.target.value)}>
@@ -383,30 +366,30 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
               <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
                 value={form.procurementHandler || ''} onChange={(e) => upd('procurementHandler', e.target.value)} placeholder="经办人姓名" />
             </div>
-            {/* 直接/商城 供应商 */}
-            {isSimple(methodKey) && (
+            {/* 直接/商城 专属字段 */}
+            {isSimple(pm) && (
               <div>
                 <div className="mb-1 text-xs text-[#606266]">供应商 <span className="text-[#f56c6c]">*</span></div>
                 <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
                   value={form.supplier || ''} onChange={(e) => upd('supplier', e.target.value)} placeholder="请输入供应商名称" />
               </div>
             )}
-            {isSimple(methodKey) && (
+            {isSimple(pm) && (
               <div>
-                <div className="mb-1 text-xs text-[#606266]">含税总金额 <span className="text-[#909399] text-[11px]">(与清单自动合计比对)</span></div>
+                <div className="mb-1 text-xs text-[#606266]">含税总金额</div>
                 <input type="number" step="0.01" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-                  value={form.taxTotalAmount ?? ''} onChange={(e) => upd('taxTotalAmount', e.target.value === '' ? undefined : Number(e.target.value))} placeholder="请输入含税总金额(可留空)" />
+                  value={form.taxTotalAmount ?? ''} onChange={(e) => upd('taxTotalAmount', e.target.value === '' ? undefined : Number(e.target.value))} placeholder="可留空" />
               </div>
             )}
-            {isSimple(methodKey) && (
+            {isSimple(pm) && (
               <div>
-                <div className="mb-1 text-xs text-[#606266]">不含税总金额 <span className="text-[#909399] text-[11px]">(与清单自动合计比对)</span></div>
+                <div className="mb-1 text-xs text-[#606266]">不含税总金额</div>
                 <input type="number" step="0.01" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-                  value={form.taxExclusiveTotalAmount ?? ''} onChange={(e) => upd('taxExclusiveTotalAmount', e.target.value === '' ? undefined : Number(e.target.value))} placeholder="请输入不含税总金额(可留空)" />
+                  value={form.taxExclusiveTotalAmount ?? ''} onChange={(e) => upd('taxExclusiveTotalAmount', e.target.value === '' ? undefined : Number(e.target.value))} placeholder="可留空" />
               </div>
             )}
             {/* 招标人：inquiry + competitive + negotiation 有 */}
-            {hasNegotiator(methodKey) && (
+            {hasNegotiator(pm) && (
               <div>
                 <div className="mb-1 text-xs text-[#606266]">招标人</div>
                 <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
@@ -414,25 +397,23 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
               </div>
             )}
           </div>
-          {/* 审批文件附件 */}
           <MaterialSlot
-            label={isSimple(methodKey) ? '相关文件资料' : '采购方式审批文件资料'}
-            required={isSimple(methodKey)}
+            label={isSimple(pm) ? '相关文件资料' : '采购方式审批文件资料'}
+            required={isSimple(pm)}
           />
         </div>
       )}
 
-      {/* ========== 线下流程专属：招标公告与时间（弹窗 2216-2342 行） ========== */}
-      {isOffline(methodKey) && (
+      {/* ========== 招标公告与时间（仅线下5种） ========== */}
+      {isOffline(pm) && (
         <div className="space-y-3 pt-3 border-t border-slate-200">
           <div className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
             <span>📢</span>
-            {methodKey === 'inquiry_invited' ? '邀请公告与时间' : '招标公告与时间'}
-            <span className="text-xs text-slate-400 font-normal">(916 L21-30)</span>
+            {pm === 'inquiry_invited' ? '邀请公告与时间' : '招标公告与时间'}
           </div>
           <div className="grid grid-cols-3 gap-3">
-            {/* 代理机构 radio：5 种线下都有 */}
-            {hasNegotiator(methodKey) && (
+            {/* 代理机构：所有线下5种都有 */}
+            {hasNegotiator(pm) && (
               <div>
                 <div className="mb-1 text-xs text-[#606266]">是否有招标代理机构</div>
                 <div className="flex gap-3 pt-1">
@@ -447,15 +428,15 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
                 </div>
               </div>
             )}
-            {hasNegotiator(methodKey) && form.hasAgent && (
+            {hasNegotiator(pm) && form.hasAgent && (
               <div>
                 <div className="mb-1 text-xs text-[#606266]">招标代理机构名称</div>
                 <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
                   value={form.agentName || ''} onChange={(e) => upd('agentName', e.target.value)} placeholder="如：湖南招标代理公司" />
               </div>
             )}
-            {/* 公告发布时间：询比/竞价/谈判-公开 */}
-            {hasAnnounceTime(methodKey) && (
+            {/* 公告发布时间：询比2种 + 竞价 + 谈判-公开 */}
+            {hasAnnounceTime(pm) && (
               <div>
                 <div className="mb-1 text-xs text-[#606266]">招采公告发布时间</div>
                 <input type="datetime-local" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
@@ -463,8 +444,8 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
                   onChange={(e) => upd('announcementPublishTime', e.target.value.replace('T', ' '))} />
               </div>
             )}
-            {/* 开标时间：询比/竞价 */}
-            {hasBidOpening(methodKey) && (
+            {/* 开标时间：询比2种 + 竞价 */}
+            {hasBidOpening(pm) && (
               <div>
                 <div className="mb-1 text-xs text-[#606266]">开标时间</div>
                 <input type="datetime-local" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
@@ -472,8 +453,8 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
                   onChange={(e) => upd('bidOpeningTime', e.target.value.replace('T', ' '))} />
               </div>
             )}
-            {/* 评标办法：询比/竞价 */}
-            {hasJudgeMethod(methodKey) && (
+            {/* 评标办法：询比2种 + 竞价 */}
+            {hasJudgeMethod(pm) && (
               <div>
                 <div className="mb-1 text-xs text-[#606266]">评标办法</div>
                 <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
@@ -481,8 +462,8 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
               </div>
             )}
           </div>
-          {/* 业主评委 + 业主代表：只有 inquiry + competitive 有 */}
-          {hasOwnerJudge(methodKey) && (
+          {/* 业主评委：只有 inquiry + competitive 有 */}
+          {hasOwnerJudge(pm) && (
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="mb-1 text-xs text-[#606266]">是否委派业主评委</div>
@@ -502,16 +483,14 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
                   <div className="mb-1 text-xs text-[#606266]">业主代表</div>
                   <div className="space-y-1.5">
                     {(form.ownerRepresentatives && form.ownerRepresentatives.length > 0
-                      ? form.ownerRepresentatives
-                      : ['']
+                      ? form.ownerRepresentatives : ['']
                     ).map((name: string, idx: number) => (
                       <div key={idx} className="flex items-center gap-1.5">
                         <input className="flex-1 h-8 px-2 border border-[#dcdfe6] rounded text-sm"
                           value={name} placeholder={`业主代表 ${idx + 1}`}
                           onChange={(e) => {
-                            const arr = [...(form.ownerRepresentatives && form.ownerRepresentatives.length > 0
-                              ? form.ownerRepresentatives
-                              : [''])];
+                            const arr = [...((form.ownerRepresentatives && form.ownerRepresentatives.length > 0
+                              ? form.ownerRepresentatives : ['']))];
                             arr[idx] = e.target.value;
                             upd('ownerRepresentatives', arr);
                           }} />
@@ -527,8 +506,7 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
                     <button type="button" className="text-xs text-indigo-600 hover:text-indigo-700 pt-0.5"
                       onClick={() => {
                         const base = (form.ownerRepresentatives && form.ownerRepresentatives.length > 0
-                          ? form.ownerRepresentatives
-                          : ['']);
+                          ? form.ownerRepresentatives : ['']);
                         upd('ownerRepresentatives', [...base, '']);
                       }}>+ 添加业主代表
                     </button>
@@ -540,12 +518,11 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
         </div>
       )}
 
-      {/* ========== 报名单位（弹窗 2344-2443 行） ========== */}
-      {(isInquiry(methodKey) || isCompetitive(methodKey) || isNegotiation(methodKey)) && (
+      {/* ========== 报名单位（询比2种 + 竞价 + 谈判2种 ========== */}
+      {(isInquiry(pm) || isCompetitive(pm) || isNegotiation(pm)) && (
         <div className="space-y-3 pt-3 border-t border-slate-200">
           <div className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
             <span>👥</span> 报名单位
-            <span className="text-xs text-slate-400 font-normal">(可自行增减行项)</span>
           </div>
           <div className="border border-slate-200 rounded overflow-hidden">
             <table className="w-full text-xs">
@@ -595,12 +572,11 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
         </div>
       )}
 
-      {/* ========== 中标结果（弹窗 2445-2556 行） ========== */}
-      {isOffline(methodKey) && (
+      {/* ========== 中标结果（线下5种 ========== */}
+      {isOffline(pm) && (
         <div className="space-y-3 pt-3 border-t border-slate-200">
           <div className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
             <span>🏆</span> 中标结果
-            <span className="text-xs text-slate-400 font-normal">(916 L31-45)</span>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
@@ -615,7 +591,8 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
                 value={form.winningSupplierLegalPerson || ''} onChange={(e) => upd('winningSupplierLegalPerson', e.target.value)}
                 placeholder="法人姓名" />
             </div>
-            {hasWinnerScore(methodKey) && (
+            {/* 中标得分：询比2种 + 竞价 */}
+            {hasWinnerScore(pm) && (
               <div>
                 <div className="mb-1 text-xs text-[#606266]">中标单位得分</div>
                 <input type="number" step="0.01" className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
@@ -653,8 +630,8 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
               )}
             </div>
           </div>
-          {/* 未中标单位1/2（只有 inquiry + competitive 有完整字段） */}
-          {hasLosers(methodKey) && (
+          {/* 未中标单位：只有 inquiry + competitive 有完整字段 */}
+          {hasLosers(pm) && (
             <>
               <div className="text-xs text-slate-500 mt-2">未中标单位</div>
               <div className="grid grid-cols-2 gap-3">
@@ -686,27 +663,26 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
         </div>
       )}
 
-      {/* ========== 审批材料附件 + 流标（弹窗 2558-2610 行） ========== */}
-      {isOffline(methodKey) && (
+      {/* ========== 审批材料附件 + 流标（线下5种 ========== */}
+      {isOffline(pm) && (
         <div className="space-y-3 pt-3 border-t border-slate-200">
           <div className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
             <span>📎</span> 审批材料附件
-            <span className="text-xs text-slate-400 font-normal">(916 L46-55)</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {(isInquiry(methodKey) || isCompetitive(methodKey) || isNegotiation(methodKey)) && (
+            {(isInquiry(pm) || isCompetitive(pm) || isNegotiation(pm)) && (
               <MaterialSlot label="会议纪要" required />
             )}
-            {(isInquiry(methodKey) || isCompetitive(methodKey) || isNegotiation(methodKey)) && (
+            {(isInquiry(pm) || isCompetitive(pm) || isNegotiation(pm)) && (
               <MaterialSlot label="上会材料" required />
             )}
-            {hasNegotiator(methodKey) && (
+            {hasNegotiator(pm) && (
               <MaterialSlot label="招标代理抽取结果表" />
             )}
-            {(isInquiry(methodKey) || isCompetitive(methodKey) || isNegotiation(methodKey)) && (
+            {(isInquiry(pm) || isCompetitive(pm) || isNegotiation(pm)) && (
               <MaterialSlot label="成交通知书" required />
             )}
-            {(isInquiry(methodKey) || isCompetitive(methodKey) || isNegotiation(methodKey)) && (
+            {(isInquiry(pm) || isCompetitive(pm) || isNegotiation(pm)) && (
               <MaterialSlot label="招采过程备案" required />
             )}
             <MaterialSlot label="合资公司会议纪要" />
@@ -765,7 +741,8 @@ export default function BiddingScenePage() {
     <div className="p-5 max-w-[1280px] mx-auto">
       <SceneHeaderCard methodKey={methodKey} />
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-        <FormInteractiveSection methodKey={methodKey} />
+        {/* key=methodKey 确保路由切换时组件 remount，useState 重置 */}
+        <FormInteractiveSection methodKey={methodKey} key={methodKey} />
       </div>
     </div>
   );
