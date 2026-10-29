@@ -29,7 +29,8 @@ const isNegotiation = (k?: string) => k === 'negotiation_open' || k === 'negotia
 const hasAnnounceTime = (k?: string) => isInquiry(k) || k === 'competitive_bidding' || k === 'negotiation_open';
 const hasBidOpening = (k?: string) => isInquiry(k) || isCompetitive(k);
 const hasJudgeMethod = (k?: string) => isInquiry(k) || isCompetitive(k);
-const hasOwnerJudge = (k?: string) => isInquiry(k) || isCompetitive(k) || isNegotiation(k);
+// hasOwnerJudge 只有 inquiry* + competitive 有，negotiation* 没有这个字段
+const hasOwnerJudge = (k?: string) => isInquiry(k) || isCompetitive(k);
 const hasLosers = (k?: string) => isInquiry(k) || isCompetitive(k);
 const hasWinnerScore = (k?: string) => isInquiry(k) || isCompetitive(k);
 const hasNegotiator = (k?: string) => isInquiry(k) || isCompetitive(k) || isNegotiation(k);
@@ -358,34 +359,58 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-      {/* ====== 基础信息（所有方式共用） ====== */}
-      <SectionHeader icon="📋" title="基础信息" sub="所有采购方式必填" tone="indigo" />
+      {/* ====== 基础信息（所有方式共用 · 和 CompetitiveBiddingPage 弹窗完全对齐） ====== */}
+      <SectionHeader icon="📋" title="基础信息" sub="工单编号/采购方式/项目名称 3 字段" tone="indigo" />
       <FieldRow cols={3}>
         <div>
           <FormLabel label="工单编号" />
-          <TextInput value={form.workOrderNo} onChange={(v) => upd('workOrderNo', v)} placeholder="自动生成，可手填" />
-        </div>
-        <div>
-          <FormLabel label="项目名称" required />
-          <TextInput value={form.projectName} onChange={(v) => upd('projectName', v)} placeholder="如：A 馆改造升级" />
-        </div>
-        <div>
-          <FormLabel label="工单名称" required />
-          <TextInput value={form.workOrderName} onChange={(v) => upd('workOrderName', v)} placeholder="如：A 馆装修材料采购" />
+          <TextInput value={form.workOrderNo} onChange={(v) => upd('workOrderNo', v)} placeholder="保存后自动生成" />
         </div>
         <div>
           <FormLabel label="采购方式" required />
           <SelectInput value={form.procurementMethod} onChange={(v) => upd('procurementMethod', v)} options={PROCUREMENT_METHOD_OPTIONS} />
         </div>
         <div>
-          <FormLabel label="截止时间" />
-          <DateInput value={form.deadline} onChange={(v) => upd('deadline', v)} />
-        </div>
-        <div>
-          <FormLabel label="关联采购计划单" />
-          <TextInput value={form.refPlanNo} onChange={(v) => upd('refPlanNo', v)} placeholder="如：GGQQ-20261018-008" />
+          <FormLabel label="项目名称" required />
+          <TextInput value={form.projectName} onChange={(v) => upd('projectName', v)} placeholder="如：A 馆改造升级" />
         </div>
       </FieldRow>
+
+      {/* ====== 当前采购方式模式描述提示条（和弹窗完全对齐） ====== */}
+      <div className={`mx-5 mb-3 text-xs px-3 py-2 rounded border ${
+        isCatalog(methodKey) ? 'bg-blue-50 border-blue-200 text-blue-700'
+          : isRandom(methodKey) ? 'bg-purple-50 border-purple-200 text-purple-700'
+          : isSimple(methodKey) ? 'bg-slate-50 border-slate-200 text-slate-600'
+          : 'bg-slate-50 border-slate-200 text-slate-600'
+      }`}>
+        {isCatalog(methodKey) ? (
+          '📋 模式：目录内比价（线上报价）— 供应商在小程序报价，你只需设置单品上限和整单上限。'
+        ) : isRandom(methodKey) ? (
+          '🎲 模式：随机抽取（线下录入）— 系统仅记录抽取结果，抽取动作不在本系统进行。可选择是否关联采购需求。'
+        ) : isSimple(methodKey) ? (
+          '📝 模式：线下录入（简化无税率）— 自己填写清单、不含税单价，走审批流程。无税率/含税列。'
+        ) : (
+          '📝 模式：线下录入 — 自己填写清单、单价、税率，走审批流程。'
+        )}
+      </div>
+
+      {/* ====== 关联采购需求（所有方式都有，random 关 linkDemand 时隐藏） ====== */}
+      {(!isRandom(methodKey) || flowBid.isFlow === false /* linkDemand 默认 true */) && (
+        <div className="px-5 pb-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-slate-600">
+              关联采购需求 {!isRandom(methodKey) && <span className="text-rose-500">*</span>}
+              <span className="text-slate-400 ml-1">（选择后将带入需求中的物资）</span>
+            </span>
+            <button className="text-xs text-indigo-500 hover:text-indigo-700 hover:underline">选择</button>
+          </div>
+          <div className="border border-dashed border-slate-300 rounded px-3 py-2 text-xs text-slate-400 text-center">
+            请点击上方「选择」按钮，从已审核通过的采购需求中选择
+          </div>
+        </div>
+      )}
+
+      {/* ====== 项目说明 ====== */}
       <FieldRow cols={1}>
         <div>
           <FormLabel label="项目说明" />
@@ -436,56 +461,110 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
         </>
       )}
 
-      {/* ====== 目录内比价专属区块 ====== */}
+      {/* ====== 目录内比价专属区块（完全对齐 CompetitiveBiddingPage 弹窗 1813-2008 行）====== */}
       {isCatalog(methodKey) && (
         <>
           <div className="h-px bg-slate-200 my-2" />
-          <SectionHeader icon="🏗️" title="受邀供应商" sub="目录内比价独有：弹窗多选框架供应商库" tone="amber" />
+
+          {/* 受邀供应商 */}
           <div className="px-5 pb-3">
-            <div className="flex flex-wrap gap-2 mb-2 min-h-[32px] p-2 border border-slate-200 rounded bg-slate-50">
-              {invitedSuppliers.length === 0 && <span className="text-[11px] text-slate-400">暂未添加受邀供应商</span>}
-              {invitedSuppliers.map((s, i) => (
-                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs">
-                  {s}
-                  <button type="button" onClick={() => setInvitedSuppliers(invitedSuppliers.filter((_, j) => j !== i))} className="hover:text-rose-500">✕</button>
-                </span>
-              ))}
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-slate-600">受邀供应商</span>
+              <button className="text-xs text-indigo-500 hover:text-indigo-700 hover:underline">
+                {invitedSuppliers.length > 0 ? '重新选择' : '选择'}（已选 {invitedSuppliers.length} 家）
+              </button>
             </div>
-            <div className="flex gap-2">
-              <TextInput value={supplierInput} onChange={setSupplierInput} placeholder="输入供应商名称后回车添加" />
-              <button type="button" onClick={addSupplier} className="px-3 h-8 text-xs bg-indigo-500 text-white rounded hover:bg-indigo-600">添加</button>
+            {invitedSuppliers.length > 0 ? (
+              <div className="border border-slate-300 rounded p-2 flex flex-wrap gap-1.5 min-h-[40px] bg-white">
+                {invitedSuppliers.map((s, i) => (
+                  <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs rounded border border-indigo-200">
+                    {s}
+                    <button onClick={() => setInvitedSuppliers(invitedSuppliers.filter((_, j) => j !== i))} className="hover:text-rose-500">×</button>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="border border-dashed border-slate-300 rounded px-3 py-2 text-xs text-slate-400 text-center min-h-[40px]">
+                请点击上方「选择」按钮，从启用的供应商中选择受邀对象
+              </div>
+            )}
+          </div>
+
+          {/* 物资明细 + 单品上限（弹窗核心区块！之前完全没做） */}
+          <div className="px-5 pb-3 border-t border-dashed border-slate-200 pt-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-slate-600">
+                物资明细（0项）- 对每条物资设置「单品上限单价(含税)」
+              </span>
+              <span className="text-xs text-slate-400">条目上限合计（仅供参考）：¥0</span>
+            </div>
+            <div className="border border-dashed border-slate-300 rounded p-6 text-center text-sm text-slate-500 bg-white">
+              请先在上方选择一条已通过的采购需求，需求中的物资将自动带入。
+            </div>
+            <div className="flex gap-2 flex-wrap mt-3">
+              <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md">
+                <div className="text-[11px] text-slate-400">条目上限合计</div>
+                <div className="text-sm font-semibold text-slate-800">¥0</div>
+              </div>
+              <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md">
+                <div className="text-[11px] text-slate-400">不含税金额合计</div>
+                <div className="text-sm font-semibold text-indigo-600">¥0</div>
+              </div>
+              <button className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg">
+                📋 查看 / 编辑清单（0）
+              </button>
             </div>
           </div>
 
-          <SectionHeader icon="📦" title="物料明细" sub="14 列：框架协议价自动带入" tone="slate" />
+          {/* 整单上限总价（弹窗里是物资明细下面的独立字段） */}
+          <div className="px-5 pb-3 border-t border-slate-200 pt-3">
+            <div className="mb-1 text-xs text-slate-600">
+              整单上限总价(含税) <span className="text-rose-500">*</span>
+              <span className="text-slate-400 ml-2 text-[11px]">
+                （参考：所有条目的上限×数量之和 ≈ ¥0）
+              </span>
+            </div>
+            <NumberInput min={0} placeholder="请输入整单含税上限" />
+          </div>
+
+          {/* 比价公告附件（蓝色框） */}
+          <div className="px-5 pb-3">
+            <div className="border border-blue-200 rounded p-3 bg-blue-50">
+              <div className="flex items-center justify-between mb-1">
+                <div>
+                  <div className="text-sm font-semibold text-slate-800">比价公告附件</div>
+                  <div className="text-xs text-slate-500">上传比价公告相关文件（PDF/Word/图片等）</div>
+                </div>
+              </div>
+              <div className="mt-2">
+                <AttachmentSlot label="比价公告附件" required hint="支持 PDF/DOC，多文件" />
+              </div>
+            </div>
+          </div>
+
+          {/* 竞价文件附件（橙色框，目录内比价独有） */}
+          <div className="px-5 pb-3">
+            <div className="border border-amber-200 rounded p-3 bg-amber-50">
+              <div className="flex items-center justify-between mb-1">
+                <div>
+                  <div className="text-sm font-semibold text-slate-800">竞价文件附件</div>
+                  <div className="text-xs text-slate-500">上传竞价文件相关资料（PDF/Word/Excel等）</div>
+                </div>
+              </div>
+              <div className="mt-2">
+                <AttachmentSlot label="竞价文件附件（逐行对应明细）" required hint="支持 PDF/DOC/Excel，多文件" />
+              </div>
+            </div>
+          </div>
+
+          {/* 物料明细 14 列（竞价表） */}
+          <SectionHeader icon="📦" title="物料明细（竞价表）" sub="14 列：竞价文件列逐行对应" tone="slate" />
           <EmptyTable
-            columns={['物料编号', '名称', '规格型号', '单位', '预估数量', '框架单价(元)', '小计(元)', '品牌', '备注', '交付周期', '质量标准', '技术参数', '售后服务', '验收标准']}
+            columns={['物料编号', '名称', '规格型号', '单位', '预估数量', '框架单价(元)', '小计(元)', '品牌', '竞价文件', '交付周期', '质量标准', '技术参数', '售后服务', '验收标准']}
             addLabel="+ 从框架协议库导入 / 手动新增一行"
           />
 
-          <SectionHeader icon="📎" title="附件区（目录内比价）" sub="3 个必填附件槽位" tone="blue" />
-          <div className="px-5 pb-3 grid grid-cols-2 gap-3">
-            <AttachmentSlot label="比价公告附件" required hint="支持 PDF/DOC，多文件" />
-            <AttachmentSlot label="竞价文件附件（逐行对应明细）" required hint="每个明细行可独立上传技术文件" />
-            <AttachmentSlot label="竞价小组评定结果附件" required />
-          </div>
-
-          <SectionHeader icon="💰" title="竞价参数" tone="emerald" />
-          <FieldRow cols={3}>
-            <div>
-              <FormLabel label="整单上限总价（元）" required />
-              <NumberInput min={0} placeholder="如：760000（参考：条目上限合计 ¥xxx）" />
-            </div>
-            <div>
-              <FormLabel label="报价窗口开始" required />
-              <DateInput />
-            </div>
-            <div>
-              <FormLabel label="报价窗口结束" required />
-              <DateInput />
-            </div>
-          </FieldRow>
-
+          {/* 比价结果汇总 */}
           <div className="px-5 pb-3 border-t border-dashed border-slate-200 mt-2 pt-3">
             <div className="text-xs text-slate-600 mb-2 flex items-center gap-1.5">
               <span className="inline-block w-1 h-1 rounded-full bg-amber-500"></span>
@@ -889,6 +968,9 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
   );
 }
 
+// key → URL slug 转换（下划线→短横线），和 Sidebar 路由一致
+const keyToSlug = (k: string) => k.replace(/_/g, '-');
+
 // =====================================================================
 // 9 种方式切换标签
 // =====================================================================
@@ -898,9 +980,9 @@ function SceneTabs({ current }: { current: string }) {
       {SCENE_MOCKS_ARRAY.map((m) => (
         <a
           key={m.key}
-          href={`/procurement/bidding-scene/${m.key}`}
+          href={`/procurement/bidding-scene/${keyToSlug(m.key)}`}
           className={`px-3 py-1.5 text-xs rounded-md border transition ${
-            current === m.key
+            current === m.key || sceneParamMatches(m.key, current)
               ? 'bg-indigo-500 text-white border-indigo-500 shadow-sm'
               : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
           }`}
@@ -912,12 +994,19 @@ function SceneTabs({ current }: { current: string }) {
   );
 }
 
+// URL param 可能是 slug（framework-catalog）或原始 key（framework_catalog），都能匹配
+function sceneParamMatches(key: string, param?: string) {
+  if (!param) return false;
+  return key === param || keyToSlug(key) === param;
+}
+
 // =====================================================================
 // 主页面
 // =====================================================================
 export default function BiddingScenePage() {
   const { sceneKey } = useParams<{ sceneKey: string }>();
-  const methodKey = sceneKey || 'framework_catalog';
+  // URL 可能是 framework-catalog（slug）或 framework_catalog（原始），统一转成原始 key
+  const methodKey = (sceneKey || 'framework_catalog').replace(/-/g, '_');
   const mock = useMemo(() => SCENE_MOCKS_ARRAY.find((m) => m.key === methodKey), [methodKey]);
   if (!mock) {
     return (
