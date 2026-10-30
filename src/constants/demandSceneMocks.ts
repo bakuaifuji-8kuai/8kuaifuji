@@ -76,7 +76,7 @@ export const SCENE_MOCKS: Record<string, SceneMock> = {
       businessCategory: 'engineering',
       subType: 'goods',
     },
-    description: '【清单内采购】场景：合同物资已锁定编码/名称/单价/税率/合同编号，列宽表显示含"合同清单内外/合同编号/合同有效期/税率/税额/含税金额/库存数量"等完整列；含锁定行（灰底+不可编辑）与非锁定行的对比。',
+    description: '【工程类/货物 + 清单内】场景：物资明细表（宽表 22 列，双表头分组：项目信息 8 列 + 采购申请 9 列 + 库存 1 列 + 合同 2 列 + 操作 1 列）；含合同清单内外/合同编号/合同有效期/税率/税额/含税金额/库存数量等完整列；清单内合同物资行的编码/名称/单价/税率/合同编号等已锁定（灰底+不可编辑），数量/单价备注/采购情况说明可改。',
     details: [
       {
         id: 'd1', productCode: 'P00001', productName: '立邦净味全效涂料（白色）', productType: '墙面涂料',
@@ -123,7 +123,7 @@ export const SCENE_MOCKS: Record<string, SceneMock> = {
       businessCategory: 'engineering',
       subType: 'goods',
     },
-    description: '【清单外采购】场景：无合同关联，列窄表显示（无"合同编号/合同有效期/税率/税额/含税金额"列），单价可手填，含单价备注/库存数量/采购情况说明。',
+    description: '【工程类/货物 + 清单外】场景：物资明细表（窄表 14 列）；无合同关联（砍合同编号/合同有效期/税率/税额/含税金额列）；含单价备注/库存数量/采购情况说明；单价全手填。',
     details: [
       {
         id: 'd1', productCode: 'P00055', productName: '定制展台背景板（3m×2.5m）',
@@ -164,7 +164,7 @@ export const SCENE_MOCKS: Record<string, SceneMock> = {
       businessCategory: 'engineering',
       subType: 'goods',
     },
-    description: '【新增供应商目录】场景：极简预算版双表头（项目信息 + 采购申请），砍含税/合同列，单价全手填；库存数量黄色高亮；可导入清单。',
+    description: '【工程类/货物 + 新增供应商目录】场景：物资明细表（新增供应商版 15 列，双表头分组：项目信息 8 列 + 采购申请 5 列 + 库存 1 列 + 说明 1 列）；砍含税/税率/税额/含税金额/合同编号/合同有效期共 6 列，单价备注/库存数量/产品属性/产品类型/采购情况说明仍保留；单价全手填；库存数量黄色高亮（#fff9c4 底）；不可导入清单。',
     details: [
       {
         id: 'd1', productCode: 'P00099', productName: '新型生物基环保涂料（米白色）',
@@ -198,7 +198,7 @@ export const SCENE_MOCKS: Record<string, SceneMock> = {
       businessCategory: 'engineering',
       subType: 'construction',
     },
-    description: '【工程类/施工】场景：明细表为"项目多行表"（非物资明细），每行一个施工子项目，填需求部门/项目名称/主要内容/不含税预算总金额/备注；施工类仅允许"新增供应商目录"采购。',
+    description: '【工程类/施工】场景：项目多行明细表（7 列：序号/需求部门/项目名称/主要内容/不含税预算总金额/备注/操作），每行一个施工子项目；施工类仅允许"新增供应商目录"采购方式（门控）。',
     projectRows: [
       {
         id: 'p1', dept: '安全管理部', projectName: 'D馆喷淋系统更换',
@@ -231,7 +231,7 @@ export const SCENE_MOCKS: Record<string, SceneMock> = {
       businessCategory: 'engineering',
       subType: 'service',
     },
-    description: '【工程类/服务 + 清单内】场景：明细表为"项目多行表"（同施工类结构），但框架类型可三选一；服务项目多行表字段：需求部门/项目名称/主要内容/不含税预算总金额/备注。',
+    description: '【工程类/服务 + 清单内】场景：项目多行明细表（7 列，同施工类结构：序号/需求部门/项目名称/主要内容/不含税预算总金额/备注/操作）；但框架合同采购方式可选清单内/清单外/新增供应商三选一。',
     projectRows: [
       {
         id: 'p1', dept: '综合管理部', projectName: '展馆日常安保服务',
@@ -258,7 +258,7 @@ export const SCENE_MOCKS: Record<string, SceneMock> = {
       businessCategory: 'engineering',
       subType: 'service',
     },
-    description: '【工程类/服务 + 清单外】场景：项目多行表，无合同关联，预算金额手填。',
+    description: '【工程类/服务 + 清单外】场景：项目多行明细表（7 列，同施工类结构）；无合同关联，预算金额全手填。',
     projectRows: [
       {
         id: 'p1', dept: '展览服务部', projectName: '展会期间标准保洁（A馆）',
@@ -285,7 +285,7 @@ export const SCENE_MOCKS: Record<string, SceneMock> = {
       businessCategory: 'engineering',
       subType: 'service',
     },
-    description: '【工程类/服务 + 新增供应商目录】场景：项目多行表，新增供应商无合同关联，预算金额全手填。',
+    description: '【工程类/服务 + 新增供应商目录】场景：项目多行明细表（7 列，同施工类结构）；新增供应商无合同关联，预算金额全手填。',
     projectRows: [
       {
         id: 'p1', dept: '信息中心', projectName: 'AI 导览系统定制开发',
