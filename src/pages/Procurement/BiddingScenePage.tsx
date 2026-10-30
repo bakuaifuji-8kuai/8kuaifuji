@@ -111,6 +111,7 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
     isFailed: false, failedReason: '',
     supplier: '', taxTotalAmount: undefined, taxExclusiveTotalAmount: undefined,
     totalPriceLimit: undefined, frameworkCompareAmountExcludingTaxInput: undefined,
+    linkDemand: true,  // 随机抽取：是否关联采购需求（默认是）
     drawTime: '', randomSupplierName: '', randomSupplierContact: '', randomContractNo: '', remark: '',
   });
   const upd = (k: string, v: any) => setForm((prev: any) => ({ ...prev, [k]: v }));
@@ -156,12 +157,12 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
           : '📝 模式：线下录入 — 你自己填写清单、单价、税率，走审批流程。'}
       </div>
 
-      {/* ========== 关联采购需求（排除 framework_random ========== */}
-      {!isRandom(pm) && (
+      {/* ========== 关联采购需求（random 方式默认显示，linkDemand 开关隐藏） ========== */}
+      {(!isRandom(pm) || form.linkDemand !== false) && (
         <div>
           <div className="mb-1 flex items-center justify-between">
             <span className="text-xs text-[#606266]">
-              关联采购需求 <span className="text-[#f56c6c]">*</span>
+              关联采购需求 {!isRandom(pm) && <span className="text-[#f56c6c]">*</span>}
               <span className="text-slate-400 ml-1">(选择后将带入需求中的物资)</span>
             </span>
             <button type="button" className="text-xs text-indigo-500 hover:text-indigo-700 hover:underline">
@@ -186,6 +187,17 @@ function FormInteractiveSection({ methodKey }: { methodKey: string }) {
         <div className="space-y-3 pt-3 border-t border-slate-200">
           <div className="text-sm font-semibold text-purple-700 flex items-center gap-2">
             <span>🎲</span> 随机抽取结果录入
+          </div>
+          {/* linkDemand 开关：控制是否显示上方"关联采购需求" */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[#606266]">是否关联采购需求</span>
+            <label className="inline-flex items-center cursor-pointer">
+              <input type="checkbox" className="sr-only peer"
+                checked={form.linkDemand !== false}
+                onChange={(e) => upd('linkDemand', e.target.checked)} />
+              <div className="relative w-9 h-5 bg-slate-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-500"></div>
+            </label>
+            <span className="text-xs text-slate-500">关闭后下方"关联采购需求"将隐藏（展会现场相关需求通常不关联）</span>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
