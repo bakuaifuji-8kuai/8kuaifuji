@@ -328,10 +328,15 @@ function MaterialNewSupplierTable({ details }: { details: SceneMockDetail[] }) {
   );
 }
 
-// ④ 非工程类物资明细表（within / outside / new_supplier 三合一，差异仅在"合同列"和"库存数量列"）
+// ④ 非工程类物资明细表
+// within: 清单内 — 有合同清单内外/合同编号/合同有效期
+// !within && newSupplier: 新增供应商 — 砍单价备注（新供应商无历史价格参考）
+// !within && !newSupplier: 清单外 — 有单价备注，无合同三列
 function NonEngGoodsTable({ details, within, newSupplier }: { details: SceneMockDetail[]; within: boolean; newSupplier: boolean }) {
   const totalAmount = details.reduce((s, d) => s + (d.amountExcludingTax || 0), 0);
   const title = within ? '【非工程类/货物 · 清单内】' : newSupplier ? '【非工程类/货物 · 新增供应商目录】' : '【非工程类/货物 · 清单外】';
+  // 总列数（用于 tfoot colSpan）
+  const totalCols = (within ? 3 : 0) + (newSupplier ? 0 : 1) + 11; // 基础11列 + 合同3列 + 单价备注1列
 
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
@@ -342,7 +347,8 @@ function NonEngGoodsTable({ details, within, newSupplier }: { details: SceneMock
             <tr>
               <Th w="w-12">序号</Th><Th>编码</Th><Th>名称</Th><Th>分类</Th><Th>规格/参数</Th><Th w="w-14">单位</Th>
               {within && <Th w="w-24 text-center">合同清单内外</Th>}
-              <Th w="w-28 text-right">不含税预算单价</Th><Th w="w-24">单价备注</Th>
+              <Th w="w-28 text-right">不含税预算单价</Th>
+              {!newSupplier && <Th w="w-24">单价备注</Th>}
               <Th w="w-20 text-right">库存数量</Th><Th w="w-28 text-right">不含税预算金额</Th>
               {within && <Th>合同编号</Th>}
               {within && <Th>合同有效期</Th>}
@@ -366,7 +372,7 @@ function NonEngGoodsTable({ details, within, newSupplier }: { details: SceneMock
                   </Td>
                 )}
                 <Td className="text-right font-mono">{(d.unitPriceExcludingTax ?? 0).toFixed(2)}</Td>
-                <Td>{d.unitPriceRemark || '-'}</Td>
+                {!newSupplier && <Td>{d.unitPriceRemark || '-'}</Td>}
                 <Td className="text-right font-medium text-amber-600">{d.stockQuantity ?? 0}</Td>
                 <Td className="text-right font-medium text-red-600">{(d.amountExcludingTax ?? 0).toFixed(2)}</Td>
                 {within && <Td>{d.contractNo || '-'}</Td>}
@@ -379,9 +385,9 @@ function NonEngGoodsTable({ details, within, newSupplier }: { details: SceneMock
           {details.length > 0 && (
             <tfoot className="bg-slate-50 border-t border-slate-200">
               <tr>
-                <td colSpan={within ? 9 : 8} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
+                <td colSpan={totalCols - 2} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
                 <td className="px-2 py-2 text-right text-red-600 font-semibold">¥ {totalAmount.toFixed(2)}</td>
-                <td colSpan={within ? 5 : 4}></td>
+                <td></td>
               </tr>
             </tfoot>
           )}
@@ -391,10 +397,15 @@ function NonEngGoodsTable({ details, within, newSupplier }: { details: SceneMock
   );
 }
 
-// ⑤ 非工程类服务明细表（within / outside / new_supplier 三合一，差异：无库存列）
+// ⑤ 非工程类服务明细表
+// within: 清单内 — 有合同清单内外/合同编号/合同有效期
+// !within && newSupplier: 新增供应商 — 砍单价备注
+// !within && !newSupplier: 清单外 — 有单价备注，无合同三列
 function NonEngServiceTable({ details, within, newSupplier }: { details: SceneMockDetail[]; within: boolean; newSupplier: boolean }) {
   const totalAmount = details.reduce((s, d) => s + (d.amountExcludingTax || 0), 0);
   const title = within ? '【非工程类/服务 · 清单内】' : newSupplier ? '【非工程类/服务 · 新增供应商目录】' : '【非工程类/服务 · 清单外】';
+  const totalCols = (within ? 3 : 0) + (newSupplier ? 0 : 1) + 10; // 基础10列 + 合同3列 + 单价备注1列
+
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
       <DetailListHeader title={`${title}非工程类服务需求明细清单`} count={details.length} totalAmount={totalAmount} />
@@ -404,7 +415,8 @@ function NonEngServiceTable({ details, within, newSupplier }: { details: SceneMo
             <tr>
               <Th w="w-12">序号</Th><Th>编码</Th><Th>名称</Th><Th>分类</Th><Th>规格/参数</Th><Th w="w-14">单位</Th>
               {within && <Th w="w-24 text-center">合同清单内外</Th>}
-              <Th w="w-28 text-right">不含税预算单价</Th><Th w="w-24">单价备注</Th>
+              <Th w="w-28 text-right">不含税预算单价</Th>
+              {!newSupplier && <Th w="w-24">单价备注</Th>}
               <Th w="w-28 text-right">不含税预算金额</Th>
               {within && <Th>合同编号</Th>}
               {within && <Th>合同有效期</Th>}
@@ -428,7 +440,7 @@ function NonEngServiceTable({ details, within, newSupplier }: { details: SceneMo
                   </Td>
                 )}
                 <Td className="text-right font-mono">{(d.unitPriceExcludingTax ?? 0).toFixed(2)}</Td>
-                <Td>{d.unitPriceRemark || '-'}</Td>
+                {!newSupplier && <Td>{d.unitPriceRemark || '-'}</Td>}
                 <Td className="text-right font-medium text-red-600">{(d.amountExcludingTax ?? 0).toFixed(2)}</Td>
                 {within && <Td>{d.contractNo || '-'}</Td>}
                 {within && <Td>{d.contractExpiryDate || '-'}</Td>}
@@ -440,9 +452,9 @@ function NonEngServiceTable({ details, within, newSupplier }: { details: SceneMo
           {details.length > 0 && (
             <tfoot className="bg-slate-50 border-t border-slate-200">
               <tr>
-                <td colSpan={within ? 8 : 7} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
+                <td colSpan={totalCols - 2} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
                 <td className="px-2 py-2 text-right text-red-600 font-semibold">¥ {totalAmount.toFixed(2)}</td>
-                <td colSpan={within ? 5 : 4}></td>
+                <td></td>
               </tr>
             </tfoot>
           )}

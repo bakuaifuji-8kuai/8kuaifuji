@@ -308,7 +308,7 @@ export const SCENE_MOCKS: Record<string, SceneMock> = {
       businessCategory: 'non_engineering',
       subType: 'goods',
     },
-    description: '【非工程类/货物 + 清单内】场景：明细表为宽表（16 列含合同列 + 单价备注 + 库存数量），比工程类少项目编号/名称分组；合同物资锁价不可改；可导入清单。',
+    description: '【非工程类/货物 + 清单内】场景：明细表为宽表（15 列含合同清单内外/合同编号/合同有效期 + 单价备注 + 库存数量），比工程类少项目编号/名称分组；合同物资锁价不可改；可导入清单。',
     details: [
       {
         id: 'd1', productCode: 'O00001', productName: 'A4 复印纸（70g 500张/包）',
@@ -351,7 +351,7 @@ export const SCENE_MOCKS: Record<string, SceneMock> = {
       businessCategory: 'non_engineering',
       subType: 'goods',
     },
-    description: '【非工程类/货物 + 清单外】场景：明细表窄表（13 列），无合同列，有单价备注 + 库存数量（货物类专属）；单价全手填。',
+    description: '【非工程类/货物 + 清单外】场景：明细表窄表（12 列），无合同列，有单价备注 + 库存数量（货物类专属）；单价全手填。',
     details: [
       {
         id: 'd1', productCode: 'O00100', productName: '美心月饼（双黄白莲蓉 740g）',
@@ -380,7 +380,7 @@ export const SCENE_MOCKS: Record<string, SceneMock> = {
       businessCategory: 'non_engineering',
       subType: 'goods',
     },
-    description: '【非工程类/货物 + 新增供应商目录】场景：同清单外窄表，单价全手填，不可导入清单。',
+    description: '【非工程类/货物 + 新增供应商目录】场景：窄表（11 列，比清单外少"单价备注"列），无合同列，无单价备注，有库存数量；单价全手填，不可导入清单。',
     details: [
       {
         id: 'd1', productCode: 'O00200', productName: '美年大健康体检套餐（标准 A）',
@@ -404,7 +404,7 @@ export const SCENE_MOCKS: Record<string, SceneMock> = {
       businessCategory: 'non_engineering',
       subType: 'service',
     },
-    description: '【非工程类/服务 + 清单内】场景：宽表（16 列含合同列 + 单价备注），比货物类少"库存数量"列（服务无库存）；合同物资锁价；可导入清单。',
+    description: '【非工程类/服务 + 清单内】场景：宽表（14 列含合同清单内外/合同编号/合同有效期 + 单价备注），比货物类少"库存数量"列（服务无库存）；合同物资锁价；可导入清单。',
     details: [
       {
         id: 'd1', productCode: 'S00001', productName: '常年法律顾问服务（年度）',
@@ -439,7 +439,7 @@ export const SCENE_MOCKS: Record<string, SceneMock> = {
       businessCategory: 'non_engineering',
       subType: 'service',
     },
-    description: '【非工程类/服务 + 清单外】场景：窄表（12 列，无库存列），单价全手填；单价备注列保留。',
+    description: '【非工程类/服务 + 清单外】场景：窄表（11 列，无库存列），单价全手填；有单价备注列。',
     details: [
       {
         id: 'd1', productCode: 'S00010', productName: '英语现场翻译（会议）',
@@ -468,7 +468,7 @@ export const SCENE_MOCKS: Record<string, SceneMock> = {
       businessCategory: 'non_engineering',
       subType: 'service',
     },
-    description: '【非工程类/服务 + 新增供应商目录】场景：同清单外窄表，单价全手填，不可导入清单。',
+    description: '【非工程类/服务 + 新增供应商目录】场景：窄表（10 列，比清单外少"单价备注"列），无合同列，无库存列，无单价备注；单价全手填，不可导入清单。',
     details: [
       {
         id: 'd1', productCode: 'S00100', productName: '员工 EAP 年度服务包',
