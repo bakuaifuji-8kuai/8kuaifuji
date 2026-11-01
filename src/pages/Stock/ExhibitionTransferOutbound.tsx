@@ -543,11 +543,10 @@ export default function ExhibitionTransferOutboundPage() {
             <table className="w-full text-sm border border-[#ebeef5] rounded overflow-hidden">
               <thead>
                 <tr className="bg-[#f5f7fa] text-[#606266]">
-                  <th className="px-4 py-3 text-left">物资编码</th>
+                  <th className="px-4 py-3 text-left">作业项</th>
                   <th className="px-4 py-3 text-left">物资名称</th>
                   <th className="px-4 py-3 text-left">规格</th>
                   <th className="px-4 py-3 text-left">单位</th>
-                  <th className="px-4 py-3 text-left">工单</th>
                   <th className="px-4 py-3 text-right">数量</th>
                   <th className="px-4 py-3 text-left">备注</th>
                 </tr>
@@ -556,7 +555,7 @@ export default function ExhibitionTransferOutboundPage() {
                 {viewItem.details.length ? (
                   viewItem.details.map((d, i) => (
                     <tr key={i} className="border-t border-[#ebeef5]">
-                      <td className="px-4 py-3 text-[#303133]">{d.productCode}</td>
+                      <td className="px-4 py-3 text-[#303133]">{d.workOrderName || '-'}</td>
                       <td className="px-4 py-3 text-[#303133]">{d.productName}</td>
                       <td className="px-4 py-3 text-[#303133]">
                         {products.find((p) => p.id === d.productId)?.specification || '-'}
@@ -564,14 +563,13 @@ export default function ExhibitionTransferOutboundPage() {
                       <td className="px-4 py-3 text-[#303133]">
                         {products.find((p) => p.id === d.productId)?.unit || '-'}
                       </td>
-                      <td className="px-4 py-3 text-[#2f54eb]">{d.workOrderCode || '-'}</td>
                       <td className="px-4 py-3 text-right text-[#303133]">{d.quantity}</td>
                       <td className="px-4 py-3 text-[#303133]">{d.remark || '-'}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="py-6 text-center text-[#909399]">
+                    <td colSpan={6} className="py-6 text-center text-[#909399]">
                       无明细
                     </td>
                   </tr>
@@ -709,13 +707,12 @@ export default function ExhibitionTransferOutboundPage() {
                   <thead>
                     <tr className="bg-[#f5f7fa] text-[#606266]">
                       <th className="px-2 py-2 text-left w-8">#</th>
-                      <th className="px-2 py-2 text-left w-28">物资编码</th>
+                      <th className="px-2 py-2 text-left w-32">作业项</th>
                       <th className="px-2 py-2 text-left flex-1">物资名称</th>
                       <th className="px-2 py-2 text-left w-24">规格</th>
                       <th className="px-2 py-2 text-left w-16">单位</th>
-                      <th className="px-2 py-2 text-left w-24">工单</th>
-                      <th className="px-2 py-2 text-left w-20">可用库存</th>
                       <th className="px-2 py-2 text-right w-24">调拨数量</th>
+                      <th className="px-2 py-2 text-left w-20">可用库存</th>
                       <th className="px-2 py-2 text-center w-12">操作</th>
                     </tr>
                   </thead>
@@ -734,12 +731,10 @@ export default function ExhibitionTransferOutboundPage() {
                         return (
                           <tr key={i} className="border-t border-[#ebeef5]">
                             <td className="px-2 py-1.5 text-[#909399]">{i + 1}</td>
-                            <td className="px-2 py-1.5 text-[#303133]">{d.productCode}</td>
+                            <td className="px-2 py-1.5 text-[#303133]">{(d as any).workOrderName || '-'}</td>
                             <td className="px-2 py-1.5 text-[#303133]">{d.productName}</td>
                             <td className="px-2 py-1.5 text-[#909399]">{p?.specification || '-'}</td>
                             <td className="px-2 py-1.5 text-[#909399]">{p?.unit || '-'}</td>
-                            <td className="px-2 py-1.5 text-[#2f54eb]">{(d as any).workOrderCode || '-'}</td>
-                            <td className="px-2 py-1.5 text-[#67c23a]">{available}</td>
                             <td className="px-2 py-1.5 text-right">
                               <input
                                 type="number"
@@ -753,6 +748,7 @@ export default function ExhibitionTransferOutboundPage() {
                                 onChange={(e) => updateDetail(i, 'quantity', parseInt(e.target.value, 10) || 0)}
                               />
                             </td>
+                            <td className="px-2 py-1.5 text-[#67c23a]">{available}</td>
                             <td className="px-2 py-1.5 text-center">
                               <TextButton type="danger" onClick={() => removeDetail(i)}>
                                 删除
@@ -763,7 +759,7 @@ export default function ExhibitionTransferOutboundPage() {
                       })
                     ) : (
                       <tr>
-                        <td colSpan={9} className="py-8 text-center text-[#909399]">
+                        <td colSpan={8} className="py-8 text-center text-[#909399]">
                           暂无物资，请点击「选择工单」或「选择物资」按钮添加
                         </td>
                       </tr>
