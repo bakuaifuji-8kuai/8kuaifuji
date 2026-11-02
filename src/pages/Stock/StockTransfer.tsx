@@ -1117,7 +1117,7 @@ export default function StockTransferPage() {
               {workOrderConfigs.length === 0 && (
                 <tr>
                   <td colSpan={9} className="py-6 text-center text-[#909399]">
-                    暂无工单配置，请先在工单物资配置中添加
+                    暂无工单配置，请先在作业项物资配置中添加
                   </td>
                 </tr>
               )}

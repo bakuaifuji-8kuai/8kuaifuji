@@ -18,25 +18,8 @@ export default function WorkOrderProductConfig() {
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
 
   const workOrderItems = [
-    { id: 'WI2606110003', code: 'WI2606110003', name: '停车作业项', category: '其他/停车/停车' },
-    { id: 'WI2606110002', code: 'WI2606110002', name: '会议室-会议室延时业项', category: '会议室/会议室/会议室延时' },
-    { id: 'WI2606110001', code: 'WI2606110001', name: '会议室-场租作业项', category: '会议室/会议室/场租' },
-    { id: 'WI2606100001', code: 'WI2606100001', name: '给排水作业', category: '水/气/水气作业/给排水' },
-    { id: 'WI2606040001', code: 'WI2606040001', name: '作业项_设备押金', category: '设备押金/设备押金/设备押金' },
-    { id: 'WI2605270021', code: 'WI2605270021', name: '搭建押金/搭建押金/搭建押金', category: '搭建押金/搭建押金/搭建押金' },
-    { id: 'WI2605270020', code: 'WI2605270020', name: '搭建押金/搭建押金/安全清洁押金', category: '搭建押金/搭建押金/安全清洁押金' },
-    { id: 'WI2605270019', code: 'WI2605270019', name: '管理费/管理费/地毯管理费', category: '管理费/管理费/地毯管理费' },
-    { id: 'WI2605270018', code: 'WI2605270018', name: '管理费/管理费/特装管理费', category: '管理费/管理费/特装管理费' },
-    { id: 'WI2605270017', code: 'WI2605270017', name: '管理费/管理费/管理费', category: '管理费/管理费/管理费' },
-    { id: 'WI2605270016', code: 'WI2605270016', name: '保洁/物业安保/布撤展-保洁加班', category: '保洁/物业安保/布撤展-保洁加班' },
-    { id: 'WI2605270015', code: 'WI2605270015', name: '保洁/物业安保/布撤展-保洁', category: '保洁/物业安保/布撤展-保洁' },
-    { id: 'WI2605270014', code: 'WI2605270014', name: '保洁/物业安保/展期-保洁加班', category: '保洁/物业安保/展期-保洁加班' },
-    { id: 'WI2605270013', code: 'WI2605270013', name: '保洁/物业安保/展期-保洁', category: '保洁/物业安保/展期-保洁' },
-    { id: 'WI2605270012', code: 'WI2605270012', name: '安保/物业安保/展期-安保加班', category: '安保/物业安保/展期-安保加班' },
-    { id: 'WI2605270011', code: 'WI2605270011', name: '安保/物业安保/布撤展--安保加班', category: '安保/物业安保/布撤展--安保加班' },
-    { id: 'WI2605270010', code: 'WI2605270010', name: '安保/物业安保/展期-物业安保', category: '安保/物业安保/展期-物业安保' },
-    { id: 'WI2605270009', code: 'WI2605270009', name: '安保/物业安保/布撤展-物业安保', category: '安保/物业安保/布撤展-物业安保' },
-    { id: 'WI2605270008', code: 'WI2605270008', name: '水/气/水气作业/给排水', category: '水/气/水气作业/给排水' },
+    { id: 'WI-PD-220V', code: 'WI-PD-220V', name: '配电箱220V 16A', category: '动力/电力/配电箱220V 16A' },
+    { id: 'WI-DD', code: 'WI-DD', name: '吊点', category: '搭建/结构/吊点' },
   ];
 
   const filteredConfigs = workOrderConfigs.filter(
@@ -274,7 +257,7 @@ export default function WorkOrderProductConfig() {
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-medium text-[#303133]">工单物资配置</h2>
+        <h2 className="text-lg font-medium text-[#303133]">作业项物资配置</h2>
         <button
           onClick={handleAddConfig}
           className="flex items-center gap-1 px-3 py-1.5 bg-[#2f54eb] text-white text-sm rounded hover:bg-[#1d4ed8]"
@@ -348,7 +331,7 @@ export default function WorkOrderProductConfig() {
             {filteredConfigs.length === 0 && (
               <tr>
                 <td colSpan={9} className="px-3 py-8 text-center text-[#909399]">
-                  暂无工单物资配置
+                  暂无作业项物资配置
                 </td>
               </tr>
             )}
@@ -360,7 +343,7 @@ export default function WorkOrderProductConfig() {
         <div className="bg-white rounded-lg w-[900px] max-h-[90vh] overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#ebeef5]">
             <h3 className="text-base font-medium text-[#303133]">
-              {editingConfig ? '编辑工单物资配置' : '新增工单物资配置'}
+              {editingConfig ? '编辑作业项物资配置' : '新增作业项物资配置'}
             </h3>
             <button onClick={() => setShowModal(false)} className="text-[#909399] hover:text-[#606266]">
               <X size={18} />

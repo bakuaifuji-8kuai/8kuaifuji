@@ -29,7 +29,7 @@ const pathLabelMap: Record<string, string> = {
   '/basic/product-application': '物资申请',
   '/basic/implementation-project': '实施项目',
   '/basic/service-project': '服务项目',
-  '/basic/workorder-product-config': '工单物资配置',
+  '/basic/workorder-product-config': '作业项物资配置',
   '/basic/supplier': '供应商管理',
   '/asset/list': '资产档案',
   '/asset/inbound': '资产入库',

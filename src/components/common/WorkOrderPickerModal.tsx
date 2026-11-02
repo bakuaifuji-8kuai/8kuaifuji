@@ -188,7 +188,7 @@ export default function WorkOrderPickerModal({
 
       <div className="max-h-[420px] overflow-y-auto border border-[#e4e7ed] rounded">
         {filteredOrders.length === 0 ? (
-          <div className="py-12 text-center text-[#909399] text-xs">暂无工单物资配置</div>
+          <div className="py-12 text-center text-[#909399] text-xs">暂无作业项物资配置</div>
         ) : (
           filteredOrders.map((order) => {
             const isExpanded = expandedOrders.has(order.id);
