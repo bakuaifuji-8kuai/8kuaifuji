@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
@@ -16,6 +16,9 @@ const warehousePropertyOptions: { value: WarehouseProperty; label: string }[] = 
   { value: 'physical', label: '实物仓' },
   { value: 'virtual', label: '虚拟仓' },
 ];
+
+// 施工单位选项（项目里实际用的 3 家）
+const constructionUnitOptions: string[] = ['上海锦华', '湖南警安', '中裕电力'];
 
 // 生成仓库编码（系统自动生成，不可编辑）
 function generateWarehouseCode(): string {
@@ -42,9 +45,13 @@ function generateWarehouseNo(existingWarehouses: Warehouse[]): string {
 
 export default function WarehousePage() {
   const warehouses = useStore((s) => s.warehouses);
+  const exhibitionProjects = useStore((s) => s.exhibitionProjects);
   const addWarehouse = useStore((s) => s.addWarehouse);
   const updateWarehouse = useStore((s) => s.updateWarehouse);
   const deleteWarehouse = useStore((s) => s.deleteWarehouse);
+
+  // 标记用户是否手动修改过仓库名称（手动改过后不再自动覆盖）
+  const nameEditedRef = useRef(false);
 
   const [filterName, setFilterName] = useState('');
   const [filterCode, setFilterCode] = useState('');
@@ -109,6 +116,7 @@ export default function WarehousePage() {
   const [isNew, setIsNew] = useState(false);
 
   const openAdd = () => {
+    nameEditedRef.current = false;
     const newItem: Warehouse = {
       id: 'WH' + Date.now(),
       code: generateWarehouseCode(),
@@ -159,6 +167,96 @@ export default function WarehousePage() {
       >
         {editItem && (
           <div className="space-y-3 text-xs">
+            {/* 仓库属性（移到最顶） */}
+            <div>
+              <div className="mb-1 text-[#606266]">仓库属性 <span className="text-[#f56c6c]">*</span></div>
+              <select
+                className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-white text-[#303133] focus:outline-none focus:border-[#2f54eb]"
+                value={editItem.property}
+                onChange={(e) => {
+                  const prop = e.target.value as WarehouseProperty;
+                  const opt = warehousePropertyOptions.find(o => o.value === prop);
+                  // 从虚拟仓切回实物仓时，清空虚拟仓专属字段
+                  if (prop === 'physical') {
+                    setEditItem({
+                      ...editItem,
+                      property: prop,
+                      propertyName: opt?.label || '',
+                      exhibitionId: undefined,
+                      exhibitionName: undefined,
+                      constructionUnit: undefined,
+                    });
+                  } else {
+                    // 切到虚拟仓时，如果已经有展会+施工单位，自动生成名称
+                    const autoName = editItem.exhibitionName && editItem.constructionUnit
+                      ? `${editItem.exhibitionName}${editItem.constructionUnit}仓库`
+                      : editItem.name;
+                    setEditItem({
+                      ...editItem,
+                      property: prop,
+                      propertyName: opt?.label || '',
+                      name: autoName,
+                    });
+                  }
+                }}
+              >
+                {warehousePropertyOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 虚拟仓专属：所属展会 + 所属施工单位 */}
+            {editItem.property === 'virtual' && (
+              <div className="grid grid-cols-2 gap-3 p-3 bg-[#f5f7fa] rounded border border-dashed border-[#dcdfe6]">
+                <div>
+                  <div className="mb-1 text-[#606266]">所属展会 <span className="text-[#f56c6c]">*</span></div>
+                  <select
+                    className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-white text-[#303133] focus:outline-none focus:border-[#2f54eb]"
+                    value={editItem.exhibitionId || ''}
+                    onChange={(e) => {
+                      const proj = exhibitionProjects.find(p => p.id === e.target.value);
+                      const newExhibitionId = e.target.value;
+                      const newExhibitionName = proj?.projectName || '';
+                      // 自动生成名称：展会名 + 施工单位 + 仓库（仅当用户没手动改过名称时）
+                      let autoName = editItem.name;
+                      if (!nameEditedRef.current && newExhibitionName && editItem.constructionUnit) {
+                        autoName = `${newExhibitionName}${editItem.constructionUnit}仓库`;
+                      }
+                      setEditItem({ ...editItem, exhibitionId: newExhibitionId, exhibitionName: newExhibitionName, name: autoName });
+                    }}
+                  >
+                    <option value="">— 请选择所属展会 —</option>
+                    {exhibitionProjects.map((p) => (
+                      <option key={p.id} value={p.id}>{p.projectName}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <div className="mb-1 text-[#606266]">所属施工单位 <span className="text-[#f56c6c]">*</span></div>
+                  <select
+                    className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-white text-[#303133] focus:outline-none focus:border-[#2f54eb]"
+                    value={editItem.constructionUnit || ''}
+                    onChange={(e) => {
+                      const newUnit = e.target.value;
+                      // 自动生成名称：展会名 + 施工单位 + 仓库（仅当用户没手动改过名称时）
+                      let autoName = editItem.name;
+                      if (!nameEditedRef.current && editItem.exhibitionName && newUnit) {
+                        autoName = `${editItem.exhibitionName}${newUnit}仓库`;
+                      }
+                      setEditItem({ ...editItem, constructionUnit: newUnit, name: autoName });
+                    }}
+                  >
+                    <option value="">— 请选择所属施工单位 —</option>
+                    {constructionUnitOptions.map((u) => (
+                      <option key={u} value={u}>{u}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* 基础信息区（两列网格） */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="mb-1 text-[#606266]">仓库编号 <span className="text-[#f56c6c]">*</span></div>
@@ -182,7 +280,11 @@ export default function WarehousePage() {
                 <input
                   className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-[#303133] focus:outline-none focus:border-[#2f54eb]"
                   value={editItem.name}
-                  onChange={(e) => setEditItem({ ...editItem, name: e.target.value })}
+                  onChange={(e) => {
+                    // 用户手动改了名称，标记一下，后面不再自动覆盖
+                    if (e.target.value !== editItem.name) nameEditedRef.current = true;
+                    setEditItem({ ...editItem, name: e.target.value });
+                  }}
                 />
               </div>
               <div>
@@ -197,22 +299,6 @@ export default function WarehousePage() {
                   }}
                 >
                   {warehouseCategoryOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <div className="mb-1 text-[#606266]">仓库属性 <span className="text-[#f56c6c]">*</span></div>
-                <select
-                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-white text-[#303133] focus:outline-none focus:border-[#2f54eb]"
-                  value={editItem.property}
-                  onChange={(e) => {
-                    const prop = e.target.value as WarehouseProperty;
-                    const opt = warehousePropertyOptions.find(o => o.value === prop);
-                    setEditItem({ ...editItem, property: prop, propertyName: opt?.label || '' });
-                  }}
-                >
-                  {warehousePropertyOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
@@ -284,6 +370,11 @@ export default function WarehousePage() {
               if (!editItem.warehouseNo || !editItem.name) {
                 alert('请填写必填项');
                 return;
+              }
+              // 虚拟仓专属校验
+              if (editItem.property === 'virtual') {
+                if (!editItem.exhibitionId) { alert('虚拟仓请选择所属展会'); return; }
+                if (!editItem.constructionUnit) { alert('虚拟仓请选择所属施工单位'); return; }
               }
               // 更新属性名称
               const propOpt = warehousePropertyOptions.find(o => o.value === editItem.property);

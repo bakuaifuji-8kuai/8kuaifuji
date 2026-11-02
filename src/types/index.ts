@@ -21,6 +21,10 @@ export interface Warehouse {
   remark?: string;
   createTime: string;
   allowNegativeInventory?: boolean; // 是否允许库存为负
+  // 虚拟仓专属字段
+  exhibitionId?: string; // 所属展会ID
+  exhibitionName?: string; // 所属展会名称（用于显示 + 自动生成仓库名）
+  constructionUnit?: string; // 所属施工单位（用于显示 + 自动生成仓库名）
 }
 
 export interface Position {
