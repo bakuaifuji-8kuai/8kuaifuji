@@ -21,11 +21,146 @@ export interface ChangeDay {
 }
 
 export const CHANGELOG: ChangeDay[] = [
+  // ============ 2026-11-02 ============
+  {
+    date: '2026-11-02',
+    summary: '仓库表单布局优化 + 调拨出库列调整',
+    entries: [
+      {
+        type: 'feat', scope: '仓库管理',
+        title: '仓库表单优化：仓库属性移顶 + 虚拟仓支持展会/施工单位 + 自动生成名称',
+        detail: '仓库表单字段重排：仓库属性移到第一块；虚拟仓新增"所属展会"和"施工单位"字段；新增"根据地址+类型自动生成仓库名称"按钮',
+        commit: '6997246',
+      },
+    ],
+  },
+
+  // ============ 2026-11-01 ============
+  {
+    date: '2026-11-01',
+    entries: [
+      {
+        type: 'refactor', scope: '调拨出库',
+        title: '调拨出库产品明细列表列调整',
+        detail: '作业项替换物资编码+工单；调拨数量前置到第一列',
+        commit: '69f6972',
+      },
+    ],
+  },
+
+  // ============ 2026-10-30 ============
+  {
+    date: '2026-10-30',
+    summary: '移除需求场景模板菜单 + 功能说明文案全对齐',
+    entries: [
+      {
+        type: 'fix', scope: '基础',
+        title: '移除需求场景模板菜单、路由、面包屑（页面文件保留）',
+        commit: 'eda30f8',
+      },
+      {
+        type: 'fix', scope: '功能说明',
+        title: '功能说明文案全部对齐页面实际列数和列清单',
+        commit: '7399b5c',
+      },
+      {
+        type: 'fix', scope: '采购需求',
+        title: '采购需求场景 description 列数对齐 + newSupplier 真砍单价备注',
+        commit: 'd23d9cc',
+      },
+      {
+        type: 'fix', scope: '采购需求',
+        title: '修复 random 方式关联采购需求条件 + linkDemand 开关',
+        commit: 'f854d4b',
+      },
+    ],
+  },
+
+  // ============ 2026-10-29 ============
+  {
+    date: '2026-10-29',
+    summary: '招采执行场景弹窗逐字段对齐 CompetitiveBiddingPage',
+    entries: [
+      {
+        type: 'fix', scope: '招采执行',
+        title: 'FormInteractiveSection 完全复刻 CompetitiveBiddingPage 弹窗',
+        detail: '条件渲染改用 form.procurementMethod 跟随采购方式 select 变化；页面顶部 SceneTabs tab 切换按钮删除（Sidebar 已有）；彻底对齐所有字段 + 修复路由切换报错',
+        commit: 'ecffa24',
+      },
+    ],
+  },
+
+  // ============ 2026-10-28 ============
+  {
+    date: '2026-10-28',
+    summary: '招采执行场景模板全采购方式补全 + help 业务边界卡',
+    entries: [
+      {
+        type: 'feat', scope: '招采执行',
+        title: '招采执行场景模板改成可交互空表单原型',
+        detail: '补全所有 9 种采购方式完整表单字段（对齐新增弹窗）；复刻弹窗审批材料区块（7槽双列+流标+竞价评定结果）；修复 CRLF 换行符导致字段不生效',
+        commit: '0630562',
+      },
+      {
+        type: 'feat', scope: '功能说明',
+        title: '招采执行/订单管理/验收三个 help 加顶部业务边界卡（businessSummary）',
+        detail: '明确仅 framework_catalog 生成采购订单，其余 10 种方式验收直接走需求明细兜底；验收页无订单提示改绿色',
+        commit: '91c775b',
+      },
+      {
+        type: 'fix', scope: '合同',
+        title: '采购计划汇总 → 招采计划汇总（7 处）',
+        commit: '5b3f27e',
+      },
+      {
+        type: 'fix', scope: '验收',
+        title: '考核提醒逻辑解耦：绑定表删频率字段，全局补质保期评估类型',
+        commit: '8540f29',
+      },
+    ],
+  },
+
+  // ============ 2026-10-27 ============
+  {
+    date: '2026-10-27',
+    summary: '供应商模拟器 + 合同台账 + framework_catalog 工单补全',
+    entries: [
+      {
+        type: 'feat', scope: '供应商',
+        title: '供应商模拟器补公告附件/比价文件附件/整单上限/供应商附件上传',
+        detail: 'submitQuote 加整单上限兜底校验；超限改为警告而非阻断（confirm 弹窗自选）',
+        commit: '2ff6750',
+      },
+      {
+        type: 'fix', scope: '合同',
+        title: '合同台账金额单位统一 + 线下流程必填校验 + 合同自动编号',
+        detail: '采购方式审批方式枚举值修正 + 竞价采购附件区块放开',
+        commit: '0493f25',
+      },
+      {
+        type: 'fix', scope: '招采执行',
+        title: '9 个 framework_catalog 工单补齐 biddingAnnouncement/biddingDocuments/totalPriceLimit',
+        detail: '版本号升到 3，版本号检测强制补齐新字段（修复 localStorage 持久化旧数据不刷新根因）',
+        commit: '479a93c',
+      },
+    ],
+  },
+
   // ============ 2026-10-26 ============
   {
     date: '2026-10-26',
-    summary: '修复直接采购/电子商城采购 4 处税率文案错配',
+    summary: '采购计划需求部门上移 + 直接/电子商城排除招采类合同 + 4 处税率文案错配修复',
     entries: [
+      {
+        type: 'feat', scope: '采购计划',
+        title: '需求部门移至主表单 + 功能说明补字段分工说明',
+        commit: '2fa20f6',
+      },
+      {
+        type: 'fix', scope: '合同',
+        title: '直接/电子商城排除招采类合同 + 隐藏审批批注按钮',
+        commit: 'ef4a2bb',
+      },
       {
         type: 'fix', scope: '招采执行',
         title: '直接采购/电子商城弹窗与详情页错误显示税率/含税列',
