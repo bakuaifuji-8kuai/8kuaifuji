@@ -209,7 +209,7 @@ export default function ProcurementDemandConfirmPage() {
     // 用已有的 procurementMode，没有就默认 meeting
     setConfirmMode(d.procurementMode || 'meeting');
     setIsThreeImportant(d.isThreeImportant || false);
-    setProjectRows(
+    const rows =
       d.projectRows?.length
         ? d.projectRows
         : d.demandType !== 'material'
@@ -223,8 +223,11 @@ export default function ProcurementDemandConfirmPage() {
             approvalDate: '',
             remark: '',
           }]
-        : []
-    );
+        : [];
+    setProjectRows(rows);
+    // 回填全局立项审批字段（从第一行取，所有行共用同一个值）
+    setGlobalApprovalMeetingName(rows[0]?.approvalMeetingName || '');
+    setGlobalApprovalDate(rows[0]?.approvalDate || '');
     setRejectReason('');
 
     // ====== 合同关联回显：已保存 needContract='no' 的需求重开时自动带出原合同 ======
@@ -259,10 +262,31 @@ export default function ProcurementDemandConfirmPage() {
       }
     }
 
+    // 把全局审批字段写回所有 projectRows（数据最终存这里）
+    // projectRows 为空时也自动创建一行载体行来承载审批字段（物资类场景）
+    const rowsWithGlobalApproval: ProjectRow[] = projectRows.length > 0
+      ? projectRows.map((r) => ({
+          ...r,
+          approvalMeetingName: globalApprovalMeetingName || r.approvalMeetingName,
+          approvalDate: globalApprovalDate || r.approvalDate,
+        }))
+      : [{
+          id: 'PR_GLOBAL_' + Date.now(),
+          dept: selected.applicantDept || '',
+          projectName: selected.projectName || '',
+          budgetAmount: 0,
+          budgetControlAmount: 0,
+          approvalMeetingName: globalApprovalMeetingName,
+          approvalDate: globalApprovalDate,
+          remark: '',
+        }];
+
     updateProcurementDemand(selected.id, {
       procurementMode: confirmMode,
       isThreeImportant,
-      projectRows: projectRows.length > 0 ? projectRows : undefined,
+      projectRows: rowsWithGlobalApproval,
+      // 顶层 approvalDate 也同步（已有字段）
+      approvalDate: globalApprovalDate || undefined,
       confirmSubmitter: currentUser.name,
       confirmSubmitTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
       status: 'confirm_pending',
@@ -274,6 +298,25 @@ export default function ProcurementDemandConfirmPage() {
   const handleConfirmApprove = () => {
     if (!selected) return;
 
+    // 把全局审批字段写回所有 projectRows（数据最终存这里）
+    // projectRows 为空时也自动创建一行载体行来承载审批字段（物资类场景）
+    const rowsWithGlobalApproval: ProjectRow[] = projectRows.length > 0
+      ? projectRows.map((r) => ({
+          ...r,
+          approvalMeetingName: globalApprovalMeetingName || r.approvalMeetingName,
+          approvalDate: globalApprovalDate || r.approvalDate,
+        }))
+      : [{
+          id: 'PR_GLOBAL_' + Date.now(),
+          dept: selected.applicantDept || '',
+          projectName: selected.projectName || '',
+          budgetAmount: 0,
+          budgetControlAmount: 0,
+          approvalMeetingName: globalApprovalMeetingName,
+          approvalDate: globalApprovalDate,
+          remark: '',
+        }];
+
     // ====== needContract 校验 ======
     // 未选择 → 强制 needContract='yes'（走标准链路）
     const finalNeedContract = needContract ?? 'yes';
@@ -282,6 +325,9 @@ export default function ProcurementDemandConfirmPage() {
       confirmApprover: currentUser.name,
       confirmApproveTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
       needContract: finalNeedContract,
+      projectRows: rowsWithGlobalApproval,
+      // 顶层 approvalDate 也同步（已有字段，兼容列表页只读展示）
+      approvalDate: globalApprovalDate || undefined,
     };
 
     if (finalNeedContract === 'no') {
@@ -1174,11 +1220,11 @@ function ConfirmFormFields({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className={labelCls}>立项审批会议名称<span className={requiredCls}>*</span></div>
-                <input className={inputCls} disabled={confirmLocked} placeholder="请输入会议名称" />
+                <input className={inputCls} disabled={confirmLocked} placeholder="请输入会议名称" value={globalApprovalMeetingName} onChange={(e) => setGlobalApprovalMeetingName(e.target.value)} />
               </div>
               <div>
                 <div className={labelCls}>立项审批日期<span className={requiredCls}>*</span></div>
-                <input type="date" className={inputCls} disabled={confirmLocked} />
+                <input type="date" className={inputCls} disabled={confirmLocked} value={globalApprovalDate} onChange={(e) => setGlobalApprovalDate(e.target.value)} />
               </div>
             </div>
             <div className="pt-3 border-t border-slate-100">
@@ -1214,7 +1260,7 @@ function ConfirmFormFields({
             </div>
             <div>
               <div className={labelCls}>立项审批日期<span className={requiredCls}>*</span></div>
-              <input type="date" className={inputCls} disabled={confirmLocked} />
+              <input type="date" className={inputCls} disabled={confirmLocked} value={globalApprovalDate} onChange={(e) => setGlobalApprovalDate(e.target.value)} />
             </div>
           </div>
         )}
@@ -1234,12 +1280,9 @@ function ConfirmFormFields({
               <div className={labelCls}>立项审批日期 <span className="text-xs text-slate-400 font-normal">(审批系统自动带入)</span></div>
               <input
                 type="date"
-                className={inputCls}
+                className={inputCls + ' bg-slate-100 text-slate-500'}
                 disabled
-                value={(() => {
-                  const today = new Date();
-                  return today.toISOString().slice(0, 10);
-                })()}
+                value={globalApprovalDate || new Date().toISOString().slice(0, 10)}
                 title="采购项目申请表的立项审批日期由审批系统流程自动带入"
               />
             </div>
