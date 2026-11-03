@@ -98,6 +98,9 @@ export default function ProcurementDemandConfirmPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [projectRows, setProjectRows] = useState<ProjectRow[]>([]);
+  // 全局立项审批字段（提升到弹窗级别，不再每行一个）
+  const [globalApprovalMeetingName, setGlobalApprovalMeetingName] = useState('');
+  const [globalApprovalDate, setGlobalApprovalDate] = useState('');
   // ====== 合同关联（needContract）======
   const [needContract, setNeedContract] = useState<'yes' | 'no' | null>(null);
   const [linkedContract, setLinkedContract] = useState<ContractLedger | null>(null);
@@ -709,6 +712,10 @@ export default function ProcurementDemandConfirmPage() {
                   removeProjectRow={removeProjectRow}
                   updateProjectRow={updateProjectRow}
                   readOnly={selected.status === 'confirm_approved' || selected.status === 'confirm_pending'}
+                  globalApprovalMeetingName={globalApprovalMeetingName}
+                  setGlobalApprovalMeetingName={setGlobalApprovalMeetingName}
+                  globalApprovalDate={globalApprovalDate}
+                  setGlobalApprovalDate={setGlobalApprovalDate}
                 />
               </div>
             )}
@@ -1086,6 +1093,11 @@ interface ConfirmFormProps {
   removeProjectRow: (idx: number) => void;
   updateProjectRow: (idx: number, field: keyof ProjectRow, value: any) => void;
   readOnly?: boolean;
+  // 全局立项审批字段（提升到弹窗级别）
+  globalApprovalMeetingName: string;
+  setGlobalApprovalMeetingName: (v: string) => void;
+  globalApprovalDate: string;
+  setGlobalApprovalDate: (v: string) => void;
 }
 
 function ConfirmFormFields({
@@ -1096,6 +1108,10 @@ function ConfirmFormFields({
   removeProjectRow,
   updateProjectRow,
   readOnly,
+  globalApprovalMeetingName,
+  setGlobalApprovalMeetingName,
+  globalApprovalDate,
+  setGlobalApprovalDate,
 }: ConfirmFormProps) {
   const inputCls = "w-full h-9 px-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500";
   const textareaCls = "w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none disabled:bg-slate-50 disabled:text-slate-500";
@@ -1251,16 +1267,58 @@ function ConfirmFormFields({
   // 服务类 / 工程类 → 多行项目表单
   const getTableHeaders = () => {
     const base = ['#', '需求部门*', '项目名称*', ['主要内容'], '不含税预算总金额*', '不含税预算审定总金额*'];
-    if (mode === 'meeting') base.push('立项审批会议名称*', '立项审批日期*');
-    if (mode === 'sign_report') base.push('立项审批日期*');
-    // application_form：立项审批日期由审批系统自动带入，不作为必填项
-    if (mode === 'application_form') base.push('立项审批日期（系统自动）');
+    // 立项审批字段已提升为弹窗全局字段，不再每行展示
     base.push('备注', '操作');
     return base;
   };
 
   return (
     <div>
+      {/* ===== 全局立项审批字段（表格上方统一区域） ===== */}
+      <div className="mb-4 p-3 bg-indigo-50/50 border border-indigo-100 rounded-lg">
+        <div className="text-xs font-medium text-indigo-700 mb-2">立项审批信息（全局）</div>
+        <div className={`grid gap-4 ${mode === 'meeting' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {mode === 'meeting' && (
+            <div>
+              <div className={labelCls}>立项审批会议名称<span className={requiredCls}>*</span></div>
+              <input
+                className={inputCls}
+                disabled={confirmLocked}
+                value={globalApprovalMeetingName}
+                onChange={(e) => setGlobalApprovalMeetingName(e.target.value)}
+                placeholder="请输入会议名称"
+              />
+            </div>
+          )}
+          {(mode === 'meeting' || mode === 'sign_report' || mode === 'application_form') && (
+            <div>
+              <div className={labelCls}>
+                立项审批日期
+                <span className={requiredCls}>*</span>
+                {mode === 'application_form' && <span className="text-xs text-slate-400 font-normal">(审批系统自动带入)</span>}
+              </div>
+              {mode === 'application_form' ? (
+                <input
+                  type="date"
+                  className={inputCls + ' bg-slate-100 text-slate-500'}
+                  disabled
+                  value={globalApprovalDate || new Date().toISOString().slice(0, 10)}
+                  title="采购项目申请表的立项审批日期由审批系统流程自动带入"
+                />
+              ) : (
+                <input
+                  type="date"
+                  className={inputCls}
+                  disabled={confirmLocked}
+                  value={globalApprovalDate}
+                  onChange={(e) => setGlobalApprovalDate(e.target.value)}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* 项目多行表单 */}
       <div className="border border-slate-200 rounded-xl overflow-hidden">
         <div className="bg-slate-50 px-4 py-2.5 flex items-center justify-between border-b border-slate-200">
@@ -1298,26 +1356,6 @@ function ConfirmFormFields({
                   <td className="px-2 py-2">
                     <input type="number" className={inputCls} disabled={listLocked} value={row.budgetControlAmount || ''} onChange={(e) => updateProjectRow(idx, 'budgetControlAmount', Number(e.target.value) || 0)} />
                   </td>
-                  {mode === 'meeting' && (
-                    <td className="px-2 py-2">
-                      <input className={inputCls} disabled={confirmLocked} value={row.approvalMeetingName || ''} onChange={(e) => updateProjectRow(idx, 'approvalMeetingName', e.target.value)} />
-                    </td>
-                  )}
-                  {(mode === 'meeting' || mode === 'sign_report' || mode === 'application_form') && (
-                    <td className="px-2 py-2">
-                      {mode === 'application_form' ? (
-                        <input
-                          type="date"
-                          className={inputCls + ' bg-slate-100 text-slate-500'}
-                          disabled
-                          value={row.approvalDate || new Date().toISOString().slice(0, 10)}
-                          title="采购项目申请表的立项审批日期由审批系统流程自动带入"
-                        />
-                      ) : (
-                        <input type="date" className={inputCls} disabled={confirmLocked} value={row.approvalDate || ''} onChange={(e) => updateProjectRow(idx, 'approvalDate', e.target.value)} />
-                      )}
-                    </td>
-                  )}
                   <td className="px-2 py-2">
                     <input className={inputCls} disabled={confirmLocked} value={row.remark || ''} onChange={(e) => updateProjectRow(idx, 'remark', e.target.value)} />
                   </td>
