@@ -640,6 +640,8 @@ export interface StockTransferDetail {
   productId: string;
   productName?: string;
   productCode?: string;
+  specification?: string;
+  unit?: string;
   fromPositionId?: string;
   fromPositionName?: string;
   toPositionId?: string;
@@ -649,6 +651,7 @@ export interface StockTransferDetail {
   workOrderId?: string; // 关联工单ID
   workOrderCode?: string; // 关联工单号
   workOrderName?: string; // 关联工单名称
+  workOrderQty?: number; // 作业数量（同一作业项下所有物资共享，默认50）
   isMain?: boolean; // 是否主料
   remark?: string; // 明细备注
 }

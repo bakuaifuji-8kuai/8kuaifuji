@@ -236,6 +236,10 @@ export default function StockTransferPage() {
   const [isNew, setIsNew] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
+  // ===== 替换物资 =====
+  const [replaceTargetIdx, setReplaceTargetIdx] = useState<number | null>(null);
+  const [replacePickerOpen, setReplacePickerOpen] = useState(false);
+
   // ===== 业务分类门控新增 state =====
   const CONSTRUCTION_UNITS = ['上海锦华', '湖南警安', '中裕电力'];
   const workOrderConfigs = useStore((s) => s.workOrderConfigs);
@@ -299,6 +303,67 @@ export default function StockTransferPage() {
   const removeDetail = (idx: number) => {
     if (!editItem) return;
     setEditItem({ ...editItem, details: editItem.details.filter((_, i) => i !== idx) });
+  };
+
+  // 替换物资：点击替换按钮 → 打开物资选择弹窗
+  const handleReplaceClick = (idx: number) => {
+    if (!editItem) return;
+    const detail = editItem.details[idx];
+    if (!detail.workOrderId) {
+      alert('无工单模式下不支持替换物资');
+      return;
+    }
+    setReplaceTargetIdx(idx);
+    setReplacePickerOpen(true);
+  };
+
+  // 替换物资确认：选中的物资作为新行 push 到同一作业项下
+  const handleReplaceConfirm = (selectedProducts: ProductPickerItem[]) => {
+    if (!editItem || replaceTargetIdx === null) return;
+    const srcDetail = editItem.details[replaceTargetIdx];
+    if (!srcDetail) return;
+
+    const existingIds = new Set(editItem.details.map((d) => d.productId));
+    const newDetails: StockTransferDetail[] = selectedProducts
+      .filter((p) => !existingIds.has(p.id))
+      .map((p, idx) => ({
+        id: 'TFD' + Date.now() + Math.random().toString(36).slice(2, 7) + 'R' + idx,
+        stockTransferId: editItem.id,
+        productId: p.id,
+        productCode: p.code || '',
+        productName: p.name || '',
+        specification: srcDetail.specification,
+        unit: srcDetail.unit,
+        workOrderId: srcDetail.workOrderId,
+        workOrderCode: srcDetail.workOrderCode,
+        workOrderName: srcDetail.workOrderName,
+        workOrderQty: srcDetail.workOrderQty ?? 50,
+        fromPositionId: '',
+        fromPositionName: '',
+        toPositionId: '',
+        toPositionName: '',
+        quantity: 1,
+      }));
+
+    if (newDetails.length === 0) {
+      alert('选中的物资已存在于明细中');
+      setReplacePickerOpen(false);
+      setReplaceTargetIdx(null);
+      return;
+    }
+
+    setEditItem({ ...editItem, details: [...editItem.details, ...newDetails] });
+    setReplacePickerOpen(false);
+    setReplaceTargetIdx(null);
+  };
+
+  // 作业数量联动：改同 workOrderId 的所有行
+  const handleWorkOrderQtyChange = (workOrderId: string, newQty: number) => {
+    if (!editItem) return;
+    const updated = editItem.details.map((d) =>
+      d.workOrderId === workOrderId ? { ...d, workOrderQty: newQty } : d
+    );
+    setEditItem({ ...editItem, details: updated });
   };
 
   const handleSave = () => {
@@ -371,6 +436,7 @@ export default function StockTransferPage() {
       ...(config.mainProducts || []),
       ...(config.auxiliaryProducts || []),
     ];
+    const workOrderQty = 50; // 作业数量默认50
     const newDetails: StockTransferDetail[] = merged.map((p, idx) => ({
       id: 'TFD' + Date.now() + Math.random().toString(36).slice(2, 7) + idx,
       stockTransferId: editItem.id,
@@ -382,6 +448,7 @@ export default function StockTransferPage() {
       workOrderId: config.workOrderId,
       workOrderCode: config.workOrderCode,
       workOrderName: config.workOrderName,
+      workOrderQty,
       fromPositionId: '',
       fromPositionName: '',
       toPositionId: '',
@@ -969,24 +1036,37 @@ export default function StockTransferPage() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-xs border border-[#ebeef5] rounded overflow-hidden min-w-[700px]">
+                <table className="w-full text-xs border border-[#ebeef5] rounded overflow-hidden min-w-[900px]">
                   <thead>
                     <tr className="bg-[#f5f7fa] text-[#606266]">
                       <th className="px-2 py-2 text-left w-8">#</th>
+                      <th className="px-2 py-2 text-left w-32">作业项</th>
+                      <th className="px-2 py-2 text-left w-24">作业数量</th>
                       <th className="px-2 py-2 text-left w-28">物资编码</th>
                       <th className="px-2 py-2 text-left flex-1">物资名称</th>
-                      <th className="px-2 py-2 text-left w-24">规格</th>
-                      <th className="px-2 py-2 text-left w-16">单位</th>
-                      <th className="px-2 py-2 text-left w-20">可用库存</th>
-                      <th className="px-2 py-2 text-left w-20">冻结库存</th>
-                      <th className="px-2 py-2 text-left w-32">备注</th>
+                      <th className="px-2 py-2 text-left w-20">规格</th>
+                      <th className="px-2 py-2 text-left w-14">单位</th>
+                      <th className="px-2 py-2 text-left w-16">可用库存</th>
+                      <th className="px-2 py-2 text-left w-16">冻结库存</th>
                       <th className="px-2 py-2 text-right w-24">调拨数量</th>
-                      <th className="px-2 py-2 text-center w-12">操作</th>
+                      <th className="px-2 py-2 text-center w-28">操作</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {editItem.details.length ? (
-                      editItem.details.map((d: any, i: number) => {
+                    {editItem.details.length ? (() => {
+                      // 计算每个 workOrderId 的首行索引和行数
+                      const groupMap = new Map<string | undefined, { firstIdx: number; count: number }>();
+                      editItem.details.forEach((d, i) => {
+                        const key = d.workOrderId;
+                        const g = groupMap.get(key);
+                        if (g) {
+                          g.count++;
+                        } else {
+                          groupMap.set(key, { firstIdx: i, count: 1 });
+                        }
+                      });
+
+                      return editItem.details.map((d: any, i: number) => {
                         const p = products.find((x) => x.id === d.productId);
                         const available = batchInventories
                           .filter(
@@ -996,7 +1076,6 @@ export default function StockTransferPage() {
                               b.warehouseId === editItem.fromWarehouseId
                           )
                           .reduce((s, b) => s + b.quantity, 0);
-                        // 冻结库存：已创建调拨单但未出库（pending 状态）的合计
                         const frozenQty = stockTransfers
                           .filter(
                             (t) =>
@@ -1012,9 +1091,56 @@ export default function StockTransferPage() {
                                 .reduce((ss, dd) => ss + dd.quantity, 0),
                             0
                           );
+
+                        // 判断是否组内第一行（用于 rowspan 合并）
+                        const groupKey = d.workOrderId;
+                        const group = groupMap.get(groupKey);
+                        const isGroupFirst = group && group.firstIdx === i;
+                        const rowSpan = group?.count || 1;
+
                         return (
                           <tr key={i} className="border-t border-[#ebeef5]">
                             <td className="px-2 py-1.5 text-[#909399]">{i + 1}</td>
+
+                            {/* 作业项 — 同组合并 */}
+                            {isGroupFirst ? (
+                              <td
+                                rowSpan={rowSpan}
+                                className="px-2 py-1.5 text-[#303133] bg-[#fafbfc] border-r border-[#ebeef5] align-middle"
+                              >
+                                {d.workOrderName ? (
+                                  <div>
+                                    <div className="font-medium">{d.workOrderName}</div>
+                                    <div className="text-[11px] text-[#909399]">{d.workOrderCode}</div>
+                                  </div>
+                                ) : (
+                                  <span className="text-[#c0c4cc]">—</span>
+                                )}
+                              </td>
+                            ) : null}
+
+                            {/* 作业数量 — 同组合并 */}
+                            {isGroupFirst ? (
+                              <td
+                                rowSpan={rowSpan}
+                                className="px-2 py-1.5 align-middle bg-[#fafbfc] border-r border-[#ebeef5]"
+                              >
+                                {d.workOrderId ? (
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    className="w-20 h-7 px-2 border border-[#dcdfe6] rounded text-right text-xs focus:outline-none focus:border-[#2f54eb]"
+                                    value={d.workOrderQty ?? 50}
+                                    onChange={(e) =>
+                                      handleWorkOrderQtyChange(d.workOrderId!, parseInt(e.target.value, 10) || 1)
+                                    }
+                                  />
+                                ) : (
+                                  <span className="text-[#c0c4cc]">—</span>
+                                )}
+                              </td>
+                            ) : null}
+
                             <td className="px-2 py-1.5 text-[#303133]">{d.productCode}</td>
                             <td className="px-2 py-1.5 text-[#303133]">{d.productName}</td>
                             <td className="px-2 py-1.5 text-[#909399]">{p?.specification || '-'}</td>
@@ -1022,15 +1148,6 @@ export default function StockTransferPage() {
                             <td className="px-2 py-1.5 text-[#67c23a]">{available}</td>
                             <td className={`px-2 py-1.5 ${frozenQty > 0 ? 'text-[#e6a23c] font-semibold' : 'text-[#909399]'}`}>
                               {frozenQty > 0 ? frozenQty : 0}
-                            </td>
-                            <td className="px-2 py-1.5">
-                              <input
-                                type="text"
-                                placeholder="备注"
-                                className="w-full h-7 px-2 border border-[#dcdfe6] rounded text-xs focus:outline-none focus:border-[#2f54eb]"
-                                value={d.remark || ''}
-                                onChange={(e) => updateDetail(i, 'remark', e.target.value)}
-                              />
                             </td>
                             <td className="px-2 py-1.5 text-right">
                               <input
@@ -1046,17 +1163,24 @@ export default function StockTransferPage() {
                               />
                             </td>
                             <td className="px-2 py-1.5 text-center">
-                              <TextButton type="danger" onClick={() => removeDetail(i)}>
-                                删除
-                              </TextButton>
+                              <div className="flex items-center justify-center gap-2">
+                                {d.workOrderId && (
+                                  <TextButton onClick={() => handleReplaceClick(i)}>
+                                    替换
+                                  </TextButton>
+                                )}
+                                <TextButton type="danger" onClick={() => removeDetail(i)}>
+                                  删除
+                                </TextButton>
+                              </div>
                             </td>
                           </tr>
                         );
-                      })
-                    ) : (
+                      });
+                    })() : (
                       <tr>
-                        <td colSpan={9} className="py-8 text-center text-[#909399]">
-                          暂无物资，请点击「选择物资」按钮添加
+                        <td colSpan={11} className="py-8 text-center text-[#909399]">
+                          暂无物资，请点击上方「+ 选择工单」或「+ 添加产品」按钮
                         </td>
                       </tr>
                     )}
@@ -1084,6 +1208,16 @@ export default function StockTransferPage() {
         title="选择物资"
         onClose={() => setPickerOpen(false)}
         onConfirm={handlePickerConfirm}
+        showStockQty={true}
+        onlyStocked={true}
+      />
+
+      {/* 替换物资弹窗 */}
+      <ProductPickerModal
+        open={replacePickerOpen}
+        title="替换物资 — 选中后将新增一条同作业项的物资记录"
+        onClose={() => { setReplacePickerOpen(false); setReplaceTargetIdx(null); }}
+        onConfirm={handleReplaceConfirm}
         showStockQty={true}
         onlyStocked={true}
       />
