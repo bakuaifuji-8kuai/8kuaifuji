@@ -1444,7 +1444,14 @@ export default function ProcurementDemandPage() {
                                     value={d.quantity}
                                     onChange={(e) => updateDetail(idx, 'quantity', Number(e.target.value))} />
                                 </td>
-                                <td className="px-2 py-1.5 text-right text-slate-800">{(d.unitPriceExcludingTax || 0).toFixed(2)}</td>
+                                {/* 不含税预算单价（清单外可编辑） */}
+                                <td className="px-2 py-1.5 text-right">
+                                  <input type="number" min="0" step="0.01"
+                                    className="w-full h-6 px-1 border border-slate-200 rounded text-xs text-right focus:outline-none focus:border-indigo-400"
+                                    value={d.unitPriceExcludingTax ?? ''}
+                                    placeholder="0.00"
+                                    onChange={(e) => updateDetail(idx, 'unitPriceExcludingTax', e.target.value === '' ? 0 : Number(e.target.value))} />
+                                </td>
                                 {showPriceRemarkCol && (
                                   <td className="px-2 py-1.5">
                                     <input className="w-full h-6 px-1 border border-slate-200 rounded text-xs"
