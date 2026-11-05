@@ -975,7 +975,7 @@ export default function StockQueryPage() {
         />
       ) : (
         // ====== 历史快照 Tab ======
-        <div className="space-y-3">
+        <div className="space-y-2">
           {inventorySnapshots.length === 0 ? (
             <div className="text-center py-16 text-[#909399]">
               <History size={48} className="mx-auto mb-3 opacity-30" />
@@ -983,65 +983,58 @@ export default function StockQueryPage() {
               <div className="text-xs mt-1">切换到「汇总库存」或「批次库存」，选中一个仓库后点击顶部「📸 保存快照」</div>
             </div>
           ) : (
-            inventorySnapshots.map((snap) => (
-              <div
-                key={snap.id}
-                className="border border-[#ebeef5] rounded-lg bg-white p-4 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold text-[#303133]">{snap.name}</span>
-                      <span className="text-xs px-2 py-0.5 rounded bg-[#ecf5ff] text-[#2f54eb]">{snap.warehouseName}</span>
+            // 先按 createdAt 降序排好，确保最新的在前面（便于后续按仓库找最新）
+            [...inventorySnapshots]
+              .sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1))
+              .map((snap, idx, arr) => {
+                // 找同一仓库下最新的快照（按 createdAt 最大）
+                const sameWarehouseSnaps = arr.filter((s) => s.warehouseId === snap.warehouseId);
+                const isLatestForWarehouse = sameWarehouseSnaps[0]?.id === snap.id;
+                return (
+                  <div
+                    key={snap.id}
+                    className="flex items-center gap-4 px-4 py-3 border border-[#ebeef5] rounded-lg bg-white hover:bg-[#fafbfc] transition-colors"
+                  >
+                    {/* 仓库标签 */}
+                    <span className="text-xs px-2 py-0.5 rounded bg-[#ecf5ff] text-[#2f54eb] shrink-0 min-w-[72px] text-center">
+                      {snap.warehouseName}
+                    </span>
+                    {/* 名称 + 元数据 */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-[#303133] truncate">{snap.name}</span>
+                        {isLatestForWarehouse && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#f0f9eb] text-[#67c23a] shrink-0">最新</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-[#909399] mt-0.5">
+                        <span>📅 {snap.createdAt}</span>
+                        <span>📦 {snap.totalItems} 条物资</span>
+                        <span>🔢 总库存 {snap.totalQuantity}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-[#909399]">
-                      <span>📅 {snap.createdAt}</span>
-                      <span>📦 {snap.totalItems} 条物资</span>
-                      <span>🔢 总库存 {snap.totalQuantity}</span>
-                    </div>
-                    <div className="text-xs text-[#909399] mt-1 truncate">
-                      筛选条件：{snap.filterSummary}
+                    {/* 操作按钮 */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <DefaultButton size="sm" onClick={() => handleExportSnapshot(snap)} icon={<Download size={13} />}>
+                        下载 Excel
+                      </DefaultButton>
+                      <button
+                        disabled={isLatestForWarehouse}
+                        onClick={() => handleDeleteSnapshot(snap.id)}
+                        className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded transition-colors ${
+                          isLatestForWarehouse
+                            ? 'text-[#c0c4cc] bg-[#f5f7fa] cursor-not-allowed'
+                            : 'text-[#f56c6c] bg-[#fef0f0] hover:bg-[#fde2e2]'
+                        }`}
+                        title={isLatestForWarehouse ? '同一仓库最新快照不可删除' : '删除此快照'}
+                      >
+                        <Trash2 size={13} />
+                        {isLatestForWarehouse ? '不可删' : '删除'}
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <DefaultButton size="sm" onClick={() => handleExportSnapshot(snap)} icon={<Download size={13} />}>
-                      下载 Excel
-                    </DefaultButton>
-                    <DefaultButton size="sm" danger onClick={() => handleDeleteSnapshot(snap.id)} icon={<Trash2 size={13} />}>
-                      删除
-                    </DefaultButton>
-                  </div>
-                </div>
-                {/* 快照明细预览（最多展示前 5 条） */}
-                <div className="mt-3 pt-3 border-t border-[#f0f0f0]">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="text-[#909399] bg-[#fafafa]">
-                        <th className="px-2 py-1 text-left">物资编码</th>
-                        <th className="px-2 py-1 text-left">物资名称</th>
-                        <th className="px-2 py-1 text-left">规格</th>
-                        <th className="px-2 py-1 text-left">仓位</th>
-                        <th className="px-2 py-1 text-right">库存数</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {snap.items.slice(0, 5).map((item, idx) => (
-                        <tr key={idx} className="text-[#303133]">
-                          <td className="px-2 py-1">{item.productCode}</td>
-                          <td className="px-2 py-1">{item.productName}</td>
-                          <td className="px-2 py-1">{item.specification}</td>
-                          <td className="px-2 py-1">{item.positionName}</td>
-                          <td className="px-2 py-1 text-right font-medium text-[#2f54eb]">{item.totalQuantity}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {snap.items.length > 5 && (
-                    <div className="text-xs text-[#c0c4cc] mt-1 text-center">... 还有 {snap.items.length - 5} 条，点击「下载 Excel」查看完整数据</div>
-                  )}
-                </div>
-              </div>
-            ))
+                );
+              })
           )}
         </div>
       )}
