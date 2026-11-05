@@ -288,17 +288,18 @@ export default function ProcurementInspectionPage() {
     const at = getAcceptanceType(demand.demandType);
 
     if (at === 'service') {
-      // 服务类：检查有没有终验单 → 决定是否弹阶段选择
+      // 服务/项目类：客户要求只要终验，不再弹阶段选择
+      // 保留已有终验单拦截（一个需求只能有一张通过的终验单）
       const hasFinal = procurementInspections.some(
         (i) => i.demandId === demand.id && i.acceptanceType === 'service' && i.phase === 'final' && i.status === 'approved',
       );
       if (hasFinal) {
-        // 已有终验单 → 直接弹提示，不让新建
         alert('本需求已完成终验，不可再创建验收单');
         setSelectedDemand(null);
         return;
       }
-      setShowPhasePicker(true);
+      // 直接进表单，phase 强制 'final'
+      openForm(demand, 'final');
     } else {
       // 物资类：前置校验 — 没订单也没需求明细 → 提示
       const order = procurementOrders.find((o) => o.demandId === demand.id);
@@ -535,7 +536,7 @@ export default function ProcurementInspectionPage() {
         <div>
           <h2 className="text-lg font-semibold text-slate-800">招采项目验收</h2>
           <p className="text-sm text-slate-500 mt-1">
-            物资类须全部入库后验收；服务/项目类支持初验 / 终验两次
+            物资类须全部入库后验收；服务/项目类直接做终验
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -554,12 +555,6 @@ export default function ProcurementInspectionPage() {
             { value: '', label: '全部' },
             { value: 'goods', label: '物资类' },
             { value: 'service', label: '服务/项目类' },
-          ]} />
-        <SearchField label="阶段" type="select" value={filterPhase} onChange={setFilterPhase}
-          options={[
-            { value: '', label: '全部' },
-            { value: 'preliminary', label: '初验' },
-            { value: 'final', label: '终验' },
           ]} />
         <SearchField label="状态" type="select" value={filterStatus} onChange={setFilterStatus}
           options={[
@@ -614,7 +609,7 @@ export default function ProcurementInspectionPage() {
       {formVisible && selectedDemand && (
         <Modal
           open={formVisible}
-          title={`${form.acceptanceType === 'goods' ? '物资类' : '服务/项目类'}验收单${form.phase ? ` · ${PHASE_LABEL[form.phase]}` : ''}`}
+          title={`${form.acceptanceType === 'goods' ? '物资类' : '服务/项目类'}验收单`}
           size="xl"
           onClose={() => closeForm(true)}
           footer={
