@@ -65,16 +65,6 @@ const pathLabelMap: Record<string, string> = {
   '/procurement/website-info': '网站信息',
   '/procurement/contract-template': '合同模板',
   '/procurement/approval-flow': '审批流程配置',
-  // 招采执行场景模板（9 种采购方式）
-  '/procurement/bidding-scene/framework-catalog': '场景·目录内比价',
-  '/procurement/bidding-scene/framework-random': '场景·随机抽取',
-  '/procurement/bidding-scene/inquiry-open': '场景·询比-公开',
-  '/procurement/bidding-scene/inquiry-invited': '场景·询比-邀请',
-  '/procurement/bidding-scene/competitive-bidding': '场景·竞价采购',
-  '/procurement/bidding-scene/negotiation-open': '场景·谈判-公开',
-  '/procurement/bidding-scene/negotiation-invited': '场景·谈判-邀请',
-  '/procurement/bidding-scene/direct': '场景·直接采购',
-  '/procurement/bidding-scene/e-mall': '场景·电子商城采购',
 };
 
 export default function AppLayout() {

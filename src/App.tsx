@@ -62,7 +62,6 @@ import ProcurementOrderPage from "@/pages/Procurement/ProcurementOrderPage";
 import SupplierPage from "@/pages/Procurement/SupplierPage";
 import ProcurementInspectionPage from "@/pages/Procurement/ProcurementInspectionPage";
 import CompetitiveBiddingPage from "@/pages/Procurement/CompetitiveBiddingPage";
-import BiddingScenePage from "@/pages/Procurement/BiddingScenePage";
 import SupplierQuotePage from "@/pages/Procurement/SupplierQuotePage";
 import SupplierQuoteSimulator from "@/pages/Procurement/SupplierQuoteSimulator";
 import WebsiteInfoPage from "@/pages/Procurement/WebsiteInfoPage";
@@ -149,7 +148,6 @@ export default function App() {
           <Route path="procurement/supplier" element={<SupplierPage />} />
           <Route path="procurement/inspection" element={<ProcurementInspectionPage />} />
           <Route path="procurement/bidding" element={<CompetitiveBiddingPage />} />
-          <Route path="procurement/bidding-scene/*" element={<BiddingScenePage />} />
           <Route path="procurement/supplier-quote" element={<SupplierQuotePage />} />
           <Route path="procurement/supplier-quote/simulator" element={<SupplierQuoteSimulator />} />
           <Route path="procurement/bidding-ledger" element={<ProcurementBiddingLedgerPage />} />
