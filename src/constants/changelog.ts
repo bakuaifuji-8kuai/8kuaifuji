@@ -24,8 +24,14 @@ export const CHANGELOG: ChangeDay[] = [
   // ============ 2026-11-05 ============
   {
     date: '2026-11-05',
-    summary: 'needContract 三选一枚举 + 调拨出库升级 + 招采验收去初验 + 预算单价可编辑',
+    summary: 'needContract 三选一枚举 + 调拨出库升级 + 招采验收去初验 + 预算单价可编辑 + 库存快照',
     entries: [
+      {
+        type: 'feat', scope: '库存查询',
+        title: '新增历史快照功能 — 保存/下载/删除多次库存快照',
+        detail: '汇总库存视图下选中一个仓库后点击「📸 保存快照」将当前筛选条件下的库存数定格为快照；快照名称自动生成（日期+仓库名+条数）；快照明细含物资编码/名称/规格/仓位/数量；独立「历史快照」Tab 管理已保存快照，支持下载 Excel 和删除；快照明细预览最多显示前 5 条，Excel 含完整数据；persist v13 自动迁移空数组',
+        commit: '3fb5ce3',
+      },
       {
         type: 'feat', scope: '采购需求',
         title: 'needContract 扩展为三选一枚举（yes / no_link / no_none）',
