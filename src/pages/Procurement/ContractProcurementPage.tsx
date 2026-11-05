@@ -479,12 +479,15 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
   /**
    * 关联采购需求下拉选项
    * 筛选条件：needContract='yes'（走标准链路的）且已立项通过且有工单
-   * ⚠️ needContract='no' 的需求直接挂已有合同，不出现在这里
+   * ⚠️ needContract='no_link'/'no_none' 的需求不进入合同签订链路
    */
   const demandOptions = [
     { value: '', label: '-- 选择关联采购需求（可选）--' },
     ...procurementDemands
-      .filter((d) => (d.needContract ?? 'yes') !== 'no') // 默认 yes，兼容老数据
+      .filter((d) => {
+        const nc = d.needContract ?? 'yes';
+        return nc === 'yes'; // 只有 yes 走标准链路进合同签订
+      })
       .filter((d) => d.status === 'confirm_approved')
       // 电子商城 / 直接采购 不签订合同：这两种采购方式不进入招采合同签订流程
       .filter((d) => {

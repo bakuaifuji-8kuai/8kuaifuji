@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 招采及合约管理 — 全状态演示数据补充包（v11）
  * ------------------------------------------------------------------
  * 设计原则（强制）：
@@ -372,7 +372,7 @@ export const SUPPLEMENT_DEMANDS: ProcurementDemand[] = [
       { id: 'PDD-DEMO2-09-2', demandId: 'DEMO2-DEM-09', productCode: 'ZJ-TM-02', productName: '证卡打印色带', specification: 'YMCKO 彩色', unit: '卷', quantity: 200, isInContractList: true, isContractItem: true, unitPriceExcludingTax: 180, unitPriceIncludingTax: 203.4, taxRate: 13, amountExcludingTax: 36000, taxAmount: 4680, amountIncludingTax: 40680, costAuditUnitPriceExcludingTax: 176 },
     ],
   },
-  // L3 服务类挂老合同（needContract=no）
+  // L3 服务类挂老合同（needContract=no_link）
   {
     id: 'DEMO2-DEM-10',
     demandNo: 'CGQQ202609010',
@@ -380,7 +380,7 @@ export const SUPPLEMENT_DEMANDS: ProcurementDemand[] = [
     procurementType: 'outside_framework',
     procurementMode: 'sign_report',
     isThreeImportant: false,
-    needContract: 'no',
+    needContract: 'no_link',
     applicant: '王五',
     applicantDept: '会展部',
     applyDate: '2026-09-19',
@@ -448,7 +448,7 @@ export const SUPPLEMENT_DEMANDS: ProcurementDemand[] = [
     procurementType: 'outside_framework',
     procurementMode: 'application_form',
     isThreeImportant: false,
-    needContract: 'no',
+    needContract: 'no_link',
     applicant: '吴九',
     applicantDept: '客户服务部',
     applyDate: '2026-08-25',

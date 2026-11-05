@@ -228,6 +228,10 @@ export default function ExhibitionTransferOutboundPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [workOrderPickerOpen, setWorkOrderPickerOpen] = useState(false);
 
+  // ===== 替换物资 =====
+  const [replaceTargetIdx, setReplaceTargetIdx] = useState<number | null>(null);
+  const [replacePickerOpen, setReplacePickerOpen] = useState(false);
+
   const openAdd = () => {
     const newOrder: StockTransfer = {
       id: 'TF' + Date.now(),
@@ -271,6 +275,7 @@ export default function ExhibitionTransferOutboundPage() {
   const handleWorkOrderConfirm = (selectedItems: WorkOrderPickerItem[]) => {
     if (!editItem) return;
 
+    const workOrderQty = 50; // 作业数量默认50（只读展示，不可编辑）
     const newDetails: StockTransferDetail[] = [];
     selectedItems.forEach((item) => {
       [...item.mainProducts, ...item.auxiliaryProducts].forEach((product) => {
@@ -284,10 +289,11 @@ export default function ExhibitionTransferOutboundPage() {
           fromPositionName: '',
           toPositionId: '',
           toPositionName: '',
-          quantity: product.quantity,
+          quantity: 0, // 初始为0，渲染时自动显示 min(作业数量, 可用库存) 作为默认值
           workOrderId: item.workOrderId,
           workOrderCode: item.workOrderCode,
           workOrderName: item.workOrderName,
+          workOrderQty,
           isMain: item.mainProducts.some((p) => p.productId === product.productId),
         });
       });
@@ -310,6 +316,56 @@ export default function ExhibitionTransferOutboundPage() {
   const removeDetail = (idx: number) => {
     if (!editItem) return;
     setEditItem({ ...editItem, details: editItem.details.filter((_, i) => i !== idx) });
+  };
+
+  // 替换物资：点击替换按钮 → 打开物资选择弹窗
+  const handleReplaceClick = (idx: number) => {
+    if (!editItem) return;
+    const detail = editItem.details[idx];
+    if (!detail.workOrderId) {
+      alert('无工单模式下不支持替换物资');
+      return;
+    }
+    setReplaceTargetIdx(idx);
+    setReplacePickerOpen(true);
+  };
+
+  // 替换物资确认：选中的物资作为新行 push 到同一作业项下
+  const handleReplaceConfirm = (selectedProducts: ProductPickerItem[]) => {
+    if (!editItem || replaceTargetIdx === null) return;
+    const srcDetail = editItem.details[replaceTargetIdx];
+    if (!srcDetail) return;
+
+    const existingIds = new Set(editItem.details.map((d) => d.productId));
+    const newDetails: StockTransferDetail[] = selectedProducts
+      .filter((p) => !existingIds.has(p.id))
+      .map((p, idx) => ({
+        id: 'TFD' + Date.now() + Math.random().toString(36).slice(2, 7) + 'R' + idx,
+        stockTransferId: editItem.id,
+        productId: p.id,
+        productCode: p.code || '',
+        productName: p.name || '',
+        workOrderId: srcDetail.workOrderId,
+        workOrderCode: srcDetail.workOrderCode,
+        workOrderName: srcDetail.workOrderName,
+        workOrderQty: srcDetail.workOrderQty ?? 50,
+        fromPositionId: '',
+        fromPositionName: '',
+        toPositionId: '',
+        toPositionName: '',
+        quantity: 0,
+      }));
+
+    if (newDetails.length === 0) {
+      alert('选中的物资已存在于明细中');
+      setReplacePickerOpen(false);
+      setReplaceTargetIdx(null);
+      return;
+    }
+
+    setEditItem({ ...editItem, details: [...editItem.details, ...newDetails] });
+    setReplacePickerOpen(false);
+    setReplaceTargetIdx(null);
   };
 
   const handleSave = () => {
@@ -703,22 +759,32 @@ export default function ExhibitionTransferOutboundPage() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-xs border border-[#ebeef5] rounded overflow-hidden min-w-[700px]">
+                <table className="w-full text-xs border border-[#ebeef5] rounded overflow-hidden min-w-[900px]">
                   <thead>
                     <tr className="bg-[#f5f7fa] text-[#606266]">
                       <th className="px-2 py-2 text-left w-8">#</th>
                       <th className="px-2 py-2 text-left w-32">作业项</th>
+                      <th className="px-2 py-2 text-left w-24">作业数量</th>
                       <th className="px-2 py-2 text-left flex-1">物资名称</th>
                       <th className="px-2 py-2 text-left w-24">规格</th>
                       <th className="px-2 py-2 text-left w-16">单位</th>
                       <th className="px-2 py-2 text-right w-24">调拨数量</th>
                       <th className="px-2 py-2 text-left w-20">可用库存</th>
-                      <th className="px-2 py-2 text-center w-12">操作</th>
+                      <th className="px-2 py-2 text-center w-28">操作</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {editItem.details.length ? (
-                      editItem.details.map((d: any, i: number) => {
+                    {editItem.details.length ? (() => {
+                      // 计算每个 workOrderId 的首行索引和行数（用于 rowspan 合并）
+                      const groupMap = new Map<string | undefined, { firstIdx: number; count: number }>();
+                      editItem.details.forEach((d, i) => {
+                        const key = d.workOrderId;
+                        const g = groupMap.get(key);
+                        if (g) { g.count++; }
+                        else { groupMap.set(key, { firstIdx: i, count: 1 }); }
+                      });
+
+                      return editItem.details.map((d: any, i: number) => {
                         const p = products.find((x) => x.id === d.productId);
                         const available = batchInventories
                           .filter(
@@ -728,10 +794,54 @@ export default function ExhibitionTransferOutboundPage() {
                               b.warehouseId === editItem.fromWarehouseId
                           )
                           .reduce((s, b) => s + b.quantity, 0);
+
+                        const groupKey = d.workOrderId;
+                        const group = groupMap.get(groupKey);
+                        const isGroupFirst = group && group.firstIdx === i;
+                        const rowSpan = group?.count || 1;
+
+                        // 调拨数量显示逻辑：
+                        // - 初始状态（quantity 为 0）→ 显示 min(作业数量, 可用库存) 作为默认值
+                        // - 用户手动编辑过（quantity > 0）→ 显示用户输入的值
+                        const workOrderQty = d.workOrderQty ?? 50;
+                        const defaultQty = Math.min(workOrderQty, available);
+                        const displayQty = d.quantity > 0 ? d.quantity : defaultQty;
+
                         return (
                           <tr key={i} className="border-t border-[#ebeef5]">
                             <td className="px-2 py-1.5 text-[#909399]">{i + 1}</td>
-                            <td className="px-2 py-1.5 text-[#303133]">{(d as any).workOrderName || '-'}</td>
+
+                            {/* 作业项 — 同组合并 */}
+                            {isGroupFirst ? (
+                              <td
+                                rowSpan={rowSpan}
+                                className="px-2 py-1.5 text-[#303133] bg-[#fafbfc] border-r border-[#ebeef5] align-middle"
+                              >
+                                {d.workOrderName ? (
+                                  <div>
+                                    <div className="font-medium">{d.workOrderName}</div>
+                                    <div className="text-[11px] text-[#909399]">{d.workOrderCode}</div>
+                                  </div>
+                                ) : (
+                                  <span className="text-[#c0c4cc]">—</span>
+                                )}
+                              </td>
+                            ) : null}
+
+                            {/* 作业数量 — 同组合并，只读展示 */}
+                            {isGroupFirst ? (
+                              <td
+                                rowSpan={rowSpan}
+                                className="px-2 py-1.5 align-middle bg-[#fafbfc] border-r border-[#ebeef5]"
+                              >
+                                {d.workOrderId ? (
+                                  <span className="text-slate-700 font-medium text-sm">{workOrderQty}</span>
+                                ) : (
+                                  <span className="text-[#c0c4cc]">—</span>
+                                )}
+                              </td>
+                            ) : null}
+
                             <td className="px-2 py-1.5 text-[#303133]">{d.productName}</td>
                             <td className="px-2 py-1.5 text-[#909399]">{p?.specification || '-'}</td>
                             <td className="px-2 py-1.5 text-[#909399]">{p?.unit || '-'}</td>
@@ -739,27 +849,34 @@ export default function ExhibitionTransferOutboundPage() {
                               <input
                                 type="number"
                                 min="0"
+                                max={available}
                                 className={`w-20 h-7 px-2 border rounded text-right focus:outline-none ${
-                                  d.quantity > available
+                                  displayQty > available
                                     ? 'border-[#f56c6c] text-[#f56c6c] focus:border-[#f56c6c]'
                                     : 'border-[#dcdfe6] text-[#303133] focus:border-[#2f54eb]'
                                 }`}
-                                value={d.quantity || ''}
-                                onChange={(e) => updateDetail(i, 'quantity', parseInt(e.target.value, 10) || 0)}
+                                value={displayQty || ''}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value, 10);
+                                  updateDetail(i, 'quantity', isNaN(val) ? 0 : val);
+                                }}
                               />
                             </td>
                             <td className="px-2 py-1.5 text-[#67c23a]">{available}</td>
                             <td className="px-2 py-1.5 text-center">
-                              <TextButton type="danger" onClick={() => removeDetail(i)}>
-                                删除
-                              </TextButton>
+                              <div className="flex items-center justify-center gap-2">
+                                {d.workOrderId && (
+                                  <TextButton onClick={() => handleReplaceClick(i)}>替换</TextButton>
+                                )}
+                                <TextButton type="danger" onClick={() => removeDetail(i)}>删除</TextButton>
+                              </div>
                             </td>
                           </tr>
                         );
-                      })
-                    ) : (
+                      });
+                    })() : (
                       <tr>
-                        <td colSpan={8} className="py-8 text-center text-[#909399]">
+                        <td colSpan={9} className="py-8 text-center text-[#909399]">
                           暂无物资，请点击「选择工单」或「选择物资」按钮添加
                         </td>
                       </tr>
@@ -797,6 +914,20 @@ export default function ExhibitionTransferOutboundPage() {
         title="选择工单"
         onClose={() => setWorkOrderPickerOpen(false)}
         onConfirm={handleWorkOrderConfirm}
+      />
+
+      {/* 替换物资弹窗 — 选中后将新增一条同作业项的物资记录 */}
+      <ProductPickerModal
+        open={replacePickerOpen}
+        title="替换物资"
+        onClose={() => {
+          setReplacePickerOpen(false);
+          setReplaceTargetIdx(null);
+        }}
+        onConfirm={handleReplaceConfirm}
+        showStockQty={true}
+        onlyStocked={true}
+        warehouseId={editItem?.fromWarehouseId}
       />
 
       {printTrigger > 0 && printItem && (

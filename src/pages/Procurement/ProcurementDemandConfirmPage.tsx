@@ -102,7 +102,7 @@ export default function ProcurementDemandConfirmPage() {
   const [globalApprovalMeetingName, setGlobalApprovalMeetingName] = useState('');
   const [globalApprovalDate, setGlobalApprovalDate] = useState('');
   // ====== 合同关联（needContract）======
-  const [needContract, setNeedContract] = useState<'yes' | 'no' | null>(null);
+  const [needContract, setNeedContract] = useState<'yes' | 'no_link' | 'no_none' | null>(null);
   const [linkedContract, setLinkedContract] = useState<ContractLedger | null>(null);
   // 附件（简化为文件名列表，演示用）
   const [attachments, setAttachments] = useState<string[]>([]);
@@ -230,9 +230,12 @@ export default function ProcurementDemandConfirmPage() {
     setGlobalApprovalDate(rows[0]?.approvalDate || '');
     setRejectReason('');
 
-    // ====== 合同关联回显：已保存 needContract='no' 的需求重开时自动带出原合同 ======
-    setNeedContract(d.needContract ?? null);
-    if (d.needContract === 'no') {
+    // ====== 合同关联回显：兼容 localStorage 里可能存在的旧数据 'no' → 映射为 'no_link' ======
+    const raw = d.needContract as string | null | undefined;
+    const normalized: typeof needContract =
+      raw === 'no' ? 'no_link' : (raw as typeof needContract) ?? null;
+    setNeedContract(normalized);
+    if (normalized === 'no_link') {
       // 优先按合同主键查找；合同被删/缺失时用合同号快照兜底反查
       const linked =
         (d.contractId ? contractLedgers.find((l) => l.id === d.contractId) : undefined) ||
@@ -330,20 +333,24 @@ export default function ProcurementDemandConfirmPage() {
       approvalDate: globalApprovalDate || undefined,
     };
 
-    if (finalNeedContract === 'no') {
-      // 选"否" → 必须从下拉选择一份可关联的执行中招采类合同
+    if (finalNeedContract === 'no_link') {
+      // 选"否（挂已有合同）" → 必须从下拉选择一份可关联的执行中招采类合同
       if (!linkedContract) {
         alert('请搜索并选择一份执行中的招采类合同，确认该需求挂到哪个合同上');
         return;
       }
       updatePatch.contractId = linkedContract.id;
       updatePatch.contractNoSnapshot = linkedContract.contractNo;
+    } else if (finalNeedContract === 'no_none') {
+      // 选"否（不签也不关联）" → 清空可能残留的合同关联字段
+      updatePatch.contractId = undefined;
+      updatePatch.contractNoSnapshot = undefined;
     }
 
     updateProcurementDemand(selected.id, updatePatch);
 
-    // ====== needContract='no' → 反向写入合同台账 linkedDemandIds ======
-    if (finalNeedContract === 'no' && linkedContract) {
+    // ====== needContract='no_link' → 反向写入合同台账 linkedDemandIds ======
+    if (finalNeedContract === 'no_link' && linkedContract) {
       const newIds = addLinkedDemand(linkedContract, selected.id);
       updateContractLedger(linkedContract.id, { linkedDemandIds: newIds });
     }
@@ -679,7 +686,7 @@ export default function ProcurementDemandConfirmPage() {
               <div className="text-sm font-semibold text-slate-800 mb-3">
                 是否需签订合同 <span className="text-rose-500">*</span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={() => { setNeedContract('yes'); setLinkedContract(null); }}
@@ -694,9 +701,9 @@ export default function ProcurementDemandConfirmPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setNeedContract('no'); }}
+                  onClick={() => { setNeedContract('no_link'); }}
                   className={`p-3 rounded-lg border-2 text-left transition-all ${
-                    needContract === 'no'
+                    needContract === 'no_link'
                       ? 'border-indigo-500 bg-white shadow-sm'
                       : 'border-slate-200 hover:border-indigo-300'
                   }`}
@@ -704,10 +711,22 @@ export default function ProcurementDemandConfirmPage() {
                   <div className="text-sm font-medium text-slate-800">否（挂已有合同）</div>
                   <div className="text-xs text-slate-500 mt-0.5">不建新合同，需求金额计入已有执行中合同</div>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => { setNeedContract('no_none'); setLinkedContract(null); }}
+                  className={`p-3 rounded-lg border-2 text-left transition-all ${
+                    needContract === 'no_none'
+                      ? 'border-amber-500 bg-white shadow-sm'
+                      : 'border-slate-200 hover:border-amber-300'
+                  }`}
+                >
+                  <div className="text-sm font-medium text-slate-800">否（不签也不关联）</div>
+                  <div className="text-xs text-slate-500 mt-0.5">需求走入库核销，不进入合同台账链路</div>
+                </button>
               </div>
 
-              {/* needContract='no' 时展开：合同关键字搜索下拉 + 自动带出合同名与金额摘要 */}
-              {needContract === 'no' && (
+              {/* needContract='no_link' 时展开：合同关键字搜索下拉 + 自动带出合同名与金额摘要 */}
+              {needContract === 'no_link' && (
                 <div className="mt-4 space-y-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div>

@@ -1297,8 +1297,8 @@ export interface ProcurementDemand {
   // 立项阶段全局字段
   isThreeImportant?: boolean;   // 是否属于"三重一大"（三种立项方式都需勾选）
   // ============== 立项确认阶段 — 合同关联 ==============
-  /** 是否需签订合同：yes=走标准链路（建工单→建合同→审批→归档）；no=挂已有执行中合同（需求金额自动计入合同已支付） */
-  needContract?: 'yes' | 'no' | null;
+  /** 是否需签订合同：yes=走标准链路；no_link=不签新合同、挂已有执行中合同；no_none=不签也不关联、需求到入库核销就结束 */
+  needContract?: 'yes' | 'no_link' | 'no_none' | null;
   /** needContract='no' 时：关联的已有合同台账 ID（必须 status='active' 执行中） */
   contractId?: string;
   /** 合同编号快照（防合同删除后找不到，UI 自动带出合同名用） */
