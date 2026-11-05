@@ -6,9 +6,9 @@ import MultiSelect from '@/components/common/MultiSelect';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import { useStore } from '@/store/useStore';
-import { Layers, Package, Edit3, Download, FileText, Upload } from 'lucide-react';
+import { Layers, Package, Edit3, Download, FileText, Upload, Camera, Trash2, History } from 'lucide-react';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
-import type { BatchInventory } from '@/types';
+import type { BatchInventory, InventorySnapshot, InventorySnapshotItem } from '@/types';
 import * as XLSX from 'xlsx';
 
 const helpContent = {
@@ -83,9 +83,14 @@ export default function StockQueryPage() {
   const positions = useStore((s) => s.positions);
   const products = useStore((s) => s.products);
 
+  // 库存快照
+  const inventorySnapshots = useStore((s) => s.inventorySnapshots);
+  const addInventorySnapshot = useStore((s) => s.addInventorySnapshot);
+  const deleteInventorySnapshot = useStore((s) => s.deleteInventorySnapshot);
+
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<'summary' | 'batch'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'batch' | 'snapshots'>('summary');
   const [filterProduct, setFilterProduct] = useState('');
   const [filterSpecification, setFilterSpecification] = useState('');
   const [filterWarehouse, setFilterWarehouse] = useState<string[]>([]);
@@ -365,6 +370,91 @@ export default function StockQueryPage() {
       ? [{ wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 12 }]
       : [{ wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 10 }];
     XLSX.writeFile(wb, `库存查询_${activeTab === 'summary' ? '汇总' : '批次'}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  // ========== 库存快照 ==========
+  const handleSaveSnapshot = () => {
+    // 必须选一个仓库
+    if (filterWarehouse.length === 0) {
+      alert('请先在筛选条件中选择一个仓库，然后再保存快照');
+      return;
+    }
+    if (filterWarehouse.length > 1) {
+      alert('保存快照只能选择一个仓库，请先调整筛选条件');
+      return;
+    }
+
+    const warehouseId = filterWarehouse[0];
+    const warehouse = warehouses.find((w) => w.id === warehouseId);
+    if (!warehouse) {
+      alert('所选仓库不存在');
+      return;
+    }
+
+    const snapshotItems: InventorySnapshotItem[] = summaryData.map((item) => ({
+      productCode: item.productCode,
+      productName: item.productName,
+      specification: item.specification || '-',
+      unit: item.unit || '-',
+      warehouseName: item.warehouseName,
+      positionName: item.positionName || '-',
+      totalQuantity: item.totalQuantity,
+    }));
+
+    if (snapshotItems.length === 0) {
+      alert('当前筛选条件下没有可保存的库存数据');
+      return;
+    }
+
+    // 构建筛选条件摘要
+    const filterParts: string[] = [];
+    if (appliedFilter.product) filterParts.push(`物资含"${appliedFilter.product}"`);
+    if (appliedFilter.specification) filterParts.push(`规格含"${appliedFilter.specification}"`);
+    if (appliedFilter.positions.length > 0) {
+      const posNames = appliedFilter.positions.map((pid) => positions.find((p) => p.id === pid)?.name).filter(Boolean).join('、');
+      if (posNames) filterParts.push(`仓位:${posNames}`);
+    }
+    if (appliedFilter.statuses.length > 0) {
+      const statusLabels: Record<string, string> = { enabled: '启用', disabled: '禁用' };
+      const statusText = appliedFilter.statuses.map((s) => statusLabels[s] || s).join('、');
+      filterParts.push(`状态:${statusText}`);
+    }
+
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0, 10);
+    const timeStr = today.toTimeString().slice(0, 8);
+    const snapshot: InventorySnapshot = {
+      id: 'SNAP-' + Date.now() + Math.random().toString(36).slice(2, 7),
+      name: `${dateStr} ${warehouse.name} 快照（${snapshotItems.length}条）`,
+      warehouseId: warehouseId,
+      warehouseName: warehouse.name,
+      filterSummary: filterParts.length > 0 ? filterParts.join(' | ') : '全部',
+      totalItems: snapshotItems.length,
+      totalQuantity: snapshotItems.reduce((sum, i) => sum + i.totalQuantity, 0),
+      createdAt: today.toISOString().slice(0, 19).replace('T', ' '),
+      items: snapshotItems,
+    };
+
+    addInventorySnapshot(snapshot);
+    alert(`快照已保存！\n名称：${snapshot.name}\n物资条数：${snapshotItems.length}\n总库存数：${snapshot.totalQuantity}`);
+  };
+
+  const handleExportSnapshot = (snapshot: InventorySnapshot) => {
+    const ws = XLSX.utils.json_to_sheet(snapshot.items);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, snapshot.name.slice(0, 30));
+    ws['!cols'] = [
+      { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 8 }, { wch: 15 }, { wch: 15 }, { wch: 12 },
+    ];
+
+    // 自定义文件名：快照名称 + 时间
+    const safeName = snapshot.name.replace(/[\\/:*?"<>|]/g, '_');
+    XLSX.writeFile(wb, `库存快照_${safeName}.xlsx`);
+  };
+
+  const handleDeleteSnapshot = (id: string) => {
+    if (!confirm('确定要删除这个快照吗？删除后不可恢复。')) return;
+    deleteInventorySnapshot(id);
   };
 
   // ========== 期初库存导入（系统初始化） ==========
@@ -740,20 +830,27 @@ export default function StockQueryPage() {
             style={{ display: 'none' }}
             onChange={handleFileUpload}
           />
-          <DefaultButton onClick={handleDownloadTemplate}>
-            下载模板
-          </DefaultButton>
-          <DefaultButton onClick={() => fileInputRef.current?.click()} icon={<Upload size={14} />}>
-            导入
-          </DefaultButton>
-          {activeTab === 'summary' && (
-            <DefaultButton onClick={handleExportReport} icon={<FileText size={14} />}>
-              导出报表
-            </DefaultButton>
+          {activeTab !== 'snapshots' && (
+            <>
+              <DefaultButton onClick={handleDownloadTemplate}>
+                下载模板
+              </DefaultButton>
+              <DefaultButton onClick={() => fileInputRef.current?.click()} icon={<Upload size={14} />}>
+                导入
+              </DefaultButton>
+              {activeTab === 'summary' && (
+                <DefaultButton onClick={handleExportReport} icon={<FileText size={14} />}>
+                  导出报表
+                </DefaultButton>
+              )}
+              <DefaultButton onClick={handleExport} icon={<Download size={14} />}>
+                导出
+              </DefaultButton>
+              <PrimaryButton onClick={handleSaveSnapshot} icon={<Camera size={14} />}>
+                保存快照
+              </PrimaryButton>
+            </>
           )}
-          <DefaultButton onClick={handleExport} icon={<Download size={14} />}>
-            导出
-          </DefaultButton>
           <button
             className={`flex items-center gap-1 px-3 py-1.5 text-xs rounded transition-colors ${
               activeTab === 'summary'
@@ -775,6 +872,17 @@ export default function StockQueryPage() {
           >
             <Package size={14} />
             批次库存
+          </button>
+          <button
+            className={`flex items-center gap-1 px-3 py-1.5 text-xs rounded transition-colors ${
+              activeTab === 'snapshots'
+                ? 'bg-[#2f54eb] text-white'
+                : 'bg-[#f5f7fa] text-[#606266] hover:bg-[#e4e7ed]'
+            }`}
+            onClick={() => setActiveTab('snapshots')}
+          >
+            <History size={14} />
+            历史快照
           </button>
         </div>
       </div>
@@ -859,12 +967,83 @@ export default function StockQueryPage() {
           operationSlot={operationSlot}
           showFooter={true}
         />
-      ) : (
+      ) : activeTab === 'batch' ? (
         <DataTable
           data={filteredBatchData}
           columns={batchColumns}
           rowKey={(row: BatchInventory) => row.id}
         />
+      ) : (
+        // ====== 历史快照 Tab ======
+        <div className="space-y-3">
+          {inventorySnapshots.length === 0 ? (
+            <div className="text-center py-16 text-[#909399]">
+              <History size={48} className="mx-auto mb-3 opacity-30" />
+              <div className="text-sm">还没有保存过快照</div>
+              <div className="text-xs mt-1">切换到「汇总库存」或「批次库存」，选中一个仓库后点击顶部「📸 保存快照」</div>
+            </div>
+          ) : (
+            inventorySnapshots.map((snap) => (
+              <div
+                key={snap.id}
+                className="border border-[#ebeef5] rounded-lg bg-white p-4 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-semibold text-[#303133]">{snap.name}</span>
+                      <span className="text-xs px-2 py-0.5 rounded bg-[#ecf5ff] text-[#2f54eb]">{snap.warehouseName}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-[#909399]">
+                      <span>📅 {snap.createdAt}</span>
+                      <span>📦 {snap.totalItems} 条物资</span>
+                      <span>🔢 总库存 {snap.totalQuantity}</span>
+                    </div>
+                    <div className="text-xs text-[#909399] mt-1 truncate">
+                      筛选条件：{snap.filterSummary}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <DefaultButton size="sm" onClick={() => handleExportSnapshot(snap)} icon={<Download size={13} />}>
+                      下载 Excel
+                    </DefaultButton>
+                    <DefaultButton size="sm" danger onClick={() => handleDeleteSnapshot(snap.id)} icon={<Trash2 size={13} />}>
+                      删除
+                    </DefaultButton>
+                  </div>
+                </div>
+                {/* 快照明细预览（最多展示前 5 条） */}
+                <div className="mt-3 pt-3 border-t border-[#f0f0f0]">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-[#909399] bg-[#fafafa]">
+                        <th className="px-2 py-1 text-left">物资编码</th>
+                        <th className="px-2 py-1 text-left">物资名称</th>
+                        <th className="px-2 py-1 text-left">规格</th>
+                        <th className="px-2 py-1 text-left">仓位</th>
+                        <th className="px-2 py-1 text-right">库存数</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {snap.items.slice(0, 5).map((item, idx) => (
+                        <tr key={idx} className="text-[#303133]">
+                          <td className="px-2 py-1">{item.productCode}</td>
+                          <td className="px-2 py-1">{item.productName}</td>
+                          <td className="px-2 py-1">{item.specification}</td>
+                          <td className="px-2 py-1">{item.positionName}</td>
+                          <td className="px-2 py-1 text-right font-medium text-[#2f54eb]">{item.totalQuantity}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {snap.items.length > 5 && (
+                    <div className="text-xs text-[#c0c4cc] mt-1 text-center">... 还有 {snap.items.length - 5} 条，点击「下载 Excel」查看完整数据</div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       )}
 
       {/* 单条修改仓位弹窗 */}

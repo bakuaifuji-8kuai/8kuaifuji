@@ -25,6 +25,8 @@ import type {
   ContractReminderSettings,
   // 非工程类-服务独立类型（B 方案）
   ServiceCategory, Service, ServiceApplication,
+  // 库存快照
+  InventorySnapshot,
 } from '@/types';
 import { DEFAULT_CONTRACT_REMINDER_SETTINGS } from '@/types';
 import * as mockData from '@/mock/data';
@@ -303,6 +305,11 @@ interface WarehouseState {
   stockTransactions: StockTransaction[];
   setStockTransactions: (data: StockTransaction[]) => void;
   addStockTransaction: (transaction: StockTransaction) => void;
+
+  // 库存快照（历史快照功能）
+  inventorySnapshots: InventorySnapshot[];
+  addInventorySnapshot: (snapshot: InventorySnapshot) => void;
+  deleteInventorySnapshot: (id: string) => void;
 
   // 库存校验和反确认辅助方法
   checkInventoryEnough: (warehouseId: string, productId: string, quantity: number) => boolean;
@@ -785,6 +792,11 @@ export const useStore = create<WarehouseState>()(
   ],
   setStockTransactions: (data) => set({ stockTransactions: data }),
   addStockTransaction: (transaction) => set((state) => ({ stockTransactions: [transaction, ...state.stockTransactions] })),
+
+  // 库存快照（历史快照功能）
+  inventorySnapshots: [],
+  addInventorySnapshot: (snapshot) => set((state) => ({ inventorySnapshots: [snapshot, ...state.inventorySnapshots] })),
+  deleteInventorySnapshot: (id) => set((state) => ({ inventorySnapshots: state.inventorySnapshots.filter((s) => s.id !== id) })),
 
   // 库存校验和反确认辅助方法
   checkInventoryEnough: (warehouseId, productId, quantity) => {
@@ -1639,7 +1651,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 12,
+      version: 13,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -1997,6 +2009,13 @@ export const useStore = create<WarehouseState>()(
               return next;
             });
             console.log(`[store migrate v12] 需求变更功能已下线：清理 ${changedCount} 条 changed 状态需求`);
+          }
+        }
+        if (version < 13) {
+          // v12→v13：新增库存快照（历史快照功能）
+          if (!Array.isArray(persistedState.inventorySnapshots)) {
+            persistedState.inventorySnapshots = [];
+            console.log('[store migrate v13] inventorySnapshots 初始化为空数组');
           }
         }
         return persistedState;

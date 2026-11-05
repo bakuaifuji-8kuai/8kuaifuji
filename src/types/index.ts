@@ -294,6 +294,29 @@ export interface BatchInventory {
   projectName?: string; // 所属项目名称
 }
 
+// 库存快照（历史快照功能）
+export interface InventorySnapshotItem {
+  productCode: string;
+  productName: string;
+  specification: string;
+  unit: string;
+  warehouseName: string;
+  positionName: string;
+  totalQuantity: number;
+}
+
+export interface InventorySnapshot {
+  id: string;
+  name: string;              // 快照名称，默认 "2026-11-05 展会物资仓 快照"
+  warehouseId: string;       // 仓库 ID（必填）
+  warehouseName: string;     // 仓库名称
+  filterSummary: string;     // 筛选条件摘要（如 "规格:会议用 | 状态:启用"）
+  totalItems: number;        // 快照包含的物资条数
+  totalQuantity: number;     // 快照包含的总库存数
+  createdAt: string;         // ISO 时间戳
+  items: InventorySnapshotItem[]; // 快照当时的汇总数据（物资+仓库+仓位维度聚合）
+}
+
 // 批次出库记录（追踪出库时批次消耗情况）
 export interface BatchOutboundDetail {
   batchId: string;
