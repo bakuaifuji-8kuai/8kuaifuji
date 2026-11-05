@@ -21,6 +21,38 @@ export interface ChangeDay {
 }
 
 export const CHANGELOG: ChangeDay[] = [
+  // ============ 2026-11-05 ============
+  {
+    date: '2026-11-05',
+    summary: 'needContract 三选一枚举 + 调拨出库升级 + 招采验收去初验 + 预算单价可编辑',
+    entries: [
+      {
+        type: 'feat', scope: '采购需求',
+        title: 'needContract 扩展为三选一枚举（yes / no_link / no_none）',
+        detail: 'yes=走标准链路建工单签合同；no_link=挂已有执行中合同（展开合同搜索下拉必选）；no_none=不签也不关联需求到入库核销就结束。合同新建页严格筛选只有 yes 才进合同签订，回显兼容旧 localStorage 数据（旧 no 自动映射 no_link）',
+        commit: 'db4f076',
+      },
+      {
+        type: 'feat', scope: '调拨出库',
+        title: '调拨出库作业项合并表头 + 替换物资按钮 + 调拨数量默认值',
+        detail: '作业项行 rowspan 合并表头；新增"替换物资"按钮可替换作业项关联的配电箱/吊点；作业数量固定 50 只读；调拨数量默认 min(50, 可用库存)',
+        commit: 'db4f076',
+      },
+      {
+        type: 'fix', scope: '验收',
+        title: '招采验收服务/项目类去掉初验环节，直接终验',
+        detail: 'confirmDemandPick 服务类跳过阶段选择弹窗直接 openForm(demand, "final")；列表页移除阶段筛选项；表单标题去掉"· 终验"后缀。历史初验单保留正常展示',
+        commit: 'fd40149',
+      },
+      {
+        type: 'fix', scope: '采购需求',
+        title: '框架合同清单外采购不含税预算单价列改为可编辑 input',
+        detail: '清单外采购场景下不含税预算单价列之前写成纯文本 `<td>`，改为 `<input type="number" min="0" step="0.01">`，绑定 updateDetail 更新 d.unitPriceExcludingTax',
+        commit: '395e94e',
+      },
+    ],
+  },
+
   // ============ 2026-11-02 ============
   {
     date: '2026-11-02',
