@@ -1027,7 +1027,6 @@ export default function ProcurementDemandPage() {
                               <th className="px-2 py-2 text-center w-24">合同清单内外</th>
                               <th className="px-2 py-2 text-left w-28">合同编号</th>
                               <th className="px-2 py-2 text-left w-28">合同有效期</th>
-                              <th className="px-2 py-2 text-left">备注</th>
                               <th className="px-2 py-2 text-center w-16">操作</th>
                             </tr>
                           </thead>
@@ -1068,7 +1067,6 @@ export default function ProcurementDemandPage() {
                                 </td>
                                 <td className="px-2 py-1.5 text-slate-600">{(d as any).contractNo || '-'}</td>
                                 <td className="px-2 py-1.5 text-slate-600">{(d as any).contractValid || '-'}</td>
-                                <td className="px-2 py-1.5 text-slate-500">{d.remark || '-'}</td>
                                 <td className="px-2 py-1.5 text-center">
                                   <button className="text-rose-500 hover:underline" onClick={() => { setDetails(details.filter(x => x.id !== d.id)); }}>删除</button>
                                 </td>
@@ -1103,7 +1101,6 @@ export default function ProcurementDemandPage() {
                               <th className="px-2 py-2 text-left w-24">单价备注</th>
                               <th className="px-2 py-2 text-right w-20">库存数量</th>
                               <th className="px-2 py-2 text-right w-32">不含税预算金额</th>
-                              <th className="px-2 py-2 text-left">备注</th>
                               <th className="px-2 py-2 text-center w-16">操作</th>
                             </tr>
                           </thead>
@@ -1132,7 +1129,6 @@ export default function ProcurementDemandPage() {
                                 </td>
                                 <td className="px-2 py-1.5 text-right text-amber-600 font-medium">{(d as any).stockQuantity ?? 0}</td>
                                 <td className="px-2 py-1.5 text-right text-slate-800 font-medium">{(d.amountExcludingTax || 0).toFixed(2)}</td>
-                                <td className="px-2 py-1.5 text-slate-500">{d.remark || '-'}</td>
                                 <td className="px-2 py-1.5 text-center">
                                   <button className="text-rose-500 hover:underline" onClick={() => { setDetails(details.filter(x => x.id !== d.id)); }}>删除</button>
                                 </td>
@@ -1167,7 +1163,6 @@ export default function ProcurementDemandPage() {
                               {showPriceRemarkCol && <th className="px-2 py-2 text-left w-24">单价备注</th>}
                               {showStockQtyCol && <th className="px-2 py-2 text-right w-20">库存数量</th>}
                               <th className="px-2 py-2 text-right w-28">不含税预算金额</th>
-                              <th className="px-2 py-2 text-left">备注</th>
                               <th className="px-2 py-2 text-center w-16">操作</th>
                             </tr>
                           </thead>
@@ -1201,7 +1196,6 @@ export default function ProcurementDemandPage() {
                                   <td className="px-2 py-1.5 text-right text-amber-600 font-medium">{(d as any).stockQuantity ?? 0}</td>
                                 )}
                                 <td className="px-2 py-1.5 text-right text-slate-800 font-medium">{(d.amountExcludingTax || 0).toFixed(2)}</td>
-                                <td className="px-2 py-1.5 text-slate-500">{d.remark || '-'}</td>
                                 <td className="px-2 py-1.5 text-center">
                                   <button className="text-rose-500 hover:underline" onClick={() => { setDetails(details.filter(x => x.id !== d.id)); }}>删除</button>
                                 </td>
