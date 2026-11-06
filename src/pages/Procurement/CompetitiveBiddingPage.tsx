@@ -1276,7 +1276,6 @@ export default function CompetitiveBiddingPage() {
                         <thead>
                           <tr className="bg-gradient-to-r from-amber-50 to-orange-50/30">
                             <th className="px-2 py-2 text-left w-10 text-[12px] text-slate-600 font-semibold">#</th>
-                            <th className="px-2 py-2 text-left w-24 text-[12px] text-slate-600 font-semibold">项目名称</th>
                             <th className="px-2 py-2 text-left w-24 text-[12px] text-slate-600 font-semibold">项目概况/物料名称</th>
                             <th className="px-2 py-2 text-left w-20 text-[12px] text-slate-600 font-semibold">合同费率(元/月)</th>
                             <th className="px-2 py-2 text-left w-20 text-[12px] text-slate-600 font-semibold">不含税单价</th>
@@ -1284,10 +1283,6 @@ export default function CompetitiveBiddingPage() {
                             <th className="px-2 py-2 text-left w-14 text-[12px] text-slate-600 font-semibold">数量 *</th>
                             <th className="px-2 py-2 text-left w-12 text-[12px] text-slate-600 font-semibold">单位 *</th>
                             <th className="px-2 py-2 text-left w-24 text-[12px] text-rose-600 font-semibold">竞价文件 *</th>
-                            <th className="px-2 py-2 text-left w-24 text-[12px] text-slate-600 font-semibold">供应商不含税单价</th>
-                            <th className="px-2 py-2 text-left w-24 text-[12px] text-indigo-600 font-semibold">供应商不含税金额</th>
-                            <th className="px-2 py-2 text-left w-24 text-[12px] text-slate-600 font-semibold">中标供应商名称</th>
-                            <th className="px-2 py-2 text-left w-24 text-[12px] text-slate-600 font-semibold">关联合同编号</th>
                             <th className="px-2 py-2 text-center w-12 text-[12px] text-slate-600 font-semibold">操作</th>
                           </tr>
                         </thead>
@@ -1296,12 +1291,6 @@ export default function CompetitiveBiddingPage() {
                             return (
                               <tr key={idx} className="border-t border-slate-100 hover:bg-amber-50/15 transition-colors">
                                 <td className="px-2 py-2 text-slate-400 text-[12px]">{idx + 1}</td>
-                                <td className="px-2 py-2">
-                                  <input className={common}
-                                    value={item.projectName || item.productName || ''}
-                                    onChange={(e) => updateItem(idx, { projectName: e.target.value })}
-                                    placeholder="项目名称" />
-                                </td>
                                 <td className="px-2 py-2">
                                   <input className={common}
                                     value={item.description || item.specification || ''}
@@ -1324,9 +1313,7 @@ export default function CompetitiveBiddingPage() {
                                     onChange={(e) => updateItem(idx, { priceDescription: e.target.value })}>
                                     <option value="">--</option>
                                     <option value="固定单价">固定单价</option>
-                                    <option value="费率结算">费率结算</option>
-                                    <option value="按量结算">按量结算</option>
-                                    <option value="按次计费">按次计费</option>
+                                    <option value="上限单价">上限单价</option>
                                   </select>
                                 </td>
                                 <td className="px-2 py-2">
@@ -1368,26 +1355,6 @@ export default function CompetitiveBiddingPage() {
                                     </label>
                                   )}
                                 </td>
-                                <td className="px-2 py-2">
-                                  <input type="number" step="0.01" className={common}
-                                    value={item.supplierUnitPriceExTax ?? ''}
-                                    onChange={(e) => updateItem(idx, { supplierUnitPriceExTax: Number(e.target.value) })} />
-                                </td>
-                                <td className="px-2 py-2 text-indigo-600 font-semibold text-[12px]">
-                                  ¥{(item.supplierAmountExTax ?? 0).toLocaleString()}
-                                </td>
-                                <td className="px-2 py-2">
-                                  <input className={common}
-                                    value={item.winningSupplierName || ''}
-                                    onChange={(e) => updateItem(idx, { winningSupplierName: e.target.value })}
-                                    placeholder="中标供应商" />
-                                </td>
-                                <td className="px-2 py-2">
-                                  <input className={common}
-                                    value={item.contractNo || ''}
-                                    onChange={(e) => updateItem(idx, { contractNo: e.target.value })}
-                                    placeholder="关联合同编号" />
-                                </td>
                                 <td className="px-2 py-2 text-center">
                                   <button onClick={() => removeItem(idx)}
                                     className="text-[11px] text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-2 py-0.5 rounded transition-colors">移除</button>
@@ -1398,7 +1365,7 @@ export default function CompetitiveBiddingPage() {
                         </tbody>
                         <tfoot>
                           <tr className="bg-gradient-to-r from-amber-50 to-orange-50/30 border-t border-slate-200">
-                            <td colSpan={11} className="px-2 py-2 text-right text-slate-600 font-semibold text-[12px]">不含税金额合计：</td>
+                            <td colSpan={8} className="px-2 py-2 text-right text-slate-600 font-semibold text-[12px]">不含税金额合计：</td>
                             <td className="px-2 py-2 text-indigo-600 font-bold text-[12px]">
                               ¥{(editItem.items?.reduce((s, i) => s + (i.supplierAmountExTax || 0), 0) || 0).toLocaleString()}
                             </td>

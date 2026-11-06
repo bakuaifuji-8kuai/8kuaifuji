@@ -81,7 +81,7 @@ function isOverLimit(item: CatalogCompareItem, row: QuoteInputRow): boolean {
   const limit = item.unitPriceLimitIncludingTax ?? item.singlePriceLimit;
   if (!limit) return false;
   const pd = item.priceDescription || '固定单价';
-  if (pd === '固定单价' || pd === '按量结算') return row.unitPrice > limit;
+  if (pd === '固定单价' || pd === '上限单价' || pd === '按量结算') return row.unitPrice > limit;
   if (pd === '费率结算') return (row.ratePerMonth ?? row.unitPrice) > limit;
   if (pd === '按次计费') return (row.unitPricePerTime ?? row.unitPrice) > limit;
   return row.unitPrice > limit;
@@ -242,6 +242,30 @@ function QuoteRowItem({ item, row, view, onChange }: QuoteRowItemProps) {
                 placeholder="请输入报价"
               />
             </div>
+          </div>
+        )}
+
+        {priceDesc === '上限单价' && (
+          <div>
+            <label className="text-[11px] text-slate-500">含税单价</label>
+            <div className="flex items-center mt-1">
+              <span className="text-slate-400 mr-1">¥</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={row.unitPrice || ''}
+                onChange={(e) => onChange({ ...row, unitPrice: parseFloat(e.target.value) || 0 })}
+                className="flex-1 h-9 px-3 rounded-lg border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                placeholder="请输入报价"
+              />
+            </div>
+            {(item.unitPriceLimitIncludingTax ?? item.singlePriceLimit) ? (
+              <div className="mt-1.5 text-[11px] text-slate-400 flex items-center gap-1">
+                <span>↑</span>
+                <span>预算上限 ¥{(item.unitPriceLimitIncludingTax ?? item.singlePriceLimit)?.toFixed(2)}/{item.unit || '份'}，建议报价不得超过此价</span>
+              </div>
+            ) : null}
           </div>
         )}
 
