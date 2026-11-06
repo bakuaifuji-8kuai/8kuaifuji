@@ -323,6 +323,18 @@ export default function ProcurementDemandConfirmPage() {
     // ====== needContract 校验 ======
     // 未选择 → 强制 needContract='yes'（走标准链路）
     const finalNeedContract = needContract ?? 'yes';
+
+    // ====== 审定金额兜底 ======
+    // 物资类：budgetAudit.auditAmount 来自清单成本审核，不动
+    // 服务/工程类：没有清单，用 Σ budgetAmount（申请预算）作为审定金额
+    let finalBudgetAudit = selected.budgetAudit;
+    if (!finalBudgetAudit?.auditAmount) {
+      const totalBudget = rowsWithGlobalApproval.reduce((s, r) => s + (r.budgetAmount || 0), 0);
+      if (totalBudget > 0) {
+        finalBudgetAudit = { ...(finalBudgetAudit || {}), auditAmount: totalBudget };
+      }
+    }
+
     let updatePatch: any = {
       status: 'confirm_approved',
       confirmApprover: currentUser.name,
@@ -331,6 +343,7 @@ export default function ProcurementDemandConfirmPage() {
       projectRows: rowsWithGlobalApproval,
       // 顶层 approvalDate 也同步（已有字段，兼容列表页只读展示）
       approvalDate: globalApprovalDate || undefined,
+      budgetAudit: finalBudgetAudit,
     };
 
     if (finalNeedContract === 'no_link') {
@@ -1328,7 +1341,7 @@ function ConfirmFormFields({
 
   // 服务类 / 工程类 → 多行项目表单
   const getTableHeaders = () => {
-    const base = ['#', '需求部门*', '项目名称*', ['主要内容'], '不含税预算总金额*', '不含税预算审定总金额*'];
+    const base = ['#', '需求部门*', '项目名称*', ['主要内容'], '不含税预算总金额*'];
     // 立项审批字段已提升为弹窗全局字段，不再每行展示
     base.push('备注', '操作');
     return base;
@@ -1414,9 +1427,6 @@ function ConfirmFormFields({
                   ))()}
                   <td className="px-2 py-2">
                     <input type="number" className={inputCls} disabled={listLocked} value={row.budgetAmount || ''} onChange={(e) => updateProjectRow(idx, 'budgetAmount', Number(e.target.value) || 0)} />
-                  </td>
-                  <td className="px-2 py-2">
-                    <input type="number" className={inputCls} disabled={listLocked} value={row.budgetControlAmount || ''} onChange={(e) => updateProjectRow(idx, 'budgetControlAmount', Number(e.target.value) || 0)} />
                   </td>
                   <td className="px-2 py-2">
                     <input className={inputCls} disabled={confirmLocked} value={row.remark || ''} onChange={(e) => updateProjectRow(idx, 'remark', e.target.value)} />
