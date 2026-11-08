@@ -1076,7 +1076,7 @@ export default function ProcurementDemandPage() {
                           {details.length > 0 && (
                             <tfoot className="bg-slate-50 border-t border-slate-200">
                               <tr>
-                                <td colSpan={9 + (showPriceRemarkCol ? 1 : 0) + (showStockQtyCol ? 1 : 0)} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
+                                <td colSpan={8 + (showPriceRemarkCol ? 1 : 0) + (showStockQtyCol ? 1 : 0)} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
                                 <td className="px-2 py-2 text-right text-red-500 font-semibold">¥ {totalAmount.toFixed(2)}</td>
                                 <td colSpan={5}></td>
                               </tr>
@@ -1106,7 +1106,7 @@ export default function ProcurementDemandPage() {
                           </thead>
                           <tbody>
                             {details.length === 0 && (
-                              <tr><td colSpan={13} className="px-3 py-8 text-center text-slate-400">暂无{unitLabel}明细，点击"+ 添加{unitLabel}"开始录入</td></tr>
+                              <tr><td colSpan={12} className="px-3 py-8 text-center text-slate-400">暂无{unitLabel}明细，点击"+ 添加{unitLabel}"开始录入</td></tr>
                             )}
                             {details.map((d, idx) => (
                               <tr key={d.id} className="border-t border-slate-100 hover:bg-slate-50">
@@ -1138,7 +1138,7 @@ export default function ProcurementDemandPage() {
                           {details.length > 0 && (
                             <tfoot className="bg-slate-50 border-t border-slate-200">
                               <tr>
-                                <td colSpan={9} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
+                                <td colSpan={8} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
                                 <td className="px-2 py-2 text-right text-red-500 font-semibold">¥ {totalAmount.toFixed(2)}</td>
                                 <td colSpan={3}></td>
                               </tr>
@@ -1205,7 +1205,7 @@ export default function ProcurementDemandPage() {
                           {details.length > 0 && (
                             <tfoot className="bg-slate-50 border-t border-slate-200">
                               <tr>
-                                <td colSpan={8 + (showPriceRemarkCol ? 1 : 0) + (showStockQtyCol ? 1 : 0)} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
+                                <td colSpan={7 + (showPriceRemarkCol ? 1 : 0) + (showStockQtyCol ? 1 : 0)} className="px-2 py-2 text-right text-slate-700 font-medium">不含税预算总金额：</td>
                                 <td className="px-2 py-2 text-right text-red-500 font-semibold">¥ {totalAmount.toFixed(2)}</td>
                                 <td colSpan={3}></td>
                               </tr>

@@ -978,9 +978,9 @@ export default function CompetitiveBiddingPage() {
     if ('singlePriceLimit' in patch) {
       updated.unitPriceLimitIncludingTax = patch.singlePriceLimit;
     }
-    // 框架协议：自动算供应商不含税金额
+    // 框架协议：自动算供应商不含税金额（目录内比价表已改用 demandUnitPriceExcludingTax 作为不含税单价列）
     const qty = updated.quantity || 0;
-    const supEx = updated.supplierUnitPriceExTax;
+    const supEx = updated.demandUnitPriceExcludingTax;
     if (supEx != null && qty) {
       updated.supplierAmountExTax = Math.round(Number(supEx) * qty * 100) / 100;
     }
@@ -1365,11 +1365,11 @@ export default function CompetitiveBiddingPage() {
                         </tbody>
                         <tfoot>
                           <tr className="bg-gradient-to-r from-amber-50 to-orange-50/30 border-t border-slate-200">
-                            <td colSpan={8} className="px-2 py-2 text-right text-slate-600 font-semibold text-[12px]">不含税金额合计：</td>
+                            <td colSpan={7} className="px-2 py-2 text-right text-slate-600 font-semibold text-[12px]">不含税金额合计：</td>
                             <td className="px-2 py-2 text-indigo-600 font-bold text-[12px]">
                               ¥{(editItem.items?.reduce((s, i) => s + (i.supplierAmountExTax || 0), 0) || 0).toLocaleString()}
                             </td>
-                            <td colSpan={2}></td>
+                            <td colSpan={1}></td>
                           </tr>
                         </tfoot>
                       </table>
