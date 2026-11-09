@@ -212,7 +212,7 @@ export default function ContractExhibitionPage() {
       total: list.length,
       draft: list.filter((l) => l.status === 'draft').length,
       pending: list.filter((l) => l.status === 'pending').length,
-      approved: list.filter((l) => ['approved', 'active', 'completed'].includes(l.status)).length,
+      approved: list.filter((l) => ['approved', 'active'].includes(l.status)).length,
       returned: list.filter((l) => l.status === 'returned').length,
     };
   }, [list]);
@@ -353,7 +353,7 @@ export default function ContractExhibitionPage() {
                             提交审批
                           </button>
                         )}
-                        {(row.status === 'pending' || row.status === 'approved' || row.status === 'active' || row.status === 'completed') && (
+                        {(row.status === 'pending' || row.status === 'approved' || row.status === 'active') && (
                           <span className="text-slate-300 text-xs">—</span>
                         )}
                       </div>

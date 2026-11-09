@@ -385,7 +385,7 @@ export default function ContractLedgerPage() {
     today.setHours(0, 0, 0, 0);
     const result: Array<{ contract: ContractLedger; type: 'paid' | 'expire' | 'eval'; message: string; level: 'warning' | 'danger' }> = [];
     ledgerData.forEach((c) => {
-      if (c.status === 'terminated' || c.status === 'completed') return;
+      if (c.status === 'terminated') return;
       // 1) 已支付金额占比提醒 — 分母用累计额
       if (!isAlertPermanentlyOff(c, 'paid') && !findActiveOverride(c, 'paid', today)) {
         const total = (c as ContractLedgerWithAccumulated).accumulatedAmount || c.amount || 0;

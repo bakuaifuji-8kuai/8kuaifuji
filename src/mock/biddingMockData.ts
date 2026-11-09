@@ -1911,7 +1911,7 @@ const METHOD_TO_FORMATION: Record<string, ContractLedger['formation']> = {
 
 /** Bidding.status → ContractLedger.status 映射 */
 const BIDDING_TO_CONTRACT_STATUS: Record<string, ContractLedger['status']> = {
-  completed: 'completed',
+  completed: 'active',
   evaluated: 'active',
 };
 
@@ -1945,7 +1945,6 @@ const COMPLETED_BIDDINGS_FOR_LEDGER = MOCK_BIDDINGS.filter(
 
 /** 根据合同状态推断归档/履行情况 */
 const ledgerArchiveStatus = (s: ContractLedger['status']): ContractLedger['archiveStatus'] => {
-  if (s === 'completed') return 'archived';
   if (s === 'active') return 'in_progress';
   return 'not_started';
 };
@@ -1953,7 +1952,6 @@ const ledgerArchiveStatus = (s: ContractLedger['status']): ContractLedger['archi
 /** 根据合同状态推断 paidAmount */
 const ledgerPaidAmount = (s: ContractLedger['status'], totalWan?: number): number | undefined => {
   if (totalWan == null) return undefined;
-  if (s === 'completed') return totalWan; // 付清
   if (s === 'active') return Math.round(totalWan * 0.6 * 100) / 100; // 60% 已付
   return 0;
 };
@@ -2014,7 +2012,7 @@ export const MOCK_CONTRACT_LEDGERS: ContractLedger[] = COMPLETED_BIDDINGS_FOR_LE
 // =====================================================================
 
 /** 取台账对应的 contractType 枚举值 → 同时作为 CPO 的备注分类 */
-const SUPPORTED_CPO_STATUSES: ContractLedger['status'][] = ['active', 'completed'];
+const SUPPORTED_CPO_STATUSES: ContractLedger['status'][] = ['active'];
 
 const LEDGERS_FOR_CPO = MOCK_CONTRACT_LEDGERS.filter(
   (l) => SUPPORTED_CPO_STATUSES.includes(l.status) && !l.formation.startsWith('state_owned_framework')
@@ -2079,7 +2077,7 @@ export const MOCK_CONTRACT_PURCHASE_ORDERS: ContractPurchaseOrder[] = LEDGERS_FO
   const bidding = MOCK_BIDDINGS.find((b) => b.id === ledger.biddingId)!;
   const cpoId = `CPO-${bidding.id}`;
   const createTime = mkTime(5 + i, 10);
-  const cpoStatus: ContractPurchaseOrderStatus = ledger.status === 'completed' ? 'submitted' : 'submitted';
+  const cpoStatus: ContractPurchaseOrderStatus = 'submitted';
 
   return {
     id: cpoId,

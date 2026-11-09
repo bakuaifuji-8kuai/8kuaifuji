@@ -68,7 +68,7 @@ export default function ProcurementAlertDashboard() {
 
     // ---------- 1) 合同：到期预警 ----------
     contractLedgers.forEach((c: ContractLedger) => {
-      if (c.status === 'terminated' || c.status === 'completed') return;
+      if (c.status === 'terminated') return;
       const expire = c.terminationDate || c.endDate || c.expireDate;
       if (!expire) return;
       const d = diffDays(expire, today);
@@ -105,7 +105,7 @@ export default function ProcurementAlertDashboard() {
     // ---------- 2) 合同：已支付占比 ----------
     const paidThreshold = reminderSettings?.paidThreshold ?? 80;
     contractLedgers.forEach((c: ContractLedger) => {
-      if (c.status === 'terminated' || c.status === 'completed') return;
+      if (c.status === 'terminated') return;
       const total = Number(c.amount || 0);
       const paid = Number(c.paidAmount || 0);
       if (total <= 0) return;
@@ -225,7 +225,7 @@ export default function ProcurementAlertDashboard() {
     // ---------- 6) 合同归档逾期（终止/完成后 30 天仍未归档） ----------
     contractLedgers.forEach((c: ContractLedger) => {
       if (c.archiveStatus === 'archived') return;
-      if (c.status !== 'terminated' && c.status !== 'completed') return;
+      if (c.status !== 'terminated') return;
       const end = c.terminationDate || c.endDate || c.expireDate;
       if (!end) return;
       const d = diffDays(end, today);

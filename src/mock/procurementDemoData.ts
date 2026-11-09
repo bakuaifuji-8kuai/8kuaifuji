@@ -1495,7 +1495,7 @@ export const contractLedgers = [
       settlementAmount: 15,
       businessCategory: "expense",
       archiveStatus: "archived",
-      status: "completed"
+      status: "active"
     },
     {
       id: "HT-006",
