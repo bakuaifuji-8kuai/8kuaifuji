@@ -1282,7 +1282,6 @@ export default function CompetitiveBiddingPage() {
                             <th className="px-2 py-2 text-left w-20 text-[12px] text-slate-600 font-semibold">单价说明</th>
                             <th className="px-2 py-2 text-left w-14 text-[12px] text-slate-600 font-semibold">数量 *</th>
                             <th className="px-2 py-2 text-left w-12 text-[12px] text-slate-600 font-semibold">单位 *</th>
-                            <th className="px-2 py-2 text-left w-24 text-[12px] text-rose-600 font-semibold">竞价文件 *</th>
                             <th className="px-2 py-2 text-center w-12 text-[12px] text-slate-600 font-semibold">操作</th>
                           </tr>
                         </thead>
@@ -1326,35 +1325,6 @@ export default function CompetitiveBiddingPage() {
                                     value={item.unit}
                                     onChange={(e) => updateItem(idx, { unit: e.target.value })} />
                                 </td>
-                                <td className="px-2 py-2">
-                                  {item.biddingFile ? (
-                                    <div className="flex items-center gap-1 text-[12px]">
-                                      <span className="truncate max-w-[80px]">📎 {item.biddingFile.fileName}</span>
-                                      <button className="text-rose-500 hover:underline flex-shrink-0"
-                                        onClick={() => updateItem(idx, { biddingFile: undefined })}>✕</button>
-                                    </div>
-                                  ) : (
-                                    <label className="inline-block">
-                                      <input type="file" className="hidden"
-                                        onChange={(e) => {
-                                          const f = e.target.files?.[0];
-                                          if (f) {
-                                            const att: Attachment = {
-                                              id: 'FI' + Date.now() + idx,
-                                              fileName: f.name,
-                                              filePath: URL.createObjectURL(f),
-                                              fileSize: f.size,
-                                              fileType: f.type,
-                                              uploadTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
-                                            };
-                                            updateItem(idx, { biddingFile: att });
-                                          }
-                                          e.target.value = '';
-                                        }} />
-                                      <span className="inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded border border-dashed border-rose-300 text-rose-600 cursor-pointer hover:bg-rose-50 transition-colors">📎 上传</span>
-                                    </label>
-                                  )}
-                                </td>
                                 <td className="px-2 py-2 text-center">
                                   <button onClick={() => removeItem(idx)}
                                     className="text-[11px] text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-2 py-0.5 rounded transition-colors">移除</button>
@@ -1365,7 +1335,7 @@ export default function CompetitiveBiddingPage() {
                         </tbody>
                         <tfoot>
                           <tr className="bg-gradient-to-r from-amber-50 to-orange-50/30 border-t border-slate-200">
-                            <td colSpan={7} className="px-2 py-2 text-right text-slate-600 font-semibold text-[12px]">不含税金额合计：</td>
+                            <td colSpan={6} className="px-2 py-2 text-right text-slate-600 font-semibold text-[12px]">不含税金额合计：</td>
                             <td className="px-2 py-2 text-indigo-600 font-bold text-[12px]">
                               ¥{(editItem.items?.reduce((s, i) => s + (i.supplierAmountExTax || 0), 0) || 0).toLocaleString()}
                             </td>
