@@ -336,7 +336,7 @@ function NonEngGoodsTable({ details, within, newSupplier }: { details: SceneMock
   const totalAmount = details.reduce((s, d) => s + (d.amountExcludingTax || 0), 0);
   const title = within ? '【非工程类/货物 · 清单内】' : newSupplier ? '【非工程类/货物 · 新增供应商目录】' : '【非工程类/货物 · 清单外】';
   // 总列数（用于 tfoot colSpan）
-  const totalCols = (within ? 3 : 0) + (newSupplier ? 0 : 1) + 11; // 基础11列 + 合同3列 + 单价备注1列
+  const totalCols = (within ? 3 : 0) + (newSupplier ? 0 : 1) + 12; // 基础12列 + 合同3列 + 单价备注1列
 
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
@@ -346,6 +346,7 @@ function NonEngGoodsTable({ details, within, newSupplier }: { details: SceneMock
           <thead className="bg-slate-50 text-slate-600">
             <tr>
               <Th w="w-12">序号</Th><Th>编码</Th><Th>名称</Th><Th>分类</Th><Th>规格/参数</Th><Th w="w-14">单位</Th>
+              <Th w="w-20 text-right">采购数量</Th>
               {within && <Th w="w-24 text-center">合同清单内外</Th>}
               <Th w="w-28 text-right">不含税预算单价</Th>
               {!newSupplier && <Th w="w-24">单价备注</Th>}
@@ -364,6 +365,7 @@ function NonEngGoodsTable({ details, within, newSupplier }: { details: SceneMock
                 <Td>{d.productType || '-'}</Td>
                 <Td>{d.specification || '-'}</Td>
                 <Td>{d.unit || '-'}</Td>
+                <Td className="text-right font-medium text-slate-700">{d.quantity ?? '-'}</Td>
                 {within && (
                   <Td className="text-center">
                     {d.isInContractList
@@ -404,7 +406,7 @@ function NonEngGoodsTable({ details, within, newSupplier }: { details: SceneMock
 function NonEngServiceTable({ details, within, newSupplier }: { details: SceneMockDetail[]; within: boolean; newSupplier: boolean }) {
   const totalAmount = details.reduce((s, d) => s + (d.amountExcludingTax || 0), 0);
   const title = within ? '【非工程类/服务 · 清单内】' : newSupplier ? '【非工程类/服务 · 新增供应商目录】' : '【非工程类/服务 · 清单外】';
-  const totalCols = (within ? 3 : 0) + (newSupplier ? 0 : 1) + 10; // 基础10列 + 合同3列 + 单价备注1列
+  const totalCols = (within ? 3 : 0) + (newSupplier ? 0 : 1) + 12; // 基础12列 + 合同3列 + 单价备注1列
 
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
@@ -414,6 +416,7 @@ function NonEngServiceTable({ details, within, newSupplier }: { details: SceneMo
           <thead className="bg-slate-50 text-slate-600">
             <tr>
               <Th w="w-12">序号</Th><Th>编码</Th><Th>名称</Th><Th>分类</Th><Th>规格/参数</Th><Th w="w-14">单位</Th>
+              <Th w="w-20 text-right">采购数量</Th>
               {within && <Th w="w-24 text-center">合同清单内外</Th>}
               <Th w="w-28 text-right">不含税预算单价</Th>
               {!newSupplier && <Th w="w-24">单价备注</Th>}
@@ -432,6 +435,7 @@ function NonEngServiceTable({ details, within, newSupplier }: { details: SceneMo
                 <Td>{d.productType || '-'}</Td>
                 <Td>{d.specification || '-'}</Td>
                 <Td>{d.unit || '-'}</Td>
+                <Td className="text-right font-medium text-slate-700">{d.quantity ?? '-'}</Td>
                 {within && (
                   <Td className="text-center">
                     {d.isInContractList
@@ -461,7 +465,7 @@ function NonEngServiceTable({ details, within, newSupplier }: { details: SceneMo
         </table>
       </div>
       <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 text-xs text-slate-600 flex items-center gap-2">
-        <span>💡 服务类无库存数量列（服务不占库存），其余差异同货物类。</span>
+        <span>💡 服务类有采购数量列（同货物类），但无库存数量列（服务不占库存）。</span>
       </div>
     </div>
   );
