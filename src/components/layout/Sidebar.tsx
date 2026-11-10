@@ -117,6 +117,8 @@ const menuItems: MenuItem[] = [
       { title: '调拨出库', path: '/stock/exhibition-transfer-outbound' },
       { title: '调拨入库', path: '/stock/exhibition-transfer-inbound' },
       { title: '调拨还库', path: '/stock/exhibition-transfer-return' },
+      { title: '调拨出库·小程序展示', path: '/stock/exhibition-transfer-approval-outbound' },
+      { title: '调拨入库·小程序展示', path: '/stock/exhibition-transfer-approval-inbound' },
     ],
   },
   {

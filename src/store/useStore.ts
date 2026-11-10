@@ -1651,7 +1651,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 13,
+      version: 15,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -2017,6 +2017,17 @@ export const useStore = create<WarehouseState>()(
             persistedState.inventorySnapshots = [];
             console.log('[store migrate v13] inventorySnapshots 初始化为空数组');
           }
+        }
+        if (version < 14) {
+          // v13→v14：展会调拨审批小程序上线，补齐 5 条展会专属调拨测试数据
+          // 强制用 mockData 全量覆盖（localStorage 里旧数据只有 3 条，没有 WH004-007 虚拟仓调拨）
+          persistedState.stockTransfers = mockData.stockTransfers;
+          console.log('[store migrate v14] stockTransfers 刷新为最新 mock（含 5 条展会调拨测试数据）');
+        }
+        if (version < 15) {
+          // v14→v15：新增 workItemName（作业项）+ boothNo（施工摊位号）字段
+          persistedState.stockTransfers = mockData.stockTransfers;
+          console.log('[store migrate v15] stockTransfers 刷新（含 workItemName + boothNo 字段）');
         }
         return persistedState;
       },

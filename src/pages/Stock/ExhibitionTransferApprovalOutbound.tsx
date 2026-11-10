@@ -82,17 +82,22 @@ function TransferCard({ item, onClick, actionLabel, actionStyle }: TransferCardP
         <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px]">{item.toWarehouseName || '-'}</span>
       </div>
 
-      {/* 展会 + 工单 */}
-      {(item.projectName || item.details.some(d => d.workOrderName)) && (
+      {/* 展会 + 摊位 + 作业项 */}
+      {(item.projectName || item.details.find(d => d.boothNo) || item.details.find(d => d.workItemName)) && (
         <div className="flex items-center gap-1 text-[11px] text-slate-500 mb-2 flex-wrap">
           {item.projectName && (
             <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px]">
               <Building2 size={10} />{item.projectName}
             </span>
           )}
-          {item.details.find(d => d.workOrderCode) && (
+          {item.details.find(d => d.boothNo) && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded text-[10px]">
+              摊位 {item.details.find(d => d.boothNo)?.boothNo}
+            </span>
+          )}
+          {item.details.find(d => d.workItemName) && (
             <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px]">
-              <FileText size={10} />{item.details.find(d => d.workOrderCode)?.workOrderCode}
+              {item.details.find(d => d.workItemName)?.workItemName}
             </span>
           )}
         </div>
@@ -267,21 +272,18 @@ function FlowRecord({ item, approver }: { item: StockTransfer; approver: MockApp
 
 // ========== 业务表单区块（键值对） ==========
 function BusinessInfoGrid({ item }: { item: StockTransfer }) {
-  const woDetail = item.details.find(d => d.workOrderCode);
-
+  const firstDetail = item.details[0];
   const rows: [string, string][] = [
     ['调拨单号', item.transferNo],
     ['调出仓库', item.fromWarehouseName || '-'],
     ['调入仓库', item.toWarehouseName || '-'],
     ['所属展会', item.projectName || '-'],
-    ['制单人', item.creator],
-    ['创建时间', item.createTime?.slice(0, 16).replace('T', ' ') || '-'],
   ];
-  if (woDetail) {
-    rows.push(['关联工单号', woDetail.workOrderCode || '-']);
-    rows.push(['工单名称', woDetail.workOrderName || '-']);
-  }
+  if (firstDetail?.boothNo) rows.push(['施工摊位号', firstDetail.boothNo]);
+  if (firstDetail?.workItemName) rows.push(['作业项', firstDetail.workItemName]);
   if (item.constructionUnit) rows.push(['施工单位', item.constructionUnit]);
+  rows.push(['制单人', item.creator]);
+  rows.push(['创建时间', item.createTime?.slice(0, 16).replace('T', ' ') || '-']);
   if (item.outboundConfirmer) rows.push(['出库确认人', item.outboundConfirmer]);
   if (item.outboundConfirmTime) rows.push(['出库确认时间', item.outboundConfirmTime]);
 
@@ -340,11 +342,16 @@ function MaterialDetailList({ item, products }: { item: StockTransfer; products:
                   <div className="text-[10px] text-slate-400">{d.unit || product?.unit || '件'}</div>
                 </div>
               </div>
-              {(d.workOrderName || d.remark) && (
+              {(d.boothNo || d.workItemName || d.remark) && (
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  {d.workOrderName && (
+                  {d.boothNo && (
+                    <span className="px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded text-[10px]">
+                      摊位 {d.boothNo}
+                    </span>
+                  )}
+                  {d.workItemName && (
                     <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px]">
-                      {d.workOrderName}
+                      {d.workItemName}
                     </span>
                   )}
                   {d.workOrderQty && (

@@ -674,6 +674,9 @@ export interface StockTransferDetail {
   workOrderId?: string; // 关联工单ID
   workOrderCode?: string; // 关联工单号
   workOrderName?: string; // 关联工单名称
+  workItemId?: string; // 关联作业项ID
+  workItemName?: string; // 关联作业项名称（展示用，替代工单名称）
+  boothNo?: string; // 施工摊位号（如 A馆A-03、B馆B-12、整体）
   workOrderQty?: number; // 作业数量（同一作业项下所有物资共享，默认50）
   isMain?: boolean; // 是否主料
   remark?: string; // 明细备注

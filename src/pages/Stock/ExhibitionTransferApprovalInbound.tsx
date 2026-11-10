@@ -82,7 +82,28 @@ function TransferCard({ item, onClick, actionLabel, actionStyle }: TransferCardP
         <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px]">{item.toWarehouseName || '-'}</span>
       </div>
 
-      {/* 出库确认人 */}
+      {/* 展会 + 摊位 + 作业项 */}
+      {(item.projectName || item.details.find(d => d.boothNo) || item.details.find(d => d.workItemName)) && (
+        <div className="flex items-center gap-1 text-[11px] text-slate-500 mb-2 flex-wrap">
+          {item.projectName && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px]">
+              <Building2 size={10} />{item.projectName}
+            </span>
+          )}
+          {item.details.find(d => d.boothNo) && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded text-[10px]">
+              摊位 {item.details.find(d => d.boothNo)?.boothNo}
+            </span>
+          )}
+          {item.details.find(d => d.workItemName) && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px]">
+              {item.details.find(d => d.workItemName)?.workItemName}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* 出库确认人（入库审批视角的关键提示） */}
       {item.outboundConfirmer && (
         <div className="flex items-center gap-1 text-[11px] text-blue-600 mb-2">
           <CheckCircle2 size={11} />
@@ -248,6 +269,7 @@ function FlowRecord({ item, approver }: { item: StockTransfer; approver: MockApp
 
 // ========== 业务表单区块 ==========
 function BusinessInfoGrid({ item }: { item: StockTransfer }) {
+  const firstDetail = item.details[0];
   const rows: [string, string][] = [
     ['调拨单号', item.transferNo],
     ['调出仓库', item.fromWarehouseName || '-'],
@@ -256,6 +278,8 @@ function BusinessInfoGrid({ item }: { item: StockTransfer }) {
     ['创建时间', item.createTime?.slice(0, 16).replace('T', ' ') || '-'],
   ];
   if (item.projectName) rows.push(['所属展会', item.projectName]);
+  if (firstDetail?.boothNo) rows.push(['施工摊位号', firstDetail.boothNo]);
+  if (firstDetail?.workItemName) rows.push(['作业项', firstDetail.workItemName]);
   if (item.outboundConfirmer) {
     rows.push(['出库确认人', item.outboundConfirmer]);
     rows.push(['出库确认时间', item.outboundConfirmTime || '-']);
@@ -318,11 +342,16 @@ function MaterialDetailList({ item, products }: { item: StockTransfer; products:
                   <div className="text-[10px] text-slate-400">{d.unit || product?.unit || '件'}</div>
                 </div>
               </div>
-              {(d.workOrderName || d.remark) && (
+              {(d.boothNo || d.workItemName || d.remark) && (
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  {d.workOrderName && (
+                  {d.boothNo && (
+                    <span className="px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded text-[10px]">
+                      摊位 {d.boothNo}
+                    </span>
+                  )}
+                  {d.workItemName && (
                     <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px]">
-                      {d.workOrderName}
+                      {d.workItemName}
                     </span>
                   )}
                   {d.isMain && (
