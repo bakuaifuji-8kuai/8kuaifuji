@@ -24,6 +24,8 @@ import StockTransferPage from "@/pages/Stock/StockTransfer";
 import ExhibitionTransferOutboundPage from "@/pages/Stock/ExhibitionTransferOutbound";
 import ExhibitionTransferInboundPage from "@/pages/Stock/ExhibitionTransferInbound";
 import ExhibitionTransferReturnPage from "@/pages/Stock/ExhibitionTransferReturn";
+import ExhibitionTransferApprovalOutboundPage from "@/pages/Stock/ExhibitionTransferApprovalOutbound";
+import ExhibitionTransferApprovalInboundPage from "@/pages/Stock/ExhibitionTransferApprovalInbound";
 import StockReportPage from "@/pages/Report/StockReport";
 import InboundReportPage from "@/pages/Report/InboundReport";
 import OutboundReportPage from "@/pages/Report/OutboundReport";
@@ -115,6 +117,8 @@ export default function App() {
           <Route path="stock/exhibition-transfer-outbound" element={<ExhibitionTransferOutboundPage />} />
           <Route path="stock/exhibition-transfer-inbound" element={<ExhibitionTransferInboundPage />} />
           <Route path="stock/exhibition-transfer-return" element={<ExhibitionTransferReturnPage />} />
+          <Route path="stock/exhibition-transfer-approval-outbound" element={<ExhibitionTransferApprovalOutboundPage />} />
+          <Route path="stock/exhibition-transfer-approval-inbound" element={<ExhibitionTransferApprovalInboundPage />} />
           <Route path="stock/transfer" element={<StockTransferPage />} />
 
           {/* 固定资产管理 */}
