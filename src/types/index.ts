@@ -2544,6 +2544,15 @@ export interface ProcurementInspection {
   approveTime?: string;
   approver?: string;
   approvalHistory?: ApprovalRecord[];
+  // ========== 服务/施工类通用验收表字段（贴合 Word 模板）==========
+  acceptanceItems?: string;               // 验收项目（从需求自动带出，可编辑）
+  acceptanceTime?: string;                // 验收时间（日期）
+  acceptanceContent?: string;             // 验收内容（多行文本）
+  isQualified?: boolean | null;            // 合格=true / 不合格=false
+  // ===== 审批意见（仅服务类，本演示系统只展示说明，不接审批引擎）=====
+  deptCountersignOpinion?: string;         // 部门会签意见
+  adminDeptOpinion?: string;              // 综合管理部意见
+  leaderOpinion?: string;                 // 公司领导意见
 }
 
 export interface FrozenExhibition {

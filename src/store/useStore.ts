@@ -1650,7 +1650,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 16,
+      version: 17,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -2044,6 +2044,26 @@ export const useStore = create<WarehouseState>()(
               }
             });
             console.log(`[store migrate v16] assessmentManagement 单值→数组，迁移 ${migrated} 条合同台账`);
+          }
+        }
+        if (version < 17) {
+          // v16→v17：服务/施工类验收单新增通用验收表字段（贴合 Word 模板）
+          const list = persistedState.procurementInspections;
+          if (Array.isArray(list)) {
+            let migrated = 0;
+            list.forEach((i: any) => {
+              if (i.acceptanceType === 'service') {
+                i.acceptanceItems ??= i.contractName || i.demandName || '';
+                i.acceptanceTime ??= i.inspectionDate || '';
+                i.acceptanceContent ??= '';
+                i.isQualified ??= null;
+                i.deptCountersignOpinion ??= '';
+                i.adminDeptOpinion ??= '';
+                i.leaderOpinion ??= '';
+                migrated++;
+              }
+            });
+            console.log(`[store migrate v17] 服务验收单补通用验收表字段，迁移 ${migrated} 条`);
           }
         }
         return persistedState;
