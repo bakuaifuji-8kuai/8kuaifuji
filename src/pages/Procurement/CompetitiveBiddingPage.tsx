@@ -1325,10 +1325,6 @@ export default function CompetitiveBiddingPage() {
                                     value={item.unit}
                                     onChange={(e) => updateItem(idx, { unit: e.target.value })} />
                                 </td>
-                                <td className="px-2 py-2 text-center">
-                                  <button onClick={() => removeItem(idx)}
-                                    className="text-[11px] text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-2 py-0.5 rounded transition-colors">移除</button>
-                                </td>
                               </tr>
                             );
                           })}
@@ -1407,16 +1403,12 @@ export default function CompetitiveBiddingPage() {
                                   placeholder="供应商名称"
                                   onChange={(e) => updateOfflineItem(idx, { supplierName: e.target.value })} />
                               </td>
-                              <td className="px-3 py-2 text-center">
-                                <button onClick={() => removeOfflineItem(idx)}
-                                  className="inline-flex items-center gap-1 px-2 py-1 text-[12px] text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors">移除</button>
-                              </td>
                             </tr>
                           ))}
                         </tbody>
                         <tfoot>
                           <tr className="bg-gradient-to-r from-emerald-50/40 to-teal-50/30 border-t border-slate-200">
-                            <td colSpan={7} className="px-3 py-2 text-right text-slate-600 font-semibold text-[13px]">不含税金额合计（元）：</td>
+                            <td colSpan={6} className="px-3 py-2 text-right text-slate-600 font-semibold text-[13px]">不含税金额合计（元）：</td>
                             <td className="px-3 py-2 text-indigo-600 font-bold text-[13px]">¥{offlineTotals.ex.toLocaleString()}</td>
                             <td colSpan={2}></td>
                           </tr>
@@ -1494,16 +1486,12 @@ export default function CompetitiveBiddingPage() {
                             </td>
                             <td className="px-3 py-2.5 text-slate-700 text-[13px]">¥{(row.amountExcludingTax ?? 0).toLocaleString()}</td>
                             <td className="px-3 py-2.5 text-purple-600 font-semibold text-[13px]">¥{(row.amountIncludingTax ?? 0).toLocaleString()}</td>
-                            <td className="px-3 py-2.5 text-center">
-                              <button onClick={() => removeOfflineItem(idx)}
-                                className="inline-flex items-center gap-1 px-2 py-1 text-[12px] text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors">移除</button>
-                            </td>
                           </tr>
                         ))}
                       </tbody>
                       <tfoot>
                         <tr className="bg-gradient-to-r from-slate-100 to-indigo-50/40 border-t border-slate-200">
-                          <td colSpan={9} className="px-3 py-2.5 text-right text-slate-600 font-semibold text-[13px]">合计：</td>
+                          <td colSpan={8} className="px-3 py-2.5 text-right text-slate-600 font-semibold text-[13px]">合计：</td>
                           <td className="px-3 py-2.5 text-slate-700 font-semibold text-[13px]">¥{offlineTotals.ex.toLocaleString()}</td>
                           <td className="px-3 py-2.5 text-purple-700 font-bold text-[13px]">¥{offlineTotals.in.toLocaleString()}</td>
                           <td></td>
