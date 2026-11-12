@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 720" width="1400" height="720">
+<defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#475569"/></marker>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000018"/></filter>
+  </defs>
+  <rect width="1400" height="720" fill="#f8fafc"/>
+  <text x="700" y="44" text-anchor="middle" font-size="20" font-weight="700" fill="#1e293b" font-family="sans-serif">订单 → 入库 → 验收 · 业务流程图</text>
+  <text x="700" y="66" text-anchor="middle" font-size="12" fill="#64748b" font-family="sans-serif">9 种国企采购方式 → 1 种自动 ProcurementOrder : 8 种走合同 → CPO 手动下单</text>
+  <rect x="40" y="96" width="1320" height="120" rx="12" fill="#fff7ed" stroke="#fed7aa"/>
+  <text x="700" y="118" text-anchor="middle" font-size="12.5" font-weight="700" fill="#c2410c" font-family="sans-serif">🟠 招采执行 · 9 种国企采购方式</text>
+  <rect x="60" y="135" width="220" height="70" rx="8" fill="#fff" stroke="#ea580c" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="60" y="135" width="220" height="18" rx="8" fill="#ea580c"/>
+  <rect x="60" y="147" width="220" height="6" fill="#ea580c"/>
+  <text x="170" y="158" text-anchor="middle" font-size="10" font-weight="700" fill="#fff" font-family="sans-serif">⭐ 唯一线上报价</text>
+  <text x="170" y="185" text-anchor="middle" font-size="12" fill="#9a3412" font-weight="700" font-family="sans-serif">框架协议采购-目录内比价</text>
+  <text x="170" y="202" text-anchor="middle" font-size="10.5" fill="#ea580c" font-weight="600" font-family="sans-serif">framework_catalog</text>
+  <text x="880" y="128" text-anchor="middle" font-size="10.5" fill="#64748b" font-family="sans-serif">（8 种线下录入，无自动订单 → 合同生效后走 CPO）</text>
+  <rect x="310" y="135" width="115" height="30" rx="5" fill="#fff" stroke="#f97316" stroke-width="1.1"/>
+  <text x="367" y="155" text-anchor="middle" font-size="10.5" fill="#9a3412" font-weight="600" font-family="sans-serif">随机抽取</text>
+  <rect x="435" y="135" width="115" height="30" rx="5" fill="#fff" stroke="#f97316" stroke-width="1.1"/>
+  <text x="492" y="155" text-anchor="middle" font-size="10.5" fill="#9a3412" font-weight="600" font-family="sans-serif">询比-公开</text>
+  <rect x="560" y="135" width="115" height="30" rx="5" fill="#fff" stroke="#f97316" stroke-width="1.1"/>
+  <text x="617" y="155" text-anchor="middle" font-size="10.5" fill="#9a3412" font-weight="600" font-family="sans-serif">询比-邀请</text>
+  <rect x="685" y="135" width="115" height="30" rx="5" fill="#fff" stroke="#f97316" stroke-width="1.1"/>
+  <text x="742" y="155" text-anchor="middle" font-size="10.5" fill="#9a3412" font-weight="600" font-family="sans-serif">竞价采购</text>
+  <rect x="310" y="169" width="115" height="30" rx="5" fill="#fff" stroke="#f97316" stroke-width="1.1"/>
+  <text x="367" y="189" text-anchor="middle" font-size="10.5" fill="#9a3412" font-weight="600" font-family="sans-serif">谈判-公开</text>
+  <rect x="435" y="169" width="115" height="30" rx="5" fill="#fff" stroke="#f97316" stroke-width="1.1"/>
+  <text x="492" y="189" text-anchor="middle" font-size="10.5" fill="#9a3412" font-weight="600" font-family="sans-serif">谈判-邀请</text>
+  <rect x="560" y="169" width="115" height="30" rx="5" fill="#fff" stroke="#f97316" stroke-width="1.1"/>
+  <text x="617" y="189" text-anchor="middle" font-size="10.5" fill="#9a3412" font-weight="600" font-family="sans-serif">直接采购</text>
+  <rect x="685" y="169" width="115" height="30" rx="5" fill="#fff" stroke="#f97316" stroke-width="1.1"/>
+  <text x="742" y="189" text-anchor="middle" font-size="10.5" fill="#9a3412" font-weight="600" font-family="sans-serif">电子商城</text>
+  <path d="M 170,205 L 170,260 L 170,280" stroke="#ea580c" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="182" y="245" font-size="11" fill="#9a3412" font-weight="700" font-family="sans-serif">完成 → 一键生成</text>
+  <path d="M 920,205 L 920,240 L 700,240 L 700,280" stroke="#f97316" stroke-width="1.8" fill="none" marker-end="url(#arrow)"/>
+  <text x="750" y="234" font-size="11" fill="#c2410c" font-weight="700" font-family="sans-serif">8 种线下完成 → 合同生效 → 手动下单</text>
+  <rect x="40" y="290" width="460" height="100" rx="12" fill="#fff" stroke="#8b5cf6" stroke-width="2"/>
+  <rect x="40" y="290" width="460" height="30" rx="12" fill="#8b5cf6"/>
+  <rect x="40" y="307" width="460" height="13" fill="#8b5cf6"/>
+  <text x="270" y="312" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="sans-serif">📦 订单源 A：ProcurementOrder（自动生成）</text>
+  <text x="270" y="347" text-anchor="middle" font-size="13" fill="#6d28d9" font-weight="700" font-family="sans-serif">handleGenerateOrder 一键触发</text>
+  <text x="270" y="367" text-anchor="middle" font-size="11" fill="#64748b" font-family="sans-serif">仅目录内比价 framework_catalog 完成后可生成</text>
+  <text x="270" y="383" text-anchor="middle" font-size="10.5" fill="#64748b" font-family="sans-serif">sourceType="framework_bidding" · CompetitiveBiddingPage 内按钮</text>
+  <rect x="900" y="290" width="460" height="100" rx="12" fill="#fff" stroke="#059669" stroke-width="2"/>
+  <rect x="900" y="290" width="460" height="30" rx="12" fill="#059669"/>
+  <rect x="900" y="307" width="460" height="13" fill="#059669"/>
+  <text x="1130" y="312" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="sans-serif">📦 订单源 B：CPO（合同手动下单 · 通用）</text>
+  <text x="1130" y="347" text-anchor="middle" font-size="13" fill="#047857" font-weight="700" font-family="sans-serif">ContractPurchaseOrderPage 独立入口</text>
+  <text x="1130" y="367" text-anchor="middle" font-size="11" fill="#64748b" font-family="sans-serif">所有合同类型随时可手动下单：选合同 → 选需求 → 填本次量</text>
+  <text x="1130" y="383" text-anchor="middle" font-size="10.5" fill="#64748b" font-family="sans-serif">8 种线下 + 非招采合同 + 自办展合同 全部适用</text>
+  <path d="M 270,390 L 270,430 L 640,430" stroke="#8b5cf6" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 1130,390 L 1130,430 L 760,430" stroke="#059669" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <rect x="640" y="450" width="180" height="70" rx="8" fill="#fff" stroke="#8b5cf6" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="64090" y="477" text-anchor="middle" font-size="12" fill="#8b5cf6" font-weight="700" font-family="sans-serif">仓库采购入库</text>
+  <text x="64090" y="497" text-anchor="middle" font-size="10" fill="#64748b" font-family="sans-serif">跨模块对接 · 自动更新 deliveredQuantity</text>
+  <rect x="830" y="450" width="180" height="70" rx="8" fill="#fff" stroke="#8b5cf6" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="83090" y="477" text-anchor="middle" font-size="12" fill="#8b5cf6" font-weight="700" font-family="sans-serif">验收（ProcurementInspection）</text>
+  <text x="83090" y="497" text-anchor="middle" font-size="10" fill="#64748b" font-family="sans-serif">有订单优先核对订单明细 · 无订单兜底需求明细</text>
+  <rect x="1020" y="450" width="180" height="70" rx="8" fill="#fff" stroke="#10b981" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="102090" y="477" text-anchor="middle" font-size="12" fill="#10b981" font-weight="700" font-family="sans-serif">合同履约进度回写</text>
+  <text x="102090" y="497" text-anchor="middle" font-size="10" fill="#64748b" font-family="sans-serif">自动更新合同已履约比例</text>
+  <path d="M 730,485 L 830,485" stroke="#8b5cf6" stroke-width="1.8" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 1010,485 L 1020,485" stroke="#8b5cf6" stroke-width="1.8" fill="none" marker-end="url(#arrow)"/>
+  <rect x="40" y="560" width="1320" height="140" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="700" y="585" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b" font-family="sans-serif">🔑 关键结论</text>
+  <text x="700" y="608" text-anchor="middle" font-size="12" fill="#64748b" font-family="sans-serif">① 仅 目录内比价 framework_catalog 自动生成 ProcurementOrder（橙→紫实线）</text>
+  <text x="700" y="628" text-anchor="middle" font-size="12" fill="#64748b" font-family="sans-serif">② 其余 8 种线下方式完成后，进入合同流程，合同生效后通过 CPO 手动下单（橙→绿→紫）</text>
+  <text x="700" y="648" text-anchor="middle" font-size="12" fill="#64748b" font-family="sans-serif">③ CPO 是独立通用下单工具，不与目录内比价订单冲突，任何合同类型随时可手动下单</text>
+  <text x="700" y="668" text-anchor="middle" font-size="12" fill="#64748b" font-family="sans-serif">④ 仓库只能凭已提交订单入库；验收有订单优先核对订单明细，无订单兜底需求明细</text>
+  <text x="700" y="690" text-anchor="middle" font-size="11" fill="#94a3b8" font-family="sans-serif">数据模型：ProcurementOrder 和 CPO 同属订单域，sourceType 字段区分来源（framework_bidding / cpo_manual）</text>
+</svg>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 560" width="1280" height="560">
+<defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#475569"/></marker>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000018"/></filter>
+  </defs>
+  <rect width="1280" height="560" fill="#f8fafc"/>
+  <text x="640" y="44" text-anchor="middle" font-size="20" font-weight="700" fill="#1e293b" font-family="sans-serif">合同 · 全业务生命周期流程图</text>
+  <text x="640" y="66" text-anchor="middle" font-size="12" fill="#64748b" font-family="sans-serif">3 类合同并行 · 合同模版 → 录入 → 审批 → 台账 → 归档 → 履约评估 → CPO 手动下单</text>
+  <rect x="40" y="100" width="180" height="55" rx="8" fill="#fff" stroke="#059669" stroke-width="1.8" filter="url(#shadow)"/>
+  <text x="130" y="123" text-anchor="middle" font-size="13" fill="#047857" font-weight="700" font-family="sans-serif">合同模版</text>
+  <text x="130" y="140" text-anchor="middle" font-size="10.5" fill="#64748b" font-family="sans-serif">ContractTemplate</text>
+  <line x1="220" y1="127" x2="270" y2="127" stroke="#059669" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="450" y="120" text-anchor="middle" font-size="12" font-weight="700" fill="#047857" font-family="sans-serif">合同录入（3 类并行）</text>
+  <rect x="320" y="130" width="160" height="55" rx="8" fill="#fff" stroke="#059669" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="400" y="152" text-anchor="middle" font-size="12.5" fill="#047857" font-weight="700" font-family="sans-serif">招采类合同</text>
+  <rect x="520" y="130" width="160" height="55" rx="8" fill="#fff" stroke="#059669" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="600" y="152" text-anchor="middle" font-size="12.5" fill="#047857" font-weight="700" font-family="sans-serif">非招采类合同</text>
+  <rect x="720" y="130" width="160" height="55" rx="8" fill="#fff" stroke="#059669" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="800" y="152" text-anchor="middle" font-size="12.5" fill="#047857" font-weight="700" font-family="sans-serif">自办展/合办展</text>
+  <line x1="400" y1="185" x2="500" y2="250" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="600" y1="185" x2="500" y2="250" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="800" y1="185" x2="500" y2="250" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="410" y="250" width="180" height="50" rx="8" fill="#fff" stroke="#059669" stroke-width="1.8" filter="url(#shadow)"/>
+  <text x="500" y="273" text-anchor="middle" font-size="13" fill="#047857" font-weight="700" font-family="sans-serif">合同审批</text>
+  <text x="500" y="290" text-anchor="middle" font-size="10.5" fill="#64748b" font-family="sans-serif">进入审批流配置</text>
+  <line x1="500" y1="300" x2="500" y2="340" stroke="#059669" stroke-width="1.8"/>
+  <polygon points="500,340 570,370 500,400 430,370" fill="#fff" stroke="#059669" stroke-width="1.8"/>
+  <text x="500" y="374" text-anchor="middle" font-size="12" font-weight="700" fill="#047857" font-family="sans-serif">审批？</text>
+  <line x1="430" y1="370" x2="230" y2="370" stroke="#ef4444" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="310" y="364" font-size="11" fill="#ef4444" font-family="sans-serif">驳回</text>
+  <rect x="80" y="345" width="150" height="50" rx="8" fill="#fff" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="155" y="368" text-anchor="middle" font-size="13" fill="#b91c1c" font-weight="700" font-family="sans-serif">退回修改</text>
+  <line x1="570" y1="370" x2="820" y2="370" stroke="#10b981" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="680" y="364" font-size="11" fill="#10b981" font-family="sans-serif">通过 → 生效</text>
+  <rect x="820" y="345" width="180" height="50" rx="8" fill="#fff" stroke="#059669" stroke-width="1.8" filter="url(#shadow)"/>
+  <text x="910" y="368" text-anchor="middle" font-size="13" fill="#047857" font-weight="700" font-family="sans-serif">合同台账</text>
+  <text x="910" y="385" text-anchor="middle" font-size="10.5" fill="#64748b" font-family="sans-serif">ContractLedger</text>
+  <line x1="910" y1="395" x2="910" y2="430" stroke="#059669" stroke-width="1.8"/>
+  <line x1="910" y1="430" x2="730" y2="430" stroke="#059669" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <line x1="910" y1="430" x2="1090" y2="430" stroke="#059669" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <rect x="620" y="430" width="110" height="45" rx="8" fill="#fff" stroke="#059669" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="675" y="457" text-anchor="middle" font-size="12" fill="#047857" font-weight="700" font-family="sans-serif">合同归档</text>
+  <rect x="1090" y="430" width="150" height="45" rx="8" fill="#fff" stroke="#059669" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="1165" y="457" text-anchor="middle" font-size="12" fill="#047857" font-weight="700" font-family="sans-serif">履约评估</text>
+  <path d="M 820,370 L 790,370 L 790,470 L 900,470" stroke="#8b5cf6" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <rect x="895" y="455" width="170" height="34" rx="6" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.3"/>
+  <text x="980" y="477" text-anchor="middle" font-size="11" fill="#7c3aed" font-weight="700" font-family="sans-serif">📦 CPO 手动下单（合同入口）</text>
+  <text x="980" y="526" text-anchor="middle" font-size="10" fill="#64748b" font-family="sans-serif">任何合同随时手动下单 · 选合同 → 选需求 → 填本次量</text>
+  <path d="M 1240,452 L 1265,452 L 1265,370 L 1000,370" stroke="#059669" stroke-width="1.2" fill="none" stroke-dasharray="4,3"/>
+  <text x="1253" y="415" font-size="10" fill="#059669" font-family="sans-serif">回写</text>
+</svg>

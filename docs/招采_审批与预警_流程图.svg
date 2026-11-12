@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" width="1200" height="560">
+<defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#475569"/></marker>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000018"/></filter>
+  </defs>
+  <rect width="1200" height="560" fill="#f8fafc"/>
+  <text x="600" y="40" text-anchor="middle" font-size="19" font-weight="700" fill="#1e293b" font-family="sans-serif">审批流配置 & 预警看板 · 业务流程图</text>
+  <text x="600" y="60" text-anchor="middle" font-size="11.5" fill="#64748b" font-family="sans-serif">支撑体系 · 服务于所有模块的审批节点和异常监控</text>
+  <rect x="40" y="90" width="560" height="430" rx="14" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="320" y="115" text-anchor="middle" font-size="14" font-weight="700" fill="#334155" font-family="sans-serif">审批流配置（ApprovalFlowConfig）</text>
+  <rect x="70" y="135" width="240" height="70" rx="8" fill="#fff" stroke="#64748b" filter="url(#shadow)"/>
+  <text x="190" y="160" text-anchor="middle" font-size="12" fill="#1e293b" font-weight="700" font-family="sans-serif">审批节点定义</text>
+  <text x="190" y="180" text-anchor="middle" font-size="10" fill="#64748b" font-family="sans-serif">节点名称 / 审批人角色（支持会签或或签）</text>
+  <rect x="350" y="135" width="240" height="70" rx="8" fill="#fff" stroke="#64748b" filter="url(#shadow)"/>
+  <text x="470" y="160" text-anchor="middle" font-size="12" fill="#1e293b" font-weight="700" font-family="sans-serif">条件分支配置</text>
+  <text x="470" y="180" text-anchor="middle" font-size="10" fill="#64748b" font-family="sans-serif">金额/类型/部门 不同条件走不同节点链</text>
+  <rect x="70" y="230" width="240" height="70" rx="8" fill="#fff" stroke="#64748b" filter="url(#shadow)"/>
+  <text x="190" y="255" text-anchor="middle" font-size="12" fill="#1e293b" font-weight="700" font-family="sans-serif">驳回后处理策略</text>
+  <text x="190" y="275" text-anchor="middle" font-size="10" fill="#64748b" font-family="sans-serif">直接驳回发起人 / 回到上节点 / 支持转办加签</text>
+  <rect x="350" y="230" width="240" height="70" rx="8" fill="#fff" stroke="#64748b" filter="url(#shadow)"/>
+  <text x="470" y="255" text-anchor="middle" font-size="12" fill="#1e293b" font-weight="700" font-family="sans-serif">超时自动处理</text>
+  <text x="470" y="275" text-anchor="middle" font-size="10" fill="#64748b" font-family="sans-serif">超时自动提醒 / 自动通过 / 可配置时限</text>
+  <rect x="70" y="330" width="500" height="170" rx="10" fill="#fff" stroke="#e2e8f0"/>
+  <text x="320" y="355" text-anchor="middle" font-size="12.5" font-weight="700" fill="#334155" font-family="sans-serif">审批实例流转（ApprovalFlowInstance）</text>
+  <rect x="100" y="380" width="90" height="35" rx="6" fill="#3b82f615" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="145" y="402" text-anchor="middle" font-size="10" fill="#3b82f6" font-weight="600" font-family="sans-serif">发起人提交</text>
+  <rect x="230" y="380" width="90" height="35" rx="6" fill="#f59e0b15" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="275" y="402" text-anchor="middle" font-size="10" fill="#f59e0b" font-weight="600" font-family="sans-serif">部门主管</text>
+  <rect x="360" y="380" width="90" height="35" rx="6" fill="#8b5cf615" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="405" y="402" text-anchor="middle" font-size="10" fill="#8b5cf6" font-weight="600" font-family="sans-serif">财务审核</text>
+  <rect x="490" y="380" width="90" height="35" rx="6" fill="#10b98115" stroke="#10b981" stroke-width="1.5"/>
+  <text x="535" y="402" text-anchor="middle" font-size="10" fill="#10b981" font-weight="600" font-family="sans-serif">总经理（超10万）</text>
+  <line x1="190" y1="397" x2="230" y2="397" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="320" y1="397" x2="360" y2="397" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="450" y1="397" x2="490" y2="397" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <circle cx="145" cy="440" r="6" fill="#10b981"/>
+  <text x="159" y="444" font-size="9.5" fill="#64748b" font-family="sans-serif">已完成</text>
+  <circle cx="275" cy="440" r="6" fill="#10b981"/>
+  <text x="289" y="444" font-size="9.5" fill="#64748b" font-family="sans-serif">已通过</text>
+  <circle cx="405" cy="440" r="6" fill="#f59e0b"/>
+  <text x="419" y="444" font-size="9.5" fill="#64748b" font-family="sans-serif">当前节点（待办）</text>
+  <circle cx="535" cy="440" r="6" fill="#cbd5e1"/>
+  <text x="549" y="444" font-size="9.5" fill="#64748b" font-family="sans-serif">排队中</text>
+  <rect x="640" y="90" width="520" height="430" rx="14" fill="#fff7ed" stroke="#fed7aa"/>
+  <text x="900" y="115" text-anchor="middle" font-size="14" font-weight="700" fill="#c2410c" font-family="sans-serif">预警看板（ProcurementAlertDashboard · 7 种规则）</text>
+  <rect x="670" y="135" width="460" height="32" rx="6" fill="#fff" stroke="#fed7aa"/>
+  <circle cx="688" cy="151" r="9" fill="#f97316" opacity="0.8"/>
+  <text x="688" y="155" text-anchor="middle" font-size="10.5" fill="#fff" font-weight="700" font-family="sans-serif">12</text>
+  <text x="710" y="150" font-size="11.5" fill="#c2410c" font-weight="700" font-family="sans-serif">① 需求超期未确认</text>
+  <text x="710" y="162" font-size="9.5" fill="#64748b" font-family="sans-serif">需求申请后超过 7 天仍在草稿状态</text>
+  <rect x="670" y="174" width="460" height="32" rx="6" fill="#fff" stroke="#fed7aa"/>
+  <circle cx="688" cy="190" r="9" fill="#f97316" opacity="0.8"/>
+  <text x="688" y="194" text-anchor="middle" font-size="10.5" fill="#fff" font-weight="700" font-family="sans-serif">5</text>
+  <text x="710" y="189" font-size="11.5" fill="#c2410c" font-weight="700" font-family="sans-serif">② 工单超期未发布</text>
+  <text x="710" y="201" font-size="9.5" fill="#64748b" font-family="sans-serif">提交审批后超过 5 天未审核</text>
+  <rect x="670" y="213" width="460" height="32" rx="6" fill="#fff" stroke="#fed7aa"/>
+  <circle cx="688" cy="229" r="9" fill="#f97316" opacity="0.8"/>
+  <text x="688" y="233" text-anchor="middle" font-size="10.5" fill="#fff" font-weight="700" font-family="sans-serif">2</text>
+  <text x="710" y="228" font-size="11.5" fill="#c2410c" font-weight="700" font-family="sans-serif">③ 报价截止未收齐</text>
+  <text x="710" y="240" font-size="9.5" fill="#64748b" font-family="sans-serif">目录内比价报价截止后仍有供应商未报价</text>
+  <rect x="670" y="252" width="460" height="32" rx="6" fill="#fff" stroke="#fed7aa"/>
+  <circle cx="688" cy="268" r="9" fill="#f97316" opacity="0.8"/>
+  <text x="688" y="272" text-anchor="middle" font-size="10.5" fill="#fff" font-weight="700" font-family="sans-serif">3</text>
+  <text x="710" y="267" font-size="11.5" fill="#c2410c" font-weight="700" font-family="sans-serif">④ 合同到期未归档</text>
+  <text x="710" y="279" font-size="9.5" fill="#64748b" font-family="sans-serif">合同终止/到期后超过 10 天未归档</text>
+  <rect x="670" y="291" width="460" height="32" rx="6" fill="#fff" stroke="#fed7aa"/>
+  <circle cx="688" cy="307" r="9" fill="#f97316" opacity="0.8"/>
+  <text x="688" y="311" text-anchor="middle" font-size="10.5" fill="#fff" font-weight="700" font-family="sans-serif">8</text>
+  <text x="710" y="306" font-size="11.5" fill="#c2410c" font-weight="700" font-family="sans-serif">⑤ 履约评价缺失</text>
+  <text x="710" y="318" font-size="9.5" fill="#64748b" font-family="sans-serif">合同完成后 30 天内未做履约评价</text>
+  <rect x="670" y="330" width="460" height="32" rx="6" fill="#fff" stroke="#fed7aa"/>
+  <circle cx="688" cy="346" r="9" fill="#f97316" opacity="0.8"/>
+  <text x="688" y="350" text-anchor="middle" font-size="10.5" fill="#fff" font-weight="700" font-family="sans-serif">6</text>
+  <text x="710" y="345" font-size="11.5" fill="#c2410c" font-weight="700" font-family="sans-serif">⑥ 订单超量预警</text>
+  <text x="710" y="357" font-size="9.5" fill="#64748b" font-family="sans-serif">累计下单即将超过合同总量（≥90%）</text>
+  <rect x="670" y="369" width="460" height="32" rx="6" fill="#fff" stroke="#fed7aa"/>
+  <circle cx="688" cy="385" r="9" fill="#f97316" opacity="0.8"/>
+  <text x="688" y="389" text-anchor="middle" font-size="10.5" fill="#fff" font-weight="700" font-family="sans-serif">1</text>
+  <text x="710" y="384" font-size="11.5" fill="#c2410c" font-weight="700" font-family="sans-serif">⑦ 供应商报价异常</text>
+  <text x="710" y="396" font-size="9.5" fill="#64748b" font-family="sans-serif">同一物资报价偏离均值超过 30%</text>
+</svg>
