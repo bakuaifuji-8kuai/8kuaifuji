@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 
 interface ModalProps {
   open: boolean;
@@ -27,6 +27,8 @@ export default function Modal({
 }: ModalProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const showTimer = useRef<number | null>(null);
+  const hideTimer = useRef<number | null>(null);
 
   const sizeToWidth: Record<string, string> = {
     sm: 'max-w-[420px]',
@@ -38,23 +40,29 @@ export default function Modal({
   const effectiveWidth = size ? (sizeToWidth[size] || `max-w-[${size}]`) : width;
 
   useEffect(() => {
+    // 清理上一次可能残留的定时器
+    if (showTimer.current !== null) { cancelAnimationFrame(showTimer.current); showTimer.current = null; }
+    if (hideTimer.current !== null) { clearTimeout(hideTimer.current); hideTimer.current = null; }
+
     if (open) {
+      // 立即挂载，下一帧开始进入动画（足够稳定，避免 StrictMode 双执行 + 双 rAF 嵌套打架）
       setIsMounted(true);
       document.body.style.overflow = 'hidden';
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setIsVisible(true);
-        });
+      showTimer.current = requestAnimationFrame(() => {
+        setIsVisible(true);
       });
     } else {
       setIsVisible(false);
       document.body.style.overflow = '';
-      const timer = setTimeout(() => {
+      hideTimer.current = window.setTimeout(() => {
         setIsMounted(false);
+        hideTimer.current = null;
       }, 200);
-      return () => clearTimeout(timer);
     }
+
     return () => {
+      if (showTimer.current !== null) { cancelAnimationFrame(showTimer.current); showTimer.current = null; }
+      if (hideTimer.current !== null) { clearTimeout(hideTimer.current); hideTimer.current = null; }
       document.body.style.overflow = '';
     };
   }, [open]);
