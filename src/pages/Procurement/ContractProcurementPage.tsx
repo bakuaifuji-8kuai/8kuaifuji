@@ -143,7 +143,7 @@ export default function ContractProcurementPage() {
       archiveStatus: 'not_started',
       status: 'draft',
       guaranteeEvaluation: { isOpen: false },
-      assessmentManagement: null,
+      assessmentManagement: [],
       yearlyEvaluation: false,
       enableExpireAlert: true,
       businessCategory: undefined,
@@ -206,7 +206,7 @@ export default function ContractProcurementPage() {
         biddingNo: finalForm.biddingNo,
         projectName: finalForm.projectName,
         guaranteeEvaluation: finalForm.guaranteeEvaluation ?? { isOpen: false },
-        assessmentManagement: finalForm.assessmentManagement ?? null,
+        assessmentManagement: finalForm.assessmentManagement ?? [],
         yearlyEvaluation: finalForm.yearlyEvaluation ?? false,
         enableExpireAlert: finalForm.enableExpireAlert ?? true,
         enablePaidAlert: finalForm.enablePaidAlert ?? true,
@@ -760,20 +760,36 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
               <span className="text-sm font-medium text-amber-800">履约评价(保证金/质保金)</span>
             </label>
           </div>
-          {/* 考核管理 */}
+          {/* 考核管理（多选勾 —— 与履约评价/年度评价/到期预警统一交互） */}
           <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-lg">
-            <Select
-              label="考核管理"
-              options={ASSESSMENT_OPTIONS}
-              value={form.assessmentManagement || ''}
-              onChange={(e) =>
-                update({
-                  assessmentManagement: e.target.value
-                    ? (e.target.value as ContractLedger['assessmentManagement'])
-                    : null,
-                })
-              }
-            />
+            <div className="text-xs font-medium text-amber-900 mb-2">考核管理（可多选，全部不勾 = 不设置）</div>
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              {([
+                { key: 'single_project', label: '单个项目考核' },
+                { key: 'monthly', label: '月度考核' },
+                { key: 'quarterly', label: '季度考核' },
+              ] as const).map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!(form.assessmentManagement || []).includes(key)}
+                    onChange={(e) => {
+                      const cur = form.assessmentManagement || [];
+                      const next = e.target.checked
+                        ? [...cur, key]
+                        : cur.filter((k) => k !== key);
+                      update({ assessmentManagement: next });
+                    }}
+                    className="w-4 h-4 rounded"
+                  />
+                  <span className="text-sm text-amber-800">{label}</span>
+                </label>
+              ))}
+            </div>
+            <div className="text-[11px] text-amber-600 mt-2 leading-relaxed">
+              📌 具体考核模板、提醒频率请到
+              <span className="font-medium">合同台账 → 考核绑定管理</span> 设置
+            </div>
           </div>
           {/* 年度评价 */}
           <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-lg">

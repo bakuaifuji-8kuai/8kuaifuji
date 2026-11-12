@@ -57,9 +57,7 @@ import { SUPPLEMENT_DEMO_DATA } from '@/mock/procurementDemoSupplement';
  * 根据三个门控字段自动向合同台账注入考核绑定（审批通过时触发）。
  * 规则：
  *   guaranteeEvaluation.isOpen === true   → kind='contract_performance'
- *   assessmentManagement === 'monthly'   → kind='monthly'
- *   assessmentManagement === 'quarterly' → kind='quarterly'
- *   assessmentManagement === 'single_project' → kind='project_single'
+ *   assessmentManagement 数组里包含 xxx   → kind='monthly'/'quarterly'/'project_single'
  *   yearlyEvaluation === true            → kind='yearly'
  * 去重：同 kind 已存在则不重复加。
  */
@@ -69,9 +67,10 @@ function autoInjectBindings(ledger: ContractLedger): ContractLedger {
   const toAdd: EvaluationType[] = [];
 
   if (ledger.guaranteeEvaluation?.isOpen) toAdd.push('contract_performance');
-  if (ledger.assessmentManagement === 'monthly') toAdd.push('monthly');
-  if (ledger.assessmentManagement === 'quarterly') toAdd.push('quarterly');
-  if (ledger.assessmentManagement === 'single_project') toAdd.push('project_single');
+  const am = ledger.assessmentManagement || [];
+  if (am.includes('monthly')) toAdd.push('monthly');
+  if (am.includes('quarterly')) toAdd.push('quarterly');
+  if (am.includes('single_project')) toAdd.push('project_single');
   if (ledger.yearlyEvaluation) toAdd.push('yearly');
 
   const newBindings: ContractEvaluationBinding[] = toAdd
@@ -1651,7 +1650,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 15,
+      version: 16,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -2028,6 +2027,24 @@ export const useStore = create<WarehouseState>()(
           // v14→v15：新增 workItemName（作业项）+ boothNo（施工摊位号）字段
           persistedState.stockTransfers = mockData.stockTransfers;
           console.log('[store migrate v15] stockTransfers 刷新（含 workItemName + boothNo 字段）');
+        }
+        if (version < 16) {
+          // v15→v16：assessmentManagement 从单值 null/string → 多选数组
+          // 旧 null → []；旧字符串 → [字符串]
+          if (Array.isArray(persistedState.contractLedgers)) {
+            let migrated = 0;
+            persistedState.contractLedgers.forEach((c: any) => {
+              const v = c.assessmentManagement;
+              if (v === null || v === undefined) {
+                c.assessmentManagement = [];
+                migrated++;
+              } else if (typeof v === 'string') {
+                c.assessmentManagement = [v];
+                migrated++;
+              }
+            });
+            console.log(`[store migrate v16] assessmentManagement 单值→数组，迁移 ${migrated} 条合同台账`);
+          }
         }
         return persistedState;
       },

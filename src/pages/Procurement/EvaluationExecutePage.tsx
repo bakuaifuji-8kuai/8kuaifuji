@@ -44,10 +44,10 @@ const MODE_LABEL_MAP: Record<ContractAssessmentMode, string> = {
 function deriveAssessmentModes(contract: ContractLedger | null): ContractAssessmentMode[] {
   if (!contract) return [];
   const modes: ContractAssessmentMode[] = [];
-  const am = contract.assessmentManagement;
-  if (am && ['single_project', 'monthly', 'quarterly'].includes(am)) {
-    modes.push(am as ContractAssessmentMode);
-  }
+  const am = contract.assessmentManagement || [];
+  if (am.includes('single_project')) modes.push('single_project');
+  if (am.includes('monthly')) modes.push('monthly');
+  if (am.includes('quarterly')) modes.push('quarterly');
   if (contract.yearlyEvaluation === true) {
     modes.push('yearly');
   }
@@ -154,8 +154,9 @@ export default function EvaluationExecutePage() {
     return contractLedgers.filter((c: ContractLedger) => {
       if (c.contractNature !== 'procurement') return false;
       if (c.status === 'draft') return false;
-      // 有 assessmentManagement（single_project/monthly/quarterly）或 yearlyEvaluation=true
-      const hasAm = c.assessmentManagement && ['single_project', 'monthly', 'quarterly'].includes(c.assessmentManagement);
+      // 有 assessmentManagement（single_project/monthly/quarterly 数组非空）或 yearlyEvaluation=true
+      const am = c.assessmentManagement || [];
+      const hasAm = am.length > 0;
       const hasYearly = c.yearlyEvaluation === true;
       return hasAm || hasYearly;
     });

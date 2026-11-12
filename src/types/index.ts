@@ -2245,8 +2245,8 @@ export interface ContractLedger {
   // ===== 招采类合同独有字段（contractNature='procurement' 时有效） =====
   /** 履约评价（保证金/质保金）：是则自动关联履约评价流程 */
   guaranteeEvaluation?: { isOpen: boolean; guaranteeType?: string };
-  /** 考核管理：单个项目考核 / 月度 / 季度 — 自动关联供应商考核流程 */
-  assessmentManagement?: 'single_project' | 'monthly' | 'quarterly' | null;
+  /** 考核管理：可多选（单个项目考核 / 月度 / 季度）— 自动关联供应商考核流程 */
+  assessmentManagement?: ('single_project' | 'monthly' | 'quarterly')[];
   /** 年度评价：是则自动关联供应商年度评价流程 */
   yearlyEvaluation?: boolean;
   // ===== 非招采类合同独有字段（contractNature='non_procurement' 时有效） =====

@@ -2002,7 +2002,7 @@ export const MOCK_CONTRACT_LEDGERS: ContractLedger[] = COMPLETED_BIDDINGS_FOR_LE
     demandNo: b.demandNo,
     projectName: b.projectName || b.biddingName,
     guaranteeEvaluation: { isOpen: !b.procurementMethod?.startsWith('framework'), guaranteeType: '履约保证金' },
-    assessmentManagement: 'single_project',
+    assessmentManagement: ['single_project'],
     yearlyEvaluation: false,
   };
 });

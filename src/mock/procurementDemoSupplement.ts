@@ -658,7 +658,7 @@ export const SUPPLEMENT_CONTRACT_LEDGERS: ContractLedger[] = [
     signingDate: '2026-10-05', effectiveDate: '2026-10-08', terminationDate: '2026-12-31', endDate: '2026-12-31', expireDate: '2026-12-31',
     amount: 117972, paidAmountBase: 5.9, businessCategory: 'expense', status: 'active',
     demandId: 'DEMO2-DEM-09', demandNo: 'CGQQ202609009', biddingId: 'BID-DEMO2-09', biddingNo: 'FM-CAT-DE2-09', projectName: '展期工作人员证件套装及打印耗材',
-    guaranteeEvaluation: { isOpen: false }, assessmentManagement: 'monthly', yearlyEvaluation: false,
+    guaranteeEvaluation: { isOpen: false }, assessmentManagement: ['monthly'], yearlyEvaluation: false,
     enableExpireAlert: true, enablePaidAlert: true, enableEvalAlert: true,
     contractEvaluations: [
       { id: 'CE-DEMO2-09-1', kind: 'monthly', templateId: 'ET-DEMO2-M', templateName: '供应商月度考核评分表', frequency: 'monthly', nextRemindDate: '2026-10-20', advanceDays: 7, remark: '每月 20 日提醒', createTime: '2026-10-08 10:00:00' },
@@ -674,7 +674,7 @@ export const SUPPLEMENT_CONTRACT_LEDGERS: ContractLedger[] = [
     signingDate: '2026-01-18', effectiveDate: '2026-02-01', terminationDate: '2027-01-31', endDate: '2027-01-31', expireDate: '2027-01-31',
     amount: 800000, paidAmountBase: 36, businessCategory: 'expense', status: 'active',
     linkedDemandIds: ['DEMO2-DEM-10', 'DEMO2-DEM-15'],
-    guaranteeEvaluation: { isOpen: true, guaranteeType: '履约保证金' }, assessmentManagement: null, yearlyEvaluation: false,
+    guaranteeEvaluation: { isOpen: true, guaranteeType: '履约保证金' }, assessmentManagement: [], yearlyEvaluation: false,
     enableExpireAlert: true, enablePaidAlert: true, enableEvalAlert: true,
     contractEvaluations: [
       { id: 'CE-DEMO2-10-1', kind: 'contract_performance', templateId: 'CP-SIMPLIFIED', templateName: '合约履约评估（简化版）', frequency: 'contract_end', nextRemindDate: '2026-11-30', advanceDays: 15, remark: '合同到期前履约评价', createTime: '2026-10-08 10:00:00' },
@@ -690,7 +690,7 @@ export const SUPPLEMENT_CONTRACT_LEDGERS: ContractLedger[] = [
     signingDate: '2026-10-01', effectiveDate: '2026-10-05', terminationDate: '2027-04-30', endDate: '2027-04-30', expireDate: '2027-04-30',
     amount: 1425720, paidAmountBase: 42, businessCategory: 'expense', status: 'active',
     demandId: 'DEMO2-DEM-11', demandNo: 'CGQQ202609011', biddingId: 'BID-DEMO2-11', biddingNo: 'FM-RND-DE2-11', projectName: '展馆智慧导览系统实施工程',
-    guaranteeEvaluation: { isOpen: false }, assessmentManagement: 'quarterly', yearlyEvaluation: true,
+    guaranteeEvaluation: { isOpen: false }, assessmentManagement: ['quarterly'], yearlyEvaluation: true,
     enableExpireAlert: true, enablePaidAlert: true, enableEvalAlert: true,
     contractEvaluations: [
       { id: 'CE-DEMO2-11-1', kind: 'quarterly', templateId: 'ET-DEMO2-Q', templateName: '供应商季度综合考核表', frequency: 'quarterly', nextRemindDate: '2026-10-25', advanceDays: 10, createTime: '2026-10-08 10:00:00' },
@@ -714,7 +714,7 @@ export const SUPPLEMENT_CONTRACT_LEDGERS: ContractLedger[] = [
     counterpartyName: '东方供应集团', counterpartyContact: '陈经理', supplierId: 'SUP005',
     mainContent: '展期 4 天电瓶车 12 辆及司机', signingDate: '2026-10-13', effectiveDate: '2026-10-14',
     amount: 96000, businessCategory: 'expense', status: 'pending',
-    guaranteeEvaluation: { isOpen: false }, assessmentManagement: 'single_project', enableExpireAlert: true,
+    guaranteeEvaluation: { isOpen: false }, assessmentManagement: ['single_project'], enableExpireAlert: true,
   },
   // ---- 单次项目考核合同（配合初验驳回需求）----
   {
@@ -726,7 +726,7 @@ export const SUPPLEMENT_CONTRACT_LEDGERS: ContractLedger[] = [
     signingDate: '2026-09-25', effectiveDate: '2026-09-28', terminationDate: '2026-12-10', endDate: '2026-12-10', expireDate: '2026-12-10',
     amount: 182000, paidAmountBase: 9, businessCategory: 'expense', status: 'active',
     demandId: 'DEMO2-DEM-16', demandNo: 'CGQQ202609016',
-    guaranteeEvaluation: { isOpen: false }, assessmentManagement: 'single_project', yearlyEvaluation: false,
+    guaranteeEvaluation: { isOpen: false }, assessmentManagement: ['single_project'], yearlyEvaluation: false,
     enableExpireAlert: true, enablePaidAlert: true, enableEvalAlert: true,
   },
   // ---- 已终止 ×3（配合归档三状态）----

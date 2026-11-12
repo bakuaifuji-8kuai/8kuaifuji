@@ -177,21 +177,6 @@ export default function CompetitiveBiddingPage() {
         return <span className={`px-1.5 py-0.5 text-xs rounded border ${cfg.cls}`}>{cfg.label}</span>;
       },
     },
-    {
-      key: 'quotesCount',
-      title: '报价数',
-      render: (row) => row.quotes?.length || 0,
-    },
-    {
-      key: 'lowestQuote',
-      title: '最低报价',
-      render: (row) => {
-        const quotes = row.quotes?.filter(q => q.isQualified) || [];
-        if (quotes.length === 0) return '-';
-        const lowest = Math.min(...quotes.map(q => q.totalAmount));
-        return `¥${lowest.toLocaleString()}`;
-      },
-    },
     { key: 'creator', title: '创建人' },
     { key: 'createTime', title: '创建时间', render: (row) => row.createTime?.split(' ')[0] || '-' },
     {
