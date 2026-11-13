@@ -2545,6 +2545,7 @@ export interface ProcurementInspection {
   approver?: string;
   approvalHistory?: ApprovalRecord[];
   // ========== 服务/施工类通用验收表字段（贴合 Word 模板）==========
+  templateId?: string;                      // 验收模板 ID（从 inspectionTemplates 注册中心选）
   acceptanceItems?: string;               // 验收项目（从需求自动带出，可编辑）
   acceptanceTime?: string;                // 验收时间（日期）
   acceptanceContent?: string;             // 验收内容（多行文本）

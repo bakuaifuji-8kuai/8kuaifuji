@@ -6,6 +6,14 @@ import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import Badge from '@/components/common/Badge';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import SelectWithSearch from '@/components/common/SelectWithSearch';
+import {
+  INSPECTION_TEMPLATES,
+  findTemplate,
+  TEMPLATE_FOOTER_NOTES,
+  type InspectionTemplate,
+  type FieldSchema,
+} from '@/constants/inspectionTemplates';
 import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
@@ -428,6 +436,7 @@ export default function ProcurementInspectionPage() {
       goodsDetails,
       serviceDetails,
       // 服务/施工类通用验收表预填
+      templateId: acceptanceType === 'service' ? 'generic' : undefined,
       acceptanceItems: acceptanceType === 'service'
         ? (relatedContract?.contractName || demand.projectName || '')
         : undefined,
@@ -498,6 +507,7 @@ export default function ProcurementInspectionPage() {
       approveTime: now,
       approver: form.inspector || currentUser?.name,
       // 服务/施工类通用验收表字段
+      templateId: form.templateId,
       acceptanceItems: form.acceptanceItems,
       acceptanceTime: form.acceptanceTime || form.inspectionDate || now.slice(0, 10),
       acceptanceContent: form.acceptanceContent,
@@ -1279,151 +1289,173 @@ function FormBody({
         );
       })()}
 
-      {/* ===== 服务类：审批流程说明 + 通用验收表 ===== */}
+      {/* ===== 服务类：模板选择 + 动态验收表 ===== */}
       {at === 'service' && (
         <>
-          {/* 审批流程说明 Banner */}
-          <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
-            <div className="flex items-start gap-2">
-              <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
-                <FileCheck className="w-4 h-4 text-indigo-600" />
-              </div>
-              <div className="flex-1 text-xs leading-relaxed">
-                <div className="font-medium text-indigo-800 mb-1">📋 服务/施工类验收 · 通用验收审批流程</div>
-                <div className="text-indigo-600">
-                  部门会签意见 → 综合管理部审核 → 公司领导审批
-                  <span className="text-indigo-400 ml-2">（本演示系统不实现审批引擎，流程说明展示用）</span>
-                </div>
-              </div>
-            </div>
+          {/* 模板选择器 */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-slate-600 shrink-0">验收模板：</span>
+            <SelectWithSearch
+              options={INSPECTION_TEMPLATES
+                .filter((t) => t.applicableType === 'service' || t.applicableType === 'both')
+                .map((t) => ({ value: t.id, label: t.name, description: t.description }))}
+              value={form.templateId}
+              placeholder="请选择验收模板"
+              onChange={(val) => setForm({ ...form, templateId: val })}
+            />
           </div>
 
-          {/* 通用验收表（贴合 Word 模板） */}
-          <div className="border border-slate-200 rounded-xl bg-white shadow-sm overflow-hidden">
-            <div className="bg-gradient-to-r from-slate-50 to-indigo-50/40 border-b border-slate-100 px-5 py-3 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-indigo-500" />
-              <span className="font-medium text-sm text-slate-800">招采项目验收表（通用）</span>
-            </div>
-            <div className="p-5 space-y-4 text-sm">
-              {/* 供应商名称 */}
-              <div className="flex gap-4 items-start">
-                <div className="w-24 shrink-0 text-slate-500 pt-1.5">供应商名称</div>
-                <div className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-md text-slate-700">
-                  {form.supplierName || '—'}
-                </div>
-              </div>
+          {/* 根据选中的模板动态渲染 */}
+          {(() => {
+            const template: InspectionTemplate | undefined = findTemplate(form.templateId);
+            if (!template) return null;
 
-              {/* 验收项目 + 验收时间（并排） */}
-              <div className="flex gap-4 items-start">
-                <div className="w-24 shrink-0 text-slate-500 pt-1.5">验收项目</div>
-                <div className="flex-1">
+            // supplierName 只读展示（模板字段，从表单 state 取）
+            const supplierDisplay = form.supplierName || '—';
+
+            // 渲染单个字段（FormBody 编辑态）
+            const renderFieldEdit = (f: FieldSchema) => {
+              const val = (form as any)[f.key];
+
+              if (f.type === 'text' && f.readOnly) {
+                return (
+                  <div className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-md text-slate-700">
+                    {f.key === 'supplierName' ? supplierDisplay : val || '—'}
+                  </div>
+                );
+              }
+              if (f.type === 'text') {
+                return (
                   <input
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                    placeholder="从需求/合同自动带出，可编辑"
-                    value={form.acceptanceItems || ''}
-                    onChange={(e) => setForm({ ...form, acceptanceItems: e.target.value })}
+                    className="flex-1 px-3 py-1.5 border border-slate-200 rounded-md text-sm
+                               focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    placeholder={f.placeholder}
+                    value={val || ''}
+                    onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
                   />
-                </div>
-                <div className="w-24 shrink-0 text-slate-500 pt-1.5">验收时间</div>
-                <div className="flex-1 max-w-[200px]">
+                );
+              }
+              if (f.type === 'date') {
+                return (
                   <input
                     type="date"
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                    value={form.acceptanceTime || ''}
-                    onChange={(e) => setForm({ ...form, acceptanceTime: e.target.value })}
+                    className="flex-1 max-w-[200px] px-3 py-1.5 border border-slate-200 rounded-md text-sm
+                               focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    value={val || ''}
+                    onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
                   />
-                </div>
-              </div>
-
-              {/* 验收内容 */}
-              <div className="flex gap-4 items-start">
-                <div className="w-24 shrink-0 text-slate-500 pt-2">验收内容</div>
-                <div className="flex-1">
+                );
+              }
+              if (f.type === 'textarea') {
+                return (
                   <textarea
-                    rows={3}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-y"
-                    placeholder="请描述服务/施工的验收情况，如完成的里程碑、质量情况、存在的问题等"
-                    value={form.acceptanceContent || ''}
-                    onChange={(e) => setForm({ ...form, acceptanceContent: e.target.value })}
+                    rows={f.rows ?? 2}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm
+                               focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-y"
+                    placeholder={f.placeholder}
+                    value={val || ''}
+                    onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
                   />
+                );
+              }
+              if (f.type === 'boolean_radio') {
+                const [pos, neg] = f.labels ?? ['合格', '不合格'];
+                return (
+                  <div className="flex items-center gap-5">
+                    <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={val === true}
+                        onChange={(e) => setForm({ ...form, [f.key]: e.target.checked ? true : null })}
+                        className="w-4 h-4 rounded accent-emerald-500"
+                      />
+                      <span className={`text-sm ${val === true ? 'text-emerald-600 font-medium' : 'text-slate-600'}`}>
+                        {pos}
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={val === false}
+                        onChange={(e) => setForm({ ...form, [f.key]: e.target.checked ? false : null })}
+                        className="w-4 h-4 rounded accent-rose-500"
+                      />
+                      <span className={`text-sm ${val === false ? 'text-rose-600 font-medium' : 'text-slate-600'}`}>
+                        {neg}
+                      </span>
+                    </label>
+                  </div>
+                );
+              }
+              return null;
+            };
+
+            return (
+              <>
+                {/* 审批流程说明 Banner（从模板 approvalFlow 动态生成） */}
+                <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
+                  <div className="flex items-start gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
+                      <FileCheck className="w-4 h-4 text-indigo-600" />
+                    </div>
+                    <div className="flex-1 text-xs leading-relaxed">
+                      <div className="font-medium text-indigo-800 mb-1">
+                        📋 服务/施工类验收 · {template.name} 审批流程
+                      </div>
+                      <div className="text-indigo-600">
+                        {template.approvalFlow.join(' → ')}
+                        <span className="text-indigo-400 ml-2">（本演示系统不实现审批引擎，流程说明展示用）</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              {/* 验收结论：合格 / 不合格（二选一，互斥 checkbox） */}
-              <div className="flex gap-4 items-center">
-                <div className="w-24 shrink-0 text-slate-500">验收结论</div>
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={form.isQualified === true}
-                    onChange={(e) => setForm({ ...form, isQualified: e.target.checked ? true : null })}
-                    className="w-4 h-4 rounded accent-emerald-500"
-                  />
-                  <span className={`${form.isQualified === true ? 'text-emerald-600 font-medium' : 'text-slate-600'}`}>合格</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={form.isQualified === false}
-                    onChange={(e) => setForm({ ...form, isQualified: e.target.checked ? false : null })}
-                    className="w-4 h-4 rounded accent-rose-500"
-                  />
-                  <span className={`${form.isQualified === false ? 'text-rose-600 font-medium' : 'text-slate-600'}`}>不合格</span>
-                </label>
-              </div>
+                {/* 验收表卡片（FieldSchema 动态渲染） */}
+                <div className="border border-slate-200 rounded-xl bg-white shadow-sm overflow-hidden">
+                  <div className="bg-gradient-to-r from-slate-50 to-indigo-50/40 border-b border-slate-100 px-5 py-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-indigo-500" />
+                    <span className="font-medium text-sm text-slate-800">招采项目验收表（{template.name}）</span>
+                  </div>
+                  <div className="p-5 space-y-4 text-sm">
+                    {template.fields.map((f, idx) => (
+                      <div key={f.key}>
+                        {/* boolean_radio 独占一行，不带右侧对齐布局 */}
+                        {f.type === 'boolean_radio' ? (
+                          <div className="flex items-center gap-4">
+                            <div className="w-24 shrink-0 text-slate-500">{f.label}</div>
+                            {renderFieldEdit(f)}
+                          </div>
+                        ) : f.type === 'date' && idx > 0 && template.fields[idx - 1].type === 'text' ? (
+                          // date 接在 text 后面：并排（验收项目 + 验收时间 模式）
+                          <div className="flex gap-4 items-start">
+                            <div className="w-24 shrink-0 text-slate-500 pt-1.5">{f.label}</div>
+                            {renderFieldEdit(f)}
+                          </div>
+                        ) : (
+                          // 默认：label + content 上下布局（textarea / 普通 text / readonly text）
+                          <div className="flex gap-4 items-start">
+                            <div className="w-24 shrink-0 text-slate-500 pt-1.5">{f.label}</div>
+                            <div className="flex-1">{renderFieldEdit(f)}</div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
 
-              <div className="border-t border-dashed border-slate-200 my-3" />
+                    {/* 审批意见前的分隔线 */}
+                    {template.fields.some((f) => ['deptCountersignOpinion', 'adminDeptOpinion', 'leaderOpinion'].includes(f.key)) && (
+                      <div className="border-t border-dashed border-slate-200 my-2" />
+                    )}
 
-              {/* 部门会签意见 */}
-              <div className="flex gap-4 items-start">
-                <div className="w-24 shrink-0 text-slate-500 pt-2">部门会签意见</div>
-                <div className="flex-1">
-                  <textarea
-                    rows={2}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-y"
-                    placeholder="需求部门负责人填写会签意见"
-                    value={form.deptCountersignOpinion || ''}
-                    onChange={(e) => setForm({ ...form, deptCountersignOpinion: e.target.value })}
-                  />
+                    {/* 底部备注 */}
+                    <div className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400 leading-relaxed">
+                      <div className="font-medium text-slate-500 mb-1">备注：</div>
+                      {TEMPLATE_FOOTER_NOTES.map((line, i) => <div key={i}>{line}</div>)}
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              {/* 综合管理部意见 */}
-              <div className="flex gap-4 items-start">
-                <div className="w-24 shrink-0 text-slate-500 pt-2">综合管理部意见</div>
-                <div className="flex-1">
-                  <textarea
-                    rows={2}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-y"
-                    placeholder="综合管理部审核意见"
-                    value={form.adminDeptOpinion || ''}
-                    onChange={(e) => setForm({ ...form, adminDeptOpinion: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              {/* 公司领导意见 */}
-              <div className="flex gap-4 items-start">
-                <div className="w-24 shrink-0 text-slate-500 pt-2">公司领导意见</div>
-                <div className="flex-1">
-                  <textarea
-                    rows={2}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-y"
-                    placeholder="公司领导最终批示"
-                    value={form.leaderOpinion || ''}
-                    onChange={(e) => setForm({ ...form, leaderOpinion: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              {/* 备注（Word 模板里的两条） */}
-              <div className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400 leading-relaxed">
-                <div className="font-medium text-slate-500 mb-1">备注：</div>
-                <div>1. 物资采购涉及固定资产、安装服务的，由需求部门组织相关部门进行验收，验收合格的作为付款依据；</div>
-                <div>2. 其他物资采购凭相关部门签字确认的入库单作为付款依据。</div>
-              </div>
-            </div>
-          </div>
+              </>
+            );
+          })()}
         </>
       )}
 
@@ -1618,74 +1650,111 @@ function ViewBody({ inspection }: { inspection: ProcurementInspection }) {
         </div>
       </div>
 
-      {/* ========== 服务类：审批流程说明 + 通用验收表（只读） ========== */}
-      {at === 'service' && (
-        <>
-          {/* 审批流程说明 Banner */}
-          <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
-            <div className="flex items-start gap-2">
-              <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
-                <FileCheck className="w-4 h-4 text-indigo-600" />
-              </div>
-              <div className="flex-1 text-xs leading-relaxed">
-                <div className="font-medium text-indigo-800 mb-1">📋 服务/施工类验收 · 通用验收审批流程</div>
-                <div className="text-indigo-600">部门会签意见 → 综合管理部审核 → 公司领导审批</div>
-              </div>
-            </div>
-          </div>
+      {/* ========== 服务类：模板驱动审批流程 + 通用验收表（只读） ========== */}
+      {at === 'service' && (() => {
+        const template: InspectionTemplate | undefined = findTemplate(inspection.templateId);
+        if (!template) return null;
 
-          {/* 通用验收表（只读） */}
-          <div className="border border-slate-200 rounded-xl bg-white shadow-sm overflow-hidden">
-            <div className="bg-gradient-to-r from-slate-50 to-indigo-50/40 border-b border-slate-100 px-5 py-3 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-indigo-500" />
-              <span className="font-medium text-sm text-slate-800">招采项目验收表（通用）</span>
+        // 渲染单个字段（ViewBody 只读态）
+        const renderFieldView = (f: FieldSchema) => {
+          const val = (inspection as any)[f.key];
+
+          if (f.type === 'text') {
+            // supplierName 特殊兜底：模板字段取快照/反查的 supplierName 变量
+            const displayVal = f.key === 'supplierName' ? supplierName : val;
+            return (
+              <span className="text-slate-700">
+                {displayVal || <span className="text-slate-300">—</span>}
+              </span>
+            );
+          }
+          if (f.type === 'textarea') {
+            return (
+              <div className="whitespace-pre-wrap leading-relaxed bg-slate-50 border border-slate-100 rounded-md px-3 py-2 min-h-[36px]">
+                {val || <span className="text-slate-300">—</span>}
+              </div>
+            );
+          }
+          if (f.type === 'date') {
+            return (
+              <span className="text-slate-700">
+                {val || <span className="text-slate-300">—</span>}
+              </span>
+            );
+          }
+          if (f.type === 'boolean_radio') {
+            const [pos, neg] = f.labels ?? ['合格', '不合格'];
+            if (val === true) return <Badge variant="success">✅ {pos}</Badge>;
+            if (val === false) return <Badge variant="danger">❌ {neg}</Badge>;
+            return <span className="text-slate-300">—</span>;
+          }
+          return null;
+        };
+
+        return (
+          <>
+            {/* 审批流程说明 Banner（从模板 approvalFlow 动态生成） */}
+            <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
+              <div className="flex items-start gap-2">
+                <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
+                  <FileCheck className="w-4 h-4 text-indigo-600" />
+                </div>
+                <div className="flex-1 text-xs leading-relaxed">
+                  <div className="font-medium text-indigo-800 mb-1">
+                    📋 服务/施工类验收 · {template.name} 审批流程
+                  </div>
+                  <div className="text-indigo-600">
+                    {template.approvalFlow.join(' → ')}
+                    <span className="text-indigo-400 ml-2">（本演示系统不实现审批引擎，流程说明展示用）</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="p-5 space-y-4 text-sm">
-              <div className="flex gap-4">
-                <div className="w-24 shrink-0 text-slate-500">供应商名称</div>
-                <div className="flex-1 text-slate-700">{supplierName || '—'}</div>
+
+            {/* 验收表卡片（FieldSchema 动态渲染） */}
+            <div className="border border-slate-200 rounded-xl bg-white shadow-sm overflow-hidden">
+              <div className="bg-gradient-to-r from-slate-50 to-indigo-50/40 border-b border-slate-100 px-5 py-3 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-indigo-500" />
+                <span className="font-medium text-sm text-slate-800">招采项目验收表（{template.name}）</span>
               </div>
-              <div className="flex gap-4">
-                <div className="w-24 shrink-0 text-slate-500">验收项目</div>
-                <div className="flex-1 text-slate-700">{inspection.acceptanceItems || contractName || '—'}</div>
-                <div className="w-24 shrink-0 text-slate-500">验收时间</div>
-                <div className="flex-1 text-slate-700">{inspection.acceptanceTime || inspection.inspectionDate || '—'}</div>
-              </div>
-              <div className="flex gap-4 items-start">
-                <div className="w-24 shrink-0 text-slate-500 pt-1">验收内容</div>
-                <div className="flex-1 text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 border border-slate-100 rounded-md px-3 py-2 min-h-[48px]">
-                  {inspection.acceptanceContent || <span className="text-slate-300">—</span>}
-                </div>
-              </div>
-              <div className="flex gap-4 items-center">
-                <div className="w-24 shrink-0 text-slate-500">验收结论</div>
-                {inspection.isQualified === true && <Badge variant="success">✅ 合格</Badge>}
-                {inspection.isQualified === false && <Badge variant="danger">❌ 不合格</Badge>}
-                {inspection.isQualified == null && <span className="text-slate-300">—</span>}
-              </div>
-              <div className="border-t border-dashed border-slate-200 my-2" />
-              <div className="flex gap-4 items-start">
-                <div className="w-24 shrink-0 text-slate-500 pt-1">部门会签意见</div>
-                <div className="flex-1 text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 border border-slate-100 rounded-md px-3 py-2 min-h-[36px]">
-                  {inspection.deptCountersignOpinion || <span className="text-slate-300">—</span>}
-                </div>
-              </div>
-              <div className="flex gap-4 items-start">
-                <div className="w-24 shrink-0 text-slate-500 pt-1">综合管理部意见</div>
-                <div className="flex-1 text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 border border-slate-100 rounded-md px-3 py-2 min-h-[36px]">
-                  {inspection.adminDeptOpinion || <span className="text-slate-300">—</span>}
-                </div>
-              </div>
-              <div className="flex gap-4 items-start">
-                <div className="w-24 shrink-0 text-slate-500 pt-1">公司领导意见</div>
-                <div className="flex-1 text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 border border-slate-100 rounded-md px-3 py-2 min-h-[36px]">
-                  {inspection.leaderOpinion || <span className="text-slate-300">—</span>}
+              <div className="p-5 space-y-4 text-sm">
+                {template.fields.map((f, idx) => (
+                  <div key={f.key}>
+                    {f.type === 'boolean_radio' ? (
+                      <div className="flex items-center gap-4">
+                        <div className="w-24 shrink-0 text-slate-500">{f.label}</div>
+                        {renderFieldView(f)}
+                      </div>
+                    ) : f.type === 'date' && idx > 0 && template.fields[idx - 1].type === 'text' ? (
+                      // date 接在 text 后面：并排（验收项目 + 验收时间 模式）
+                      <div className="flex gap-4 items-start">
+                        <div className="w-24 shrink-0 text-slate-500 pt-1">{f.label}</div>
+                        <div className="flex-1">{renderFieldView(f)}</div>
+                      </div>
+                    ) : (
+                      <div className="flex gap-4 items-start">
+                        <div className="w-24 shrink-0 text-slate-500 pt-1">{f.label}</div>
+                        <div className="flex-1">{renderFieldView(f)}</div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* 审批意见前的分隔线 */}
+                {template.fields.some((f) => ['deptCountersignOpinion', 'adminDeptOpinion', 'leaderOpinion'].includes(f.key)) && (
+                  <div className="border-t border-dashed border-slate-200 my-2" />
+                )}
+
+                {/* 底部备注 */}
+                <div className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400 leading-relaxed">
+                  <div className="font-medium text-slate-500 mb-1">备注：</div>
+                  {TEMPLATE_FOOTER_NOTES.map((line, i) => <div key={i}>{line}</div>)}
                 </div>
               </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        );
+      })()}
 
       {/* ========== 区块二：物资类验收明细 ========== */}
       {at === 'goods' && inspection.goodsDetails && (() => {
