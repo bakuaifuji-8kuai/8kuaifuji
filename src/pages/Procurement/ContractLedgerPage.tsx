@@ -232,8 +232,6 @@ export default function ContractLedgerPage() {
 
   const filteredData = useMemo(() => {
     return contractLedgers.filter((c) => {
-      // 合同台账（支出+其他）：排除收入合同（收入合同独立展示在 ContractIncomeLedgerPage）
-      if (c.businessCategory === 'income') return false;
       if (applied.no && !c.contractNo.includes(applied.no)) return false;
       if (applied.name && !c.contractName.includes(applied.name)) return false;
       if (applied.status && c.status !== applied.status) return false;

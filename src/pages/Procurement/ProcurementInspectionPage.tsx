@@ -1392,24 +1392,6 @@ function FormBody({
 
             return (
               <>
-                {/* 审批流程说明 Banner（从模板 approvalFlow 动态生成） */}
-                <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
-                  <div className="flex items-start gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
-                      <FileCheck className="w-4 h-4 text-indigo-600" />
-                    </div>
-                    <div className="flex-1 text-xs leading-relaxed">
-                      <div className="font-medium text-indigo-800 mb-1">
-                        📋 服务/施工类验收 · {template.name} 审批流程
-                      </div>
-                      <div className="text-indigo-600">
-                        {template.approvalFlow.join(' → ')}
-                        <span className="text-indigo-400 ml-2">（本演示系统不实现审批引擎，流程说明展示用）</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 {/* 验收表卡片（FieldSchema 动态渲染） */}
                 <div className="border border-slate-200 rounded-xl bg-white shadow-sm overflow-hidden">
                   <div className="bg-gradient-to-r from-slate-50 to-indigo-50/40 border-b border-slate-100 px-5 py-3 flex items-center gap-2">
@@ -1693,24 +1675,6 @@ function ViewBody({ inspection }: { inspection: ProcurementInspection }) {
 
         return (
           <>
-            {/* 审批流程说明 Banner（从模板 approvalFlow 动态生成） */}
-            <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
-              <div className="flex items-start gap-2">
-                <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
-                  <FileCheck className="w-4 h-4 text-indigo-600" />
-                </div>
-                <div className="flex-1 text-xs leading-relaxed">
-                  <div className="font-medium text-indigo-800 mb-1">
-                    📋 服务/施工类验收 · {template.name} 审批流程
-                  </div>
-                  <div className="text-indigo-600">
-                    {template.approvalFlow.join(' → ')}
-                    <span className="text-indigo-400 ml-2">（本演示系统不实现审批引擎，流程说明展示用）</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* 验收表卡片（FieldSchema 动态渲染） */}
             <div className="border border-slate-200 rounded-xl bg-white shadow-sm overflow-hidden">
               <div className="bg-gradient-to-r from-slate-50 to-indigo-50/40 border-b border-slate-100 px-5 py-3 flex items-center gap-2">
