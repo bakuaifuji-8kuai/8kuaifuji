@@ -1052,14 +1052,17 @@ export default function ContractLedgerPage() {
           {(row.status === 'terminated' || row.status === 'expired' || row.status === 'invalid') && (
             <TextButton onClick={() => handleActivate(row)}>恢复执行</TextButton>
           )}
-          <TextButton
-            type="danger"
-            onClick={() => {
-              if (confirm(`确认删除合同 ${row.contractNo}？\n\n建议：建议将合同状态设为"已终止"而非删除，以保留历史数据。`)) {
-                deleteContractLedger(row.id);
-              }
-            }}
-          >删除</TextButton>
+          {/* 仅草稿态允许删除；正式合同走"终止"保留历史数据 */}
+          {row.status === 'draft' && (
+            <TextButton
+              type="danger"
+              onClick={() => {
+                if (confirm(`确认删除草稿合同 ${row.contractNo}？`)) {
+                  deleteContractLedger(row.id);
+                }
+              }}
+            >删除</TextButton>
+          )}
         </div>
       ),
       footer: '',
