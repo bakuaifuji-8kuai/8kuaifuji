@@ -118,15 +118,12 @@ export default function ContractLedgerPage() {
   const [filterBusinessCategory, setFilterBusinessCategory] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
-  const [filterWinningDateFrom, setFilterWinningDateFrom] = useState('');
-  const [filterWinningDateTo, setFilterWinningDateTo] = useState('');
 
   const [applied, setApplied] = useState({
     no: '', name: '', status: '', nature: '', formation: '',
     archiveStatus: '', isModelText: '',
     counterparty: '', department: '', businessCategory: '',
     dateFrom: '', dateTo: '',
-    winningDateFrom: '', winningDateTo: '',
   });
 
   // 弹窗状态
@@ -256,8 +253,6 @@ export default function ContractLedgerPage() {
       if (applied.businessCategory && c.businessCategory !== applied.businessCategory) return false;
       if (applied.dateFrom && (!c.signingDate || c.signingDate < applied.dateFrom)) return false;
       if (applied.dateTo && (!c.signingDate || c.signingDate > applied.dateTo)) return false;
-      if (applied.winningDateFrom && (!c.winningDate || c.winningDate < applied.winningDateFrom)) return false;
-      if (applied.winningDateTo && (!c.winningDate || c.winningDate > applied.winningDateTo)) return false;
       return true;
     });
   }, [contractLedgers, applied]);
@@ -860,12 +855,7 @@ export default function ContractLedgerPage() {
     { key: 'contractType', title: '合同类型', render: (row) => getContractTypeLabel(row), footer: '' },
     // 4. 合同形成方式
     { key: 'formation', title: '合同形成方式', render: (row) => getFormationLabel(row), footer: '' },
-    // 5. 中标时间
-    { key: 'winningDate', title: '中标时间', render: (row) => {
-      if (row.contractNature !== 'procurement') return <span className="text-[#c0c4cc]">-</span>;
-      return row.winningDate || '-';
-    }, footer: '' },
-    // 6. 示范文本（是/否）
+    // 5. 示范文本（是/否）
     { key: 'isModelText', title: '示范文本', render: (row) => (
       row.isModelText
         ? <span className="inline-block px-2 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200">是</span>
@@ -1377,7 +1367,6 @@ export default function ContractLedgerPage() {
           counterparty: filterCounterparty, department: filterDepartment,
           businessCategory: filterBusinessCategory,
           dateFrom: filterDateFrom, dateTo: filterDateTo,
-          winningDateFrom: filterWinningDateFrom, winningDateTo: filterWinningDateTo,
         })}
         onReset={() => {
           setFilterNo(''); setFilterName(''); setFilterStatus('');
@@ -1386,13 +1375,11 @@ export default function ContractLedgerPage() {
           setFilterCounterparty(''); setFilterDepartment('');
           setFilterBusinessCategory('');
           setFilterDateFrom(''); setFilterDateTo('');
-          setFilterWinningDateFrom(''); setFilterWinningDateTo('');
           setApplied({
             no: '', name: '', status: '', nature: '', formation: '',
             archiveStatus: '', isModelText: '',
             counterparty: '', department: '', businessCategory: '',
             dateFrom: '', dateTo: '',
-            winningDateFrom: '', winningDateTo: '',
           });
         }}
       >
@@ -1476,8 +1463,6 @@ export default function ContractLedgerPage() {
         />
         <SearchField label="签订日期起" type="date" value={filterDateFrom} onChange={setFilterDateFrom} />
         <SearchField label="签订日期止" type="date" value={filterDateTo} onChange={setFilterDateTo} />
-        <SearchField label="中标时间起" type="date" value={filterWinningDateFrom} onChange={setFilterWinningDateFrom} />
-        <SearchField label="中标时间止" type="date" value={filterWinningDateTo} onChange={setFilterWinningDateTo} />
       </SearchBar>
 
       {/* 主数据表格 */}
