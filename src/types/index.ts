@@ -2423,7 +2423,7 @@ export interface ProcurementOrderDetail {
 export interface ProcurementOrder {
   id: string;
   orderNo: string;
-  sourceType?: 'framework' | 'one_time' | 'public_recruit' | 'framework_bidding'; // 订单来源
+  sourceType?: 'framework' | 'one_time' | 'public_recruit' | 'framework_bidding' | 'bidding' | 'direct'; // 订单来源
   demandId?: string; // 关联采购需求
   demandNo?: string;
   contractId?: string; // 关联合同

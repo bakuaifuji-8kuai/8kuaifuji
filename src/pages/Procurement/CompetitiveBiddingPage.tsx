@@ -54,6 +54,15 @@ const isOfflineExecution = (m?: BiddingProcurementMethod) =>
 /** 直接采购（简化明细：无税率/含税） */
 const isDirectOrMall = (m?: BiddingProcurementMethod) => m === 'direct' || m === 'e_mall';
 
+/** 物资类需求类型（可生成采购订单 + 走仓库入库核对） */
+const GOODS_DEMAND_TYPES: string[] = ['material', 'material_non_engineering'];
+
+/** 判断工单关联的需求是不是物资类 — 物资类工单完成后可生成采购订单 */
+const isGoodsBidding = (b: Bidding, demands: ProcurementDemand[]): boolean => {
+  const d = demands.find((x) => x.id === b.demandId);
+  return !!d && GOODS_DEMAND_TYPES.includes(d.demandType as string);
+};
+
 /** 项目部门下拉选项（复用资产申领里已有的部门列表） */
 const PROJECT_DEPARTMENTS = ['展览部', '市场部', '宣传部', '活动部', '行政部', '技术部', '工程部'];
 
@@ -257,7 +266,8 @@ export default function CompetitiveBiddingPage() {
             {isCatalog && row.status === 'evaluated' && (
               <TextButton onClick={() => handleComplete(row)}>完成</TextButton>
             )}
-            {isCatalog && row.status === 'completed' && (
+            {/* 物资类工单，已完成/已评标 → 可生成采购订单（任何采购方式） */}
+            {isGoodsBidding(row, procurementDemands) && ['completed', 'evaluated'].includes(row.status) && (
               <TextButton
                 onClick={() => handleGenerateOrder(row)}
                 className="text-indigo-600"
@@ -604,30 +614,57 @@ export default function CompetitiveBiddingPage() {
     });
   };
 
-  /** framework 完成后一键生成采购订单 */
+  /** 物资类工单完成/评标后一键生成采购订单（任何采购方式均可） */
   const handleGenerateOrder = (bidding: Bidding) => {
-    if (bidding.status !== 'completed') {
-      alert('只有已完成的框架协议采购才能生成订单');
+    if (!['completed', 'evaluated'].includes(bidding.status)) {
+      alert('只有已完成或已评标的工单才能生成采购订单');
+      return;
+    }
+    if (!isGoodsBidding(bidding, procurementDemands)) {
+      alert('仅物资类需求工单可生成采购订单');
       return;
     }
     if ((bidding as any).generatedOrderId) {
-      if (!confirm('该框架已生成过订单，确认重新生成？（将新增一条）')) return;
+      if (!confirm('该工单已生成过订单，确认重新生成？（将新增一条）')) return;
     }
     if (!bidding.winningSupplierId) {
       alert('成交供应商缺失，无法生成订单');
       return;
     }
     const orderId = `PO_${Date.now()}`;
-    const items = (bidding.items || []).map((it: any, idx: number) => {
+
+    // 兼容两种明细来源：目录内比价 bidding.items / 线下录入 bidding.offlineDetails
+    const catalogItems = bidding.items || [];
+    const offlineItems = bidding.offlineDetails || [];
+    const items = (catalogItems.length > 0 ? catalogItems : offlineItems).map((it: any, idx: number) => {
+      if (catalogItems.length > 0) {
+        // 目录内比价明细
+        const qty = it.quantity ?? 1;
+        const unitPrice = it.unitPriceLimitIncludingTax ?? it.unitPriceLimitExcludingTax ?? 0;
+        return {
+          id: `ITEM_${orderId}_${idx}`,
+          orderId,
+          productId: it.productCode || it.code || '',
+          productCode: it.productCode || it.code || '',
+          productName: it.productName || it.materialName || it.name || '未命名物料',
+          specification: it.specification || it.spec || '',
+          unit: it.unit || '',
+          quantity: qty,
+          unitPrice,
+          amount: +(unitPrice * qty).toFixed(2),
+          taxRate: it.taxRate ?? 0.13,
+        };
+      }
+      // 线下录入明细
       const qty = it.quantity ?? 1;
-      const unitPrice = it.unitPriceLimitIncludingTax ?? it.unitPriceLimitExcludingTax ?? 0;
+      const unitPrice = it.unitPriceIncludingTax ?? it.unitPriceExcludingTax ?? 0;
       return {
         id: `ITEM_${orderId}_${idx}`,
         orderId,
-        productId: it.productCode || it.code || '',
-        productCode: it.productCode || it.code || '',
-        productName: it.productName || it.materialName || it.name || '未命名物料',
-        specification: it.specification || it.spec || '',
+        productId: '',
+        productCode: '',
+        productName: it.itemName || it.name || '未命名物料',
+        specification: it.description || '',
         unit: it.unit || '',
         quantity: qty,
         unitPrice,
@@ -635,15 +672,26 @@ export default function CompetitiveBiddingPage() {
         taxRate: it.taxRate ?? 0.13,
       };
     });
+
     const orderNo = genSerialNo(
       SERIAL_CONFIG.CPO,
       (useStore.getState().procurementOrders as ProcurementOrder[]).map((o) => o.orderNo),
     );
     const now = new Date().toISOString();
+
+    // sourceType 根据采购方式动态设置
+    const sourceType: ProcurementOrder['sourceType'] = (() => {
+      const m = bidding.procurementMethod || '';
+      if (m.startsWith('framework')) return 'framework';
+      if (['direct', 'e_mall'].includes(m)) return 'direct';
+      return 'bidding';
+    })();
+
+    const pmLabel = BIDDING_METHOD_LABEL[bidding.procurementMethod as BiddingProcurementMethod] || bidding.procurementMethod || '招采';
     const order: ProcurementOrder = {
       id: orderId,
       orderNo,
-      sourceType: 'framework_bidding',
+      sourceType,
       demandNo: bidding.demandNo || '',
       contractId: '',
       contractNo: '',
@@ -653,7 +701,7 @@ export default function CompetitiveBiddingPage() {
       createTime: now,
       creator: currentUser?.name || '当前用户',
       deliveryDate: now.slice(0, 10),
-      remark: `由框架协议采购 ${bidding.biddingNo} 自动生成，共 ${items.length} 项`,
+      remark: `由${pmLabel}工单 ${bidding.biddingNo} 自动生成，共 ${items.length} 项`,
       details: items,
     };
     addProcurementOrder?.(order);
