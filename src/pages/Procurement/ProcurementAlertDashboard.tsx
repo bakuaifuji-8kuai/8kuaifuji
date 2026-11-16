@@ -4,6 +4,8 @@ import {
   AlertTriangle, FileWarning, CalendarCheck, Wallet, UserCog, Gavel, Archive,
   ChevronRight, ExternalLink
 } from 'lucide-react';
+import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 import { useStore } from '@/store/useStore';
 import type { ContractLedger, Supplier, Bidding } from '@/types';
 
@@ -305,18 +307,21 @@ function DashboardBody({
     <div className="space-y-5">
       {/* ===== 页面头部 ===== */}
       <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 border border-amber-200 rounded-xl p-5">
-        <div className="flex items-start gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-rose-500 flex items-center justify-center shadow-md shadow-amber-200">
-            <AlertTriangle className="w-6 h-6 text-white" />
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 flex-1">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-rose-500 flex items-center justify-center shadow-md shadow-amber-200">
+              <AlertTriangle className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-xl font-bold text-slate-800">全景预警中心</h1>
+              <p className="text-sm text-slate-500 mt-1">
+                实时汇聚合同、供应商资质、招采截止、合同归档等全链路到期预警 —
+                <span className="ml-1 text-indigo-600 font-medium">共 {allAlerts.length} 条</span>
+                {stats.danger > 0 && <span className="ml-2 text-rose-600 font-medium">· 紧急 {stats.danger}</span>}
+              </p>
+            </div>
           </div>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold text-slate-800">全景预警中心</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              实时汇聚合同、供应商资质、招采截止、合同归档等全链路到期预警 —
-              <span className="ml-1 text-indigo-600 font-medium">共 {allAlerts.length} 条</span>
-              {stats.danger > 0 && <span className="ml-2 text-rose-600 font-medium">· 紧急 {stats.danger}</span>}
-            </p>
-          </div>
+          <FeatureHelpButton content={PROCUREMENT_HELP.alertDashboard} />
         </div>
       </div>
 

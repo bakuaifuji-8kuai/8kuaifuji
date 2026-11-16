@@ -1224,4 +1224,72 @@ export const PROCUREMENT_HELP: Record<string, HelpContent> = {
       note: '演示数据已包含完整链路：需求→订单→入库单→批次库存→入库流水。',
     },
   },
+
+  // ================= 24. 全景预警中心 =================
+  alertDashboard: {
+    title: '全景预警中心 - 功能操作说明',
+    businessSummary: {
+      why: '实时汇聚合同、供应商资质、招采截止、归档等全链路到期预警，让经办人在出问题前就被提醒，避免漏签合同过期、资质失效还在参与招标、订单没回写就归档等合规风险',
+      scope: [
+        '🟠 两类严重度：danger（紧急，3天内/已过期/超95%）、warning（警告，30天内/80-95%）',
+        '',
+        '📊 6 种预警类型（全部由系统根据 store 数据自动计算，无需人工录入）：',
+        '① 合同到期：合同剩余天数 ≤ 配置天数（默认30天），或已过期',
+        '② 合同考核到期：月度/季度/年度考核、履约评价按各自独立开关+提前天数提醒；已过期也会列示',
+        '③ 支付占比：合同已付款 / 合同总额 ≥ 阈值（默认80%提醒、≥95%紧急）',
+        '④ 供应商资质到期：供应商资质到期日 ≤ 30天，或已过期',
+        '⑤ 招采截止临近：目录内比价方式 + 已审批通过的工单，截止时间 ≤ 3天',
+        '⑥ 归档逾期：合同已终止/完成超过 30 天仍未归档',
+      ].join('\n'),
+      notDo: [
+        '不做实时推送/短信——演示环境仅页面内展示；真项目会接企业微信/钉钉机器人',
+        '不做"已读/处理"状态——当前点"处理"只是跳到源单据，系统不会把预警标记为已处理',
+        '不做自定义规则配置入口——阈值（到期天数/支付占比/考核提前天数）在 store 的 reminderSettings 里统一配置，页面只消费',
+      ],
+    },
+    description: '全链路到期预警汇聚中心。自动扫描合同台账、供应商资质、招采工单、归档状态四类数据源，6 种预警按严重度排序。每条预警点右上角可直接跳到源单据处理。',
+    sections: [
+      { heading: '严重度判定（谁是 danger，谁是 warning）', items: [
+        '🔴 danger：3 天内到期 / 已过期 / 支付占比 ≥95% / 资质已过期 / 考核已过期',
+        '🟠 warning：4-30 天内到期 / 支付占比 80-95% / 考核将到期 / 招采 2-3 天截止 / 归档逾期',
+        '⚠️ 合同终止后不再产生"合同到期"和"支付占比"预警（已终止的合同风险已锁定）',
+      ]},
+      { heading: '指标卡（顶部 8 宫格）', items: [
+        '🔴 紧急总数 / 🟠 警告总数：点一下切到对应严重度 + 全部类型筛选',
+        '6 个类型卡：每个卡片显示该类型数量，点一下切到该类型 Tab + 全部严重度',
+        '所有卡片点了以后，下方 Tab 和严重度筛选器会同步联动',
+      ]},
+      { heading: '预警列表', items: [
+        '每条预警显示：类型图标、标题、完整描述、源单据编号+名称、meta 附加信息（经办部门/对方单位/模板名称等）',
+        '「去处理 →」按钮：点一下直接跳到源单据页面（合同台账 / 供应商管理 / 招采执行 / 合同归档），带上源单据 ID 参数',
+        'Tab 栏：全部 / 合同到期 / 合同考核 / 支付占比 / 供应商资质 / 招采截止 / 归档逾期 — 每个 Tab 右上角带当前类型计数',
+        '严重度切换：全部 / 紧急 🔴 / 警告 🟠 — 一键只看某一级',
+      ]},
+      { heading: '预警怎么算出来的', items: [
+        '全部由系统根据 store 里的数据实时计算（useMemo），页面打开就刷新',
+        '阈值来源：store.contractReminderSettings（expireDays 默认30、paidThreshold 默认80、eval 各考核类型独立开关+提前天数）',
+        '数据来源：contractLedgers / suppliers / biddings 三份 store',
+      ]},
+    ],
+    operations: [
+      { name: '指标卡联动', condition: '顶部 8 张卡片', detail: '点紧急/警告总数 → 切到对应严重度+全部类型；点类型卡 → 切到该类型 Tab + 全部严重度', impact: '联动下方 Tab 和严重度筛选器，快速聚焦某一类风险' },
+      { name: 'Tab 切换', condition: '中部 Tab 栏', detail: '7 个 Tab（全部 + 6 种类型），每个 Tab 带计数 badge', impact: '只改变列表过滤，不改预警本身' },
+      { name: '严重度筛选', condition: 'Tab 栏右侧', detail: '全部 / 紧急 🔴 / 警告 🟠 三档', impact: '与 Tab 叠加生效（AND）' },
+      { name: '去处理', condition: '每条预警右侧「去处理 →」按钮', detail: '直接跳到源单据页面（带 ?id= 参数）', impact: '浏览器跳转，预警中心页状态会重置（因为是路由跳转，不是局部操作）' },
+      { name: '刷新', condition: '浏览器刷新/F5', detail: '预警列表由 useMemo 实时计算，store 数据一变就重新算', impact: '如果其他模块改了数据（比如供应商更新了资质到期日），回到本页面自动看到变化' },
+    ],
+    statusFlow: [],
+    fields: [
+      { name: '预警类型 type', meaning: '6 种之一', logic: 'contract_expire / contract_eval / contract_paid / supplier_qual / bidding_end / archive_overdue', relation: 'Tab 过滤 / 指标卡计数' },
+      { name: '严重度 level', meaning: 'danger / warning', logic: '按类型独立阈值判定，见"严重度判定"章节', relation: '红色/橙色显示，danger 排在前面' },
+      { name: '源单据 sourceId + sourceNo + sourceName', meaning: '预警从哪来的', logic: 'type 不同，来源不同（合同→contractLedger.id，供应商→supplier.id，招采→bidding.id）', relation: '跳转到源单据' },
+      { name: 'meta 附加信息', meaning: '经办部门/对方单位/模板名称/金额比等', logic: '每种类型独立拼接，帮助快速理解风险上下文', relation: '无' },
+      { name: 'jumpPath', meaning: '「去处理 →」跳去哪', logic: '按 type 映射：合同→/procurement/contract?id=、供应商→/procurement/supplier?id=、招采→/procurement/bidding?id=、归档→/procurement/contract-archive?contractId=', relation: '路由配置' },
+    ],
+    related: {
+      upstream: ['合同台账（合同到期/支付占比/合同考核到期三类预警）', '供应商管理（资质到期预警）', '招采执行工单（竞价截止临近预警）', '合同归档（终止后超 30 天未归档预警）'],
+      downstream: ['「去处理 →」按钮直接跳回源单据页面，本页不做回写'],
+      note: '所有预警由系统自动计算，无人工录入环节。处理完源单据后（比如合同归档、供应商资质更新），刷新本页即自动消失。',
+    },
+  },
 };
