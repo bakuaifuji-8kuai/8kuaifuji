@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState, useEffect, type ReactNode } from 'react';
-import { Search, Check, Package, FileText, Calendar, AlertTriangle, Building2, Hash, Plus, X, ChevronRight, FileCheck, FileX, Paperclip } from 'lucide-react';
+import { Search, Check, Package, FileText, Calendar, AlertTriangle, Building2, Hash, Plus, X, ChevronRight, FileCheck, FileX, Paperclip, AlertCircle } from 'lucide-react';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
@@ -1018,8 +1018,43 @@ function FormBody({
 
   return (
     <div className="space-y-5">
-      {/* 关联合同信息卡 */}
-      {contract && <ContractInfoCard contract={contract} />}
+      {/* 关联合同信息卡（始终显示：有完整合同 → 完整卡；无则显示线索占位） */}
+      {contract ? (
+        <ContractInfoCard contract={contract} />
+      ) : (
+        <div className="bg-amber-50/70 border border-amber-200 rounded-lg p-4 text-xs">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertCircle className="w-4 h-4 text-amber-500" />
+            <span className="font-medium text-amber-700">关联合同</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-200">
+              未找到合同台账记录
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-slate-600">
+            {demand.contractNoSnapshot && (
+              <div>
+                <span className="text-slate-400">需求合同快照号：</span>
+                <span className="font-mono text-indigo-600">{demand.contractNoSnapshot}</span>
+              </div>
+            )}
+            {order?.contractNo && (
+              <div>
+                <span className="text-slate-400">订单关联合同号：</span>
+                <span className="font-mono text-indigo-600">{order.contractNo}</span>
+              </div>
+            )}
+            {demand.projectName && (
+              <div>
+                <span className="text-slate-400">项目名称：</span>{demand.projectName}
+              </div>
+            )}
+            <div>
+              <span className="text-slate-400">提示：</span>
+              签订合同后本信息卡会自动补全
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 基础信息 */}
       <div className="grid grid-cols-4 gap-4 text-sm">
