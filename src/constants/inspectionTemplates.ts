@@ -43,8 +43,8 @@ export const INSPECTION_TEMPLATES: InspectionTemplate[] = [
     id: 'generic',
     name: '通用验收表',
     applicableType: 'service',
-    description: '标准供应商验收表：供应商/项目/时间/内容 + 三级审批意见',
-    approvalFlow: ['部门会签意见', '综合管理部审核', '公司领导审批'],
+    description: '标准供应商验收表：供应商/项目/时间/内容 + 验收结论',
+    approvalFlow: [],
     fields: [
       { key: 'supplierName', label: '供应商名称', type: 'text', readOnly: true },
       { key: 'acceptanceItems', label: '验收项目', type: 'text', autoFill: true },
@@ -52,12 +52,6 @@ export const INSPECTION_TEMPLATES: InspectionTemplate[] = [
       { key: 'acceptanceContent', label: '验收内容', type: 'textarea', rows: 3,
         placeholder: '请描述服务/施工的验收情况，如完成的里程碑、质量情况、存在的问题等' },
       { key: 'isQualified', label: '验收结论', type: 'boolean_radio', labels: ['合格', '不合格'] },
-      { key: 'deptCountersignOpinion', label: '部门会签意见', type: 'textarea', rows: 2,
-        placeholder: '需求部门负责人填写会签意见' },
-      { key: 'adminDeptOpinion', label: '综合管理部意见', type: 'textarea', rows: 2,
-        placeholder: '综合管理部审核意见' },
-      { key: 'leaderOpinion', label: '公司领导意见', type: 'textarea', rows: 2,
-        placeholder: '公司领导最终批示' },
     ],
     builtin: true,
   },
@@ -69,8 +63,5 @@ export function findTemplate(id?: string): InspectionTemplate | undefined {
   return INSPECTION_TEMPLATES.find((t) => t.id === id);
 }
 
-// 验收表底部固定备注（Word 模板里的两条）
-export const TEMPLATE_FOOTER_NOTES = [
-  '1. 物资采购涉及固定资产、安装服务的，由需求部门组织相关部门进行验收，验收合格的作为付款依据；',
-  '2. 其他物资采购凭相关部门签字确认的入库单作为付款依据。',
-];
+// 验收表底部固定备注（可空）
+export const TEMPLATE_FOOTER_NOTES: string[] = [];
