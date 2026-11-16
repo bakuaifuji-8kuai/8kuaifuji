@@ -1132,7 +1132,7 @@ function FormBody({
             {!order && (
               <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-xs mb-3 flex items-center gap-2 text-emerald-700">
                 <span className="text-sm">🏷️</span>
-                <span>本需求未生成采购订单，当前明细数据来自需求填报——这是正常路径，可直接验收。如需走仓库入库核对，请先在招采执行（目录内比价）生成采购订单</span>
+                <span>本需求未生成采购订单，当前明细数据来自需求填报——这是正常路径，可直接验收。如需走仓库入库核对，请先在招采执行（物资类需求，任何采购方式）工单完成后生成采购订单</span>
               </div>
             )}
 
