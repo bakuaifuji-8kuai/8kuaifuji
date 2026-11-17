@@ -29,7 +29,6 @@ const STATUS_BADGE: Record<string, { text: string; variant: 'default' | 'primary
   active: { text: '履行中', variant: 'primary' },
   expired: { text: '已到期', variant: 'secondary' },
   terminated: { text: '已终止', variant: 'danger' },
-  completed: { text: '已完成', variant: 'success' },
   invalid: { text: '已作废', variant: 'danger' },
   suspended: { text: '已暂停', variant: 'warning' },
   returned: { text: '已退回', variant: 'danger' },
@@ -221,7 +220,7 @@ export default function ContractNonProcurementPage() {
       total: list.length,
       draft: list.filter((l) => l.status === 'draft').length,
       pending: list.filter((l) => l.status === 'pending').length,
-      approved: list.filter((l) => ['approved', 'active', 'completed'].includes(l.status)).length,
+      approved: list.filter((l) => ['approved', 'active'].includes(l.status)).length,
       returned: list.filter((l) => l.status === 'returned').length,
     };
   }, [list]);

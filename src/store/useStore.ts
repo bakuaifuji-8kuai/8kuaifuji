@@ -1650,7 +1650,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 18,
+      version: 19,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -2078,6 +2078,21 @@ export const useStore = create<WarehouseState>()(
               }
             });
             console.log(`[store migrate v18] 服务验收单补 templateId='generic'，迁移 ${migrated} 条`);
+          }
+        }
+        if (version < 19) {
+          // v18→v19：合同台账 status 非法值清洗
+          // ContractStatus 合法值：draft|pending|approved|active|expired|terminated|invalid|suspended
+          // 删除遗留的 completed（页面容错+localStorage 脏数据），统一映射为 active
+          if (Array.isArray(persistedState.contractLedgers)) {
+            let migrated = 0;
+            persistedState.contractLedgers.forEach((c: any) => {
+              if (c.status === 'completed') {
+                c.status = 'active';
+                migrated++;
+              }
+            });
+            console.log(`[store migrate v19] 合同台账非法状态清洗：completed→active，迁移 ${migrated} 条`);
           }
         }
         return persistedState;

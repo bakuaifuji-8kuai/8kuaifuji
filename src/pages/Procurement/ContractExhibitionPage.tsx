@@ -32,7 +32,6 @@ const STATUS_BADGE: Record<string, { text: string; variant: 'default' | 'primary
   active: { text: '履行中', variant: 'primary' },
   expired: { text: '已到期', variant: 'default' },
   terminated: { text: '已终止', variant: 'danger' },
-  completed: { text: '已完成', variant: 'success' },
   invalid: { text: '已作废', variant: 'danger' },
   suspended: { text: '已暂停', variant: 'warning' },
   returned: { text: '已退回', variant: 'danger' },
