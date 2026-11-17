@@ -32,9 +32,7 @@ const STATUS_BADGE: Record<string, { text: string; variant: 'default' | 'primary
   active: { text: '履行中', variant: 'primary' },
   expired: { text: '已到期', variant: 'default' },
   terminated: { text: '已终止', variant: 'danger' },
-  invalid: { text: '已作废', variant: 'danger' },
-  suspended: { text: '已暂停', variant: 'warning' },
-  returned: { text: '已退回', variant: 'danger' },
+  invalid: { text: '已失效', variant: 'danger' },
 };
 
 const BUSINESS_CATEGORY_OPTIONS = Object.entries(BUSINESS_CATEGORY_LABELS).map(([value, label]) => ({
@@ -212,7 +210,6 @@ export default function ContractExhibitionPage() {
       draft: list.filter((l) => l.status === 'draft').length,
       pending: list.filter((l) => l.status === 'pending').length,
       approved: list.filter((l) => ['approved', 'active'].includes(l.status)).length,
-      returned: list.filter((l) => l.status === 'returned').length,
     };
   }, [list]);
 
@@ -246,7 +243,6 @@ export default function ContractExhibitionPage() {
               { key: 'draft', label: `草稿(${counts.draft})` },
               { key: 'pending', label: `待审批(${counts.pending})` },
               { key: 'approved', label: `已通过(${counts.approved})` },
-              { key: 'returned', label: `已退回(${counts.returned})` },
             ].map((item) => (
               <button
                 key={item.key}
