@@ -40,7 +40,7 @@ const DEMAND_TYPE_LABEL: Record<string, string> = {
 // ========== 报价输入行（动态字段） ==========
 interface QuoteInputRow {
   itemIndex: number;       // 对应 bidding.items 的下标
-  unitPrice: number;       // 含税单价（通用）
+  unitPrice: number;       // 不含税单价（用户输入）
   taxRate: number;         // 税率
   deliveryDate: string;
   remark: string;
@@ -55,7 +55,8 @@ interface QuoteInputRow {
 }
 
 // 根据 CatalogCompareItem 的 priceDescription 计算金额
-function calcRowAmount(item: CatalogCompareItem, row: QuoteInputRow): { amount: number; taxAmount: number } {
+// 方案A：用户输入不含税单价，正算不含税金额→税额→含税金额
+function calcRowAmount(item: CatalogCompareItem, row: QuoteInputRow): { amountExTax: number; amount: number; taxAmount: number } {
   const taxRate = row.taxRate || item.taxRate || 0.13;
   let unitPrice = row.unitPrice;
   let qty = item.quantity;
@@ -71,20 +72,24 @@ function calcRowAmount(item: CatalogCompareItem, row: QuoteInputRow): { amount: 
     qty = row.times;
   }
 
-  const amount = Math.round(unitPrice * qty * 100) / 100;
-  const taxAmount = Math.round((amount / (1 + taxRate)) * taxRate * 100) / 100;
-  return { amount, taxAmount };
+  const amountExTax = Math.round(unitPrice * qty * 100) / 100;           // 不含税金额
+  const taxAmount = Math.round(amountExTax * taxRate * 100) / 100;       // 税额（正算）
+  const amount = Math.round((amountExTax + taxAmount) * 100) / 100;      // 含税金额
+  return { amountExTax, amount, taxAmount };
 }
 
 // 判断报价是否超限
+// 方案A：用户输入不含税单价，上限也反算成不含税单价上限比较
 function isOverLimit(item: CatalogCompareItem, row: QuoteInputRow): boolean {
-  const limit = item.unitPriceLimitIncludingTax ?? item.singlePriceLimit;
-  if (!limit) return false;
+  const taxRate = row.taxRate || item.taxRate || 0.13;
+  const taxLimit = item.unitPriceLimitIncludingTax ?? item.singlePriceLimit;
+  if (!taxLimit) return false;
+  const limitExTax = Math.round((taxLimit / (1 + taxRate)) * 100) / 100; // 反算不含税单价上限
   const pd = item.priceDescription || '固定单价';
-  if (pd === '固定单价' || pd === '上限单价' || pd === '按量结算') return row.unitPrice > limit;
-  if (pd === '费率结算') return (row.ratePerMonth ?? row.unitPrice) > limit;
-  if (pd === '按次计费') return (row.unitPricePerTime ?? row.unitPrice) > limit;
-  return row.unitPrice > limit;
+  if (pd === '固定单价' || pd === '上限单价' || pd === '按量结算') return row.unitPrice > limitExTax;
+  if (pd === '费率结算') return (row.ratePerMonth ?? row.unitPrice) > taxLimit;
+  if (pd === '按次计费') return (row.unitPricePerTime ?? row.unitPrice) > taxLimit;
+  return row.unitPrice > taxLimit;
 }
 
 // ========== 手机框架 ==========
@@ -210,8 +215,8 @@ function QuoteRowItem({ item, row, view, onChange }: QuoteRowItemProps) {
           </div>
           {limit && (
             <div className="text-right shrink-0">
-              <div className="text-[10px] text-slate-400">含税上限</div>
-              <div className="text-[13px] font-semibold text-slate-600">¥{limit.toLocaleString()}</div>
+              <div className="text-[10px] text-slate-400">不含税单价上限</div>
+              <div className="text-[13px] font-semibold text-slate-600">¥{Math.round((limit / (1 + (item.taxRate || 0.13))) * 100) / 100}</div>
             </div>
           )}
         </div>
@@ -229,7 +234,7 @@ function QuoteRowItem({ item, row, view, onChange }: QuoteRowItemProps) {
       <div className="space-y-2">
         {priceDesc === '固定单价' && (
           <div>
-            <label className="text-[11px] text-slate-500">含税单价</label>
+            <label className="text-[11px] text-slate-500">不含税单价</label>
             <div className="flex items-center mt-1">
               <span className="text-slate-400 mr-1">¥</span>
               <input
@@ -247,7 +252,7 @@ function QuoteRowItem({ item, row, view, onChange }: QuoteRowItemProps) {
 
         {priceDesc === '上限单价' && (
           <div>
-            <label className="text-[11px] text-slate-500">含税单价</label>
+            <label className="text-[11px] text-slate-500">不含税单价</label>
             <div className="flex items-center mt-1">
               <span className="text-slate-400 mr-1">¥</span>
               <input
@@ -304,7 +309,7 @@ function QuoteRowItem({ item, row, view, onChange }: QuoteRowItemProps) {
         {priceDesc === '按量结算' && (
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[11px] text-slate-500">含税单价</label>
+              <label className="text-[11px] text-slate-500">不含税单价</label>
               <div className="flex items-center mt-1">
                 <span className="text-slate-400 mr-1">¥</span>
                 <input
@@ -666,7 +671,7 @@ export default function SupplierQuoteSimulator() {
           unit: d.unit,
           quantity: d.quantity,
           unitPrice: d.unitPrice,
-          unitPriceExcludingTax: Math.round((d.unitPrice / (1 + (d.taxRate || 0.13))) * 100) / 100,
+          unitPriceExcludingTax: Math.round(d.unitPrice * 100) / 100,
           amount: d.amount,
           amountExcludingTax: Math.round((d.amount - (d.taxAmount || 0)) * 100) / 100,
           taxRate: d.taxRate,
@@ -825,13 +830,15 @@ export default function SupplierQuoteSimulator() {
     const demandType = getDemandType(currentBidding.demandId);
     const view = getQuoteView(demandType);
 
-    // 汇总
+    // 汇总（方案A：底部展示不含税合计）
     let totalAmount = 0;
     let totalTax = 0;
+    let totalAmountExTax = 0;
     quoteRows.forEach((row, idx) => {
-      const { amount, taxAmount } = calcRowAmount(items[idx], row);
+      const { amount, taxAmount, amountExTax } = calcRowAmount(items[idx], row);
       totalAmount += amount;
       totalTax += taxAmount;
+      totalAmountExTax += amountExTax;
     });
 
     return (
@@ -986,18 +993,12 @@ export default function SupplierQuoteSimulator() {
 
         {/* 底部汇总 + 提交 */}
         <div className="bg-white border-t border-slate-100 px-4 py-3">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <div className="text-[11px] text-slate-400">报价总金额（含税）</div>
-              <div className={`text-[20px] font-bold ${
-                currentBidding.totalPriceLimit && totalAmount > currentBidding.totalPriceLimit ? 'text-red-500' : 'text-slate-800'
-              }`}>
-                ¥{Math.round(totalAmount * 100) / 100 < Number.POSITIVE_INFINITY ? totalAmount.toLocaleString() : '0'}
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-[11px] text-slate-400">税额</div>
-              <div className="text-[13px] text-slate-600">¥{totalTax.toLocaleString()}</div>
+          <div className="mb-2">
+            <div className="text-[11px] text-slate-400">报价总金额</div>
+            <div className={`text-[20px] font-bold ${
+              currentBidding.totalPriceLimit && totalAmount > currentBidding.totalPriceLimit ? 'text-red-500' : 'text-slate-800'
+            }`}>
+              ¥{Math.round(totalAmountExTax * 100) / 100 < Number.POSITIVE_INFINITY ? totalAmountExTax.toLocaleString() : '0'}
             </div>
           </div>
           {currentBidding.totalPriceLimit ? (
@@ -1008,7 +1009,7 @@ export default function SupplierQuoteSimulator() {
             }`}>
               <span className="flex items-center gap-1">
                 {totalAmount > currentBidding.totalPriceLimit ? <AlertTriangle size={12} /> : <span>🏷️</span>}
-                整单上限总价（含税）
+                整单上限总价
               </span>
               <span>
                 ¥{currentBidding.totalPriceLimit.toLocaleString()}
