@@ -33,7 +33,6 @@ const STATUS_BADGE: Record<string, { text: string; variant: 'default' | 'primary
   active: { text: '履行中', variant: 'primary' },
   expired: { text: '已到期', variant: 'default' },
   terminated: { text: '已终止', variant: 'danger' },
-  invalid: { text: '已失效', variant: 'danger' },
 };
 
 const BUSINESS_CATEGORY_OPTIONS = Object.entries(BUSINESS_CATEGORY_LABELS).map(([value, label]) => ({

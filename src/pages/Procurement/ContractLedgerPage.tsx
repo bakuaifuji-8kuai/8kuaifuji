@@ -29,7 +29,6 @@ const statusMap: Record<string, { label: string; color: string; bg: string }> = 
   active: { label: '执行中', color: 'text-[#67c23a]', bg: 'bg-[#f0f9eb]' },
   expired: { label: '已到期', color: 'text-[#909399]', bg: 'bg-[#f4f4f5]' },
   terminated: { label: '已终止', color: 'text-[#f56c6c]', bg: 'bg-[#fef0f0]' },
-  invalid: { label: '已失效', color: 'text-[#f56c6c]', bg: 'bg-[#fef0f0]' },
 };
 
 /** 考核类型枚举 */
@@ -1039,7 +1038,7 @@ export default function ContractLedgerPage() {
           {(row.status === 'active' || row.status === 'approved') && (
             <TextButton type="danger" onClick={() => { setTerminateItem(row); setTerminateReason(''); }}>终止</TextButton>
           )}
-          {(row.status === 'terminated' || row.status === 'expired' || row.status === 'invalid') && (
+          {(row.status === 'terminated' || row.status === 'expired') && (
             <TextButton onClick={() => handleActivate(row)}>恢复执行</TextButton>
           )}
           {/* 仅草稿态允许删除；正式合同走"终止"保留历史数据 */}

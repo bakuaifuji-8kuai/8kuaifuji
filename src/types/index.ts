@@ -2100,7 +2100,7 @@ export type ContractType = ProcurementContractType | NonProcurementContractType;
 export type ContractNature = 'procurement' | 'non_procurement';
 
 // 合同状态
-export type ContractStatus = 'draft' | 'pending' | 'approved' | 'active' | 'expired' | 'terminated' | 'invalid' | 'suspended';
+export type ContractStatus = 'draft' | 'pending' | 'approved' | 'active' | 'expired' | 'terminated';
 
 // ====================================================================
 // 合同台账记录

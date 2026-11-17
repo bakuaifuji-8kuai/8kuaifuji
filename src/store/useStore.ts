@@ -2082,23 +2082,24 @@ export const useStore = create<WarehouseState>()(
         }
         if (version < 19) {
           // v18→v19：合同台账 status 非法值清洗
-          // 合同真实合法状态（以 ContractLedgerPage statusMap 为准）：
+          // 合同真实合法状态（以台账主页面 ContractLedgerPage 业务流转为准）：
           //   draft(草稿) | pending(待审批) | approved(已审批) | active(执行中)
-          //   expired(已到期) | terminated(已终止) | invalid(已失效)
-          // 非法状态映射：
+          //   expired(已到期) | terminated(已终止)
+          // 非法状态全部映射为 active：
           //   completed(已完成) → active   // 早期页面容错+localStorage脏数据
-          //   suspended(已暂停) → active   // 类型定义里有但业务从未使用
+          //   suspended(已暂停) → active   // 类型定义有但业务从未使用
           //   returned(已退回)  → active   // 页面硬编码但合同审批不支持退回
+          //   invalid(已失效)   → active   // 类型定义+statusMap 死代码，无任何地方置为 invalid
           if (Array.isArray(persistedState.contractLedgers)) {
             let migrated = 0;
-            const ILLEGAL_MAP: Record<string, string> = { completed: 'active', suspended: 'active', returned: 'active' };
+            const ILLEGAL_MAP: Record<string, string> = { completed: 'active', suspended: 'active', returned: 'active', invalid: 'active' };
             persistedState.contractLedgers.forEach((c: any) => {
               if (ILLEGAL_MAP[c.status]) {
                 c.status = ILLEGAL_MAP[c.status];
                 migrated++;
               }
             });
-            console.log(`[store migrate v19] 合同台账非法状态清洗：${migrated} 条 (completed/suspended/returned → active)`);
+            console.log(`[store migrate v19] 合同台账非法状态清洗：${migrated} 条 (completed/suspended/returned/invalid → active)`);
           }
         }
         return persistedState;
