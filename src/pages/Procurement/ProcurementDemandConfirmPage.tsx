@@ -798,12 +798,12 @@ export default function ProcurementDemandConfirmPage() {
               </div>
             )}
 
-            {/* --- 物资明细 + 成本审核（仅物资类）--- */}
+            {/* --- 明细清单 + 成本审核（工程类-货物 / 非工程类-货物 / 非工程类-服务，共三类有明细表的需求）--- */}
             {selected?.details?.length > 0 && formType === 'material' && (
               <div className="mt-4 pt-4 border-t border-indigo-100/60">
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-sm font-semibold text-slate-800">
-                    物资明细清单 · 成本审核 <span className="text-slate-400 text-xs font-normal">（{selected.details.length} 项）</span>
+                    明细清单 · 成本审核 <span className="text-slate-400 text-xs font-normal">（{selected.details.length} 项）</span>
                   </div>
                   <div className="text-xs text-slate-500">
                     {selected.procurementType === 'within_framework'
