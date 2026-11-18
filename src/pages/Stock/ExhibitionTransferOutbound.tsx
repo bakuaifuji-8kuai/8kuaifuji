@@ -807,24 +807,26 @@ export default function ExhibitionTransferOutboundPage() {
               />
             </div>
 
-            {/* 作业项目汇总板块（独立于产品明细表格） */}
-            <div className="bg-gradient-to-br from-indigo-50/60 to-purple-50/60 border border-indigo-100 rounded-lg p-4 mb-1">
-              <div className="flex items-center justify-between mb-3">
+            {/* 作业项目汇总 — 紧凑版 */}
+            <div className="mb-2 p-3 bg-[#fafbfc] border border-[#ebeef5] rounded text-xs">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-medium text-[#303133]">
+                  作业项目汇总
+                  <span className="ml-1 text-[#909399] font-normal">
+                    （{workItemSummary.length} 项）
+                  </span>
+                </span>
                 <div className="flex items-center gap-2">
-                  <span className="inline-block w-1 h-5 bg-gradient-to-b from-indigo-500 to-purple-600 rounded" />
-                  <div className="font-semibold text-[#303133]">
-                    作业项目汇总
-                    <span className="ml-2 text-xs text-[#909399] font-normal">
-                      （共 {workItemSummary.length} 项）
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <DefaultButton onClick={() => setWorkOrderPickerOpen(true)}>+ 选择工单</DefaultButton>
+                  <button
+                    onClick={() => setWorkOrderPickerOpen(true)}
+                    className="px-2 py-1 text-[#2f54eb] border border-[#dcdfe6] rounded hover:border-[#2f54eb] hover:text-[#2f54eb]"
+                  >
+                    + 工单
+                  </button>
                   {workItemSummary.length > 0 && (
                     <button
                       onClick={clearAllWorkOrders}
-                      className="px-3 py-1.5 text-xs text-[#f56c6c] border border-[#fbc4c4] rounded hover:bg-[#fef0f0] transition-colors"
+                      className="px-2 py-1 text-[#909399] border border-[#dcdfe6] rounded hover:text-[#f56c6c]"
                     >
                       清空
                     </button>
@@ -833,55 +835,25 @@ export default function ExhibitionTransferOutboundPage() {
               </div>
 
               {workItemSummary.length === 0 ? (
-                <div className="text-center py-4 text-[#909399] text-xs">
-                  暂无作业项目，请点击「选择工单」添加
-                </div>
+                <div className="text-[#909399] text-center py-2">暂无，点击「+ 工单」添加</div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="text-[#606266] bg-white/60">
-                        <th className="px-3 py-2 text-left font-medium rounded-l">作业项目</th>
-                        <th className="px-3 py-2 text-center font-medium">作业数量</th>
-                        <th className="px-3 py-2 text-left font-medium">来源工单</th>
-                        <th className="px-3 py-2 text-center font-medium rounded-r w-16">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {workItemSummary.map((item, idx) => (
-                        <tr key={item.workItemName} className="border-t border-indigo-100/60 bg-white/80 hover:bg-white transition-colors">
-                          <td className="px-3 py-2 font-medium text-[#303133]">
-                            {item.workItemName}
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <span className="inline-flex items-center justify-center min-w-[48px] px-2 py-0.5 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 font-semibold rounded-full">
-                              {item.workItemQty}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 text-[#606266]">
-                            <div className="flex flex-wrap gap-1">
-                              {item.workOrderCodes.map((code) => (
-                                <span
-                                  key={code}
-                                  className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[11px] font-mono"
-                                >
-                                  {code}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <button
-                              onClick={() => removeWorkItem(item.workItemName)}
-                              className="text-[#f56c6c] hover:text-[#f78989] transition-colors text-xs"
-                            >
-                              移除 ✕
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="flex flex-wrap gap-1.5">
+                  {workItemSummary.map((item) => (
+                    <div
+                      key={item.workItemName}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#e4e7ed] rounded group"
+                      title={`来源: ${item.workOrderCodes.join(', ')}`}
+                    >
+                      <span className="text-[#303133] font-medium">{item.workItemName}</span>
+                      <span className="text-[#2f54eb] font-semibold">{item.workItemQty}</span>
+                      <span
+                        className="ml-1 w-4 h-4 flex items-center justify-center text-[#909399] hover:text-[#f56c6c] cursor-pointer opacity-60 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeWorkItem(item.workItemName)}
+                      >
+                        ✕
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
