@@ -1073,6 +1073,10 @@ export interface WorkOrderProductConfig {
   projectName: string;
   exhibitionName: string;
   constructionUnit?: string; // 施工单位（上海锦华 / 湖南警安 / 中裕电力）
+  boothName?: string; // 展馆（A馆 / W馆 / 整体）
+  boothNo?: string; // 施工档位号（A-03 / W馆A-12 / 整体）
+  workItemName?: string; // 作业项目（电箱220V室内）
+  workItemQty?: number; // 作业数量
   category: string;
   mainProducts: WorkOrderProductItem[];
   auxiliaryProducts: WorkOrderProductItem[];

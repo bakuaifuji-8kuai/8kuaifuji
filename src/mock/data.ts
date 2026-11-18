@@ -2600,6 +2600,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
       { id: 'WP0016', productId: 'PRD775', productCode: 'QD2006', productName: '电缆', categoryName: '低值易耗', specification: '4㎡3芯（无头/20米长）', unit: '根', quantity: 1 },
       { id: 'WP0017', productId: 'PRD776', productCode: 'QD2007', productName: '电缆', categoryName: '低值易耗', specification: '25㎡（无头带铜鼻子/20米长）', unit: '根', quantity: 1 },
     ],
+    boothName: 'A馆',
+    boothNo: 'A-03',
+    workItemName: '电箱220V室内',
+    workItemQty: 6,
     createTime: '2026-06-01T08:00:00Z',
   },
   {
@@ -2618,6 +2622,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP0004', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 1 },
     ],
+    boothName: 'A馆',
+    boothNo: 'A-05',
+    workItemName: '电箱220V室外',
+    workItemQty: 15,
     createTime: '2026-06-01T08:05:00Z',
   },
   {
@@ -2636,6 +2644,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP002', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 2 },
     ],
+    boothName: 'W馆',
+    boothNo: 'W-01',
+    workItemName: '停车作业项',
+    workItemQty: 5,
     createTime: '2026-06-11T11:24:06Z',
   },
   {
@@ -2654,6 +2666,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP004', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '维修用', unit: '套', quantity: 3 },
     ],
+    boothName: '整体',
+    boothNo: '整体',
+    workItemName: '会议室延时',
+    workItemQty: 10,
     createTime: '2026-06-11T11:23:31Z',
   },
   {
@@ -2672,6 +2688,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP006', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', quantity: 8 },
     ],
+    boothName: '整体',
+    boothNo: '整体',
+    workItemName: '场租作业项',
+    workItemQty: 20,
     createTime: '2026-06-11T11:21:38Z',
   },
   {
@@ -2690,6 +2710,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP008', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 2 },
     ],
+    boothName: 'W馆',
+    boothNo: 'W-A12',
+    workItemName: '给排水作业',
+    workItemQty: 30,
     createTime: '2026-06-10T16:54:18Z',
   },
   {
@@ -2708,6 +2732,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP010', productId: 'PRD011', productCode: 'P40002', productName: '说明书', categoryName: '低值易耗', specification: '标准', unit: '本', quantity: 20 },
     ],
+    boothName: '整体',
+    boothNo: '整体',
+    workItemName: '设备押金',
+    workItemQty: 50,
     createTime: '2026-06-04T09:53:37Z',
   },
   {
@@ -2727,6 +2755,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP013', productId: 'PRD009', productCode: 'P20003', productName: '螺丝套装', categoryName: '低值易耗', specification: '标准', unit: '盒', quantity: 20 },
     ],
+    boothName: 'A馆',
+    boothNo: 'A-08',
+    workItemName: '搭建押金',
+    workItemQty: 25,
     createTime: '2026-05-27T15:49:05Z',
   },
   {
@@ -2745,6 +2777,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP015', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 5 },
     ],
+    boothName: 'A馆',
+    boothNo: 'A-10',
+    workItemName: '安全清洁押金',
+    workItemQty: 10,
     createTime: '2026-05-27T15:46:34Z',
   },
   {
@@ -2763,6 +2799,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP017', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', quantity: 10 },
     ],
+    boothName: 'W馆',
+    boothNo: 'W-05',
+    workItemName: '地毯管理费',
+    workItemQty: 200,
     createTime: '2026-05-27T15:46:33Z',
   },
   {
@@ -2782,6 +2822,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP020', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '维修用', unit: '套', quantity: 4 },
     ],
+    boothName: 'W馆',
+    boothNo: 'W-06',
+    workItemName: '特装管理费',
+    workItemQty: 40,
     createTime: '2026-05-27T15:46:33Z',
   },
   {
@@ -2800,6 +2844,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP022', productId: 'PRD011', productCode: 'P40002', productName: '说明书', categoryName: '低值易耗', specification: '标准', unit: '本', quantity: 15 },
     ],
+    boothName: '整体',
+    boothNo: '整体',
+    workItemName: '管理费',
+    workItemQty: 30,
     createTime: '2026-05-27T15:46:30Z',
   },
   {
@@ -2818,6 +2866,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP024', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '保洁用', unit: '套', quantity: 5 },
     ],
+    boothName: '整体',
+    boothNo: '整体',
+    workItemName: '布撤展保洁加班',
+    workItemQty: 15,
     createTime: '2026-05-27T15:40:38Z',
   },
   {
@@ -2836,6 +2888,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP026', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '保洁用', unit: '套', quantity: 4 },
     ],
+    boothName: '整体',
+    boothNo: '整体',
+    workItemName: '布撤展保洁',
+    workItemQty: 12,
     createTime: '2026-05-27T15:40:35Z',
   },
   {
@@ -2854,6 +2910,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP028', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '保洁用', unit: '套', quantity: 3 },
     ],
+    boothName: '整体',
+    boothNo: '整体',
+    workItemName: '展期保洁加班',
+    workItemQty: 10,
     createTime: '2026-05-27T15:40:33Z',
   },
   {
@@ -2872,6 +2932,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP030', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '保洁用', unit: '套', quantity: 2 },
     ],
+    boothName: '整体',
+    boothNo: '整体',
+    workItemName: '展期保洁',
+    workItemQty: 8,
     createTime: '2026-05-27T15:39:38Z',
   },
   {
@@ -2890,6 +2954,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP032', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', quantity: 6 },
     ],
+    boothName: '整体',
+    boothNo: '整体',
+    workItemName: '展期安保加班',
+    workItemQty: 20,
     createTime: '2026-05-27T15:39:34Z',
   },
   {
@@ -2908,6 +2976,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP034', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', quantity: 4 },
     ],
+    boothName: '整体',
+    boothNo: '整体',
+    workItemName: '布撤展安保加班',
+    workItemQty: 15,
     createTime: '2026-05-27T15:39:31Z',
   },
   {
@@ -2926,6 +2998,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP036', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', quantity: 3 },
     ],
+    boothName: '整体',
+    boothNo: '整体',
+    workItemName: '展期物业安保',
+    workItemQty: 12,
     createTime: '2026-05-27T15:39:29Z',
   },
   {
@@ -2944,6 +3020,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP038', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', quantity: 2 },
     ],
+    boothName: '整体',
+    boothNo: '整体',
+    workItemName: '布撤展物业安保',
+    workItemQty: 10,
     createTime: '2026-05-27T15:39:28Z',
   },
   {
@@ -2962,6 +3042,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     auxiliaryProducts: [
       { id: 'WP040', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 1 },
     ],
+    boothName: 'W馆',
+    boothNo: 'W-A15',
+    workItemName: '给排水作业',
+    workItemQty: 20,
     createTime: '2026-05-27T15:39:27Z',
   },
 ];

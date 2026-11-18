@@ -272,12 +272,53 @@ export default function ExhibitionTransferOutboundPage() {
     setPickerOpen(false);
   };
 
+  // 作业项目汇总（从 details 反算）：相同 workItemName 的 workOrderQty 累加
+  const workItemSummary = useMemo(() => {
+    if (!editItem) return [] as {
+      workItemName: string;
+      workItemQty: number;
+      workOrderCodes: string[];
+      workOrderIds: string[];
+    }[];
+    const map = new Map<string, {
+      workItemName: string;
+      workItemQty: number;
+      workOrderCodes: string[];
+      workOrderIds: string[];
+    }>();
+    for (const d of editItem.details) {
+      const key = d.workItemName || d.workOrderName || '';
+      if (!key || !d.workOrderId) continue;
+      const existing = map.get(key);
+      if (existing) {
+        if (!existing.workOrderIds.includes(d.workOrderId)) {
+          existing.workItemQty += d.workOrderQty ?? 0;
+          if (d.workOrderCode && !existing.workOrderCodes.includes(d.workOrderCode)) {
+            existing.workOrderCodes.push(d.workOrderCode);
+          }
+          existing.workOrderIds.push(d.workOrderId);
+        }
+      } else {
+        map.set(key, {
+          workItemName: key,
+          workItemQty: d.workOrderQty ?? 0,
+          workOrderCodes: d.workOrderCode ? [d.workOrderCode] : [],
+          workOrderIds: [d.workOrderId],
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [editItem?.details]);
+
   const handleWorkOrderConfirm = (selectedItems: WorkOrderPickerItem[]) => {
     if (!editItem) return;
 
-    const workOrderQty = 50; // 作业数量默认50（只读展示，不可编辑）
     const newDetails: StockTransferDetail[] = [];
     selectedItems.forEach((item) => {
+      // 真实作业数量：优先取 item.workItemQty，没有则从主料数量算
+      const itemQty = item.workItemQty ?? item.mainProducts.reduce((s, p) => s + p.quantity, 0);
+      const itemWorkItemName = item.workItemName || item.workOrderName;
+
       [...item.mainProducts, ...item.auxiliaryProducts].forEach((product) => {
         newDetails.push({
           id: 'TFD' + Date.now() + Math.random().toString(36).slice(2, 7),
@@ -289,11 +330,12 @@ export default function ExhibitionTransferOutboundPage() {
           fromPositionName: '',
           toPositionId: '',
           toPositionName: '',
-          quantity: 0, // 初始为0，渲染时自动显示 min(作业数量, 可用库存) 作为默认值
+          quantity: 0,
           workOrderId: item.workOrderId,
           workOrderCode: item.workOrderCode,
-          workOrderName: item.workOrderName,
-          workOrderQty,
+          workOrderName: itemWorkItemName,
+          workItemName: itemWorkItemName,
+          workOrderQty: itemQty,
           isMain: item.mainProducts.some((p) => p.productId === product.productId),
         });
       });
@@ -304,6 +346,27 @@ export default function ExhibitionTransferOutboundPage() {
 
     setEditItem({ ...editItem, details: [...editItem.details, ...toAdd] });
     setWorkOrderPickerOpen(false);
+  };
+
+  // 移除某个作业项目的所有物资明细
+  const removeWorkItem = (workItemName: string) => {
+    if (!editItem) return;
+    setEditItem({
+      ...editItem,
+      details: editItem.details.filter((d) => {
+        const key = d.workItemName || d.workOrderName || '';
+        return key !== workItemName;
+      }),
+    });
+  };
+
+  // 清空所有工单明细
+  const clearAllWorkOrders = () => {
+    if (!editItem) return;
+    setEditItem({
+      ...editItem,
+      details: editItem.details.filter((d) => !d.workOrderId),
+    });
   };
 
   const updateDetail = (idx: number, field: string, value: any) => {
@@ -348,7 +411,7 @@ export default function ExhibitionTransferOutboundPage() {
         workOrderId: srcDetail.workOrderId,
         workOrderCode: srcDetail.workOrderCode,
         workOrderName: srcDetail.workOrderName,
-        workOrderQty: srcDetail.workOrderQty ?? 50,
+        workOrderQty: srcDetail.workOrderQty ?? 0,
         fromPositionId: '',
         fromPositionName: '',
         toPositionId: '',
@@ -744,6 +807,85 @@ export default function ExhibitionTransferOutboundPage() {
               />
             </div>
 
+            {/* 作业项目汇总板块（独立于产品明细表格） */}
+            <div className="bg-gradient-to-br from-indigo-50/60 to-purple-50/60 border border-indigo-100 rounded-lg p-4 mb-1">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-1 h-5 bg-gradient-to-b from-indigo-500 to-purple-600 rounded" />
+                  <div className="font-semibold text-[#303133]">
+                    作业项目汇总
+                    <span className="ml-2 text-xs text-[#909399] font-normal">
+                      （共 {workItemSummary.length} 项）
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <DefaultButton onClick={() => setWorkOrderPickerOpen(true)}>+ 选择工单</DefaultButton>
+                  {workItemSummary.length > 0 && (
+                    <button
+                      onClick={clearAllWorkOrders}
+                      className="px-3 py-1.5 text-xs text-[#f56c6c] border border-[#fbc4c4] rounded hover:bg-[#fef0f0] transition-colors"
+                    >
+                      清空
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {workItemSummary.length === 0 ? (
+                <div className="text-center py-4 text-[#909399] text-xs">
+                  暂无作业项目，请点击「选择工单」添加
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-[#606266] bg-white/60">
+                        <th className="px-3 py-2 text-left font-medium rounded-l">作业项目</th>
+                        <th className="px-3 py-2 text-center font-medium">作业数量</th>
+                        <th className="px-3 py-2 text-left font-medium">来源工单</th>
+                        <th className="px-3 py-2 text-center font-medium rounded-r w-16">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {workItemSummary.map((item, idx) => (
+                        <tr key={item.workItemName} className="border-t border-indigo-100/60 bg-white/80 hover:bg-white transition-colors">
+                          <td className="px-3 py-2 font-medium text-[#303133]">
+                            {item.workItemName}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <span className="inline-flex items-center justify-center min-w-[48px] px-2 py-0.5 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 font-semibold rounded-full">
+                              {item.workItemQty}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-[#606266]">
+                            <div className="flex flex-wrap gap-1">
+                              {item.workOrderCodes.map((code) => (
+                                <span
+                                  key={code}
+                                  className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[11px] font-mono"
+                                >
+                                  {code}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              onClick={() => removeWorkItem(item.workItemName)}
+                              className="text-[#f56c6c] hover:text-[#f78989] transition-colors text-xs"
+                            >
+                              移除 ✕
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
             <div>
               <div className="flex items-center justify-between mb-1">
                 <div className="font-medium text-[#303133]">
@@ -753,7 +895,6 @@ export default function ExhibitionTransferOutboundPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <DefaultButton onClick={() => setWorkOrderPickerOpen(true)}>+ 选择工单</DefaultButton>
                   <DefaultButton onClick={() => setPickerOpen(true)}>+ 选择物资</DefaultButton>
                 </div>
               </div>
@@ -763,8 +904,6 @@ export default function ExhibitionTransferOutboundPage() {
                   <thead>
                     <tr className="bg-[#f5f7fa] text-[#606266]">
                       <th className="px-2 py-2 text-left w-8">#</th>
-                      <th className="px-2 py-2 text-left w-32">作业项</th>
-                      <th className="px-2 py-2 text-left w-24">作业数量</th>
                       <th className="px-2 py-2 text-left flex-1">物资名称</th>
                       <th className="px-2 py-2 text-left w-24">规格</th>
                       <th className="px-2 py-2 text-left w-16">单位</th>
@@ -774,17 +913,8 @@ export default function ExhibitionTransferOutboundPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {editItem.details.length ? (() => {
-                      // 计算每个 workOrderId 的首行索引和行数（用于 rowspan 合并）
-                      const groupMap = new Map<string | undefined, { firstIdx: number; count: number }>();
-                      editItem.details.forEach((d, i) => {
-                        const key = d.workOrderId;
-                        const g = groupMap.get(key);
-                        if (g) { g.count++; }
-                        else { groupMap.set(key, { firstIdx: i, count: 1 }); }
-                      });
-
-                      return editItem.details.map((d: any, i: number) => {
+                    {editItem.details.length ? (
+                      editItem.details.map((d: any, i: number) => {
                         const p = products.find((x) => x.id === d.productId);
                         const available = batchInventories
                           .filter(
@@ -795,54 +925,28 @@ export default function ExhibitionTransferOutboundPage() {
                           )
                           .reduce((s, b) => s + b.quantity, 0);
 
-                        const groupKey = d.workOrderId;
-                        const group = groupMap.get(groupKey);
-                        const isGroupFirst = group && group.firstIdx === i;
-                        const rowSpan = group?.count || 1;
-
                         // 调拨数量显示逻辑：
                         // - 初始状态（quantity 为 0）→ 显示 min(作业数量, 可用库存) 作为默认值
                         // - 用户手动编辑过（quantity > 0）→ 显示用户输入的值
-                        const workOrderQty = d.workOrderQty ?? 50;
+                        const workOrderQty = d.workOrderQty ?? 0;
                         const defaultQty = Math.min(workOrderQty, available);
                         const displayQty = d.quantity > 0 ? d.quantity : defaultQty;
 
                         return (
-                          <tr key={i} className="border-t border-[#ebeef5]">
+                          <tr key={i} className="border-t border-[#ebeef5] hover:bg-[#fafbfc]">
                             <td className="px-2 py-1.5 text-[#909399]">{i + 1}</td>
 
-                            {/* 作业项 — 同组合并 */}
-                            {isGroupFirst ? (
-                              <td
-                                rowSpan={rowSpan}
-                                className="px-2 py-1.5 text-[#303133] bg-[#fafbfc] border-r border-[#ebeef5] align-middle"
-                              >
-                                {d.workOrderName ? (
-                                  <div>
-                                    <div className="font-medium">{d.workOrderName}</div>
-                                    <div className="text-[11px] text-[#909399]">{d.workOrderCode}</div>
-                                  </div>
-                                ) : (
-                                  <span className="text-[#c0c4cc]">—</span>
+                            <td className="px-2 py-1.5 text-[#303133]">
+                              <div className="flex items-center gap-2">
+                                {d.isMain && (
+                                  <span className="px-1 py-0.5 text-[10px] bg-[#f0f9eb] text-[#67c23a] rounded">主料</span>
                                 )}
-                              </td>
-                            ) : null}
-
-                            {/* 作业数量 — 同组合并，只读展示 */}
-                            {isGroupFirst ? (
-                              <td
-                                rowSpan={rowSpan}
-                                className="px-2 py-1.5 align-middle bg-[#fafbfc] border-r border-[#ebeef5]"
-                              >
-                                {d.workOrderId ? (
-                                  <span className="text-slate-700 font-medium text-sm">{workOrderQty}</span>
-                                ) : (
-                                  <span className="text-[#c0c4cc]">—</span>
+                                {!d.isMain && d.workOrderId && (
+                                  <span className="px-1 py-0.5 text-[10px] bg-[#fdf6ec] text-[#e6a23c] rounded">辅料</span>
                                 )}
-                              </td>
-                            ) : null}
-
-                            <td className="px-2 py-1.5 text-[#303133]">{d.productName}</td>
+                                <span>{d.productName}</span>
+                              </div>
+                            </td>
                             <td className="px-2 py-1.5 text-[#909399]">{p?.specification || '-'}</td>
                             <td className="px-2 py-1.5 text-[#909399]">{p?.unit || '-'}</td>
                             <td className="px-2 py-1.5 text-right">
@@ -873,10 +977,10 @@ export default function ExhibitionTransferOutboundPage() {
                             </td>
                           </tr>
                         );
-                      });
-                    })() : (
+                      })
+                    ) : (
                       <tr>
-                        <td colSpan={9} className="py-8 text-center text-[#909399]">
+                        <td colSpan={7} className="py-8 text-center text-[#909399]">
                           暂无物资，请点击「选择工单」或「选择物资」按钮添加
                         </td>
                       </tr>
