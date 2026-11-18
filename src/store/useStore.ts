@@ -1650,7 +1650,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 19,
+      version: 20,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -2100,6 +2100,19 @@ export const useStore = create<WarehouseState>()(
               }
             });
             console.log(`[store migrate v19] 合同台账非法状态清洗：${migrated} 条 (completed/suspended/returned/invalid → active)`);
+          }
+        }
+        if (version < 20) {
+          // v19→v20：全局预警设置扩字段（原来只管合同类 3 种，现在扩到全景预警 6 种）
+          // 新增 supplierQualDays / biddingEndDays / archiveOverdueDays，用默认值兜底
+          const s = persistedState.contractReminderSettings as any;
+          const DEFAULTS = { supplierQualDays: 30, biddingEndDays: 3, archiveOverdueDays: 30 };
+          if (s) {
+            let patched = 0;
+            Object.entries(DEFAULTS).forEach(([k, v]) => {
+              if (s[k] === undefined || s[k] === null) { s[k] = v; patched++; }
+            });
+            if (patched > 0) console.log(`[store migrate v20] 全局预警设置补 ${patched} 个新字段默认值`);
           }
         }
         return persistedState;

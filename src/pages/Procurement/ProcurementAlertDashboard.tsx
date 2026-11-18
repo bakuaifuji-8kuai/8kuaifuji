@@ -1,13 +1,16 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle, FileWarning, CalendarCheck, Wallet, UserCog, Gavel, Archive,
-  ChevronRight, ExternalLink
+  ChevronRight, ExternalLink, Bell, Save, X
 } from 'lucide-react';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
+import Modal from '@/components/common/Modal';
+import { DefaultButton, PrimaryButton } from '@/components/common/Button';
 import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 import { useStore } from '@/store/useStore';
-import type { ContractLedger, Supplier, Bidding } from '@/types';
+import type { ContractLedger, Supplier, Bidding, ContractReminderSettings, EvalReminderConfig } from '@/types';
+import { EVAL_REMINDER_KINDS } from '@/types';
 
 // ==================== 类型定义 ====================
 type AlertType =
@@ -62,11 +65,35 @@ export default function ProcurementAlertDashboard() {
   const suppliers = useStore((s) => s.suppliers) || [];
   const biddings = useStore((s) => s.biddings) || [];
   const reminderSettings = useStore((s) => s.contractReminderSettings);
+  const setReminderSettings = useStore((s) => s.setContractReminderSettings);
+
+  // 预警设置弹窗状态
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [draft, setDraft] = useState<ContractReminderSettings | null>(null);
+
+  useEffect(() => {
+    if (settingsOpen && reminderSettings) {
+      setDraft(JSON.parse(JSON.stringify(reminderSettings)));
+    }
+  }, [settingsOpen, reminderSettings]);
+
+  const handleSaveSettings = () => {
+    if (!draft) return;
+    setReminderSettings(draft);
+    setSettingsOpen(false);
+  };
 
   // ====== 统一计算所有预警条目 ======
   const allAlerts = useMemo<AlertItem[]>(() => {
     const today = new Date();
     const result: AlertItem[] = [];
+
+    // 统一兜底（store persist 可能还没跑过 v20 migrate）
+    const settings = {
+      supplierQualDays: reminderSettings?.supplierQualDays ?? 30,
+      biddingEndDays: reminderSettings?.biddingEndDays ?? 3,
+      archiveOverdueDays: reminderSettings?.archiveOverdueDays ?? 30,
+    };
 
     // ---------- 1) 合同：到期预警 ----------
     contractLedgers.forEach((c: ContractLedger) => {
@@ -173,7 +200,8 @@ export default function ProcurementAlertDashboard() {
     suppliers.forEach((s: Supplier) => {
       if (!s.qualificationExpiryDate) return;
       const d = diffDays(s.qualificationExpiryDate, today);
-      if (d >= 0 && d <= 30) {
+      const qDays = settings.supplierQualDays;
+      if (d >= 0 && d <= qDays) {
         result.push({
           id: `qual-${s.id}`,
           type: 'supplier_qual',
@@ -208,7 +236,8 @@ export default function ProcurementAlertDashboard() {
       if (b.status !== 'approved') return;  // 已审批通过的才会有真实竞价
       if (!b.endTime) return;
       const d = diffDays(b.endTime, today);
-      if (d >= 0 && d <= 3) {
+      const bDays = settings.biddingEndDays;
+      if (d >= 0 && d <= bDays) {
         result.push({
           id: `bidding-${b.id}`,
           type: 'bidding_end',
@@ -224,14 +253,15 @@ export default function ProcurementAlertDashboard() {
       }
     });
 
-    // ---------- 6) 合同归档逾期（终止/完成后 30 天仍未归档） ----------
+    // ---------- 6) 合同归档逾期（终止/完成后 N 天仍未归档） ----------
     contractLedgers.forEach((c: ContractLedger) => {
       if (c.archiveStatus === 'archived') return;
       if (c.status !== 'terminated') return;
       const end = c.terminationDate || c.endDate || c.expireDate;
       if (!end) return;
       const d = diffDays(end, today);
-      if (d < -30) {
+      const aDays = settings.archiveOverdueDays;
+      if (d < -aDays) {
         result.push({
           id: `archive-${c.id}`,
           type: 'archive_overdue',
@@ -281,17 +311,199 @@ export default function ProcurementAlertDashboard() {
   // 直接用 URL search param 也行，但简单起见用 state
   // 👇 下面组件函数体开头用 useState 管理
 
-  return <DashboardBody allAlerts={allAlerts} stats={stats} tabs={tabs} navigate={navigate} />;
+  return (
+    <>
+      <DashboardBody
+        allAlerts={allAlerts}
+        stats={stats}
+        tabs={tabs}
+        navigate={navigate}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
+
+      {/* ===== 全局预警提醒设置弹窗 ===== */}
+      <Modal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        title="⚙️ 全局预警提醒设置"
+        width="max-w-[640px]"
+      >
+        {draft && (
+          <div className="space-y-5">
+            {/* --- 合同类预警 --- */}
+            <div className="bg-slate-50/60 rounded-lg p-4 border border-slate-100">
+              <div className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                <span className="w-1 h-4 bg-gradient-to-b from-indigo-500 to-purple-500 rounded" />
+                合同类预警（3 种）
+              </div>
+
+              {/* 已支付占比 */}
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <div className="text-sm text-slate-700 font-medium">已支付金额占比预警阈值</div>
+                  <div className="text-xs text-slate-400 mt-0.5">累计已支付 / 合同总金额 ≥ 此值时触发</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={draft.paidThreshold}
+                    onChange={(e) => setDraft({ ...draft, paidThreshold: Number(e.target.value) || 0 })}
+                    className="w-16 h-8 px-2 border border-slate-300 rounded text-center focus:outline-none focus:border-indigo-400"
+                  />
+                  <span className="text-sm text-slate-500">%</span>
+                </div>
+              </div>
+
+              {/* 合同到期 */}
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <div className="text-sm text-slate-700 font-medium">合同到期日提前提醒天数</div>
+                  <div className="text-xs text-slate-400 mt-0.5">到期前 N 天内 / 已过期 N 天内都触发</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={draft.expireDays}
+                    onChange={(e) => setDraft({ ...draft, expireDays: Number(e.target.value) || 0 })}
+                    className="w-16 h-8 px-2 border border-slate-300 rounded text-center focus:outline-none focus:border-indigo-400"
+                  />
+                  <span className="text-sm text-slate-500">天</span>
+                </div>
+              </div>
+
+              {/* 考核类型独立配置 */}
+              <div className="mt-3 pt-3 border-t border-slate-200">
+                <div className="text-sm text-slate-700 font-medium mb-2">合同考核类型独立配置</div>
+                <div className="space-y-1.5">
+                  {EVAL_REMINDER_KINDS.map((kind) => {
+                    const cfg = draft.eval[kind];
+                    const label = evalKindLabel[kind] || kind;
+                    return (
+                      <div key={kind} className="flex items-center gap-3 py-1">
+                        <input
+                          type="checkbox"
+                          checked={cfg.enabled}
+                          onChange={(e) => setDraft({
+                            ...draft,
+                            eval: { ...draft.eval, [kind]: { ...cfg, enabled: e.target.checked } }
+                          })}
+                          className="w-4 h-4 accent-indigo-500"
+                        />
+                        <span className="text-sm text-slate-700 w-24">{label}</span>
+                        <span className="text-xs text-slate-400">提前</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={365}
+                          disabled={!cfg.enabled}
+                          value={cfg.days}
+                          onChange={(e) => setDraft({
+                            ...draft,
+                            eval: { ...draft.eval, [kind]: { ...cfg, days: Number(e.target.value) || 0 } }
+                          })}
+                          className="w-16 h-7 px-2 border border-slate-300 rounded text-center text-sm focus:outline-none focus:border-indigo-400 disabled:bg-slate-50 disabled:text-slate-400"
+                        />
+                        <span className="text-xs text-slate-400">天</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* --- 新增三类预警 --- */}
+            <div className="bg-cyan-50/40 rounded-lg p-4 border border-cyan-100">
+              <div className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                <span className="w-1 h-4 bg-gradient-to-b from-cyan-500 to-teal-500 rounded" />
+                全景预警扩展（3 种）
+              </div>
+
+              {/* 供应商资质 */}
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <div className="text-sm text-slate-700 font-medium">供应商资质到期提前提醒</div>
+                  <div className="text-xs text-slate-400 mt-0.5">资质到期前 N 天 / 已过期 N 天内都触发</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={draft.supplierQualDays}
+                    onChange={(e) => setDraft({ ...draft, supplierQualDays: Number(e.target.value) || 0 })}
+                    className="w-16 h-8 px-2 border border-slate-300 rounded text-center focus:outline-none focus:border-indigo-400"
+                  />
+                  <span className="text-sm text-slate-500">天</span>
+                </div>
+              </div>
+
+              {/* 招采截止 */}
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <div className="text-sm text-slate-700 font-medium">招采截止临近提醒天数</div>
+                  <div className="text-xs text-slate-400 mt-0.5">框架协议目录内比价标，截止前 N 天内触发</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={1}
+                    max={30}
+                    value={draft.biddingEndDays}
+                    onChange={(e) => setDraft({ ...draft, biddingEndDays: Number(e.target.value) || 0 })}
+                    className="w-16 h-8 px-2 border border-slate-300 rounded text-center focus:outline-none focus:border-indigo-400"
+                  />
+                  <span className="text-sm text-slate-500">天</span>
+                </div>
+              </div>
+
+              {/* 归档逾期 */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-slate-700 font-medium">合同归档逾期判断天数</div>
+                  <div className="text-xs text-slate-400 mt-0.5">合同终止 / 完成后 N 天仍未归档 → 触发逾期预警</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={draft.archiveOverdueDays}
+                    onChange={(e) => setDraft({ ...draft, archiveOverdueDays: Number(e.target.value) || 0 })}
+                    className="w-16 h-8 px-2 border border-slate-300 rounded text-center focus:outline-none focus:border-indigo-400"
+                  />
+                  <span className="text-sm text-slate-500">天</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 底部按钮 */}
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <DefaultButton onClick={() => setSettingsOpen(false)}>取消</DefaultButton>
+              <PrimaryButton onClick={handleSaveSettings}>
+                <Save className="w-3.5 h-3.5" />
+                保存设置
+              </PrimaryButton>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </>
+  );
 }
 
 // ==================== 展示组件 ====================
 function DashboardBody({
-  allAlerts, stats, tabs, navigate,
+  allAlerts, stats, tabs, navigate, onOpenSettings,
 }: {
   allAlerts: AlertItem[];
   stats: { danger: number; warning: number; byType: Record<AlertType, number> };
   tabs: { key: AlertType | 'all'; label: string; icon: any; count: number }[];
   navigate: ReturnType<typeof useNavigate>;
+  onOpenSettings: () => void;
 }) {
   // Tab + 严重度筛选（组件级 state）
   const [activeTab, setActiveTab] = useState<AlertType | 'all'>('all');
@@ -321,7 +533,17 @@ function DashboardBody({
               </p>
             </div>
           </div>
-          <FeatureHelpButton content={PROCUREMENT_HELP.alertDashboard} />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onOpenSettings}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-white border border-slate-200 text-slate-700 hover:border-indigo-300 hover:text-indigo-600 hover:shadow-sm transition-all"
+              title="全局预警提醒设置"
+            >
+              <Bell className="w-3.5 h-3.5" />
+              提醒设置
+            </button>
+            <FeatureHelpButton content={PROCUREMENT_HELP.alertDashboard} />
+          </div>
         </div>
       </div>
 
@@ -475,6 +697,7 @@ function DashboardBody({
           })}
         </div>
       )}
+
     </div>
   );
 }

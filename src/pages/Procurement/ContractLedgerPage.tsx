@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+﻿import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
@@ -1078,9 +1078,6 @@ export default function ContractLedgerPage() {
         </div>
         <div className="flex items-center gap-2">
           <FeatureHelpButton content={PROCUREMENT_HELP.contractLedger} />
-          <DefaultButton onClick={() => setReminderSettingsOpen(true)}>
-            <Bell size={14} /> 提醒设置
-          </DefaultButton>
           <DefaultButton onClick={handlePrint}>
             <Printer size={14} /> 打印
           </DefaultButton>
@@ -1127,11 +1124,6 @@ export default function ContractLedgerPage() {
             {stats.total} 份合同 · 总 ¥{stats.totalAmount.toLocaleString()} 元 · {stats.activeCount} 执行中 · {stats.expiringCount} 即将到期
           </span>
         </button>
-
-        {/* 提醒设置（已有，保留原按钮） */}
-        <DefaultButton onClick={() => setReminderSettingsOpen(true)}>
-          <Bell size={14} /> 提醒设置
-        </DefaultButton>
       </div>
 
       {/* 预警详情 Modal —— 包含预警列表 + 统计汇总 */}
@@ -1349,9 +1341,6 @@ export default function ContractLedgerPage() {
             {/* Modal Footer */}
             <div className="px-6 py-3 border-t border-slate-200 flex justify-end gap-2 bg-slate-50 rounded-b-xl">
               <DefaultButton onClick={() => setReminderDetailOpen(false)}>关闭</DefaultButton>
-              <PrimaryButton onClick={() => { setReminderDetailOpen(false); setReminderSettingsOpen(true); }}>
-                <Bell size={14} /> 提醒设置
-              </PrimaryButton>
             </div>
           </div>
         </div>
@@ -1923,170 +1912,6 @@ export default function ContractLedgerPage() {
         </div>
       </Modal>
 
-      {/* 合同提醒设置弹窗 */}
-      <Modal
-        open={reminderSettingsOpen}
-        title="合同提醒设置"
-        onClose={() => setReminderSettingsOpen(false)}
-        footer={
-          <>
-            <DefaultButton onClick={() => setReminderSettingsOpen(false)}>取消</DefaultButton>
-            <PrimaryButton onClick={() => {
-              if (draftPaidThreshold < 0 || draftPaidThreshold > 100) {
-                alert('已支付金额占比必须在 0-100 之间');
-                return;
-              }
-              if (draftExpireDays < 0) {
-                alert('到期提前天数不能为负数');
-                return;
-              }
-              // 校验考核类型的天数
-              for (const [kind, cfg] of Object.entries(draftEval)) {
-                if (cfg.days < 0) { alert(`${kind} 提前天数不能为负数`); return; }
-              }
-              // 写入 store（持久化）
-              setReminderSettings({
-                paidThreshold: draftPaidThreshold,
-                expireDays: draftExpireDays,
-                eval: draftEval as any,
-              });
-              setReminderSettingsOpen(false);
-            }}>保存设置</PrimaryButton>
-          </>
-        }
-        width="600px"
-      >
-        <div className="space-y-4">
-          <div className="text-xs text-[#909399] mb-2">
-            设置合同预警提醒规则，符合条件的合同将在合同台账页面上方以提醒面板形式展示。
-          </div>
-
-          {/* 字段1：已支付金额占比 */}
-          <div className="border border-[#ebeef5] rounded p-3">
-            <div className="flex items-start gap-2 mb-2">
-              <div className="w-1 h-4 bg-[#e6a23c] rounded mt-0.5"></div>
-              <div className="flex-1">
-                <div className="text-sm font-medium text-[#303133]">① 已支付金额占比预警阈值</div>
-                <div className="text-xs text-[#909399] mt-1">
-                  当某合同的"已支付金额 / 合同总金额" ≥ 设定阈值时，系统自动在提醒面板中提示。
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 mt-3">
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={draftPaidThreshold}
-                onChange={(e) => setDraftPaidThreshold(Number(e.target.value) || 0)}
-                className="w-24 h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-              />
-              <span className="text-sm text-[#606266]">%</span>
-              <span className="text-xs text-[#909399] ml-2">
-                （当前：{draftPaidThreshold}%，达到该比例时触发提醒）
-              </span>
-            </div>
-            <div className="text-xs text-[#e6a23c] mt-2 bg-[#fdf6ec] p-2 rounded">
-              💡 建议设置 80%~95%，便于及时掌握合同付款进度与履约情况。
-            </div>
-          </div>
-
-          {/* 字段2：到期日提前提醒天数 */}
-          <div className="border border-[#ebeef5] rounded p-3">
-            <div className="flex items-start gap-2 mb-2">
-              <div className="w-1 h-4 bg-[#f56c6c] rounded mt-0.5"></div>
-              <div className="flex-1">
-                <div className="text-sm font-medium text-[#303133]">② 合同到期日提前提醒天数</div>
-                <div className="text-xs text-[#909399] mt-1">
-                  当合同有效期到期日距离当前日期 ≤ 设定天数时，系统自动在提醒面板中提示。
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 mt-3">
-              <input
-                type="number"
-                min={0}
-                max={365}
-                value={draftExpireDays}
-                onChange={(e) => setDraftExpireDays(Number(e.target.value) || 0)}
-                className="w-24 h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-              />
-              <span className="text-sm text-[#606266]">天</span>
-              <span className="text-xs text-[#909399] ml-2">
-                （当前：到期前 {draftExpireDays} 天开始提醒）
-              </span>
-            </div>
-            <div className="text-xs text-[#f56c6c] mt-2 bg-[#fef0f0] p-2 rounded">
-              💡 建议设置 15~60 天，便于提前安排续签、验收、归档等事宜。
-            </div>
-          </div>
-
-          {/* 字段3：合同考核到期提醒 —— 每种考核类型独立配置 */}
-          <div className="border border-[#ebeef5] rounded p-3">
-            <div className="flex items-start gap-2 mb-3">
-              <div className="w-1 h-4 bg-purple-500 rounded mt-0.5"></div>
-              <div className="flex-1">
-                <div className="text-sm font-medium text-[#303133]">③ 合同考核到期提醒（按类型独立配置）</div>
-                <div className="text-xs text-[#909399] mt-1">
-                  已绑定考核的合同，在下次考核到期前自动提醒。可按考核类型独立开关、独立设置提前天数。
-                </div>
-              </div>
-            </div>
-            {/* 6 行独立配置 */}
-            <div className="space-y-2">
-              {([
-                { key: 'monthly',            label: '月度考核',   defaultDays: 7,  desc: '每月固定循环' },
-                { key: 'quarterly',          label: '季度考核',   defaultDays: 10, desc: '每季度固定循环' },
-                { key: 'yearly',             label: '年度评价',   defaultDays: 30, desc: '每年固定循环' },
-                { key: 'project_single',     label: '项目考核',   defaultDays: 7,  desc: '单个项目结束后一次性考核' },
-                { key: 'contract_performance', label: '履约评价',   defaultDays: 15, desc: '合同履约保证金/质保金评估' },
-                { key: 'warranty',           label: '质保期评估', defaultDays: 15, desc: '质保期满前进行质保金退还评估' },
-              ] as const).map((item) => {
-                const cfg = draftEval[item.key] ?? { enabled: true, days: item.defaultDays };
-                return (
-                  <div key={item.key} className="flex items-center gap-3 py-1.5 border-b border-[#ebeef5] last:border-0">
-                    <input
-                      type="checkbox"
-                      checked={cfg.enabled}
-                      onChange={(e) => setDraftEval((prev) => ({ ...prev, [item.key]: { ...cfg, enabled: e.target.checked } }))}
-                      className="w-4 h-4 accent-purple-500 flex-shrink-0"
-                    />
-                    <span className="text-sm text-[#303133] w-24 flex-shrink-0">{item.label}</span>
-                    <span className="text-xs text-[#909399] flex-1 truncate">{item.desc}</span>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <span className="text-xs text-[#606266]">到期前</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={60}
-                        value={cfg.days}
-                        onChange={(e) => setDraftEval((prev) => ({ ...prev, [item.key]: { ...cfg, days: Number(e.target.value) || 0 } }))}
-                        disabled={!cfg.enabled}
-                        className="w-16 h-7 px-2 border border-[#dcdfe6] rounded text-sm disabled:bg-[#f5f7fa] disabled:cursor-not-allowed text-center"
-                      />
-                      <span className="text-xs text-[#606266]">天</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="text-xs text-purple-600 mt-2 bg-purple-50 p-2 rounded">
-              💡 已过期 30 天内的考核也会预警。
-            </div>
-          </div>
-
-          {/* 实时触发统计 */}
-          <div className="border border-[#dcdfe6] rounded p-3 bg-[#f5f7fa]">
-            <div className="text-xs text-[#606266] mb-1">当前设置下命中提醒的合同数</div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-[#e6a23c]">🔔 共 <b>{reminderContracts.length}</b> 条</span>
-              <span className="text-xs text-[#909399]">
-                （支付预警 + 到期预警 + 考核提醒）
-              </span>
-            </div>
-          </div>
-        </div>
-      </Modal>
 
       {/* ========== 预警临时忽略弹窗 ========== */}
       {ignoreModalOpen && ignoreTarget && (

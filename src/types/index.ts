@@ -2359,7 +2359,7 @@ export interface EvalReminderConfig {
   days: number;
 }
 
-/** 合同提醒设置（store 持久化） */
+/** 全局预警设置（store 持久化，覆盖全景预警中心全部 6 种预警） */
 export interface ContractReminderSettings {
   /** 已支付金额占比预警阈值（%） */
   paidThreshold: number;
@@ -2373,9 +2373,15 @@ export interface ContractReminderSettings {
     project_single: EvalReminderConfig;
     contract_performance: EvalReminderConfig;
   };
+  /** 供应商资质到期提前提醒天数（资质到期前 N 天 / 已过期 N 天内都触发） */
+  supplierQualDays: number;
+  /** 招采截止临近提醒天数（框架目录内比价标截止前 N 天内触发） */
+  biddingEndDays: number;
+  /** 合同归档逾期判断天数（合同终止/完成后 N 天仍未归档 → 逾期） */
+  archiveOverdueDays: number;
 }
 
-/** 合同提醒设置默认值 */
+/** 全局预警设置默认值 */
 export const DEFAULT_CONTRACT_REMINDER_SETTINGS: ContractReminderSettings = {
   paidThreshold: 80,
   expireDays: 30,
@@ -2386,6 +2392,9 @@ export const DEFAULT_CONTRACT_REMINDER_SETTINGS: ContractReminderSettings = {
     project_single:     { enabled: true,  days: 7 },
     contract_performance: { enabled: true,  days: 15 },
   },
+  supplierQualDays: 30,
+  biddingEndDays: 3,
+  archiveOverdueDays: 30,
 };
 
 /** 考核类型 → 提醒配置 key 映射（过滤掉 warranty/single 兼容类型） */
