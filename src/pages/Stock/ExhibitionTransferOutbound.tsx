@@ -778,12 +778,19 @@ export default function ExhibitionTransferOutboundPage() {
               </div>
               </div>
               {/* 工单号显示区 */}
-              <div className="w-[200px] flex flex-col items-center justify-center p-3 border border-dashed border-[#dcdfe6] rounded">
+              <div className="w-[240px] flex flex-col items-center justify-center p-3 border border-dashed border-[#dcdfe6] rounded">
                 <div className="text-xs text-[#606266] mb-1">工单号</div>
-                <div className="text-lg font-bold text-[#f56c6c]">
+                <div className="w-full flex flex-wrap gap-1 justify-center">
                   {(() => {
-                    const woDetail = editItem.details.find((d) => d.workOrderCode);
-                    return woDetail ? woDetail.workOrderCode : '暂无';
+                    const codes = Array.from(new Set(editItem.details
+                      .filter((d) => d.workOrderCode)
+                      .map((d) => d.workOrderCode) as string[]));
+                    if (codes.length === 0) return <span className="text-[#c0c4cc]">暂无</span>;
+                    return codes.map((code) => (
+                      <span key={code} className="text-xs font-bold text-[#f56c6c] bg-[#fef0f0] px-1.5 py-0.5 rounded border border-[#fbc4c4]">
+                        {code}
+                      </span>
+                    ));
                   })()}
                 </div>
                 <div className="text-xs text-[#606266] mt-2 mb-0.5">所属展会</div>
