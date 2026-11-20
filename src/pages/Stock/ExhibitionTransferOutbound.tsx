@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { PrimaryButton, DefaultButton, TextButton } from '@/components/common/Button';
 import { SearchBar, SearchField } from '@/components/common/SearchField';
 import MultiSelect from '@/components/common/MultiSelect';
@@ -550,6 +550,428 @@ export default function ExhibitionTransferOutboundPage() {
 
   const totalQuantity = editItem?.details.reduce((s, d) => s + (d.quantity || 0), 0) || 0;
 
+  // ===== 全屏编辑视图 =====
+  if (editItem) {
+    return (
+      <div className="min-h-screen bg-[#f1f5f9]">
+        {/* 顶部 */}
+        <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <PrimaryButton onClick={() => {
+              if (confirm('未保存的内容将丢失，确认返回列表？')) setEditItem(null);
+            }}>← 返回列表</PrimaryButton>
+            <h2 className="text-lg font-semibold text-slate-800">
+              📦 {isNew ? '新增调拨单' : '编辑调拨单'} · 领料
+            </h2>
+          </div>
+          <div className="text-sm text-slate-500">
+            调拨单号 <span className="font-mono text-slate-700">{editItem.transferNo}</span>
+          </div>
+        </div>
+
+        <div className="p-6 max-w-[1400px] mx-auto space-y-4">
+          {/* ==== 基础信息 ==== */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <label className="text-xs text-slate-500 block mb-1">调拨单号</label>
+                <input
+                  className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm bg-slate-50 text-slate-600 focus:outline-none"
+                  value={editItem.transferNo}
+                  readOnly
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 block mb-1">
+                  <span className="text-red-500">*</span> 调出仓库（实物仓）
+                </label>
+                <select
+                  className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-indigo-400"
+                  value={editItem.fromWarehouseId}
+                  onChange={(e) => {
+                    const wh = fromWarehouses.find((w) => w.id === e.target.value);
+                    setEditItem({ ...editItem, fromWarehouseId: e.target.value, fromWarehouseName: wh?.name });
+                  }}
+                >
+                  {fromWarehouses.map((w) => (
+                    <option key={w.id} value={w.id}>{w.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 block mb-1">
+                  <span className="text-red-500">*</span> 调入仓库（虚拟仓）
+                </label>
+                <select
+                  className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-indigo-400"
+                  value={editItem.toWarehouseId}
+                  onChange={(e) => {
+                    const wh = toWarehouses.find((w) => w.id === e.target.value);
+                    setEditItem({ ...editItem, toWarehouseId: e.target.value, toWarehouseName: wh?.name });
+                  }}
+                >
+                  {toWarehouses.map((w) => (
+                    <option key={w.id} value={w.id}>{w.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 block mb-1">制单人</label>
+                <input
+                  className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm bg-slate-50 text-slate-600 focus:outline-none"
+                  value={editItem.creator}
+                  readOnly
+                />
+              </div>
+            </div>
+            <div className="mt-3">
+              <label className="text-xs text-slate-500 block mb-1">备注</label>
+              <textarea
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
+                rows={2}
+                value={editItem.remark || ''}
+                onChange={(e) => setEditItem({ ...editItem, remark: e.target.value })}
+              />
+            </div>
+          </div>
+
+          {/* ==== 作业项汇总（表格形式）==== */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+              <div className="font-semibold text-slate-700 text-sm">
+                📋 作业项汇总 <span className="text-slate-400 font-normal">（{workItemSummary.length} 项）</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <DefaultButton onClick={() => setWorkOrderPickerOpen(true)}>+ 工单</DefaultButton>
+                {workItemSummary.length > 0 && (
+                  <DefaultButton onClick={clearAllWorkOrders}>清空</DefaultButton>
+                )}
+              </div>
+            </div>
+            {workItemSummary.length === 0 ? (
+              <div className="py-10 text-center text-slate-400 text-sm">
+                暂无作业项，点击右上「+ 工单」从工单配置中选择
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-xs">
+                    <th className="px-4 py-2.5 text-left w-10">#</th>
+                    <th className="px-4 py-2.5 text-left">作业项目</th>
+                    <th className="px-4 py-2.5 text-center w-24">作业数量</th>
+                    <th className="px-4 py-2.5 text-left">来源工单</th>
+                    <th className="px-4 py-2.5 text-center w-20">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {workItemSummary.map((item, i) => (
+                    <tr key={item.workItemName} className="border-t border-slate-100 hover:bg-slate-50/60">
+                      <td className="px-4 py-2.5 text-slate-400">{i + 1}</td>
+                      <td className="px-4 py-2.5 font-medium text-slate-700">{item.workItemName}</td>
+                      <td className="px-4 py-2.5 text-center">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-semibold text-xs">
+                          {item.workItemQty}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {item.workOrderCodes.map((c) => (
+                          <span key={c} className="inline-block mr-1 text-xs font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
+                            {c}
+                          </span>
+                        ))}
+                      </td>
+                      <td className="px-4 py-2.5 text-center">
+                        <button
+                          onClick={() => removeWorkItem(item.workItemName)}
+                          className="text-red-500 hover:text-red-600 text-xs"
+                        >移除 ✕</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* ==== 产品明细（按作业项分组）==== */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+              <div className="font-semibold text-slate-700 text-sm">
+                📦 物资明细（按作业项分组）
+              </div>
+              <DefaultButton onClick={() => setPickerOpen(true)}>+ 追加物资（无工单）</DefaultButton>
+            </div>
+
+            {/* 没选工单 + 没手动加物资 */}
+            {editItem.details.length === 0 && workItemSummary.length === 0 && (
+              <div className="py-12 text-center text-slate-400 text-sm">
+                <div className="mb-3">暂无物资明细</div>
+                <div className="flex items-center justify-center gap-2">
+                  <PrimaryButton onClick={() => setWorkOrderPickerOpen(true)}>
+                    <ArrowRightLeft size={14} /> + 选择工单
+                  </PrimaryButton>
+                  <DefaultButton onClick={() => setPickerOpen(true)}>+ 手动选物资</DefaultButton>
+                </div>
+              </div>
+            )}
+
+            {/* 按作业项分组渲染 */}
+            {workItemSummary.length > 0 && workItemSummary.map((group, gi) => {
+              // 找这个作业项下的所有物资明细
+              const groupDetails = editItem.details.filter((d) => {
+                const key = d.workItemName || d.workOrderName || '';
+                return key === group.workItemName;
+              });
+
+              // 找工单配置
+              const config = workOrderConfigs.find((c) => group.workOrderIds.includes(c.workOrderId));
+              const hasConfig = !!config && (config.mainProducts.length > 0 || config.auxiliaryProducts.length > 0);
+
+              return (
+                <div key={group.workItemName} className="border-b border-slate-100 last:border-b-0">
+                  {/* 组头 */}
+                  <div className="bg-gradient-to-r from-indigo-50/80 to-slate-50 px-5 py-3 flex items-center justify-between border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-slate-400 w-5">{gi + 1}</span>
+                      <span className="font-semibold text-slate-700">{group.workItemName}</span>
+                      <span className="text-xs text-slate-400">
+                        工单 {group.workOrderCodes.join(', ')} · 作业数量 {group.workItemQty}
+                      </span>
+                      {!hasConfig && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                          ⚠️ 该工单未配置物资
+                        </span>
+                      )}
+                      {groupDetails.some((d) => {
+                        const p = products.find((x) => x.id === d.productId);
+                        const avail = batchInventories
+                          .filter((b) => b.productId === d.productId && b.quantity > 0 && b.warehouseId === editItem.fromWarehouseId)
+                          .reduce((s, b) => s + b.quantity, 0);
+                        const displayQty = d.quantity > 0 ? d.quantity : (d.workOrderQty ?? 0);
+                        return displayQty > avail;
+                      }) && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">
+                          ⚠️ 存在库存不足，建议替换
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <DefaultButton onClick={() => {
+                        // 把 replaceTargetIdx 设成 -1 表示"追加物资"模式
+                        setReplaceTargetIdx(-(gi + 1));
+                        setReplacePickerOpen(true);
+                      }}>+ 追加物资</DefaultButton>
+                    </div>
+                  </div>
+
+                  {/* 组内物资 */}
+                  {groupDetails.length === 0 ? (
+                    <div className="py-6 text-center text-slate-400 text-sm bg-amber-50/30">
+                      此作业项下暂无物资，点击右上「+ 追加物资」选择
+                    </div>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-50/60 text-slate-500 text-xs">
+                          <th className="px-4 py-2 text-left w-10">#</th>
+                          <th className="px-4 py-2 text-left">物资名称</th>
+                          <th className="px-4 py-2 text-left w-28">规格</th>
+                          <th className="px-4 py-2 text-left w-14">单位</th>
+                          <th className="px-4 py-2 text-right w-28">调拨数量</th>
+                          <th className="px-4 py-2 text-right w-24">可用库存</th>
+                          <th className="px-4 py-2 text-center w-14">类型</th>
+                          <th className="px-4 py-2 text-center w-32">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {groupDetails.map((d: any, ri) => {
+                          const p = products.find((x) => x.id === d.productId);
+                          const available = batchInventories
+                            .filter((b) => b.productId === d.productId && b.quantity > 0 && b.warehouseId === editItem.fromWarehouseId)
+                            .reduce((s, b) => s + b.quantity, 0);
+                          const workOrderQty = d.workOrderQty ?? 0;
+                          const defaultQty = Math.min(workOrderQty, available);
+                          const displayQty = d.quantity > 0 ? d.quantity : defaultQty;
+                          const qtyShort = displayQty > available;
+
+                          return (
+                            <tr key={ri} className="border-t border-slate-100 hover:bg-slate-50/40">
+                              <td className="px-4 py-2 text-slate-400">{ri + 1}</td>
+                              <td className="px-4 py-2 font-medium text-slate-700">{d.productName}</td>
+                              <td className="px-4 py-2 text-slate-500">{p?.specification || '-'}</td>
+                              <td className="px-4 py-2 text-slate-500">{p?.unit || '-'}</td>
+                              <td className="px-4 py-2 text-right">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={available}
+                                  className={`w-24 h-8 px-2 border rounded-lg text-right focus:outline-none ${
+                                    qtyShort ? 'border-red-400 bg-red-50 text-red-600' : 'border-slate-300 text-slate-700 focus:border-indigo-400'
+                                  }`}
+                                  value={displayQty || ''}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value, 10);
+                                    const realIdx = editItem.details.findIndex(
+                                      (x) => x.workItemName === group.workItemName && x.productId === d.productId && x.id === d.id
+                                    );
+                                    if (realIdx >= 0) updateDetail(realIdx, 'quantity', isNaN(val) ? 0 : val);
+                                  }}
+                                />
+                              </td>
+                              <td className={`px-4 py-2 text-right font-medium ${qtyShort ? 'text-red-600' : 'text-emerald-600'}`}>
+                                {available}{qtyShort ? ' ⚠️' : ''}
+                              </td>
+                              <td className="px-4 py-2 text-center">
+                                {d.isMain
+                                  ? <span className="px-1.5 py-0.5 text-[10px] bg-blue-50 text-blue-600 rounded">主料</span>
+                                  : <span className="px-1.5 py-0.5 text-[10px] bg-amber-50 text-amber-600 rounded">辅料</span>
+                                }
+                              </td>
+                              <td className="px-4 py-2 text-center">
+                                <button
+                                  className="text-indigo-500 hover:text-indigo-600 text-xs mr-2"
+                                  onClick={() => {
+                                    const realIdx = editItem.details.findIndex(
+                                      (x) => x.workItemName === group.workItemName && x.productId === d.productId && x.id === d.id
+                                    );
+                                    if (realIdx >= 0) handleReplaceClick(realIdx);
+                                  }}
+                                >替换</button>
+                                <button
+                                  className="text-red-500 hover:text-red-600 text-xs"
+                                  onClick={() => {
+                                    const realIdx = editItem.details.findIndex(
+                                      (x) => x.workItemName === group.workItemName && x.productId === d.productId && x.id === d.id
+                                    );
+                                    if (realIdx >= 0) removeDetail(realIdx);
+                                  }}
+                                >删除</button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* 有手动加的物资（没挂在工单下）——兜底分组 */}
+            {(() => {
+              const noGroupDetails = editItem.details.filter((d) => !d.workItemName && !d.workOrderName);
+              if (noGroupDetails.length === 0) return null;
+              return (
+                <div className="border-t border-slate-100">
+                  <div className="bg-slate-50 px-5 py-3 flex items-center gap-2">
+                    <span className="font-semibold text-slate-600 text-sm">无工单关联（手动添加）</span>
+                    <span className="text-xs text-slate-400">这些物资未关联任何工单作业项</span>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-slate-50/60 text-slate-500 text-xs">
+                        <th className="px-4 py-2 text-left w-10">#</th>
+                        <th className="px-4 py-2 text-left">物资名称</th>
+                        <th className="px-4 py-2 text-left w-28">规格</th>
+                        <th className="px-4 py-2 text-left w-14">单位</th>
+                        <th className="px-4 py-2 text-right w-28">调拨数量</th>
+                        <th className="px-4 py-2 text-right w-24">可用库存</th>
+                        <th className="px-4 py-2 text-center w-32">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {noGroupDetails.map((d: any, ri) => {
+                        const p = products.find((x) => x.id === d.productId);
+                        const available = batchInventories
+                          .filter((b) => b.productId === d.productId && b.quantity > 0 && b.warehouseId === editItem.fromWarehouseId)
+                          .reduce((s, b) => s + b.quantity, 0);
+                        const qtyShort = (d.quantity || 0) > available;
+                        const realIdx = editItem.details.indexOf(d);
+                        return (
+                          <tr key={ri} className="border-t border-slate-100 hover:bg-slate-50/40">
+                            <td className="px-4 py-2 text-slate-400">{ri + 1}</td>
+                            <td className="px-4 py-2 font-medium text-slate-700">{d.productName}</td>
+                            <td className="px-4 py-2 text-slate-500">{p?.specification || '-'}</td>
+                            <td className="px-4 py-2 text-slate-500">{p?.unit || '-'}</td>
+                            <td className="px-4 py-2 text-right">
+                              <input
+                                type="number" min="0" max={available}
+                                className={`w-24 h-8 px-2 border rounded-lg text-right focus:outline-none ${qtyShort ? 'border-red-400 bg-red-50 text-red-600' : 'border-slate-300 text-slate-700 focus:border-indigo-400'}`}
+                                value={d.quantity || ''}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value, 10);
+                                  if (realIdx >= 0) updateDetail(realIdx, 'quantity', isNaN(val) ? 0 : val);
+                                }}
+                              />
+                            </td>
+                            <td className={`px-4 py-2 text-right font-medium ${qtyShort ? 'text-red-600' : 'text-emerald-600'}`}>
+                              {available}{qtyShort ? ' ⚠️' : ''}
+                            </td>
+                            <td className="px-4 py-2 text-center">
+                              <button className="text-red-500 hover:text-red-600 text-xs" onClick={() => removeDetail(realIdx)}>删除</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+
+        {/* 底部固定操作栏 */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-[0_-2px_10px_rgba(0,0,0,0.04)] z-30">
+          <div className="text-sm text-slate-500">
+            📊 共 <b className="text-slate-700">{workItemSummary.length}</b> 个作业项 ·
+            <b className="text-slate-700"> {editItem.details.length}</b> 种物资 ·
+            合计 <b className="text-indigo-600">{totalQuantity}</b> 件
+          </div>
+          <div className="flex items-center gap-2">
+            <DefaultButton onClick={() => {
+              if (confirm('未保存的内容将丢失，确认返回列表？')) setEditItem(null);
+            }}>取消</DefaultButton>
+            <PrimaryButton onClick={handleSave}>保存调拨单</PrimaryButton>
+          </div>
+        </div>
+
+        {/* 底部留白防遮挡 */}
+        <div className="h-16" />
+
+        {/* 子弹窗：选择工单 */}
+        <WorkOrderPickerModal
+          open={workOrderPickerOpen}
+          title="选择工单"
+          onClose={() => setWorkOrderPickerOpen(false)}
+          onConfirm={handleWorkOrderConfirm}
+        />
+
+        {/* 子弹窗：选择物资（无工单时） */}
+        <ProductPickerModal
+          open={pickerOpen}
+          title="选择物资"
+          onClose={() => setPickerOpen(false)}
+          onConfirm={handlePickerConfirm}
+          showStockQty={true}
+          onlyStocked={true}
+          warehouseId={editItem?.fromWarehouseId}
+        />
+
+        {/* 子弹窗：替换物资 / 追加物资 */}
+        <ProductPickerModal
+          open={replacePickerOpen}
+          title={replaceTargetIdx !== null && replaceTargetIdx < 0 ? '追加物资到作业项' : '替换物资'}
+          onClose={() => { setReplacePickerOpen(false); setReplaceTargetIdx(null); }}
+          onConfirm={handleReplaceConfirm}
+          showStockQty={true}
+          onlyStocked={true}
+          warehouseId={editItem?.fromWarehouseId}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -701,317 +1123,6 @@ export default function ExhibitionTransferOutboundPage() {
           <DefaultButton onClick={() => setViewItem(null)}>关闭</DefaultButton>
         </div>
       </Modal>
-
-      <Modal
-        open={!!editItem}
-        title={isNew ? '新增调拨单' : '编辑调拨单'}
-        onClose={() => {
-          setEditItem(null);
-        }}
-        width="max-w-[1200px]"
-      >
-        {editItem && (
-          <div className="space-y-3 text-xs max-h-[70vh] overflow-y-auto">
-            <div className="flex gap-3">
-              <div className="flex-1 grid grid-cols-4 gap-3">
-              <div>
-                <div className="mb-1 text-[#606266]">调拨单号</div>
-                <input
-                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-[#303133] focus:outline-none focus:border-[#2f54eb]"
-                  value={editItem.transferNo}
-                  onChange={(e) => setEditItem({ ...editItem, transferNo: e.target.value })}
-                />
-              </div>
-              <div>
-                <div className="mb-1 text-[#606266]">
-                  <span className="text-[#f56c6c]">*</span> 调出仓库（实物仓）
-                </div>
-                <select
-                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-white text-[#303133] focus:outline-none focus:border-[#2f54eb]"
-                  value={editItem.fromWarehouseId}
-                  onChange={(e) => {
-                    const wh = fromWarehouses.find((w) => w.id === e.target.value);
-                    setEditItem({
-                      ...editItem,
-                      fromWarehouseId: e.target.value,
-                      fromWarehouseName: wh?.name,
-                    });
-                  }}
-                >
-                  {fromWarehouses.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <div className="mb-1 text-[#606266]">
-                  <span className="text-[#f56c6c]">*</span> 调入仓库（虚拟仓）
-                </div>
-                <select
-                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-white text-[#303133] focus:outline-none focus:border-[#2f54eb]"
-                  value={editItem.toWarehouseId}
-                  onChange={(e) => {
-                    const wh = toWarehouses.find((w) => w.id === e.target.value);
-                    setEditItem({
-                      ...editItem,
-                      toWarehouseId: e.target.value,
-                      toWarehouseName: wh?.name,
-                    });
-                  }}
-                >
-                  {toWarehouses.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <div className="mb-1 text-[#606266]">制单人</div>
-                <input
-                  disabled
-                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded bg-[#f5f7fa] text-[#909399] cursor-not-allowed"
-                  value={editItem.creator}
-                />
-              </div>
-              </div>
-              {/* 工单号显示区 */}
-              <div className="w-[240px] flex flex-col items-center justify-center p-3 border border-dashed border-[#dcdfe6] rounded">
-                <div className="text-xs text-[#606266] mb-1">工单号</div>
-                <div className="w-full flex flex-wrap gap-1 justify-center">
-                  {(() => {
-                    const codes = Array.from(new Set(editItem.details
-                      .filter((d) => d.workOrderCode)
-                      .map((d) => d.workOrderCode) as string[]));
-                    if (codes.length === 0) return <span className="text-[#c0c4cc]">暂无</span>;
-                    return codes.map((code) => (
-                      <span key={code} className="text-xs font-bold text-[#f56c6c] bg-[#fef0f0] px-1.5 py-0.5 rounded border border-[#fbc4c4]">
-                        {code}
-                      </span>
-                    ));
-                  })()}
-                </div>
-                <div className="text-xs text-[#606266] mt-2 mb-0.5">所属展会</div>
-                <div className="text-xs font-medium text-[#303133]">
-                  {(() => {
-                    const woDetail = editItem.details.find((d) => d.workOrderId);
-                    if (!woDetail) return '暂无';
-                    const config = workOrderConfigs.find((c) => c.workOrderId === woDetail.workOrderId);
-                    return config?.exhibitionName || '暂无';
-                  })()}
-                </div>
-              </div>
-            </div>
-            <div>
-              <div className="mb-1 text-[#606266]">备注</div>
-              <textarea
-                className="w-full px-2 py-2 border border-[#dcdfe6] rounded text-[#303133] focus:outline-none focus:border-[#2f54eb]"
-                rows={2}
-                value={editItem.remark || ''}
-                onChange={(e) => setEditItem({ ...editItem, remark: e.target.value })}
-              />
-            </div>
-
-            {/* 作业项目汇总 — 紧凑版 */}
-            <div className="mb-2 p-3 bg-[#fafbfc] border border-[#ebeef5] rounded text-xs">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-medium text-[#303133]">
-                  作业项目汇总
-                  <span className="ml-1 text-[#909399] font-normal">
-                    （{workItemSummary.length} 项）
-                  </span>
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setWorkOrderPickerOpen(true)}
-                    className="px-2 py-1 text-[#2f54eb] border border-[#dcdfe6] rounded hover:border-[#2f54eb] hover:text-[#2f54eb]"
-                  >
-                    + 工单
-                  </button>
-                  {workItemSummary.length > 0 && (
-                    <button
-                      onClick={clearAllWorkOrders}
-                      className="px-2 py-1 text-[#909399] border border-[#dcdfe6] rounded hover:text-[#f56c6c]"
-                    >
-                      清空
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {workItemSummary.length === 0 ? (
-                <div className="text-[#909399] text-center py-2">暂无，点击「+ 工单」添加</div>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {workItemSummary.map((item) => (
-                    <div
-                      key={item.workItemName}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#e4e7ed] rounded group"
-                      title={`来源: ${item.workOrderCodes.join(', ')}`}
-                    >
-                      <span className="text-[#303133] font-medium">{item.workItemName}</span>
-                      <span className="text-[#2f54eb] font-semibold">{item.workItemQty}</span>
-                      <span
-                        className="ml-1 w-4 h-4 flex items-center justify-center text-[#909399] hover:text-[#f56c6c] cursor-pointer opacity-60 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeWorkItem(item.workItemName)}
-                      >
-                        ✕
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <div className="font-medium text-[#303133]">
-                  产品明细{' '}
-                  <span className="text-[#909399] font-normal">
-                    （共 {editItem.details.length} 种，合计 {totalQuantity} 件）
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <DefaultButton onClick={() => setPickerOpen(true)}>+ 选择物资</DefaultButton>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs border border-[#ebeef5] rounded overflow-hidden min-w-[900px]">
-                  <thead>
-                    <tr className="bg-[#f5f7fa] text-[#606266]">
-                      <th className="px-2 py-2 text-left w-8">#</th>
-                      <th className="px-2 py-2 text-left flex-1">物资名称</th>
-                      <th className="px-2 py-2 text-left w-24">规格</th>
-                      <th className="px-2 py-2 text-left w-16">单位</th>
-                      <th className="px-2 py-2 text-right w-24">调拨数量</th>
-                      <th className="px-2 py-2 text-left w-20">可用库存</th>
-                      <th className="px-2 py-2 text-center w-28">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {editItem.details.length ? (
-                      editItem.details.map((d: any, i: number) => {
-                        const p = products.find((x) => x.id === d.productId);
-                        const available = batchInventories
-                          .filter(
-                            (b) =>
-                              b.productId === d.productId &&
-                              b.quantity > 0 &&
-                              b.warehouseId === editItem.fromWarehouseId
-                          )
-                          .reduce((s, b) => s + b.quantity, 0);
-
-                        // 调拨数量显示逻辑：
-                        // - 初始状态（quantity 为 0）→ 显示 min(作业数量, 可用库存) 作为默认值
-                        // - 用户手动编辑过（quantity > 0）→ 显示用户输入的值
-                        const workOrderQty = d.workOrderQty ?? 0;
-                        const defaultQty = Math.min(workOrderQty, available);
-                        const displayQty = d.quantity > 0 ? d.quantity : defaultQty;
-
-                        return (
-                          <tr key={i} className="border-t border-[#ebeef5] hover:bg-[#fafbfc]">
-                            <td className="px-2 py-1.5 text-[#909399]">{i + 1}</td>
-
-                            <td className="px-2 py-1.5 text-[#303133]">
-                              <div className="flex items-center gap-2">
-                                {d.isMain && (
-                                  <span className="px-1 py-0.5 text-[10px] bg-[#f0f9eb] text-[#67c23a] rounded">主料</span>
-                                )}
-                                {!d.isMain && d.workOrderId && (
-                                  <span className="px-1 py-0.5 text-[10px] bg-[#fdf6ec] text-[#e6a23c] rounded">辅料</span>
-                                )}
-                                <span>{d.productName}</span>
-                              </div>
-                            </td>
-                            <td className="px-2 py-1.5 text-[#909399]">{p?.specification || '-'}</td>
-                            <td className="px-2 py-1.5 text-[#909399]">{p?.unit || '-'}</td>
-                            <td className="px-2 py-1.5 text-right">
-                              <input
-                                type="number"
-                                min="0"
-                                max={available}
-                                className={`w-20 h-7 px-2 border rounded text-right focus:outline-none ${
-                                  displayQty > available
-                                    ? 'border-[#f56c6c] text-[#f56c6c] focus:border-[#f56c6c]'
-                                    : 'border-[#dcdfe6] text-[#303133] focus:border-[#2f54eb]'
-                                }`}
-                                value={displayQty || ''}
-                                onChange={(e) => {
-                                  const val = parseInt(e.target.value, 10);
-                                  updateDetail(i, 'quantity', isNaN(val) ? 0 : val);
-                                }}
-                              />
-                            </td>
-                            <td className="px-2 py-1.5 text-[#67c23a]">{available}</td>
-                            <td className="px-2 py-1.5 text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                {d.workOrderId && (
-                                  <TextButton onClick={() => handleReplaceClick(i)}>替换</TextButton>
-                                )}
-                                <TextButton type="danger" onClick={() => removeDetail(i)}>删除</TextButton>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td colSpan={7} className="py-8 text-center text-[#909399]">
-                          暂无物资，请点击「选择工单」或「选择物资」按钮添加
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-        <div className="mt-4 flex justify-end gap-2">
-          <DefaultButton
-            onClick={() => {
-              setEditItem(null);
-            }}
-          >
-            取消
-          </DefaultButton>
-          <PrimaryButton onClick={handleSave}>保存</PrimaryButton>
-        </div>
-      </Modal>
-
-      <ProductPickerModal
-        open={pickerOpen}
-        title="选择物资"
-        onClose={() => setPickerOpen(false)}
-        onConfirm={handlePickerConfirm}
-        showStockQty={true}
-        onlyStocked={true}
-        warehouseId={editItem?.fromWarehouseId}
-      />
-
-      <WorkOrderPickerModal
-        open={workOrderPickerOpen}
-        title="选择工单"
-        onClose={() => setWorkOrderPickerOpen(false)}
-        onConfirm={handleWorkOrderConfirm}
-      />
-
-      {/* 替换物资弹窗 — 选中后将新增一条同作业项的物资记录 */}
-      <ProductPickerModal
-        open={replacePickerOpen}
-        title="替换物资"
-        onClose={() => {
-          setReplacePickerOpen(false);
-          setReplaceTargetIdx(null);
-        }}
-        onConfirm={handleReplaceConfirm}
-        showStockQty={true}
-        onlyStocked={true}
-        warehouseId={editItem?.fromWarehouseId}
-      />
 
       {printTrigger > 0 && printItem && (
         <PrintDocument
