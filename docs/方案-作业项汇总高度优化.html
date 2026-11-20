@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>方案 · 作业项汇总卡片高度优化</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'PingFang SC', sans-serif; background: #f1f5f9; padding: 28px; color: #1e293b; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  h2 { font-size: 15px; margin: 28px 0 12px; padding-left: 8px; border-left: 3px solid #6366f1; }
+  .note { background:#eff6ff;border-left:3px solid #6366f1;padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;color:#334155;margin:10px 0;line-height:1.8; }
+  .note-warn { background:#fef3c7;border-left-color:#f59e0b; }
+  .tag { display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;margin-right:4px; }
+  .tag-new { background:#fce7f3;color:#be185d; }
+  .tag-keep { background:#dcfce7;color:#15803d; }
+  .tag-del { background:#fee2e2;color:#b91c1c; }
+
+  .screen { background:#fff;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,0.08);max-width:1100px;margin:12px auto;overflow:hidden; }
+  .screen-hd { background:linear-gradient(90deg,#6366f1,#8b5cf6);color:#fff;padding:10px 16px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px; }
+  .screen-bd { padding:16px; }
+
+  /* 对比表头 */
+  .cmp { width:100%;border-collapse:collapse;font-size:13px;margin:10px 0; }
+  .cmp th,.cmp td { border:1px solid #e2e8f0;padding:10px 12px;text-align:left;vertical-align:top; }
+  .cmp th { background:#f8fafc;color:#475569; }
+
+  /* ===== 方案 A：紧凑表格 ===== */
+  .compact-tbl { width:100%;border-collapse:collapse;font-size:12px; }
+  .compact-tbl th { background:#f8fafc;color:#475569;padding:6px 10px;text-align:left;font-weight:600;font-size:11px;border-bottom:1px solid #e2e8f0; }
+  .compact-tbl td { padding:5px 10px;border-bottom:1px solid #f1f5f9;color:#1e293b; }
+  .compact-tbl tr:hover td { background:#f8fafc; }
+  .badge { padding:1px 7px;border-radius:10px;font-size:10px;font-weight:500; }
+  .badge-info { background:#e0e7ff;color:#4338ca; }
+  .badge-warn { background:#fef3c7;color:#b45309; }
+  .badge-ok { background:#dcfce7;color:#15803d; }
+  .dot { display:inline-block;width:6px;height:6px;border-radius:50%;background:#6366f1;margin-right:6px; }
+  .dot-warn { background:#f59e0b; }
+  .dot-ok { background:#10b981; }
+  .dot-short { background:#dc2626; }
+  .mini-btn { padding:2px 8px;border-radius:4px;font-size:11px;cursor:pointer;border:1px solid #e2e8f0;background:#fff;margin-right:3px;color:#64748b; }
+  .mini-btn:hover { border-color:#6366f1;color:#6366f1; }
+  .mini-btn-danger { color:#dc2626;border-color:#fee2e2; }
+  .mini-btn-danger:hover { background:#fef2f2; }
+
+  .chip-line { display:flex;gap:3px;flex-wrap:nowrap;overflow:hidden; }
+  .chip-more { background:#e2e8f0;color:#475569;padding:1px 6px;border-radius:8px;font-size:10px; }
+
+  .hd { padding:8px 12px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;background:#fafbfc; }
+  .hd-l { font-size:13px;color:#334155;font-weight:600; }
+  .hd-r { display:flex;gap:6px; }
+  .btn { padding:4px 12px;border-radius:5px;font-size:12px;cursor:pointer;border:none; }
+  .btn-primary { background:#6366f1;color:#fff; }
+  .btn-default { background:#fff;color:#475569;border:1px solid #e2e8f0; }
+
+  /* ===== 方案 B：折叠抽屉 ===== */
+  .drawer { border:1px solid #e2e8f0;border-radius:8px;overflow:hidden; }
+  .drawer-hd { padding:10px 14px;display:flex;align-items:center;justify-content:space-between;background:#f8fafc;cursor:pointer; }
+  .drawer-hd:hover { background:#f1f5f9; }
+  .drawer-hd-l { font-size:13px;color:#334155;display:flex;align-items:center;gap:8px; }
+  .drawer-hd-l b { color:#6366f1;font-size:15px; }
+  .drawer-hd-r { display:flex;gap:6px;align-items:center; }
+  .drawer-bd { max-height:0;overflow:hidden;transition:max-height .25s ease; }
+  .drawer.open .drawer-bd { max-height:500px; }
+  .chevron { transition:transform .2s; display:inline-block; }
+  .drawer.open .chevron { transform:rotate(90deg); }
+
+  .stat-row { display:flex;gap:14px;font-size:12px;color:#64748b;align-items:center; }
+  .stat-row b { color:#334155; }
+</style>
+</head>
+<body>
+
+<h1>📐 作业项汇总卡片 · 高度优化方案对比</h1>
+<div class="note">
+  <b>问题：</b>当前汇总卡片（3 列 + 来源工单号 chip 叠一行），5 条就占 30% 屏幕；30 条 → 直接占满首屏，物资明细看不到了。<br>
+  <b>目标：</b>30 条作业项汇总卡片高度 ≤ 300px，同时来源工单、状态、操作按钮都能访问。
+</div>
+
+<h2>一、改前（当前现状）</h2>
+<div class="screen">
+  <div class="screen-hd">📋 改前 · 现状</div>
+  <div class="screen-bd">
+    <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+      <div style="padding:10px 14px;border-bottom:1px solid #e2e8f0;background:#f8fafc;display:flex;justify-content:space-between;">
+        <div style="font-size:13px;font-weight:600;">📋 作业项汇总 <span style="color:#94a3b8;font-weight:normal;">（5 项）</span></div>
+        <div><span class="mini-btn">+ 工单</span><span class="mini-btn">清空</span></div>
+      </div>
+      <table class="compact-tbl">
+        <thead><tr><th style="width:32px">#</th><th>作业项目</th><th style="width:80px;text-align:center;">作业数量</th><th>来源工单</th><th style="width:120px;text-align:right;">操作</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>配电箱220V 16A</td><td style="text-align:center;font-weight:600;color:#6366f1;">1</td><td><span class="badge badge-info">WI-PD-220V</span></td><td style="text-align:right;"><span class="mini-btn">替换</span><span class="mini-btn mini-btn-danger">×</span></td></tr>
+          <tr><td>2</td><td>水/水气作业/给排水</td><td style="text-align:center;font-weight:600;color:#6366f1;">1</td><td><span class="badge badge-info">WI-FD-220V</span></td><td style="text-align:right;"><span class="mini-btn">替换</span><span class="mini-btn mini-btn-danger">×</span></td></tr>
+          <tr><td>3</td><td>安防/物业安保/布展-物业安保</td><td style="text-align:center;font-weight:600;color:#6366f1;">1</td><td><span class="badge badge-info">WI-26061270088</span></td><td style="text-align:right;"><span class="mini-btn">替换</span><span class="mini-btn mini-btn-danger">×</span></td></tr>
+          <tr><td>4</td><td>安防/物业安保-展期-物业安保</td><td style="text-align:center;font-weight:600;color:#6366f1;">1</td><td><span class="badge badge-info">WI-26061270139</span></td><td style="text-align:right;"><span class="mini-btn">替换</span><span class="mini-btn mini-btn-danger">×</span></td></tr>
+          <tr><td>5</td><td>安防/物业安保/布展-安保加强</td><td style="text-align:center;font-weight:600;color:#6366f1;">1</td><td><span class="badge badge-info">WI-26061270011</span></td><td style="text-align:right;"><span class="mini-btn">替换</span><span class="mini-btn mini-btn-danger">×</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:14px;padding:12px;background:#fef2f2;border-radius:6px;font-size:12px;color:#b91c1c;">
+      ⚠️ <b>问题</b>：来源工单 chip 叠成一行，每一行高度 ≈ 38px；5 行 + 表头 = 240px。若 30 行 ≈ 1020px，直接把物资明细压到视口下方。
+    </div>
+  </div>
+</div>
+
+<h2>二、方案 A：紧凑表格 + 状态指示点 + 操作折叠</h2>
+<div class="note">
+  <b>思路：</b>① 行高从 38px → <b>24px</b>（单行无 chip）&nbsp; ② 来源工单合并成一行 "WI-220V、WI-2606…" + <span style="background:#e2e8f0;padding:0 6px;border-radius:8px;">+2</span>&nbsp; ③ 状态用 3px 小圆点（绿=ok / 黄=未配 / 红=库存不足）<br>
+  <b>30 行总高度：</b>(24+8) × 30 + 60 ≈ <b>1020px</b> ❌ 仍然偏大 → 加 <code>max-height + overflow-y-auto</code> 限死 ≤ 240px
+</div>
+
+<div class="screen">
+  <div class="screen-hd">方案 A · 紧凑表格</div>
+  <div class="screen-bd">
+    <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+      <div class="hd">
+        <div class="hd-l">📋 作业项汇总 <span style="color:#94a3b8;font-weight:normal;">（30 项）</span></div>
+        <div class="hd-r"><span class="btn btn-default">+ 工单</span><span class="btn btn-default">清空</span></div>
+      </div>
+      <div style="max-height:240px;overflow-y:auto;">
+        <table class="compact-tbl" style="border:none;">
+          <thead style="position:sticky;top:0;z-index:1;">
+            <tr style="background:#f8fafc;">
+              <th style="width:28px"></th>
+              <th>作业项目</th>
+              <th style="width:60px;text-align:center;">数量</th>
+              <th>来源工单</th>
+              <th style="width:48px;text-align:center;">状态</th>
+              <th style="width:70px;text-align:right;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- 模拟 12 行 → 滚到底还有 -->
+            <tr><td class="dot dot-ok"></td><td>配电箱220V 16A</td><td style="text-align:center;font-weight:600;">50</td><td class="chip-line"><span class="badge badge-info">WI-220V</span><span class="badge badge-info">WI-0015</span><span class="badge chip-more">+1</span></td><td style="text-align:center;"><span class="badge badge-ok">✓</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+            <tr><td class="dot dot-warn"></td><td>配电箱220V 32A</td><td style="text-align:center;font-weight:600;">30</td><td class="chip-line"><span class="badge badge-info">WI-220V</span></td><td style="text-align:center;"><span class="badge badge-warn">未配</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+            <tr><td class="dot dot-short"></td><td>音响调试</td><td style="text-align:center;font-weight:600;">4</td><td class="chip-line"><span class="badge badge-info">WI-0005</span></td><td style="text-align:center;"><span class="badge" style="background:#fee2e2;color:#b91c1c;">缺1</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+            <tr><td class="dot dot-ok"></td><td>水/水气作业/给排水</td><td style="text-align:center;font-weight:600;">20</td><td class="chip-line"><span class="badge badge-info">WI-FD-220V</span></td><td style="text-align:center;"><span class="badge badge-ok">✓</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+            <tr><td class="dot dot-ok"></td><td>安防/物业安保/布展-物业安保</td><td style="text-align:center;font-weight:600;">100</td><td class="chip-line"><span class="badge badge-info">WI-0088</span><span class="badge badge-info">WI-0111</span><span class="badge chip-more">+3</span></td><td style="text-align:center;"><span class="badge badge-ok">✓</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+            <tr><td class="dot dot-warn"></td><td>吊点-搭建/结构</td><td style="text-align:center;font-weight:600;">15</td><td class="chip-line"><span class="badge badge-info">WI-DD</span></td><td style="text-align:center;"><span class="badge badge-warn">未配</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+            <tr><td class="dot dot-ok"></td><td>地毯-地面铺设</td><td style="text-align:center;font-weight:600;">500</td><td class="chip-line"><span class="badge badge-info">WI-0022</span></td><td style="text-align:center;"><span class="badge badge-ok">✓</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+            <tr><td class="dot dot-short"></td><td>LED屏-背景搭建</td><td style="text-align:center;font-weight:600;">8</td><td class="chip-line"><span class="badge badge-info">WI-0033</span></td><td style="text-align:center;"><span class="badge" style="background:#fee2e2;color:#b91c1c;">缺2</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+            <tr><td class="dot dot-ok"></td><td>桁架-结构搭建</td><td style="text-align:center;font-weight:600;">200</td><td class="chip-line"><span class="badge badge-info">WI-0044</span><span class="badge chip-more">+2</span></td><td style="text-align:center;"><span class="badge badge-ok">✓</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+            <tr><td class="dot dot-ok"></td><td>喷绘-画面印刷</td><td style="text-align:center;font-weight:600;">120</td><td class="chip-line"><span class="badge badge-info">WI-0055</span></td><td style="text-align:center;"><span class="badge badge-ok">✓</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+            <tr><td class="dot dot-warn"></td><td>花卉-装饰布置</td><td style="text-align:center;font-weight:600;">30</td><td class="chip-line"><span class="badge badge-info">WI-0066</span></td><td style="text-align:center;"><span class="badge badge-warn">未配</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+            <tr><td class="dot dot-ok"></td><td>桌椅-家具租赁</td><td style="text-align:center;font-weight:600;">80</td><td class="chip-line"><span class="badge badge-info">WI-0077</span></td><td style="text-align:center;"><span class="badge badge-ok">✓</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+            <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:8px;font-size:11px;">↓ 还有 18 条，请滚动</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="padding:4px 12px;background:#f8fafc;border-top:1px solid #e2e8f0;font-size:11px;color:#64748b;display:flex;justify-content:space-between;">
+        <span>🟢 充足 · 🟡 未配置物资 · 🔴 库存不足</span>
+        <span>30 条 · 卡片限高 240px 可滚动</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2>三、方案 B：折叠抽屉（默认收起 → 一行统计条）</h2>
+<div class="note note-warn">
+  <b>思路：</b>汇总卡片变成一个<b>可折叠抽屉</b>。<br>
+  · <b>默认收起</b>时：只展示一行 "📋 已选 30 个作业项 · 210 种物资 · 3 项库存不足 · 2 项未配置" + 统计徽章，高度 ≈ <b>44px</b><br>
+  · <b>展开后</b>：同方案 A 的紧凑表格 + max-height 滚动<br>
+  <b>好处</b>：首屏打开时物资明细直接可见（汇总只占一行）；需要看汇总再展开。
+</div>
+
+<div class="screen">
+  <div class="screen-hd">方案 B · 折叠抽屉（推荐）</div>
+  <div class="screen-bd">
+
+    <!-- 收起态 -->
+    <div class="drawer" onclick="this.classList.toggle('open')">
+      <div class="drawer-hd">
+        <div class="drawer-hd-l">
+          <span class="chevron">▶</span>
+          📋 作业项汇总
+          <div class="stat-row">
+            · 已选 <b>30</b> 个作业项
+            · 合计 <b>210</b> 种物资
+            · <span style="color:#dc2626;">⚠️ <b>3</b> 项库存不足</span>
+            · <span style="color:#b45309;">📝 <b>2</b> 项未配置</span>
+          </div>
+        </div>
+        <div class="drawer-hd-r" onClick="event.stopPropagation()">
+          <span class="mini-btn">+ 工单</span>
+          <span class="mini-btn mini-btn-danger">清空</span>
+        </div>
+      </div>
+      <div class="drawer-bd">
+        <!-- 展开后的紧凑表格（同方案 A） -->
+        <div style="max-height:240px;overflow-y:auto;border-top:1px solid #e2e8f0;">
+          <table class="compact-tbl" style="border:none;">
+            <thead style="position:sticky;top:0;background:#f8fafc;z-index:1;">
+              <tr><th style="width:28px"></th><th>作业项目</th><th style="width:60px;text-align:center;">数量</th><th>来源工单</th><th style="width:48px;text-align:center;">状态</th><th style="width:70px;text-align:right;">操作</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="dot dot-ok"></td><td>配电箱220V 16A</td><td style="text-align:center;font-weight:600;">50</td><td class="chip-line"><span class="badge badge-info">WI-220V</span><span class="badge chip-more">+2</span></td><td style="text-align:center;"><span class="badge badge-ok">✓</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+              <tr><td class="dot dot-warn"></td><td>配电箱220V 32A</td><td style="text-align:center;font-weight:600;">30</td><td class="chip-line"><span class="badge badge-info">WI-220V</span></td><td style="text-align:center;"><span class="badge badge-warn">未配</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+              <tr><td class="dot dot-short"></td><td>音响调试</td><td style="text-align:center;font-weight:600;">4</td><td class="chip-line"><span class="badge badge-info">WI-0005</span></td><td style="text-align:center;"><span class="badge" style="background:#fee2e2;color:#b91c1c;">缺1</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+              <tr><td class="dot dot-ok"></td><td>地毯-地面铺设</td><td style="text-align:center;font-weight:600;">500</td><td class="chip-line"><span class="badge badge-info">WI-0022</span></td><td style="text-align:center;"><span class="badge badge-ok">✓</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+              <tr><td class="dot dot-warn"></td><td>吊点-搭建/结构</td><td style="text-align:center;font-weight:600;">15</td><td class="chip-line"><span class="badge badge-info">WI-DD</span></td><td style="text-align:center;"><span class="badge badge-warn">未配</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+              <tr><td class="dot dot-ok"></td><td>桁架-结构搭建</td><td style="text-align:center;font-weight:600;">200</td><td class="chip-line"><span class="badge badge-info">WI-0044</span><span class="badge chip-more">+2</span></td><td style="text-align:center;"><span class="badge badge-ok">✓</span></td><td style="text-align:right;"><span class="mini-btn mini-btn-danger">×</span></td></tr>
+              <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:8px;font-size:11px;">↓ 还有 24 条，请滚动或收起抽屉</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:10px;padding:10px;background:#f0fdf4;border-radius:6px;font-size:12px;color:#15803d;">
+      ✅ <b>点一下就展开/收起</b>。30 条作业项 · 收起时汇总卡片只占 44px，物资明细直接露出首屏。
+    </div>
+
+  </div>
+</div>
+
+<h2>四、方案对比</h2>
+<table class="cmp">
+  <thead><tr><th>维度</th><th>改前（现状）</th><th>方案 A · 紧凑表格</th><th>方案 B · 折叠抽屉（推荐）</th></tr></thead>
+  <tbody>
+    <tr><td>默认高度（30 条）</td><td>≈ 1100px ❌</td><td>≈ 300px（限高 240 滚动）</td><td><b>≈ 44px ✓</b></td></tr>
+    <tr><td>信息密度</td><td>每行 38px chip 堆叠</td><td>每行 24px + chip 单行折叠</td><td>收起时一行统计条 · 展开后同 A</td></tr>
+    <tr><td>状态可视性</td><td>无状态指示</td><td>🟢🟡🔴 圆点 + badge</td><td>收起时只显示汇总统计 · 展开后同 A</td></tr>
+    <tr><td>删除/替换操作</td><td>每行都有</td><td>每行 × 保留，"替换" hover 才出现</td><td>同 A</td></tr>
+    <tr><td>改动量</td><td>—</td><td>中等（改表格样式 + 加 chip 折叠）</td><td>中等（套 drawer 组件 + 默认 closed）</td></tr>
+    <tr><td>首屏体验</td><td>明细被压到视口下</td><td>明细露出大半</td><td><b>明细完整露出 ✓</b></td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

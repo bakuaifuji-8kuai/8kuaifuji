@@ -227,6 +227,7 @@ export default function ExhibitionTransferOutboundPage() {
   const [isNew, setIsNew] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [workOrderPickerOpen, setWorkOrderPickerOpen] = useState(false);
+  const [workItemExpanded, setWorkItemExpanded] = useState(false);
 
   // ===== 替换物资 =====
   const [replaceTargetIdx, setReplaceTargetIdx] = useState<number | null>(null);
@@ -309,6 +310,39 @@ export default function ExhibitionTransferOutboundPage() {
     }
     return Array.from(map.values());
   }, [editItem?.details]);
+
+  // 汇总：库存不足的作业项数
+  const shortWorkItemCount = useMemo(() => {
+    if (!editItem) return 0;
+    return workItemSummary.filter((g) => {
+      const details = editItem.details.filter(
+        (d) => (d.workItemName || d.workOrderName) === g.workItemName
+      );
+      return details.some((d) => {
+        const available = batchInventories
+          .filter(
+            (b) =>
+              b.productId === d.productId &&
+              b.quantity > 0 &&
+              b.warehouseId === editItem.fromWarehouseId
+          )
+          .reduce((s, b) => s + b.quantity, 0);
+        const displayQty =
+          d.quantity > 0 ? d.quantity : Math.min(d.workOrderQty ?? 0, available);
+        return displayQty > available;
+      });
+    }).length;
+  }, [editItem, workItemSummary, batchInventories]);
+
+  // 汇总：未配置物资的作业项数
+  const unconfiguredCount = useMemo(() => {
+    return workItemSummary.filter((g) => {
+      const cfg = workOrderConfigs.find(
+        (c) => c.workOrderName === g.workItemName
+      );
+      return !cfg || cfg.products.length === 0;
+    }).length;
+  }, [workItemSummary, workOrderConfigs]);
 
   const handleWorkOrderConfirm = (selectedItems: WorkOrderPickerItem[]) => {
     if (!editItem) return;
@@ -637,61 +671,179 @@ export default function ExhibitionTransferOutboundPage() {
             </div>
           </div>
 
-          {/* ==== 作业项汇总（表格形式）==== */}
+          {/* ==== 作业项汇总（折叠抽屉）==== */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
-              <div className="font-semibold text-slate-700 text-sm">
-                📋 作业项汇总 <span className="text-slate-400 font-normal">（{workItemSummary.length} 项）</span>
+            {/* 抽屉头：收起时 = 统计条，展开时 = 标题 */}
+            <div
+              className="px-5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 border-b border-slate-100"
+              onClick={() => setWorkItemExpanded((v) => !v)}
+            >
+              <div className="flex items-center gap-3 text-sm text-slate-600">
+                <span
+                  className={`inline-block transition-transform duration-200 text-slate-400 ${
+                    workItemExpanded ? 'rotate-90' : ''
+                  }`}
+                >
+                  ▶
+                </span>
+                <span className="font-semibold text-slate-700">📋 作业项汇总</span>
+                {workItemSummary.length === 0 ? (
+                  <span className="text-slate-400 text-xs">暂无作业项</span>
+                ) : (
+                  <>
+                    <span className="text-xs text-slate-500">
+                      已选 <b className="text-indigo-600">{workItemSummary.length}</b> 项
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      · 合计 <b className="text-indigo-600">{editItem?.details.length ?? 0}</b> 种物资
+                    </span>
+                    {shortWorkItemCount > 0 && (
+                      <span className="text-xs text-red-500">
+                        · ⚠️ <b>{shortWorkItemCount}</b> 项库存不足
+                      </span>
+                    )}
+                    {unconfiguredCount > 0 && (
+                      <span className="text-xs text-amber-600">
+                        · 📝 <b>{unconfiguredCount}</b> 项未配置物资
+                      </span>
+                    )}
+                  </>
+                )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                 <DefaultButton onClick={() => setWorkOrderPickerOpen(true)}>+ 工单</DefaultButton>
                 {workItemSummary.length > 0 && (
                   <DefaultButton onClick={clearAllWorkOrders}>清空</DefaultButton>
                 )}
               </div>
             </div>
-            {workItemSummary.length === 0 ? (
-              <div className="py-10 text-center text-slate-400 text-sm">
-                暂无作业项，点击右上「+ 工单」从工单配置中选择
-              </div>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-slate-50 text-slate-500 text-xs">
-                    <th className="px-4 py-2.5 text-left w-10">#</th>
-                    <th className="px-4 py-2.5 text-left">作业项目</th>
-                    <th className="px-4 py-2.5 text-center w-24">作业数量</th>
-                    <th className="px-4 py-2.5 text-left">来源工单</th>
-                    <th className="px-4 py-2.5 text-center w-20">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {workItemSummary.map((item, i) => (
-                    <tr key={item.workItemName} className="border-t border-slate-100 hover:bg-slate-50/60">
-                      <td className="px-4 py-2.5 text-slate-400">{i + 1}</td>
-                      <td className="px-4 py-2.5 font-medium text-slate-700">{item.workItemName}</td>
-                      <td className="px-4 py-2.5 text-center">
-                        <span className="inline-block px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-semibold text-xs">
-                          {item.workItemQty}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        {item.workOrderCodes.map((c) => (
-                          <span key={c} className="inline-block mr-1 text-xs font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
-                            {c}
-                          </span>
-                        ))}
-                      </td>
-                      <td className="px-4 py-2.5 text-center">
-                        <button
-                          onClick={() => removeWorkItem(item.workItemName)}
-                          className="text-red-500 hover:text-red-600 text-xs"
-                        >移除 ✕</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+            {/* 抽屉体 */}
+            {workItemExpanded && (
+              <>
+                {workItemSummary.length === 0 ? (
+                  <div className="py-6 text-center text-slate-400 text-xs">
+                    暂无作业项，点击右上「+ 工单」从工单配置中选择
+                  </div>
+                ) : (
+                  <div className="max-h-[240px] overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-slate-50 sticky top-0 z-10">
+                        <tr className="text-slate-500">
+                          <th className="px-3 py-1.5 text-left w-6"></th>
+                          <th className="px-3 py-1.5 text-left">作业项目</th>
+                          <th className="px-3 py-1.5 text-center w-14">数量</th>
+                          <th className="px-3 py-1.5 text-left">来源工单</th>
+                          <th className="px-3 py-1.5 text-center w-16">状态</th>
+                          <th className="px-3 py-1.5 text-right w-16">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {workItemSummary.map((item) => {
+                          // 算状态
+                          const details =
+                            editItem?.details.filter(
+                              (d) =>
+                                (d.workItemName || d.workOrderName) === item.workItemName
+                            ) || [];
+                          const cfg = workOrderConfigs.find(
+                            (c) => c.workOrderName === item.workItemName
+                          );
+                          const hasConfig = !!cfg && cfg.products.length > 0;
+                          const hasShort = details.some((d) => {
+                            const available = batchInventories
+                              .filter(
+                                (b) =>
+                                  b.productId === d.productId &&
+                                  b.quantity > 0 &&
+                                  b.warehouseId === editItem?.fromWarehouseId
+                              )
+                              .reduce((s, b) => s + b.quantity, 0);
+                            const displayQty =
+                              d.quantity > 0
+                                ? d.quantity
+                                : Math.min(d.workOrderQty ?? 0, available);
+                            return displayQty > available;
+                          });
+                          const statusDot = hasShort
+                            ? 'bg-red-500'
+                            : !hasConfig
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500';
+                          const statusLabel = hasShort
+                            ? '缺'
+                            : !hasConfig
+                            ? '未配'
+                            : '✓';
+                          const statusClass = hasShort
+                            ? 'bg-red-50 text-red-600'
+                            : !hasConfig
+                            ? 'bg-amber-50 text-amber-600'
+                            : 'bg-emerald-50 text-emerald-600';
+
+                          // 来源工单 chip 折叠：显示前 2 个 + N
+                          const codes = item.workOrderCodes;
+                          const shown = codes.slice(0, 2);
+                          const more = codes.length - shown.length;
+
+                          return (
+                            <tr
+                              key={item.workItemName}
+                              className="border-t border-slate-100 hover:bg-slate-50/60 h-6"
+                            >
+                              <td className="px-3 py-1">
+                                <span
+                                  className={`inline-block w-2 h-2 rounded-full ${statusDot}`}
+                                ></span>
+                              </td>
+                              <td className="px-3 py-1 font-medium text-slate-700 truncate max-w-[260px]">
+                                {item.workItemName}
+                              </td>
+                              <td className="px-3 py-1 text-center font-semibold text-indigo-600">
+                                {item.workItemQty}
+                              </td>
+                              <td className="px-3 py-1">
+                                {shown.map((c) => (
+                                  <span
+                                    key={c}
+                                    className="inline-block mr-1 text-[10px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded"
+                                  >
+                                    {c}
+                                  </span>
+                                ))}
+                                {more > 0 && (
+                                  <span className="inline-block text-[10px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded">
+                                    +{more}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-3 py-1 text-center">
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[10px] ${statusClass}`}
+                                >
+                                  {statusLabel}
+                                </span>
+                              </td>
+                              <td className="px-3 py-1 text-right">
+                                <button
+                                  onClick={() => removeWorkItem(item.workItemName)}
+                                  className="text-red-500 hover:text-red-600 text-xs"
+                                >
+                                  ✕
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <div className="px-4 py-1.5 border-t border-slate-100 bg-slate-50 text-[10px] text-slate-500 flex justify-between">
+                  <span>🟢 充足 · 🟡 未配置 · 🔴 库存不足</span>
+                  <span>{workItemSummary.length} 条 · 可滚动</span>
+                </div>
+              </>
             )}
           </div>
 
