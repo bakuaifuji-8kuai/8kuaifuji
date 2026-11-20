@@ -23,8 +23,7 @@ export default function WorkOrderProductConfig() {
     config =>
       config.workOrderName.includes(searchKeyword) ||
       config.workOrderCode.includes(searchKeyword) ||
-      config.category.includes(searchKeyword) ||
-      config.exhibitionName?.includes(searchKeyword)
+      config.category.includes(searchKeyword)
   );
 
   const filteredProducts = products.filter(
@@ -178,7 +177,6 @@ export default function WorkOrderProductConfig() {
             <tr className="bg-[#f5f7fa] text-[#606266]">
               <th className="px-3 py-2 text-left">作业项目编码</th>
               <th className="px-3 py-2 text-left">作业项目名称</th>
-              <th className="px-3 py-2 text-left">展会名称</th>
               <th className="px-3 py-2 text-left">作业分类</th>
               <th className="px-3 py-2 text-left">物资种类</th>
               <th className="px-3 py-2 text-left">创建时间</th>
@@ -191,7 +189,6 @@ export default function WorkOrderProductConfig() {
               <tr key={config.id} className="border-t border-[#f0f2f5] hover:bg-[#f5f7fa]">
                 <td className="px-3 py-2 text-[#303133]">{config.workOrderCode}</td>
                 <td className="px-3 py-2 text-[#303133]">{config.workOrderName}</td>
-                <td className="px-3 py-2 text-[#303133]">{config.exhibitionName || '-'}</td>
                 <td className="px-3 py-2 text-[#303133]">{config.category}</td>
                 <td className="px-3 py-2 text-[#303133]">{config.products.length}</td>
                 <td className="px-3 py-2 text-[#303133]">{new Date(config.createTime).toLocaleString()}</td>
@@ -208,7 +205,7 @@ export default function WorkOrderProductConfig() {
             ))}
             {filteredConfigs.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-[#909399]">
+                <td colSpan={7} className="px-3 py-8 text-center text-[#909399]">
                   暂无作业项物资配置
                 </td>
               </tr>
