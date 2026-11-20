@@ -431,12 +431,8 @@ export default function StockTransferPage() {
 
   const handleSelectWorkOrder = (config: WorkOrderProductConfig) => {
     if (!editItem) return;
-    // 合并 main + auxiliary 物资为明细
-    const merged = [
-      ...(config.mainProducts || []),
-      ...(config.auxiliaryProducts || []),
-    ];
-    const workOrderQty = 50; // 作业数量默认50
+    const merged = config.products || [];
+    const workOrderQty = config.workItemQty || 50;
     const newDetails: StockTransferDetail[] = merged.map((p, idx) => ({
       id: 'TFD' + Date.now() + Math.random().toString(36).slice(2, 7) + idx,
       stockTransferId: editItem.id,
@@ -453,7 +449,7 @@ export default function StockTransferPage() {
       fromPositionName: '',
       toPositionId: '',
       toPositionName: '',
-      quantity: p.quantity || 0,
+      quantity: p.ratio || 0,
     }));
     // 去重：按 productId
     const existingIds = new Set(editItem.details.map((d) => d.productId));
@@ -1241,8 +1237,7 @@ export default function StockTransferPage() {
                 <th className="px-2 py-2 text-left flex-1">工单名称</th>
                 <th className="px-2 py-2 text-left w-24">施工单位</th>
                 <th className="px-2 py-2 text-left w-20">分类</th>
-                <th className="px-2 py-2 text-center w-20">主物资数</th>
-                <th className="px-2 py-2 text-center w-20">辅物资数</th>
+                <th className="px-2 py-2 text-center w-20">物资种类</th>
                 <th className="px-2 py-2 text-center w-24">已生成调拨单</th>
                 <th className="px-2 py-2 text-center w-16">操作</th>
               </tr>
@@ -1283,8 +1278,7 @@ export default function StockTransferPage() {
                       )}
                     </td>
                     <td className="px-2 py-2 text-[#606266]">{config.category}</td>
-                    <td className="px-2 py-2 text-center text-[#67c23a]">{config.mainProducts?.length || 0}</td>
-                    <td className="px-2 py-2 text-center text-[#e6a23c]">{config.auxiliaryProducts?.length || 0}</td>
+                    <td className="px-2 py-2 text-center text-[#67c23a]">{config.products?.length || 0}</td>
                     <td className={`px-2 py-2 text-center ${relatedCount > 0 ? 'text-[#409eff] font-semibold' : 'text-[#c0c4cc]'}`}>
                       {relatedCount > 0 ? relatedCount : 0}
                     </td>
@@ -1452,9 +1446,7 @@ function ManagedWorkOrderPicker({
               )}
               {filtered.map((config) => {
                 const checked = selectedIds.includes(config.id);
-                const totalQty =
-                  (config.mainProducts?.length || 0) +
-                  (config.auxiliaryProducts?.length || 0);
+                const totalQty = config.products?.length || 0;
                 return (
                   <tr
                     key={config.id}

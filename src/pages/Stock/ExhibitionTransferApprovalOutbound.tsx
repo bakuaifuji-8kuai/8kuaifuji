@@ -359,9 +359,6 @@ function MaterialDetailList({ item, products }: { item: StockTransfer; products:
                       作业数量 {d.workOrderQty}
                     </span>
                   )}
-                  {d.isMain && (
-                    <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded text-[10px]">主料</span>
-                  )}
                   {d.remark && (
                     <span className="text-[10px] text-slate-500">{d.remark}</span>
                   )}

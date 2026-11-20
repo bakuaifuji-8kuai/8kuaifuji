@@ -323,7 +323,7 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
 
     const newDetails: OutboundDetail[] = [];
     selectedItems.forEach((item) => {
-      [...item.mainProducts, ...item.auxiliaryProducts].forEach((product) => {
+      item.products.forEach((product) => {
         newDetails.push({
           id: 'D' + Date.now() + Math.random().toString(36).slice(2, 7),
           outboundOrderId: editItem.id,
@@ -332,11 +332,10 @@ export default function OutboundPage({ type = 'lowvalue' }: Props) {
           productName: product.productName,
           positionId: '',
           positionName: '',
-          quantity: product.quantity,
+          quantity: product.ratio,
           workOrderId: item.workOrderId,
           workOrderCode: item.workOrderCode,
           workOrderName: item.workOrderName,
-          isMain: item.mainProducts.some((p) => p.productId === product.productId),
         });
       });
     });

@@ -17,21 +17,13 @@ export interface WorkOrderPickerItem {
   workItemName?: string;
   workItemQty?: number;
   category: string;
-  mainProducts: {
+  products: {
     productId: string;
     productCode: string;
     productName: string;
     specification?: string;
     unit: string;
-    quantity: number;
-  }[];
-  auxiliaryProducts: {
-    productId: string;
-    productCode: string;
-    productName: string;
-    specification?: string;
-    unit: string;
-    quantity: number;
+    ratio: number;
   }[];
 }
 
@@ -50,7 +42,6 @@ export default function WorkOrderPickerModal({
 }: WorkOrderPickerModalProps) {
   const { workOrderConfigs } = useStore();
 
-  // 四个筛选条件
   const [filterWorkOrderCode, setFilterWorkOrderCode] = useState('');
   const [filterWorkOrderName, setFilterWorkOrderName] = useState('');
   const [filterExhibitionName, setFilterExhibitionName] = useState('');
@@ -59,7 +50,6 @@ export default function WorkOrderPickerModal({
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
-  // 下拉选项（去重）
   const exhibitionOptions = useMemo((): string[] => {
     return Array.from(new Set(workOrderConfigs.map((o) => o.exhibitionName).filter((v): v is string => !!v)));
   }, [workOrderConfigs]);
@@ -101,7 +91,6 @@ export default function WorkOrderPickerModal({
     setSelectedItems(next);
   };
 
-  // category "电力/电箱/室内" → 业务类型 "电力"
   const getBizType = (category: string): string => {
     const parts = category.split('/');
     return parts[0] || category;
@@ -125,21 +114,13 @@ export default function WorkOrderPickerModal({
         workItemName: config.workItemName,
         workItemQty: config.workItemQty,
         category: config.category,
-        mainProducts: config.mainProducts.map((p) => ({
+        products: config.products.map((p) => ({
           productId: p.productId,
           productCode: p.productCode,
           productName: p.productName,
           specification: p.specification,
           unit: p.unit,
-          quantity: p.quantity,
-        })),
-        auxiliaryProducts: config.auxiliaryProducts.map((p) => ({
-          productId: p.productId,
-          productCode: p.productCode,
-          productName: p.productName,
-          specification: p.specification,
-          unit: p.unit,
-          quantity: p.quantity,
+          ratio: p.ratio,
         })),
       });
     }
@@ -148,7 +129,6 @@ export default function WorkOrderPickerModal({
 
   return (
     <Modal open={open} title={title} onClose={onClose} width="max-w-[1000px]">
-      {/* 四个筛选条件 */}
       <div className="mb-3 grid grid-cols-2 gap-2">
         <div className="relative">
           <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-[#c0c4cc]" />
@@ -192,7 +172,6 @@ export default function WorkOrderPickerModal({
         </select>
       </div>
 
-      {/* 表头：工单编号 | 展馆 | 档位号 | 施工单位 | 业务类型 | 作业项目 | 作业数量 */}
       <div className="flex items-center gap-2 mb-2 text-xs text-[#606266] font-medium bg-[#f5f7fa] rounded px-3 py-2">
         <div className="w-8"></div>
         <div className="w-28 text-left">工单编号</div>
@@ -212,10 +191,9 @@ export default function WorkOrderPickerModal({
           filteredOrders.map((order) => {
             const isExpanded = expandedOrders.has(order.id);
             const isSelected = selectedItems.has(order.id);
-            const totalMainQty = order.mainProducts.reduce((s, p) => s + p.quantity, 0);
-            const totalAuxQty = order.auxiliaryProducts.reduce((s, p) => s + p.quantity, 0);
-            const workItemQty = order.workItemQty ?? totalMainQty;
+            const workItemQty = order.workItemQty;
             const bizType = getBizType(order.category);
+            const pCount = order.products.length;
 
             return (
               <div key={order.id}>
@@ -233,18 +211,10 @@ export default function WorkOrderPickerModal({
                   <div className="w-28 text-[#303133] font-medium truncate" title={order.workOrderCode}>
                     {order.workOrderCode}
                   </div>
-                  <div className="w-14 text-center text-[#606266]">
-                    {order.boothName || '-'}
-                  </div>
-                  <div className="w-20 text-center text-[#606266] truncate" title={order.boothNo || ''}>
-                    {order.boothNo || '-'}
-                  </div>
-                  <div className="w-20 text-center text-[#606266] truncate" title={order.constructionUnit || ''}>
-                    {order.constructionUnit || '-'}
-                  </div>
-                  <div className="w-16 text-center text-[#606266] truncate" title={bizType}>
-                    {bizType}
-                  </div>
+                  <div className="w-14 text-center text-[#606266]">{order.boothName || '-'}</div>
+                  <div className="w-20 text-center text-[#606266] truncate" title={order.boothNo || ''}>{order.boothNo || '-'}</div>
+                  <div className="w-20 text-center text-[#606266] truncate" title={order.constructionUnit || ''}>{order.constructionUnit || '-'}</div>
+                  <div className="w-16 text-center text-[#606266] truncate" title={bizType}>{bizType}</div>
                   <div
                     className="flex-1 text-center text-[#303133] truncate"
                     title={order.workItemName || order.workOrderName}
@@ -252,79 +222,39 @@ export default function WorkOrderPickerModal({
                   >
                     {order.workItemName || order.workOrderName}
                   </div>
-                  <div className="w-16 text-center text-[#303133] font-medium">{workItemQty}</div>
+                  <div className="w-16 text-center text-[#303133] font-medium">{workItemQty ?? '-'}</div>
                   <div
                     className="w-12 flex justify-center text-[#909399] text-[10px]"
                     onClick={() => toggleOrder(order.id)}
                   >
-                    {order.mainProducts.length + order.auxiliaryProducts.length > 1
-                      ? isExpanded
-                        ? <ChevronDown size={14} className="text-[#909399]" />
-                        : <ChevronRight size={14} className="text-[#909399]" />
+                    {pCount > 0
+                      ? isExpanded ? <ChevronDown size={14} className="text-[#909399]" /> : <ChevronRight size={14} className="text-[#909399]" />
                       : null}
                   </div>
                 </div>
 
                 {isExpanded && (
                   <div className="bg-[#fafbfc]">
-                    {order.mainProducts.length > 0 && (
-                      <>
-                        <div className="flex items-center gap-2 px-3 py-1 text-[10px] text-[#67c23a] bg-[#f0f9eb] border-b border-[#ebeef5]">
-                          <div className="w-8"></div>
-                          <div className="flex-1 font-medium">主料</div>
-                          <div className="w-20"></div>
-                          <div className="w-16 text-center">数量</div>
-                          <div className="w-16 text-center">单位</div>
-                          <div className="w-12"></div>
+                    {pCount > 0 ? (
+                      <div className="px-3 py-1 text-[10px] text-[#409eff] bg-[#ecf5ff] border-b border-[#ebeef5]">
+                        📦 物资配置（不分主辅，数量为比例系数）
+                      </div>
+                    ) : null}
+                    {order.products.map((p) => (
+                      <div key={p.id} className="flex items-center gap-2 px-3 py-1.5 text-xs border-b border-[#ebeef5]">
+                        <div className="w-8"></div>
+                        <div className="flex-1 grid grid-cols-2 gap-2">
+                          <div className="text-[#303133] truncate" title={p.productCode}>{p.productCode}</div>
+                          <div className="text-[#303133] truncate" title={p.productName}>{p.productName}</div>
                         </div>
-                        {order.mainProducts.map((p) => (
-                          <div key={p.id} className="flex items-center gap-2 px-3 py-1.5 text-xs border-b border-[#ebeef5]">
-                            <div className="w-8"></div>
-                            <div className="flex-1 grid grid-cols-2 gap-2">
-                              <div className="text-[#303133] truncate" title={p.productCode}>{p.productCode}</div>
-                              <div className="text-[#303133] truncate" title={p.productName}>{p.productName}</div>
-                            </div>
-                            <div className="w-20 text-[#909399] truncate" title={p.specification || '-'}>
-                              {p.specification || '-'}
-                            </div>
-                            <div className="w-16 text-center text-[#303133]">{p.quantity}</div>
-                            <div className="w-16 text-center text-[#909399]">{p.unit}</div>
-                            <div className="w-12"></div>
-                          </div>
-                        ))}
-                      </>
-                    )}
-
-                    {order.auxiliaryProducts.length > 0 && (
-                      <>
-                        <div className="flex items-center gap-2 px-3 py-1 text-[10px] text-[#e6a23c] bg-[#fdf6ec] border-b border-[#ebeef5]">
-                          <div className="w-8"></div>
-                          <div className="flex-1 font-medium">辅料</div>
-                          <div className="w-20"></div>
-                          <div className="w-16 text-center">数量</div>
-                          <div className="w-16 text-center">单位</div>
-                          <div className="w-12"></div>
-                        </div>
-                        {order.auxiliaryProducts.map((p) => (
-                          <div key={p.id} className="flex items-center gap-2 px-3 py-1.5 text-xs border-b border-[#ebeef5]">
-                            <div className="w-8"></div>
-                            <div className="flex-1 grid grid-cols-2 gap-2">
-                              <div className="text-[#303133] truncate" title={p.productCode}>{p.productCode}</div>
-                              <div className="text-[#303133] truncate" title={p.productName}>{p.productName}</div>
-                            </div>
-                            <div className="w-20 text-[#909399] truncate" title={p.specification || '-'}>
-                              {p.specification || '-'}
-                            </div>
-                            <div className="w-16 text-center text-[#303133]">{p.quantity}</div>
-                            <div className="w-16 text-center text-[#909399]">{p.unit}</div>
-                            <div className="w-12"></div>
-                          </div>
-                        ))}
-                      </>
-                    )}
-
-                    {order.mainProducts.length === 0 && order.auxiliaryProducts.length === 0 && (
-                      <div className="px-3 py-4 text-center text-[#909399] text-xs">暂无物资配置</div>
+                        <div className="w-20 text-[#909399] truncate" title={p.specification || '-'}>{p.specification || '-'}</div>
+                        <div className="w-16 text-center text-[#303133]">{p.ratio}</div>
+                        <div className="w-16 text-center text-[#909399]">{p.unit}</div>
+                        <div className="w-12"></div>
+                      </div>
+                    ))}
+                    {pCount === 0 && (
+                      <div className="px-3 py-4 text-center text-[#909399] text-xs">⚠️ 该工单未配置物资</div>
                     )}
                   </div>
                 )}

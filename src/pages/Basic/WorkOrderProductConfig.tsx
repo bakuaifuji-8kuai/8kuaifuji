@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, Trash2, Save, RefreshCw, X, Edit2 } from 'lucide-react';
+import { Search, Plus, Trash2, Save, X, Edit2 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import type { WorkOrderProductConfig, WorkOrderProductItem, Product } from '@/types';
 
@@ -10,10 +10,8 @@ export default function WorkOrderProductConfig() {
   const [editingConfig, setEditingConfig] = useState<WorkOrderProductConfig | null>(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<{ id: string; name: string; category: string } | null>(null);
   const [exhibitionName, setExhibitionName] = useState('');
-  const [mainProducts, setMainProducts] = useState<WorkOrderProductItem[]>([]);
-  const [auxiliaryProducts, setAuxiliaryProducts] = useState<WorkOrderProductItem[]>([]);
+  const [productsList, setProductsList] = useState<WorkOrderProductItem[]>([]);
   const [productPickerOpen, setProductPickerOpen] = useState(false);
-  const [productPickerType, setProductPickerType] = useState<'main' | 'auxiliary'>('main');
   const [productSearch, setProductSearch] = useState('');
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
 
@@ -41,8 +39,7 @@ export default function WorkOrderProductConfig() {
     setEditingConfig(null);
     setSelectedWorkOrder(null);
     setExhibitionName('');
-    setMainProducts([]);
-    setAuxiliaryProducts([]);
+    setProductsList([]);
     setShowModal(true);
   };
 
@@ -50,8 +47,7 @@ export default function WorkOrderProductConfig() {
     setEditingConfig(config);
     setSelectedWorkOrder({ id: config.workOrderId, name: config.workOrderName, category: config.category });
     setExhibitionName(config.exhibitionName || '');
-    setMainProducts([...config.mainProducts]);
-    setAuxiliaryProducts([...config.auxiliaryProducts]);
+    setProductsList([...config.products]);
     setShowModal(true);
   };
 
@@ -61,16 +57,11 @@ export default function WorkOrderProductConfig() {
     }
   };
 
-  const handleSelectProduct = (product: Product) => {
-    const existingItem: WorkOrderProductItem | undefined = productPickerType === 'main'
-      ? mainProducts.find(p => p.productId === product.id)
-      : auxiliaryProducts.find(p => p.productId === product.id);
-
-    if (existingItem) {
+  const handleAddSingle = (product: Product) => {
+    if (productsList.some(p => p.productId === product.id)) {
       alert('该物资已在配置中');
       return;
     }
-
     const newItem: WorkOrderProductItem = {
       id: `WP${Date.now()}${Math.random().toString(36).substr(2, 9)}`,
       productId: product.id,
@@ -79,81 +70,38 @@ export default function WorkOrderProductConfig() {
       categoryName: product.categoryName || '',
       specification: product.specification,
       unit: product.unit,
-      quantity: 1,
+      ratio: 1, // 默认 1:1
     };
-
-    if (productPickerType === 'main') {
-      setMainProducts([...mainProducts, newItem]);
-    } else {
-      setAuxiliaryProducts([...auxiliaryProducts, newItem]);
-    }
-  };
-
-  const handleToggleProduct = (productId: string) => {
-    setSelectedProductIds(prev =>
-      prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]
-    );
-  };
-
-  const handleSelectAll = () => {
-    const availableProducts = filteredProducts.filter(p => {
-      const existingMain = mainProducts.find(mp => mp.productId === p.id);
-      const existingAux = auxiliaryProducts.find(ap => ap.productId === p.id);
-      return !existingMain && !existingAux;
-    });
-    setSelectedProductIds(availableProducts.map(p => p.id));
-  };
-
-  const handleClearSelection = () => {
-    setSelectedProductIds([]);
+    setProductsList([...productsList, newItem]);
   };
 
   const handleConfirmSelection = () => {
-    const selectedProducts = products.filter(p => selectedProductIds.includes(p.id));
-    
-    selectedProducts.forEach(product => {
-      const existingItem: WorkOrderProductItem | undefined = productPickerType === 'main'
-        ? mainProducts.find(p => p.productId === product.id)
-        : auxiliaryProducts.find(p => p.productId === product.id);
-
-      if (!existingItem) {
-        const newItem: WorkOrderProductItem = {
-          id: `WP${Date.now()}${Math.random().toString(36).substr(2, 9)}`,
-          productId: product.id,
-          productCode: product.code,
-          productName: product.name,
-          categoryName: product.categoryName || '',
-          specification: product.specification,
-          unit: product.unit,
-          quantity: 1,
-        };
-
-        if (productPickerType === 'main') {
-          setMainProducts(prev => [...prev, newItem]);
-        } else {
-          setAuxiliaryProducts(prev => [...prev, newItem]);
-        }
-      }
+    const selected = products.filter(p => selectedProductIds.includes(p.id));
+    const existingIds = new Set(productsList.map(p => p.productId));
+    selected.forEach(product => {
+      if (existingIds.has(product.id)) return;
+      const newItem: WorkOrderProductItem = {
+        id: `WP${Date.now()}${Math.random().toString(36).substr(2, 9)}_${product.id}`,
+        productId: product.id,
+        productCode: product.code,
+        productName: product.name,
+        categoryName: product.categoryName || '',
+        specification: product.specification,
+        unit: product.unit,
+        ratio: 1,
+      };
+      setProductsList(prev => [...prev, newItem]);
     });
-
     setSelectedProductIds([]);
     setProductPickerOpen(false);
   };
 
-  const handleRemoveProduct = (type: 'main' | 'auxiliary', id: string) => {
-    if (type === 'main') {
-      setMainProducts(mainProducts.filter(p => p.id !== id));
-    } else {
-      setAuxiliaryProducts(auxiliaryProducts.filter(p => p.id !== id));
-    }
+  const handleRemoveProduct = (id: string) => {
+    setProductsList(productsList.filter(p => p.id !== id));
   };
 
-  const handleQuantityChange = (type: 'main' | 'auxiliary', id: string, quantity: number) => {
-    if (type === 'main') {
-      setMainProducts(mainProducts.map(p => p.id === id ? { ...p, quantity } : p));
-    } else {
-      setAuxiliaryProducts(auxiliaryProducts.map(p => p.id === id ? { ...p, quantity } : p));
-    }
+  const handleRatioChange = (id: string, ratio: number) => {
+    setProductsList(productsList.map(p => p.id === id ? { ...p, ratio: Math.max(0, ratio) } : p));
   };
 
   const handleSave = () => {
@@ -161,12 +109,11 @@ export default function WorkOrderProductConfig() {
       alert('请选择作业项目');
       return;
     }
-
     const now = new Date().toISOString();
     const existingConfig = workOrderConfigs.find(c => c.workOrderId === selectedWorkOrder.id);
     const projectId = existingConfig?.projectId || '';
     const projectName = existingConfig?.projectName || '';
-    
+
     const config: WorkOrderProductConfig = editingConfig
       ? {
           ...editingConfig,
@@ -174,8 +121,7 @@ export default function WorkOrderProductConfig() {
           workOrderName: selectedWorkOrder.name,
           exhibitionName,
           category: selectedWorkOrder.category,
-          mainProducts,
-          auxiliaryProducts,
+          products: productsList,
           updateTime: now,
         }
       : {
@@ -187,8 +133,7 @@ export default function WorkOrderProductConfig() {
           projectName,
           exhibitionName,
           category: selectedWorkOrder.category,
-          mainProducts,
-          auxiliaryProducts,
+          products: productsList,
           createTime: now,
         };
 
@@ -197,62 +142,8 @@ export default function WorkOrderProductConfig() {
     } else {
       setWorkOrderConfigs([...workOrderConfigs, config]);
     }
-
     setShowModal(false);
   };
-
-  const renderProductTable = (type: 'main' | 'auxiliary', items: WorkOrderProductItem[]) => (
-    <div className="border border-[#ebeef5] rounded">
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="bg-[#f5f7fa] text-[#606266]">
-            <th className="px-3 py-2 text-left">物资编码</th>
-            <th className="px-3 py-2 text-left">物资名称</th>
-            <th className="px-3 py-2 text-left">分类</th>
-            <th className="px-3 py-2 text-left">规格</th>
-            <th className="px-3 py-2 text-left">单位</th>
-            <th className="px-3 py-2 text-center">数量</th>
-            <th className="px-3 py-2 text-center">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map(item => (
-            <tr key={item.id} className="border-t border-[#f0f2f5]">
-              <td className="px-3 py-2 text-[#303133]">{item.productCode}</td>
-              <td className="px-3 py-2 text-[#303133]">{item.productName}</td>
-              <td className="px-3 py-2 text-[#303133]">{item.categoryName}</td>
-              <td className="px-3 py-2 text-[#303133]">{item.specification || '-'}</td>
-              <td className="px-3 py-2 text-[#303133]">{item.unit}</td>
-              <td className="px-3 py-2 text-center">
-                <input
-                  type="number"
-                  min="1"
-                  value={item.quantity}
-                  onChange={(e) => handleQuantityChange(type, item.id, parseInt(e.target.value) || 1)}
-                  className="w-20 px-2 py-1 border border-[#dcdfe6] rounded text-center focus:outline-none focus:border-[#2f54eb]"
-                />
-              </td>
-              <td className="px-3 py-2 text-center">
-                <button
-                  onClick={() => handleRemoveProduct(type, item.id)}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </td>
-            </tr>
-          ))}
-          {items.length === 0 && (
-            <tr>
-              <td colSpan={7} className="px-3 py-8 text-center text-[#909399]">
-                暂无{type === 'main' ? '主料' : '辅料'}，请点击右上角添加
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
 
   return (
     <div className="p-6">
@@ -294,8 +185,7 @@ export default function WorkOrderProductConfig() {
               <th className="px-3 py-2 text-left">作业项目名称</th>
               <th className="px-3 py-2 text-left">展会名称</th>
               <th className="px-3 py-2 text-left">作业分类</th>
-              <th className="px-3 py-2 text-left">主料数量</th>
-              <th className="px-3 py-2 text-left">辅料数量</th>
+              <th className="px-3 py-2 text-left">物资种类</th>
               <th className="px-3 py-2 text-left">创建时间</th>
               <th className="px-3 py-2 text-left">更新时间</th>
               <th className="px-3 py-2 text-center">操作</th>
@@ -308,21 +198,14 @@ export default function WorkOrderProductConfig() {
                 <td className="px-3 py-2 text-[#303133]">{config.workOrderName}</td>
                 <td className="px-3 py-2 text-[#303133]">{config.exhibitionName || '-'}</td>
                 <td className="px-3 py-2 text-[#303133]">{config.category}</td>
-                <td className="px-3 py-2 text-[#303133]">{config.mainProducts.length}</td>
-                <td className="px-3 py-2 text-[#303133]">{config.auxiliaryProducts.length}</td>
+                <td className="px-3 py-2 text-[#303133]">{config.products.length}</td>
                 <td className="px-3 py-2 text-[#303133]">{new Date(config.createTime).toLocaleString()}</td>
                 <td className="px-3 py-2 text-[#303133]">{config.updateTime ? new Date(config.updateTime).toLocaleString() : '-'}</td>
                 <td className="px-3 py-2 text-center">
-                  <button
-                    onClick={() => handleEditConfig(config)}
-                    className="text-[#2f54eb] hover:text-[#1d4ed8] mx-1"
-                  >
+                  <button onClick={() => handleEditConfig(config)} className="text-[#2f54eb] hover:text-[#1d4ed8] mx-1">
                     <Edit2 size={14} />
                   </button>
-                  <button
-                    onClick={() => handleDeleteConfig(config.id)}
-                    className="text-red-500 hover:text-red-700 mx-1"
-                  >
+                  <button onClick={() => handleDeleteConfig(config.id)} className="text-red-500 hover:text-red-700 mx-1">
                     <Trash2 size={14} />
                   </button>
                 </td>
@@ -330,7 +213,7 @@ export default function WorkOrderProductConfig() {
             ))}
             {filteredConfigs.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-[#909399]">
+                <td colSpan={8} className="px-3 py-8 text-center text-[#909399]">
                   暂无作业项物资配置
                 </td>
               </tr>
@@ -339,6 +222,7 @@ export default function WorkOrderProductConfig() {
         </table>
       </div>
 
+      {/* 配置弹窗 */}
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" style={{ display: showModal ? 'flex' : 'none' }}>
         <div className="bg-white rounded-lg w-[900px] max-h-[90vh] overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#ebeef5]">
@@ -366,11 +250,6 @@ export default function WorkOrderProductConfig() {
                   <option key={wo.id} value={wo.id}>{wo.name} ({wo.category})</option>
                 ))}
               </select>
-              {selectedWorkOrder && (
-                <div className="mt-2 text-xs text-[#909399]">
-                  作业分类：{selectedWorkOrder.category}
-                </div>
-              )}
             </div>
 
             <div className="mb-4">
@@ -384,52 +263,72 @@ export default function WorkOrderProductConfig() {
               />
             </div>
 
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-medium text-[#303133]">主料</h4>
+            {/* 合并后的单一物资表 */}
+            <div className="mb-6 border border-[#ebeef5] rounded">
+              <div className="flex items-center justify-between px-3 py-2 bg-[#f5f7fa] border-b border-[#ebeef5]">
+                <h4 className="text-sm font-medium text-[#303133]">📦 物资清单（不分主辅 · 数量为比例系数）</h4>
                 <button
-                  onClick={() => {
-                    setProductPickerType('main');
-                    setProductPickerOpen(true);
-                  }}
+                  onClick={() => setProductPickerOpen(true)}
                   className="flex items-center gap-1 px-2 py-1 text-xs text-[#2f54eb] hover:text-[#1d4ed8]"
                 >
                   <Plus size={12} />
-                  添加主料
+                  添加物资
                 </button>
               </div>
-              {renderProductTable('main', mainProducts)}
-            </div>
-
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-medium text-[#303133]">辅料</h4>
-                <button
-                  onClick={() => {
-                    setProductPickerType('auxiliary');
-                    setProductPickerOpen(true);
-                  }}
-                  className="flex items-center gap-1 px-2 py-1 text-xs text-[#2f54eb] hover:text-[#1d4ed8]"
-                >
-                  <Plus size={12} />
-                  添加辅料
-                </button>
-              </div>
-              {renderProductTable('auxiliary', auxiliaryProducts)}
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[#606266]">
+                    <th className="px-3 py-2 text-left">物资编码</th>
+                    <th className="px-3 py-2 text-left">物资名称</th>
+                    <th className="px-3 py-2 text-left">分类</th>
+                    <th className="px-3 py-2 text-left">规格</th>
+                    <th className="px-3 py-2 text-left">单位</th>
+                    <th className="px-3 py-2 text-center w-40">比例系数（默认 1:1）</th>
+                    <th className="px-3 py-2 text-center w-16">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productsList.map(item => (
+                    <tr key={item.id} className="border-t border-[#f0f2f5]">
+                      <td className="px-3 py-2 text-[#303133]">{item.productCode}</td>
+                      <td className="px-3 py-2 text-[#303133]">{item.productName}</td>
+                      <td className="px-3 py-2 text-[#303133]">{item.categoryName}</td>
+                      <td className="px-3 py-2 text-[#303133]">{item.specification || '-'}</td>
+                      <td className="px-3 py-2 text-[#303133]">{item.unit}</td>
+                      <td className="px-3 py-2 text-center">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={item.ratio}
+                          onChange={(e) => handleRatioChange(item.id, parseFloat(e.target.value) || 0)}
+                          className="w-20 px-2 py-1 border border-[#dcdfe6] rounded text-center focus:outline-none focus:border-[#2f54eb]"
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <button onClick={() => handleRemoveProduct(item.id)} className="text-red-500 hover:text-red-700">
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {productsList.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="px-3 py-8 text-center text-[#909399]">
+                        暂无物资，请点击右上角添加
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
           <div className="flex items-center justify-end gap-3 px-4 py-3 border-t border-[#ebeef5] bg-[#f5f7fa]">
-            <button
-              onClick={() => setShowModal(false)}
-              className="px-4 py-2 text-sm text-[#606266] hover:text-[#303133]"
-            >
+            <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-[#606266] hover:text-[#303133]">
               取消
             </button>
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-1 px-4 py-2 bg-[#2f54eb] text-white text-sm rounded hover:bg-[#1d4ed8]"
-            >
+            <button onClick={handleSave} className="flex items-center gap-1 px-4 py-2 bg-[#2f54eb] text-white text-sm rounded hover:bg-[#1d4ed8]">
               <Save size={14} />
               保存
             </button>
@@ -437,12 +336,11 @@ export default function WorkOrderProductConfig() {
         </div>
       </div>
 
+      {/* 物资选择弹窗 */}
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" style={{ display: productPickerOpen ? 'flex' : 'none' }}>
         <div className="bg-white rounded-lg w-[600px] max-h-[70vh] overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#ebeef5]">
-            <h3 className="text-base font-medium text-[#303133]">
-              选择{productPickerType === 'main' ? '主料' : '辅料'}
-            </h3>
+            <h3 className="text-base font-medium text-[#303133]">选择物资</h3>
             <button onClick={() => { setProductPickerOpen(false); setSelectedProductIds([]); }} className="text-[#909399] hover:text-[#606266]">
               <X size={18} />
             </button>
@@ -460,76 +358,37 @@ export default function WorkOrderProductConfig() {
               />
             </div>
 
-            <div className="flex items-center justify-between mb-2">
-              <button
-                onClick={handleSelectAll}
-                className="text-xs text-[#2f54eb] hover:text-[#1d4ed8]"
-              >
-                全选
-              </button>
-              <button
-                onClick={handleClearSelection}
-                className="text-xs text-[#909399] hover:text-[#606266]"
-              >
-                清除选择
-              </button>
-            </div>
-
             <div className="border border-[#ebeef5] rounded overflow-y-auto max-h-[40vh]">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-[#f5f7fa] text-[#606266]">
-                    <th className="px-3 py-2 text-center w-8">
-                      <input
-                        type="checkbox"
-                        checked={selectedProductIds.length === filteredProducts.filter(p => {
-                          const existingMain = mainProducts.find(mp => mp.productId === p.id);
-                          const existingAux = auxiliaryProducts.find(ap => ap.productId === p.id);
-                          return !existingMain && !existingAux;
-                        }).length}
-                        onChange={handleSelectAll}
-                      />
-                    </th>
                     <th className="px-3 py-2 text-left">物资编码</th>
                     <th className="px-3 py-2 text-left">物资名称</th>
                     <th className="px-3 py-2 text-left">分类</th>
                     <th className="px-3 py-2 text-left">规格</th>
                     <th className="px-3 py-2 text-left">单位</th>
-                    <th className="px-3 py-2 text-center">操作</th>
+                    <th className="px-3 py-2 text-center w-20">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredProducts.map(product => {
-                    const existingMain = mainProducts.find(mp => mp.productId === product.id);
-                    const existingAux = auxiliaryProducts.find(ap => ap.productId === product.id);
-                    const isDisabled = existingMain || existingAux;
-                    const isSelected = selectedProductIds.includes(product.id);
-                    
+                    const disabled = productsList.some(p => p.productId === product.id);
                     return (
-                      <tr key={product.id} className={`border-t border-[#f0f2f5] ${isDisabled ? 'bg-[#fafafa] opacity-50' : 'hover:bg-[#f5f7fa]'}`}>
-                        <td className="px-3 py-2 text-center">
-                          {!isDisabled && (
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => handleToggleProduct(product.id)}
-                            />
-                          )}
-                        </td>
+                      <tr key={product.id} className={`border-t border-[#f0f2f5] ${disabled ? 'bg-[#fafafa] opacity-50' : 'hover:bg-[#f5f7fa]'}`}>
                         <td className="px-3 py-2 text-[#303133]">{product.code}</td>
                         <td className="px-3 py-2 text-[#303133]">{product.name}</td>
                         <td className="px-3 py-2 text-[#303133]">{product.categoryName || '-'}</td>
                         <td className="px-3 py-2 text-[#303133]">{product.specification || '-'}</td>
                         <td className="px-3 py-2 text-[#303133]">{product.unit}</td>
                         <td className="px-3 py-2 text-center">
-                          {isDisabled ? (
+                          {disabled ? (
                             <span className="text-xs text-[#909399]">已配置</span>
                           ) : (
                             <button
-                              onClick={() => handleSelectProduct(product)}
+                              onClick={() => handleAddSingle(product)}
                               className="px-3 py-1 text-xs text-[#2f54eb] border border-[#2f54eb] rounded hover:bg-[#2f54eb] hover:text-white"
                             >
-                              选择
+                              + 添加
                             </button>
                           )}
                         </td>
@@ -538,29 +397,13 @@ export default function WorkOrderProductConfig() {
                   })}
                   {filteredProducts.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-[#909399]">
+                      <td colSpan={6} className="px-3 py-8 text-center text-[#909399]">
                         暂无物资
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 mt-4">
-              <button
-                onClick={() => { setProductPickerOpen(false); setSelectedProductIds([]); }}
-                className="px-4 py-2 text-sm text-[#606266] hover:text-[#303133]"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleConfirmSelection}
-                disabled={selectedProductIds.length === 0}
-                className="px-4 py-2 bg-[#2f54eb] text-white text-sm rounded hover:bg-[#1d4ed8] disabled:bg-[#c0c4cc] disabled:cursor-not-allowed"
-              >
-                确认选择 ({selectedProductIds.length})
-              </button>
             </div>
           </div>
         </div>

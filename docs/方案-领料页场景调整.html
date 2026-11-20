@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>方案 · 领料页四场景调整 + 配置弹窗合并</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f1f5f9; color: #1e293b; padding: 24px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  h2 { font-size: 16px; font-weight: 600; margin: 32px 0 14px; padding-left: 10px; border-left: 3px solid #6366f1; }
+  h3 { font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 10px; }
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; margin-right: 6px; }
+  .tag-new { background: #fce7f3; color: #be185d; }
+  .tag-del { background: #fee2e2; color: #b91c1c; }
+  .tag-change { background: #fef3c7; color: #b45309; }
+  .tag-keep { background: #dcfce7; color: #15803d; }
+  .note { background: #eff6ff; border-left: 3px solid #6366f1; padding: 14px 18px; border-radius: 0 10px 10px 0; font-size: 13px; color: #334155; margin: 12px 0; line-height: 1.8; }
+  .note-warn { background: #fef3c7; border-left-color: #f59e0b; }
+  .tag-issue { background: #fee2e2; color: #b91c1c; }
+
+  /* 屏幕容器 */
+  .screen {
+    background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    width: 100%; max-width: 1180px; margin: 18px auto; overflow: hidden;
+  }
+  .screen-header {
+    background: linear-gradient(90deg, #6366f1, #8b5cf6); color: #fff;
+    padding: 14px 20px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 10px;
+  }
+  .screen-header .btn-back { background: rgba(255,255,255,0.2); padding: 3px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .screen-body { padding: 20px; }
+
+  /* 顶部基础信息卡 */
+  .base-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; margin-bottom: 16px; }
+  .base-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 24px; }
+  .base-field .lbl { font-size: 12px; color: #64748b; margin-bottom: 4px; }
+  .base-field .val { font-size: 14px; color: #1e293b; font-weight: 500; }
+  .base-field .val input, .base-field .val select { width: 100%; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; }
+
+  /* 作业项汇总表格 */
+  .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 13px; }
+  .summary-table th { background: #f1f5f9; color: #475569; padding: 9px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
+  .summary-table td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .mini-btn { padding: 3px 8px; border-radius: 5px; font-size: 12px; cursor: pointer; border: 1px solid; background: #fff; margin-right: 4px; }
+  .mini-btn-primary { background: #6366f1; color: #fff; border-color: #6366f1; }
+  .mini-btn-primary:hover { background: #4f46e5; }
+  .mini-btn-default { border-color: #cbd5e1; color: #475569; }
+  .mini-btn-default:hover { border-color: #6366f1; color: #6366f1; }
+  .mini-btn-danger { border-color: #ef4444; color: #ef4444; }
+  .mini-btn-danger:hover { background: #ef4444; color: #fff; }
+
+  /* 分组卡片 */
+  .group-card { border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+  .group-head {
+    background: linear-gradient(90deg, #eef2ff, #faf5ff);
+    padding: 10px 16px; display: flex; align-items: center; gap: 12px; font-size: 13px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .group-head .gi-name { font-weight: 600; color: #1e293b; font-size: 14px; }
+  .group-head .gi-wo { color: #6366f1; font-size: 12px; }
+  .group-head .gi-qty { background: #fff; padding: 2px 8px; border-radius: 10px; color: #475569; font-size: 12px; }
+  .badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+  .badge-warn { background: #fef3c7; color: #b45309; }
+  .badge-danger { background: #fee2e2; color: #b91c1c; }
+  .badge-ok { background: #dcfce7; color: #15803d; }
+  .badge-info { background: #e0e7ff; color: #4338ca; }
+  .badge-plus { background: #f0fdf4; color: #15803d; border: 1px dashed #86efac; padding: 2px 10px; border-radius: 10px; font-size: 12px; cursor: pointer; margin-left: auto; }
+  .badge-plus:hover { background: #dcfce7; }
+
+  .group-body { padding: 0; }
+  .detail-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .detail-table th { background: #f8fafc; color: #475569; padding: 8px 14px; text-align: left; font-weight: 600; font-size: 12px; border-bottom: 1px solid #e2e8f0; }
+  .detail-table td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
+  .detail-table tr:last-child td { border-bottom: none; }
+  .detail-table tr.qty-short td { background: #fff5f5; }
+  .detail-table .qty-input { width: 72px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 5px; font-size: 12px; text-align: center; }
+  .detail-table .qty-input.short { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+  .ratio-input { width: 60px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 5px; font-size: 12px; text-align: center; background: #f0fdf4; border-color: #86efac; color: #15803d; }
+  .avail-ok { color: #16a34a; }
+  .avail-short { color: #dc2626; font-weight: 600; }
+
+  /* 空组 */
+  .empty-group {
+    padding: 30px; text-align: center; background: #fffbeb; color: #92400e; border: 2px dashed #fcd34d;
+    margin: 10px 12px 14px; border-radius: 8px;
+  }
+  .empty-group .big-btn {
+    margin-top: 12px; padding: 8px 22px; background: linear-gradient(90deg, #6366f1, #8b5cf6); color: #fff;
+    border: none; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 500;
+  }
+
+  /* 场景标签 */
+  .scenario { display: inline-block; background: #6366f1; color: #fff; padding: 2px 10px; border-radius: 4px; font-size: 12px; margin-right: 8px; }
+  .scenario-2 { background: #f59e0b; }
+  .scenario-3 { background: #dc2626; }
+
+  /* 对比表 */
+  .compare-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  .compare-table th, .compare-table td { border: 1px solid #e2e8f0; padding: 10px 12px; text-align: left; vertical-align: top; }
+  .compare-table th { background: #f8fafc; color: #475569; font-weight: 600; }
+  .compare-table td ul { padding-left: 18px; margin-top: 4px; }
+  .compare-table td ul li { margin-bottom: 3px; }
+
+  /* 配置弹窗（合并后） */
+  .modal-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    display: flex; align-items: center; justify-content: center; z-index: 999;
+  }
+  .modal {
+    background: #fff; border-radius: 10px; width: 680px; max-height: 80vh; display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .modal-head { padding: 14px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+  .modal-head h3 { font-size: 15px; color: #1e293b; font-weight: 600; margin: 0; }
+  .modal-head .close { cursor: pointer; color: #94a3b8; font-size: 20px; border: none; background: none; }
+  .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+  .modal-foot { padding: 12px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 8px; }
+  .form-row { margin-bottom: 12px; }
+  .form-row label { font-size: 12px; color: #475569; display: block; margin-bottom: 4px; font-weight: 500; }
+  .form-row select, .form-row input[type="text"] { width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; }
+
+  /* 底部操作栏 */
+  .bottom-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e2e8f0;
+    padding: 12px 24px; display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.05);
+  }
+  .btn-primary { padding: 8px 22px; background: linear-gradient(90deg, #6366f1, #8b5cf6); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; box-shadow: 0 2px 8px rgba(99,102,241,0.3); }
+  .btn-default { padding: 8px 22px; background: #fff; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  .btn-default:hover { border-color: #6366f1; color: #6366f1; }
+
+  .bottom-placeholder { height: 70px; }
+
+  /* 流程说明 */
+  .flow-steps { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 10px 0; }
+  .flow-step { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 12px; font-size: 12px; }
+  .flow-arrow { color: #94a3b8; }
+</style>
+</head>
+<body>
+
+<h1>📐 领料页调整方案 · 四场景全覆盖</h1>
+<div class="note">
+  <b>前置规则（已决定）</b>：① 配置弹窗不再分主料/辅料，所有物资同一表格 &nbsp; ② 配置里的「数量」改为「比例」，默认 1:1 &nbsp; ③ 调拨单实际调度量 = 作业数量 × 比例
+</div>
+
+<h2>一、四个业务场景 & 页面行为</h2>
+
+<table class="compare-table">
+  <thead>
+    <tr>
+      <th width="180">场景</th>
+      <th width="220">业务含义</th>
+      <th>页面自动行为</th>
+      <th>用户可追加</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="scenario">场景 1</span></td>
+      <td>工单<b>配了配电箱</b>，且库存充足</td>
+      <td>自动展开配置物资（配电箱等），<br>数量 = 作业数量 × 比例<br>→ 绿色徽章 "✓ 库存充足"</td>
+      <td colspan="2" style="background:#f0fdf4;color:#15803d;">"+ 追加物资到本组" —— 可加电缆、插线板、其他配电箱等</td>
+    </tr>
+    <tr>
+      <td><span class="scenario scenario-2">场景 2</span></td>
+      <td>工单<b>没配任何物资</b>（或该作业项没挂配置）</td>
+      <td>整组空展示：<br>amber 背景 + 居中提示文字<br>→ "⚠️ 该工单未配置物资"</td>
+      <td colspan="2" style="background:#fffbeb;color:#b45309;">两个入口：组头 "+ 追加物资" 按钮 + 空组中央大号 "+ 选择物资" 按钮</td>
+    </tr>
+    <tr>
+      <td><span class="scenario scenario-3">场景 3</span></td>
+      <td>工单<b>配了配电箱</b>，但库存<b>不够</b></td>
+      <td>自动展开配置物资，但库存不足行 <b>红底 + 红色数字</b><br>→ 红色徽章 "⚠️ 存在库存不足"</td>
+      <td colspan="2" style="background:#fef2f2;color:#dc2626;">① 库存不足行 → 右侧 "+ 追加替代" 加其他型号配电箱<br>② 组头 "+ 追加物资" 加电缆、插线板</td>
+    </tr>
+    <tr>
+      <td><span class="scenario" style="background:#0ea5e9;">场景 4</span></td>
+      <td><b>多个工单作业项名称相同</b><br>（例：选了 3 个"电箱220V室内"工单）</td>
+      <td>页面只显示 <b>一组汇总</b>：<br>作业数量 = 50 + 30 + 20 = <b>100</b><br>同 productId 的物资自动合并为一行</td>
+      <td colspan="2" style="background:#e0f2fe;color:#0369a1;">来源工单列用 chip 叠多个编号<br>物资表：同物资 ratio 取 max，实际数量 = 100 × ratio</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note note-warn">
+  <b>核心设计原则</b>：三个场景的 UI 骨架<b>完全一致</b>（都是"作业项汇总表 + 分组卡片 + 底部栏"），只有<b>徽章颜色、空/红状态、追加入口位置</b>不同。用户不需要切换视图模式。
+</div>
+
+<!-- ========== 方案 A：调拨出库全屏页 ========== -->
+
+<h2>二、调拨出库全屏页（三个场景混合展示）</h2>
+
+<div class="screen">
+  <div class="screen-header">
+    <span class="btn-back">← 返回列表</span>
+    <span>📦 新增调拨单 · 展会物资调拨出库</span>
+    <span style="margin-left:auto;font-size:12px;opacity:.9;">调拨单号：TF20261120-001</span>
+  </div>
+  <div class="screen-body">
+
+    <!-- 基础信息 -->
+    <div class="base-card">
+      <div class="base-grid">
+        <div class="base-field"><div class="lbl">调拨单号</div><div class="val">TF20261120-001</div></div>
+        <div class="base-field"><div class="lbl"><span style="color:#ef4444">*</span> 调出仓库</div><div class="val"><select><option>A馆实物仓</option><option>B馆实物仓</option></select></div></div>
+        <div class="base-field"><div class="lbl"><span style="color:#ef4444">*</span> 调入仓库</div><div class="val"><select><option>展会现场临仓</option></select></div></div>
+        <div class="base-field"><div class="lbl">制单人</div><div class="val">管理员</div></div>
+      </div>
+    </div>
+
+    <!-- 作业项汇总表 -->
+    <div class="group-card" style="margin-bottom:16px;">
+      <div class="group-head" style="background:linear-gradient(90deg,#eff6ff,#f0f9ff);">
+        <span class="gi-name">📋 作业项汇总</span>
+        <span style="margin-left:auto;color:#475569;font-size:12px;">已选 <b style="color:#6366f1;">3</b> 个工单</span>
+        <button class="mini-btn mini-btn-default" style="margin-left:12px;">🗑 清空全部</button>
+        <button class="mini-btn mini-btn-primary" onclick="document.getElementById('woPkr').style.display='flex';">+ 选择工单</button>
+      </div>
+      <div class="group-body">
+        <table class="summary-table">
+          <thead>
+            <tr>
+              <th>作业项目</th>
+              <th>作业数量</th>
+              <th>来源工单</th>
+              <th>物资种类</th>
+              <th style="width:180px; text-align:right;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>电箱220V室内</b></td>
+              <td>50</td>
+              <td class="gi-wo">WI2606010001</td>
+              <td>5 种</td>
+              <td style="text-align:right;"><button class="mini-btn">🔍 查看分组</button><button class="mini-btn mini-btn-default">− 移除</button></td>
+            </tr>
+            <tr>
+              <td><b>电箱220V室外</b></td>
+              <td>30</td>
+              <td class="gi-wo">WI2606010002</td>
+              <td>0 种 · <span style="color:#b45309;">未配置</span></td>
+              <td style="text-align:right;"><button class="mini-btn mini-btn-default">− 移除</button></td>
+            </tr>
+            <tr>
+              <td><b>音响调试</b></td>
+              <td>4</td>
+              <td class="gi-wo">WI2606010005</td>
+              <td>3 种 · <span style="color:#dc2626;">库存不足 1 行</span></td>
+              <td style="text-align:right;"><button class="mini-btn mini-btn-default">− 移除</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 分组卡片 场景1：配了且库存够 -->
+    <div class="group-card">
+      <div class="group-head">
+        <span class="gi-name">🎯 场景 1</span>
+        <span class="badge badge-ok">✓ 库存充足</span>
+        <span class="gi-name" style="color:#1e293b;margin-left:16px;">电箱220V室内</span>
+        <span class="gi-wo">工单 WI2606010001</span>
+        <span class="gi-qty">作业数量 × 50</span>
+        <span class="badge-plus">+ 追加物资到本组</span>
+      </div>
+      <div class="group-body">
+        <table class="detail-table">
+          <thead>
+            <tr>
+              <th style="width:40px;">#</th>
+              <th>物资名称</th>
+              <th>规格</th>
+              <th>单位</th>
+              <th style="width:90px;">配置比例</th>
+              <th style="width:90px;">可调数量</th>
+              <th style="width:90px;">当前库存</th>
+              <th style="width:200px;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>配电箱</td>
+              <td>16A</td>
+              <td>个</td>
+              <td><input class="ratio-input" value="1.0"></td>
+              <td><input class="qty-input" value="50"></td>
+              <td class="avail-ok">120</td>
+              <td><button class="mini-btn mini-btn-default">替换</button><button class="mini-btn mini-btn-danger">删除</button></td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>配电箱</td>
+              <td>32A</td>
+              <td>个</td>
+              <td><input class="ratio-input" value="0.5"></td>
+              <td><input class="qty-input" value="25"></td>
+              <td class="avail-ok">60</td>
+              <td><button class="mini-btn mini-btn-default">替换</button><button class="mini-btn mini-btn-danger">删除</button></td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td>电缆</td>
+              <td>6mm² 多股</td>
+              <td>米</td>
+              <td><input class="ratio-input" value="3"></td>
+              <td><input class="qty-input" value="150"></td>
+              <td class="avail-ok">400</td>
+              <td><button class="mini-btn mini-btn-default">替换</button><button class="mini-btn mini-btn-danger">删除</button></td>
+            </tr>
+            <tr>
+              <td colspan="8" style="text-align:center;color:#94a3b8;font-size:12px;padding:8px;">
+                ↑ 配置了 3 种物资，全部库存充足，比例可微调，实际数量 = 50 × ratio
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 分组卡片 场景2：没配置 -->
+    <div class="group-card">
+      <div class="group-head">
+        <span class="gi-name">🎯 场景 2</span>
+        <span class="badge badge-warn">⚠️ 该工单未配置物资</span>
+        <span class="gi-name" style="color:#1e293b;margin-left:16px;">电箱220V室外</span>
+        <span class="gi-wo">工单 WI2606010002</span>
+        <span class="gi-qty">作业数量 × 30</span>
+        <span class="badge-plus">+ 追加物资到本组</span>
+      </div>
+      <div class="empty-group">
+        <div style="font-size:14px;margin-bottom:4px;">🗂️ 此作业项下暂无物资配置</div>
+        <div style="font-size:12px;color:#a16207;margin-bottom:12px;">点击下方按钮选择配电箱、电缆、插线板等</div>
+        <button class="big-btn" onclick="document.getElementById('woPkr').style.display='flex';">➕ 选择物资</button>
+      </div>
+    </div>
+
+    <!-- 分组卡片 场景3：配了但库存不足 -->
+    <div class="group-card">
+      <div class="group-head">
+        <span class="gi-name">🎯 场景 3</span>
+        <span class="badge badge-danger">⚠️ 存在库存不足</span>
+        <span class="gi-name" style="color:#1e293b;margin-left:16px;">音响调试</span>
+        <span class="gi-wo">工单 WI2606010005</span>
+        <span class="gi-qty">作业数量 × 4</span>
+        <span class="badge-plus">+ 追加物资到本组</span>
+      </div>
+      <div class="group-body">
+        <table class="detail-table">
+          <thead>
+            <tr>
+              <th style="width:40px;">#</th>
+              <th>物资名称</th>
+              <th>规格</th>
+              <th>单位</th>
+              <th style="width:90px;">配置比例</th>
+              <th style="width:90px;">可调数量</th>
+              <th style="width:90px;">当前库存</th>
+              <th style="width:200px;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="qty-short">
+              <td>1</td>
+              <td><b>舞台功放</b></td>
+              <td>专业级 1000W</td>
+              <td>台</td>
+              <td><input class="ratio-input" value="1.0"></td>
+              <td><input class="qty-input short" value="4"></td>
+              <td class="avail-short">仅 <b>1</b> 台</td>
+              <td><button class="mini-btn mini-btn-primary">+ 追加替代</button><button class="mini-btn mini-btn-danger">删除</button></td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>音响线</td>
+              <td>专业 3.5m</td>
+              <td>根</td>
+              <td><input class="ratio-input" value="2"></td>
+              <td><input class="qty-input" value="8"></td>
+              <td class="avail-ok">20</td>
+              <td><button class="mini-btn mini-btn-default">替换</button><button class="mini-btn mini-btn-danger">删除</button></td>
+            </tr>
+            <tr>
+              <td colspan="8" style="text-align:center;color:#94a3b8;font-size:12px;padding:8px;">
+                ↑ 第一行库存不足，可追加其他型号功放作替代；也可追加插线板、电源延长线
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 无工单关联的手动物资兜底 -->
+    <div class="group-card" style="border-style:dashed;border-width:2px;">
+      <div class="group-head" style="background:#fafafa;">
+        <span class="gi-name">📝 手动物资（无工单关联）</span>
+        <span class="badge-plus">+ 直接选择物资</span>
+      </div>
+      <div class="empty-group" style="background:#fafafa;border-color:#e2e8f0;color:#64748b;">
+        <div style="font-size:13px;">可添加零星物资，不关联任何工单</div>
+      </div>
+    </div>
+
+    <div class="bottom-placeholder"></div>
+  </div>
+
+  <!-- 底部操作栏 -->
+  <div class="bottom-bar">
+    <div style="font-size:13px;color:#475569;">
+      📊 合计 <b style="color:#6366f1;font-size:15px;">3</b> 个作业项 · 
+      <b style="color:#6366f1;font-size:15px;">8</b> 种物资 · 
+      <b style="color:#dc2626;">2 行库存不足</b>
+    </div>
+    <div>
+      <button class="btn-default" style="margin-right:8px;">取消</button>
+      <button class="btn-primary">💾 保存调拨单</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 场景 4：相同作业项汇总 ========== -->
+
+<h2>三、场景 4 · 相同作业项跨工单自动汇总</h2>
+
+<div class="note">
+  <b>触发条件</b>：用户选择了多个作业项名称相同的工单（例：3 个都叫"电箱220V室内"）<br>
+  <b>UI 行为</b>：页面<b>只渲染一组</b>"电箱220V室内"卡片，作业数量 = 各工单 workOrderQty 累加；同 productId 的物资自动合并为一行，ratio 取 max（各工单配置里的比例系数可能不同，取最保守的那个），实际数量 = <b>总作业数量 × ratio</b>
+</div>
+
+<div class="screen">
+  <div class="screen-header">
+    <span class="btn-back">← 返回列表</span>
+    <span>📦 新增调拨单 · <b style="background:rgba(255,255,255,0.2);padding:2px 10px;border-radius:4px;margin-left:6px;">场景 4</b> 相同作业项汇总</span>
+    <span style="margin-left:auto;font-size:12px;opacity:.9;">调拨单号：TF20261120-002</span>
+  </div>
+  <div class="screen-body">
+
+    <!-- 基础信息（略，同前） -->
+
+    <!-- 作业项汇总表：合并前 vs 合并后 -->
+    <div class="group-card" style="margin-bottom:16px;">
+      <div class="group-head" style="background:linear-gradient(90deg,#e0f2fe,#f0f9ff);">
+        <span class="gi-name">📋 作业项汇总</span>
+        <span style="margin-left:auto;color:#0369a1;font-size:12px;">⚠️ 选中了 4 个工单，其中 3 个作业项相同 → 自动合并为 1 行</span>
+        <button class="mini-btn mini-btn-default" style="margin-left:12px;">🗑 清空全部</button>
+        <button class="mini-btn mini-btn-primary">+ 选择工单</button>
+      </div>
+      <div class="group-body">
+        <table class="summary-table">
+          <thead>
+            <tr>
+              <th>作业项目</th>
+              <th>作业数量</th>
+              <th>来源工单（3 个）</th>
+              <th>物资种类</th>
+              <th style="width:120px; text-align:right;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>电箱220V室内</b></td>
+              <td><b style="color:#0369a1;font-size:15px;">100</b> <span style="color:#94a3b8;font-size:11px;">= 50 + 30 + 20</span></td>
+              <td>
+                <span class="badge badge-info" style="margin:2px;">WI2606010001</span>
+                <span class="badge badge-info" style="margin:2px;">WI2606010015</span>
+                <span class="badge badge-info" style="margin:2px;">WI2606010023</span>
+              </td>
+              <td>5 种</td>
+              <td style="text-align:right;"><button class="mini-btn mini-btn-danger" style="color:#dc2626;border-color:#fecaca;">− 全部移除</button></td>
+            </tr>
+            <tr>
+              <td><b>音响调试</b></td>
+              <td>4</td>
+              <td class="gi-wo">WI2606010005</td>
+              <td>3 种</td>
+              <td style="text-align:right;"><button class="mini-btn mini-btn-danger" style="color:#dc2626;border-color:#fecaca;">− 移除</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 汇总卡片：1 个作业项 3 个工单合并 -->
+    <div class="group-card" style="border-color:#0ea5e9;border-width:2px;">
+      <div class="group-head" style="background:linear-gradient(90deg,#e0f2fe,#f0f9ff);">
+        <span class="gi-name">🎯 场景 4</span>
+        <span class="badge" style="background:#0ea5e9;color:#fff;">✦ 相同作业项汇总</span>
+        <span class="gi-name" style="color:#1e293b;margin-left:16px;">电箱220V室内</span>
+        <span class="badge badge-info" style="margin:0 4px;">WI2606010001</span>
+        <span class="badge badge-info" style="margin:0 4px;">WI2606010015</span>
+        <span class="badge badge-info" style="margin:0 4px;">WI2606010023</span>
+        <span class="gi-qty" style="background:#0ea5e9;color:#fff;border:none;">总作业数 × 100</span>
+        <span class="badge-plus">+ 追加物资到本组</span>
+      </div>
+      <div class="group-body">
+
+        <!-- 合并规则说明条 -->
+        <div style="background:#fff8e1;border-bottom:1px solid #f0e0a0;padding:8px 16px;font-size:12px;color:#92400e;">
+          <b>🔀 合并规则</b>：3 个工单的 "电箱220V室内" 合并为一组。物资明细按 <b>productId</b> 去重，<b>比例系数取 max</b>（各工单配置可能不同，取最保守值）。
+        </div>
+
+        <table class="detail-table">
+          <thead>
+            <tr>
+              <th style="width:40px;">#</th>
+              <th>物资名称</th>
+              <th>规格</th>
+              <th>单位</th>
+              <th style="width:130px;">比例系数（取 max）</th>
+              <th style="width:110px;">可调数量</th>
+              <th style="width:100px;">当前库存</th>
+              <th style="width:130px;">合并来源</th>
+              <th style="width:160px;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td><b>配电箱</b></td>
+              <td>16A</td>
+              <td>个</td>
+              <td>
+                <input class="ratio-input" value="1.0">
+                <div style="font-size:10px;color:#94a3b8;margin-top:2px;">(1.0 / 1.0 / 0.5 → <b style="color:#15803d;">max 1.0</b>)</div>
+              </td>
+              <td><input class="qty-input" value="100"></td>
+              <td class="avail-ok">120</td>
+              <td>来自 3 个工单</td>
+              <td><button class="mini-btn mini-btn-default">替换</button><button class="mini-btn mini-btn-danger">删除</button></td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td><b>配电箱</b></td>
+              <td>32A</td>
+              <td>个</td>
+              <td>
+                <input class="ratio-input" value="0.5">
+                <div style="font-size:10px;color:#94a3b8;margin-top:2px;">(0.5 / 无 / 0.5 → <b style="color:#15803d;">max 0.5</b>)</div>
+              </td>
+              <td><input class="qty-input" value="50"></td>
+              <td class="avail-ok">60</td>
+              <td>来自 2 个工单</td>
+              <td><button class="mini-btn mini-btn-default">替换</button><button class="mini-btn mini-btn-danger">删除</button></td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td><b>电缆</b></td>
+              <td>6mm² 多股</td>
+              <td>米</td>
+              <td>
+                <input class="ratio-input" value="3">
+                <div style="font-size:10px;color:#94a3b8;margin-top:2px;">(3 / 4 / 3 → <b style="color:#15803d;">max 4</b>，覆盖为 3)</div>
+              </td>
+              <td><input class="qty-input" value="300"></td>
+              <td class="avail-ok">400</td>
+              <td>来自 3 个工单</td>
+              <td><button class="mini-btn mini-btn-default">替换</button><button class="mini-btn mini-btn-danger">删除</button></td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td><b>插线板</b></td>
+              <td>6 位</td>
+              <td>个</td>
+              <td>
+                <input class="ratio-input" value="0.3">
+                <div style="font-size:10px;color:#94a3b8;margin-top:2px;">(仅 WI023 配置 → 0.3)</div>
+              </td>
+              <td><input class="qty-input" value="30"></td>
+              <td class="avail-ok">80</td>
+              <td>来自 1 个工单</td>
+              <td><button class="mini-btn mini-btn-default">替换</button><button class="mini-btn mini-btn-danger">删除</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="padding:10px 16px;background:#f8fafc;font-size:12px;color:#64748b;border-top:1px solid #e2e8f0;">
+          💡 <b>合并算法</b>：<code>groupBy(workItemName) → reduce(workOrderQty sum, productId merge with ratio=max) → 实际数量 = 总作业数 × ratio</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- 另一组（单工单，不合并） -->
+    <div class="group-card">
+      <div class="group-head">
+        <span class="gi-name">音响调试</span>
+        <span class="gi-wo">工单 WI2606010005</span>
+        <span class="gi-qty">作业数量 × 4</span>
+        <span class="badge-plus">+ 追加物资到本组</span>
+      </div>
+      <div class="group-body" style="padding:30px;text-align:center;color:#94a3b8;font-size:13px;">
+        （略，和原场景 3 结构相同 —— 有配置、库存不足行红底）
+      </div>
+    </div>
+
+    <div class="bottom-placeholder"></div>
+  </div>
+
+  <div class="bottom-bar">
+    <div style="font-size:13px;color:#475569;">
+      📊 合计 <b style="color:#6366f1;font-size:15px;">2</b> 个作业项 · 
+      <b style="color:#6366f1;font-size:15px;">7</b> 种物资 · 
+      （已自动合并 3 个同作业项工单）
+    </div>
+    <div>
+      <button class="btn-default" style="margin-right:8px;">取消</button>
+      <button class="btn-primary">💾 保存调拨单</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 方案 B：配置弹窗合并后 ========== -->
+
+<h2>四、作业项物资配置弹窗（合并主/辅 → 单一物资表）</h2>
+
+<div class="note">
+  <b>之前：</b>弹窗分「主料」和「辅料」两个独立表格，各有自己的"添加"按钮，各有数量列。<br>
+  <b>现在：</b>合并为一个物资表，<span class="tag tag-new">数量 → 比例</span>，默认值 1。配置页和调拨单页都用同一套数据结构。
+</div>
+
+<div class="screen">
+  <div class="screen-header">
+    <span>⚙️ 作业项物资配置 · 新增/编辑</span>
+    <span style="margin-left:auto;font-size:12px;opacity:.9;">参考场景1的「电箱220V室内」配置</span>
+  </div>
+  <div class="screen-body">
+
+    <div class="base-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px;">
+      <div class="base-field"><div class="lbl"><span style="color:#ef4444">*</span> 作业项目</div><div class="val"><select><option>电箱220V室内</option></select></div></div>
+      <div class="base-field"><div class="lbl">所属展会</div><div class="val">长沙国际会展 · 秋季展</div></div>
+      <div class="base-field"><div class="lbl">施工单位</div><div class="val">上海锦华</div></div>
+    </div>
+
+    <!-- 合并后的单一物资表 -->
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;">
+      <div style="padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:13px;font-weight:600;color:#1e293b;">📦 物资清单（不分主辅 · 数量为比例系数）</div>
+        <button class="mini-btn mini-btn-primary" onclick="document.getElementById('woPkr').style.display='flex';">+ 添加物资</button>
+      </div>
+      <table class="detail-table" style="border:none;">
+        <thead>
+          <tr>
+            <th style="width:40px;">#</th>
+            <th>物资编码</th>
+            <th>物资名称</th>
+            <th>规格</th>
+            <th>单位</th>
+            <th style="width:120px;">
+              比例系数
+              <span style="font-size:11px;color:#94a3b8;display:block;font-weight:normal;">默认 1:1</span>
+            </th>
+            <th style="width:100px;">示例</th>
+            <th style="width:70px;">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>P10001</td>
+            <td>配电箱</td>
+            <td>16A</td>
+            <td>个</td>
+            <td><input class="ratio-input" value="1.0"></td>
+            <td style="color:#475569;font-size:12px;">50作业 → <b style="color:#6366f1;">50</b> 个</td>
+            <td><button class="mini-btn mini-btn-danger">删除</button></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>P10002</td>
+            <td>配电箱</td>
+            <td>32A</td>
+            <td>个</td>
+            <td><input class="ratio-input" value="0.5"></td>
+            <td style="color:#475569;font-size:12px;">50作业 → <b style="color:#6366f1;">25</b> 个</td>
+            <td><button class="mini-btn mini-btn-danger">删除</button></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>P20015</td>
+            <td>电缆</td>
+            <td>6mm² 多股</td>
+            <td>米</td>
+            <td><input class="ratio-input" value="3"></td>
+            <td style="color:#475569;font-size:12px;">50作业 → <b style="color:#6366f1;">150</b> 米</td>
+            <td><button class="mini-btn mini-btn-danger">删除</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="padding:12px 14px;background:#f9fafb;border-top:1px solid #e2e8f0;font-size:12px;color:#64748b;">
+        💡 <b>比例系数说明</b>：调度实际数量 = 调拨单里的「作业数量 × 比例」。例：配电箱系数 1.0 表示每 1 个作业单元配 1 个配电箱；系数 3 表示配 3 米电缆。
+      </div>
+    </div>
+
+    <!-- 配置页面列表头变化 -->
+    <div style="margin-top:18px;">
+      <h3>📋 配置列表表头对比（改前 vs 改后）</h3>
+      <table class="compare-table" style="margin:6px 0;">
+        <thead>
+          <tr><th width="120"></th><th>改前</th><th>改后</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>表格数量</td><td>2 个（主料表 + 辅料表）</td><td class="tag tag-new">1 个</td></tr>
+          <tr><td>数量列名</td><td>"主料数量" / "辅料数量"</td><td class="tag tag-new">"比例系数"</td></tr>
+          <tr><td>空表提示</td><td>"暂无主料" / "暂无辅料"</td><td>"暂无物资，点击右上角添加"</td></tr>
+          <tr><td>新增按钮</td><td>"添加主料" + "添加辅料"</td><td class="tag tag-new">"添加物资"</td></tr>
+          <tr><td>统计字段</td><td>mainProducts + auxiliaryProducts 分别存</td><td class="tag tag-new">合并为 products 单一数组</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div style="padding:12px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:8px;background:#f9fafb;">
+    <button class="btn-default">取消</button>
+    <button class="btn-primary">💾 保存配置</button>
+  </div>
+</div>
+
+<!-- ========== 四、数据流 ========== -->
+
+<h2>五、数据流 & 计算逻辑（含场景 4 合并）</h2>
+
+<div class="note">
+  <b>场景 1/2/3 公式</b>：<br>
+  <code>实际调度数量 = editItem.details[i].quantity &nbsp;（可调输入框里的值，用户可改）</code><br>
+  <code>默认值 = workOrderQty（作业数量）× product.ratio（配置里的比例）</code>
+</div>
+
+<div class="note" style="background:#e0f2fe;border-left-color:#0ea5e9;">
+  <b>🎯 场景 4 合并算法</b>：<br>
+  <code>groupBy(workItemName) → {</code><br>
+  <code>&nbsp;&nbsp;workOrderQty: sum(各工单 workOrderQty),</code><br>
+  <code>&nbsp;&nbsp;products: reduce(各工单 products, (acc, p) => {</code><br>
+  <code>&nbsp;&nbsp;&nbsp;&nbsp;acc[p.productId] = acc[p.productId] ? { ...p, ratio: Math.max(acc[p.productId].ratio, p.ratio) } : p</code><br>
+  <code>&nbsp;&nbsp;})</code><br>
+  <code>}</code><br>
+  <code>→ 实际数量 = 合并后总作业数 × ratio</code>
+</div>
+
+<div class="flow-steps">
+  <div class="flow-step">① 作业项物资配置<br><b>products[]</b> 含 ratio</div>
+  <span class="flow-arrow">→</span>
+  <div class="flow-step">② 调拨单选工单<br>自动展开 products[]</div>
+  <span class="flow-arrow">→</span>
+  <div class="flow-step">③ 默认数量 = <b>workOrderQty × ratio</b></div>
+  <span class="flow-arrow">→</span>
+  <div class="flow-step">④ 用户可手动覆盖<br>也可追加物资</div>
+  <span class="flow-arrow">→</span>
+  <div class="flow-step">⑤ 保存后入库<br>实际数量写入</div>
+</div>
+
+<div class="note note-warn">
+  <b>类型变更清单</b>（源头改）：<br>
+  ✅ <code>WorkOrderProductItem.quantity</code> → <code>ratio: number</code><br>
+  ✅ <code>WorkOrderProductConfig.mainProducts + auxiliaryProducts</code> → <code>products: WorkOrderProductItem[]</code><br>
+  ✅ <code>OutboundOrderDetail.isMain</code> 删除 &nbsp;|&nbsp; ✅ <code>StockTransferDetail.isMain</code> 删除<br>
+  ✅ <b>runtime migration</b>：store 启动时检测 localStorage 里的老数据，自动把 mainProducts/auxiliaryProducts 合并 + ratio 回填 = quantity / workOrderQty
+</div>
+
+</body>
+</html>

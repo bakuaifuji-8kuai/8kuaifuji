@@ -1334,7 +1334,7 @@ export const outboundOrders: OutboundOrder[] = [
     warehouseId: 'WH001', warehouseName: '主仓库', status: 'submitted', operator: '王五',
     createTime: '2024-06-06 11:00:00', approveTime: '2024-06-06 11:30:00', approver: '李四',
     details: [
-      { id: 'OUTD007', outboundOrderId: 'OUT006', productId: 'PRD004', productName: '桌椅套装', productCode: 'P10004', positionId: 'POS003', positionName: 'A区03号', quantity: 50, workOrderId: 'WI2606010001', workOrderCode: 'WI2606010001', workOrderName: '电箱220V室内', isMain: true },
+      { id: 'OUTD007', outboundOrderId: 'OUT006', productId: 'PRD004', productName: '桌椅套装', productCode: 'P10004', positionId: 'POS003', positionName: 'A区03号', quantity: 50, workOrderId: 'WI2606010001', workOrderCode: 'WI2606010001', workOrderName: '电箱220V室内' },
     ]
   },
   {
@@ -1351,8 +1351,8 @@ export const outboundOrders: OutboundOrder[] = [
     warehouseId: 'WH001', warehouseName: '主仓库', status: 'submitted', operator: '王五',
     createTime: '2024-06-08 09:00:00', approveTime: '2024-06-08 09:30:00', approver: '李四',
     details: [
-      { id: 'OUTD010', outboundOrderId: 'OUT008', productId: 'PRD001', productName: '展板', productCode: 'P10001', positionId: 'POS001', positionName: 'A区01号', quantity: 15, workOrderId: 'WI2606010002', workOrderCode: 'WI2606010002', workOrderName: '电箱220V室外', isMain: true },
-      { id: 'OUTD011', outboundOrderId: 'OUT008', productId: 'PRD005', productName: '指示牌', productCode: 'P10005', positionId: 'POS005', positionName: 'B区02号', quantity: 20, workOrderId: 'WI2606010002', workOrderCode: 'WI2606010002', workOrderName: '电箱220V室外', isMain: false },
+      { id: 'OUTD010', outboundOrderId: 'OUT008', productId: 'PRD001', productName: '展板', productCode: 'P10001', positionId: 'POS001', positionName: 'A区01号', quantity: 15, workOrderId: 'WI2606010002', workOrderCode: 'WI2606010002', workOrderName: '电箱220V室外' },
+      { id: 'OUTD011', outboundOrderId: 'OUT008', productId: 'PRD005', productName: '指示牌', productCode: 'P10005', positionId: 'POS005', positionName: 'B区02号', quantity: 20, workOrderId: 'WI2606010002', workOrderCode: 'WI2606010002', workOrderName: '电箱220V室外' },
     ]
   },
   {
@@ -1370,8 +1370,8 @@ export const outboundOrders: OutboundOrder[] = [
     warehouseId: 'WH001', warehouseName: '主仓库', status: 'submitted', operator: '王五',
     createTime: '2026-06-16 11:00:00', approveTime: '2026-06-16 11:30:00', approver: '李四',
     details: [
-      { id: 'OUTD015', outboundOrderId: 'OUT010', productId: 'PRD001', productName: '展板', productCode: 'P10001', positionId: 'POS001', positionName: 'A区01号', quantity: 50, workOrderId: 'WI2606110003', workOrderCode: 'WI2606110003', workOrderName: '停车作业项', isMain: true },
-      { id: 'OUTD016', outboundOrderId: 'OUT010', productId: 'PRD005', productName: '指示牌', productCode: 'P10005', positionId: 'POS005', positionName: 'B区02号', quantity: 30, workOrderId: 'WI2606110003', workOrderCode: 'WI2606110003', workOrderName: '停车作业项', isMain: false },
+      { id: 'OUTD015', outboundOrderId: 'OUT010', productId: 'PRD001', productName: '展板', productCode: 'P10001', positionId: 'POS001', positionName: 'A区01号', quantity: 50, workOrderId: 'WI2606110003', workOrderCode: 'WI2606110003', workOrderName: '停车作业项' },
+      { id: 'OUTD016', outboundOrderId: 'OUT010', productId: 'PRD005', productName: '指示牌', productCode: 'P10005', positionId: 'POS005', positionName: 'B区02号', quantity: 30, workOrderId: 'WI2606110003', workOrderCode: 'WI2606110003', workOrderName: '停车作业项' },
     ]
   },
   // ===== 测试数据开始 =====
@@ -1401,8 +1401,8 @@ export const outboundOrders: OutboundOrder[] = [
     createTime: '2026-06-23 11:25:00', approveTime: '2026-06-23 12:40:00', approver: '赵六',
     remark: '测试出库单3-展会物资领用',
     details: [
-      { id: 'OUTD_TEST_3_1', outboundOrderId: 'OUT_TEST_3', productId: 'PRD103', productName: '方形井盖', productCode: 'JJ1016', positionId: 'POS010', positionName: 'E区01号', quantity: 30, workOrderId: 'WI2606110002', workOrderCode: 'WI2606110002', workOrderName: '会议室-会议室延时业项', isMain: true },
-      { id: 'OUTD_TEST_3_2', outboundOrderId: 'OUT_TEST_3', productId: 'PRD105', productName: '碳钢地沟盖板', productCode: 'JJ1018', positionId: 'POS010', positionName: 'E区01号', quantity: 15, workOrderId: 'WI2606110002', workOrderCode: 'WI2606110002', workOrderName: '会议室-会议室延时业项', isMain: false },
+      { id: 'OUTD_TEST_3_1', outboundOrderId: 'OUT_TEST_3', productId: 'PRD103', productName: '方形井盖', productCode: 'JJ1016', positionId: 'POS010', positionName: 'E区01号', quantity: 30, workOrderId: 'WI2606110002', workOrderCode: 'WI2606110002', workOrderName: '会议室-会议室延时业项' },
+      { id: 'OUTD_TEST_3_2', outboundOrderId: 'OUT_TEST_3', productId: 'PRD105', productName: '碳钢地沟盖板', productCode: 'JJ1018', positionId: 'POS010', positionName: 'E区01号', quantity: 15, workOrderId: 'WI2606110002', workOrderCode: 'WI2606110002', workOrderName: '会议室-会议室延时业项' },
     ]
   },
   {
@@ -1441,8 +1441,8 @@ export const outboundOrders: OutboundOrder[] = [
     createTime: '2026-06-27 15:45:00', approveTime: '2026-06-27 16:50:00', approver: '李四',
     remark: '测试出库单7-展会物资领用',
     details: [
-      { id: 'OUTD_TEST_7_1', outboundOrderId: 'OUT_TEST_7', productId: 'PRD108', productName: '石材干挂配件平板', productCode: 'JJ1030', positionId: 'POS003', positionName: 'A区03号', quantity: 50, workOrderId: 'WI2606110001', workOrderCode: 'WI2606110001', workOrderName: '会议室-场租作业项', isMain: true },
-      { id: 'OUTD_TEST_7_2', outboundOrderId: 'OUT_TEST_7', productId: 'PRD101', productName: '圆形井盖', productCode: 'JJ1012', positionId: 'POS003', positionName: 'A区03号', quantity: 25, workOrderId: 'WI2606110001', workOrderCode: 'WI2606110001', workOrderName: '会议室-场租作业项', isMain: false },
+      { id: 'OUTD_TEST_7_1', outboundOrderId: 'OUT_TEST_7', productId: 'PRD108', productName: '石材干挂配件平板', productCode: 'JJ1030', positionId: 'POS003', positionName: 'A区03号', quantity: 50, workOrderId: 'WI2606110001', workOrderCode: 'WI2606110001', workOrderName: '会议室-场租作业项' },
+      { id: 'OUTD_TEST_7_2', outboundOrderId: 'OUT_TEST_7', productId: 'PRD101', productName: '圆形井盖', productCode: 'JJ1012', positionId: 'POS003', positionName: 'A区03号', quantity: 25, workOrderId: 'WI2606110001', workOrderCode: 'WI2606110001', workOrderName: '会议室-场租作业项' },
     ]
   },
   {
@@ -1451,8 +1451,8 @@ export const outboundOrders: OutboundOrder[] = [
     createTime: '2026-06-28 16:50:00', approveTime: '2026-06-28 17:45:00', approver: '王五',
     remark: '测试出库单8-工单出库',
     details: [
-      { id: 'OUTD_TEST_8_1', outboundOrderId: 'OUT_TEST_8', productId: 'PRD111', productName: '瓷砖', productCode: 'JJ1035', positionId: 'POS009', positionName: 'D区02号', quantity: 55, workOrderId: 'WO_TEST_3', workOrderCode: 'GD20260625003', workOrderName: '测试维修工单3', isMain: true },
-      { id: 'OUTD_TEST_8_2', outboundOrderId: 'OUT_TEST_8', productId: 'PRD102', productName: '圆形井盖', productCode: 'JJ1013', positionId: 'POS009', positionName: 'D区02号', quantity: 27, workOrderId: 'WO_TEST_3', workOrderCode: 'GD20260625003', workOrderName: '测试维修工单3', isMain: false },
+      { id: 'OUTD_TEST_8_1', outboundOrderId: 'OUT_TEST_8', productId: 'PRD111', productName: '瓷砖', productCode: 'JJ1035', positionId: 'POS009', positionName: 'D区02号', quantity: 55, workOrderId: 'WO_TEST_3', workOrderCode: 'GD20260625003', workOrderName: '测试维修工单3' },
+      { id: 'OUTD_TEST_8_2', outboundOrderId: 'OUT_TEST_8', productId: 'PRD102', productName: '圆形井盖', productCode: 'JJ1013', positionId: 'POS009', positionName: 'D区02号', quantity: 27, workOrderId: 'WO_TEST_3', workOrderCode: 'GD20260625003', workOrderName: '测试维修工单3' },
     ]
   },
   // ===== 测试数据结束 =====
@@ -2350,10 +2350,10 @@ export const stockTransfers: StockTransfer[] = [
     createTime: '2026-11-10 09:30:00',
     remark: '车展A馆展位搭建，需调拨展板、展架、地毯等物资到虚拟仓',
     details: [
-      { id: 'TFDX01', stockTransferId: 'TF2026111001', productId: 'PRD001', productCode: 'P10001', productName: '展板', specification: '1m*2m', unit: '块', quantity: 60, workOrderId: 'WO20261101', workOrderCode: 'WX2611010001', workOrderName: 'A馆标准展位搭建', workItemId: 'WI001', workItemName: '展位布设', boothNo: 'A馆A-03', workOrderQty: 50, isMain: true, remark: '主料' },
-      { id: 'TFDX02', stockTransferId: 'TF2026111001', productId: 'PRD002', productCode: 'P10002', productName: '展架', specification: '铝合金', unit: '套', quantity: 30, workOrderId: 'WO20261101', workOrderCode: 'WX2611010001', workOrderName: 'A馆标准展位搭建', workItemId: 'WI001', workItemName: '展位布设', boothNo: 'A馆A-03', workOrderQty: 50, isMain: true, remark: '主料' },
-      { id: 'TFDX03', stockTransferId: 'TF2026111001', productId: 'PRD003', productCode: 'P10003', productName: '地毯', specification: '加厚型', unit: '平方米', quantity: 200, workOrderId: 'WO20261101', workOrderCode: 'WX2611010001', workOrderName: 'A馆标准展位搭建', workItemId: 'WI001', workItemName: '展位布设', boothNo: 'A馆A-03', workOrderQty: 50, isMain: false, remark: '辅料' },
-      { id: 'TFDX04', stockTransferId: 'TF2026111001', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', specification: '立式', unit: '个', quantity: 10, workOrderId: 'WO20261101', workOrderCode: 'WX2611010001', workOrderName: 'A馆标准展位搭建', workItemId: 'WI002', workItemName: '标识系统布设', boothNo: 'A馆A-03', workOrderQty: 50, isMain: false, remark: '辅料' },
+      { id: 'TFDX01', stockTransferId: 'TF2026111001', productId: 'PRD001', productCode: 'P10001', productName: '展板', specification: '1m*2m', unit: '块', quantity: 60, workOrderId: 'WO20261101', workOrderCode: 'WX2611010001', workOrderName: 'A馆标准展位搭建', workItemId: 'WI001', workItemName: '展位布设', boothNo: 'A馆A-03', workOrderQty: 50, remark: '已出库' },
+      { id: 'TFDX02', stockTransferId: 'TF2026111001', productId: 'PRD002', productCode: 'P10002', productName: '展架', specification: '铝合金', unit: '套', quantity: 30, workOrderId: 'WO20261101', workOrderCode: 'WX2611010001', workOrderName: 'A馆标准展位搭建', workItemId: 'WI001', workItemName: '展位布设', boothNo: 'A馆A-03', workOrderQty: 50, remark: '已出库' },
+      { id: 'TFDX03', stockTransferId: 'TF2026111001', productId: 'PRD003', productCode: 'P10003', productName: '地毯', specification: '加厚型', unit: '平方米', quantity: 200, workOrderId: 'WO20261101', workOrderCode: 'WX2611010001', workOrderName: 'A馆标准展位搭建', workItemId: 'WI001', workItemName: '展位布设', boothNo: 'A馆A-03', workOrderQty: 50, remark: '配件' },
+      { id: 'TFDX04', stockTransferId: 'TF2026111001', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', specification: '立式', unit: '个', quantity: 10, workOrderId: 'WO20261101', workOrderCode: 'WX2611010001', workOrderName: 'A馆标准展位搭建', workItemId: 'WI002', workItemName: '标识系统布设', boothNo: 'A馆A-03', workOrderQty: 50, remark: '配件' },
     ],
   },
   {
@@ -2378,9 +2378,9 @@ export const stockTransfers: StockTransfer[] = [
     outboundConfirmTime: '2026-11-10 11:30:00',
     remark: '特装展位配电箱、投影设备等已出库，等待入库审批',
     details: [
-      { id: 'TFDX05', stockTransferId: 'TF2026111002', productId: 'PRD007', productCode: 'P20002', productName: '投影仪', specification: '高清', unit: '台', quantity: 8, workOrderId: 'WO20261102', workOrderCode: 'WX2611010002', workOrderName: 'B馆特装展位·电箱配置', workItemId: 'WI003', workItemName: '电箱配置', boothNo: 'B馆B-12', workOrderQty: 50, isMain: true, remark: '已出库确认' },
-      { id: 'TFDX06', stockTransferId: 'TF2026111002', productId: 'PRD008', productCode: 'P20003', productName: '音响设备', specification: '专业级', unit: '套', quantity: 4, workOrderId: 'WO20261102', workOrderCode: 'WX2611010002', workOrderName: 'B馆特装展位·电箱配置', workItemId: 'WI004', workItemName: '音响调试', boothNo: 'B馆B-12', workOrderQty: 50, isMain: true, remark: '已出库确认' },
-      { id: 'TFDX07', stockTransferId: 'TF2026111002', productId: 'PRD009', productCode: 'P20004', productName: '电脑', specification: 'i7/16G/512G', unit: '台', quantity: 6, workOrderId: 'WO20261102', workOrderCode: 'WX2611010002', workOrderName: 'B馆特装展位·电箱配置', workItemId: 'WI005', workItemName: '设备调试', boothNo: 'B馆B-12', workOrderQty: 50, isMain: false, remark: '已出库确认' },
+      { id: 'TFDX05', stockTransferId: 'TF2026111002', productId: 'PRD007', productCode: 'P20002', productName: '投影仪', specification: '高清', unit: '台', quantity: 8, workOrderId: 'WO20261102', workOrderCode: 'WX2611010002', workOrderName: 'B馆特装展位·电箱配置', workItemId: 'WI003', workItemName: '电箱配置', boothNo: 'B馆B-12', workOrderQty: 50, remark: '已出库确认' },
+      { id: 'TFDX06', stockTransferId: 'TF2026111002', productId: 'PRD008', productCode: 'P20003', productName: '音响设备', specification: '专业级', unit: '套', quantity: 4, workOrderId: 'WO20261102', workOrderCode: 'WX2611010002', workOrderName: 'B馆特装展位·电箱配置', workItemId: 'WI004', workItemName: '音响调试', boothNo: 'B馆B-12', workOrderQty: 50, remark: '已出库确认' },
+      { id: 'TFDX07', stockTransferId: 'TF2026111002', productId: 'PRD009', productCode: 'P20004', productName: '电脑', specification: 'i7/16G/512G', unit: '台', quantity: 6, workOrderId: 'WO20261102', workOrderCode: 'WX2611010002', workOrderName: 'B馆特装展位·电箱配置', workItemId: 'WI005', workItemName: '设备调试', boothNo: 'B馆B-12', workOrderQty: 50, remark: '已出库确认' },
     ],
   },
   {
@@ -2432,9 +2432,9 @@ export const stockTransfers: StockTransfer[] = [
     inboundConfirmTime: '2026-11-05 14:20:00',
     remark: '电力展设备已全部入库虚拟仓',
     details: [
-      { id: 'TFDX12', stockTransferId: 'TF2026111004', productId: 'PRD007', productCode: 'P20002', productName: '投影仪', specification: '高清', unit: '台', quantity: 5, workOrderId: 'WO20261103', workOrderCode: 'WX2611010003', workOrderName: '电力展厅·设备搭建', workItemId: 'WI006', workItemName: '电力展厅设备搭建', boothNo: '电力馆E-08', workOrderQty: 50, isMain: true, remark: '已完成' },
-      { id: 'TFDX13', stockTransferId: 'TF2026111004', productId: 'PRD009', productCode: 'P20004', productName: '电脑', specification: 'i7/16G/512G', unit: '台', quantity: 10, workOrderId: 'WO20261103', workOrderCode: 'WX2611010003', workOrderName: '电力展厅·设备搭建', workItemId: 'WI007', workItemName: '设备调试与安装', boothNo: '电力馆E-08', workOrderQty: 50, isMain: true, remark: '已完成' },
-      { id: 'TFDX14', stockTransferId: 'TF2026111004', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', specification: '会议用', unit: '套', quantity: 15, workOrderId: 'WO20261103', workOrderCode: 'WX2611010003', workOrderName: '电力展厅·设备搭建', workItemId: 'WI008', workItemName: '会议区布设', boothNo: '电力馆E-08', workOrderQty: 50, isMain: false, remark: '已完成' },
+      { id: 'TFDX12', stockTransferId: 'TF2026111004', productId: 'PRD007', productCode: 'P20002', productName: '投影仪', specification: '高清', unit: '台', quantity: 5, workOrderId: 'WO20261103', workOrderCode: 'WX2611010003', workOrderName: '电力展厅·设备搭建', workItemId: 'WI006', workItemName: '电力展厅设备搭建', boothNo: '电力馆E-08', workOrderQty: 50, remark: '已完成' },
+      { id: 'TFDX13', stockTransferId: 'TF2026111004', productId: 'PRD009', productCode: 'P20004', productName: '电脑', specification: 'i7/16G/512G', unit: '台', quantity: 10, workOrderId: 'WO20261103', workOrderCode: 'WX2611010003', workOrderName: '电力展厅·设备搭建', workItemId: 'WI007', workItemName: '设备调试与安装', boothNo: '电力馆E-08', workOrderQty: 50, remark: '已完成' },
+      { id: 'TFDX14', stockTransferId: 'TF2026111004', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', specification: '会议用', unit: '套', quantity: 15, workOrderId: 'WO20261103', workOrderCode: 'WX2611010003', workOrderName: '电力展厅·设备搭建', workItemId: 'WI008', workItemName: '会议区布设', boothNo: '电力馆E-08', workOrderQty: 50, remark: '已完成' },
     ],
   },
   {
@@ -2583,22 +2583,20 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '中裕电力',
     category: '电力/电箱/室内',
-    mainProducts: [
-      { id: 'WP0001', productId: 'PRD779', productCode: 'QD2010', productName: '配电箱', categoryName: '低值易耗', specification: '16A', unit: '个', quantity: 1 },
-      { id: 'WP0002', productId: 'PRD780', productCode: 'QD2011', productName: '配电箱', categoryName: '低值易耗', specification: '32A', unit: '个', quantity: 1 },
-      { id: 'WP0003', productId: 'PRD781', productCode: 'QD2012', productName: '配电箱', categoryName: '低值易耗', specification: '63A', unit: '个', quantity: 1 },
-      { id: 'WP0004', productId: 'PRD782', productCode: 'QD2013', productName: '配电箱', categoryName: '低值易耗', specification: '40A', unit: '个', quantity: 1 },
-      { id: 'WP0005', productId: 'PRD783', productCode: 'QD2014', productName: '配电箱', categoryName: '低值易耗', specification: '16A/220V', unit: '个', quantity: 1 },
-      { id: 'WP0006', productId: 'PRD784', productCode: 'QD2015', productName: '配电箱', categoryName: '低值易耗', specification: '100A', unit: '个', quantity: 1 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP0011', productId: 'PRD770', productCode: 'QD2001', productName: '电缆', categoryName: '低值易耗', specification: '6㎡（单线63A头/15米长）', unit: '根', quantity: 1 },
-      { id: 'WP0012', productId: 'PRD771', productCode: 'QD2002', productName: '电缆', categoryName: '低值易耗', specification: '6㎡（单线125A头/15米长）', unit: '根', quantity: 1 },
-      { id: 'WP0013', productId: 'PRD772', productCode: 'QD2003', productName: '电缆', categoryName: '低值易耗', specification: '4㎡（单线32A头/15米长）', unit: '根', quantity: 1 },
-      { id: 'WP0014', productId: 'PRD773', productCode: 'QD2004', productName: '电缆', categoryName: '低值易耗', specification: '16㎡（无头/15米长）', unit: '根', quantity: 1 },
-      { id: 'WP0015', productId: 'PRD774', productCode: 'QD2005', productName: '电缆', categoryName: '低值易耗', specification: '4㎡3芯/16A/10米（16A电箱）', unit: '根', quantity: 1 },
-      { id: 'WP0016', productId: 'PRD775', productCode: 'QD2006', productName: '电缆', categoryName: '低值易耗', specification: '4㎡3芯（无头/20米长）', unit: '根', quantity: 1 },
-      { id: 'WP0017', productId: 'PRD776', productCode: 'QD2007', productName: '电缆', categoryName: '低值易耗', specification: '25㎡（无头带铜鼻子/20米长）', unit: '根', quantity: 1 },
+    products: [
+      { id: 'WP0001', productId: 'PRD779', productCode: 'QD2010', productName: '配电箱', categoryName: '低值易耗', specification: '16A', unit: '个', ratio: 1},
+      { id: 'WP0002', productId: 'PRD780', productCode: 'QD2011', productName: '配电箱', categoryName: '低值易耗', specification: '32A', unit: '个', ratio: 1},
+      { id: 'WP0003', productId: 'PRD781', productCode: 'QD2012', productName: '配电箱', categoryName: '低值易耗', specification: '63A', unit: '个', ratio: 1},
+      { id: 'WP0004', productId: 'PRD782', productCode: 'QD2013', productName: '配电箱', categoryName: '低值易耗', specification: '40A', unit: '个', ratio: 1},
+      { id: 'WP0005', productId: 'PRD783', productCode: 'QD2014', productName: '配电箱', categoryName: '低值易耗', specification: '16A/220V', unit: '个', ratio: 1},
+      { id: 'WP0006', productId: 'PRD784', productCode: 'QD2015', productName: '配电箱', categoryName: '低值易耗', specification: '100A', unit: '个', ratio: 1},
+      { id: 'WP0011', productId: 'PRD770', productCode: 'QD2001', productName: '电缆', categoryName: '低值易耗', specification: '6㎡（单线63A头/15米长）', unit: '根', ratio: 1},
+      { id: 'WP0012', productId: 'PRD771', productCode: 'QD2002', productName: '电缆', categoryName: '低值易耗', specification: '6㎡（单线125A头/15米长）', unit: '根', ratio: 1},
+      { id: 'WP0013', productId: 'PRD772', productCode: 'QD2003', productName: '电缆', categoryName: '低值易耗', specification: '4㎡（单线32A头/15米长）', unit: '根', ratio: 1},
+      { id: 'WP0014', productId: 'PRD773', productCode: 'QD2004', productName: '电缆', categoryName: '低值易耗', specification: '16㎡（无头/15米长）', unit: '根', ratio: 1},
+      { id: 'WP0015', productId: 'PRD774', productCode: 'QD2005', productName: '电缆', categoryName: '低值易耗', specification: '4㎡3芯/16A/10米（16A电箱）', unit: '根', ratio: 1},
+      { id: 'WP0016', productId: 'PRD775', productCode: 'QD2006', productName: '电缆', categoryName: '低值易耗', specification: '4㎡3芯（无头/20米长）', unit: '根', ratio: 1},
+      { id: 'WP0017', productId: 'PRD776', productCode: 'QD2007', productName: '电缆', categoryName: '低值易耗', specification: '25㎡（无头带铜鼻子/20米长）', unit: '根', ratio: 1},
     ],
     boothName: 'A馆',
     boothNo: 'A-03',
@@ -2616,11 +2614,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '中裕电力',
     category: '电力/电箱/室外',
-    mainProducts: [
-      { id: 'WP0003', productId: 'PRD014', productCode: 'P20006', productName: '电箱220V室外', categoryName: '低值易耗', specification: '220V/16A 室外防水款', unit: '台', quantity: 15 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP0004', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 1 },
+    products: [
+      { id: 'WP0003', productId: 'PRD014', productCode: 'P20006', productName: '电箱220V室外', categoryName: '低值易耗', specification: '220V/16A 室外防水款', unit: '台', ratio: 15},
+      { id: 'WP0004', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', ratio: 1},
     ],
     boothName: 'A馆',
     boothNo: 'A-05',
@@ -2638,11 +2634,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '上海锦华',
     category: '其他/停车/停车',
-    mainProducts: [
-      { id: 'WP001', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', quantity: 5 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP002', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 2 },
+    products: [
+      { id: 'WP001', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', ratio: 5},
+      { id: 'WP002', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', ratio: 2},
     ],
     boothName: 'W馆',
     boothNo: 'W-01',
@@ -2660,11 +2654,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '湖南警安',
     category: '会议室/会议室/会议室延时',
-    mainProducts: [
-      { id: 'WP003', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', quantity: 10 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP004', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '维修用', unit: '套', quantity: 3 },
+    products: [
+      { id: 'WP003', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', ratio: 10},
+      { id: 'WP004', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '维修用', unit: '套', ratio: 3},
     ],
     boothName: '整体',
     boothNo: '整体',
@@ -2682,11 +2674,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '湖南警安',
     category: '会议室/会议室/场租',
-    mainProducts: [
-      { id: 'WP005', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', quantity: 20 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP006', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', quantity: 8 },
+    products: [
+      { id: 'WP005', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', ratio: 20},
+      { id: 'WP006', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', ratio: 8},
     ],
     boothName: '整体',
     boothNo: '整体',
@@ -2704,11 +2694,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '中裕电力',
     category: '水/气/水气作业/给排水',
-    mainProducts: [
-      { id: 'WP007', productId: 'PRD008', productCode: 'P40001', productName: '水管接头', categoryName: '低值易耗', specification: 'DN50', unit: '个', quantity: 30 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP008', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 2 },
+    products: [
+      { id: 'WP007', productId: 'PRD008', productCode: 'P40001', productName: '水管接头', categoryName: '低值易耗', specification: 'DN50', unit: '个', ratio: 30},
+      { id: 'WP008', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', ratio: 2},
     ],
     boothName: 'W馆',
     boothNo: 'W-A12',
@@ -2726,11 +2714,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '湖南警安',
     category: '设备押金/设备押金/设备押金',
-    mainProducts: [
-      { id: 'WP009', productId: 'PRD007', productCode: 'P50002', productName: '设备押金条', categoryName: '其他物资', specification: '标准', unit: '张', quantity: 50 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP010', productId: 'PRD011', productCode: 'P40002', productName: '说明书', categoryName: '低值易耗', specification: '标准', unit: '本', quantity: 20 },
+    products: [
+      { id: 'WP009', productId: 'PRD007', productCode: 'P50002', productName: '设备押金条', categoryName: '其他物资', specification: '标准', unit: '张', ratio: 50},
+      { id: 'WP010', productId: 'PRD011', productCode: 'P40002', productName: '说明书', categoryName: '低值易耗', specification: '标准', unit: '本', ratio: 20},
     ],
     boothName: '整体',
     boothNo: '整体',
@@ -2748,12 +2734,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '上海锦华',
     category: '搭建押金/搭建押金/搭建押金',
-    mainProducts: [
-      { id: 'WP011', productId: 'PRD001', productCode: 'P10001', productName: '钢板', categoryName: '会展物资', specification: '1m*2m', unit: '块', quantity: 15 },
-      { id: 'WP012', productId: 'PRD002', productCode: 'P10002', productName: '铝板', categoryName: '会展物资', specification: '铝合金', unit: '套', quantity: 10 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP013', productId: 'PRD009', productCode: 'P20003', productName: '螺丝套装', categoryName: '低值易耗', specification: '标准', unit: '盒', quantity: 20 },
+    products: [
+      { id: 'WP011', productId: 'PRD001', productCode: 'P10001', productName: '钢板', categoryName: '会展物资', specification: '1m*2m', unit: '块', ratio: 15},
+      { id: 'WP012', productId: 'PRD002', productCode: 'P10002', productName: '铝板', categoryName: '会展物资', specification: '铝合金', unit: '套', ratio: 10},
+      { id: 'WP013', productId: 'PRD009', productCode: 'P20003', productName: '螺丝套装', categoryName: '低值易耗', specification: '标准', unit: '盒', ratio: 20},
     ],
     boothName: 'A馆',
     boothNo: 'A-08',
@@ -2771,11 +2755,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '上海锦华',
     category: '搭建押金/搭建押金/安全清洁押金',
-    mainProducts: [
-      { id: 'WP014', productId: 'PRD001', productCode: 'P10001', productName: '钢板', categoryName: '会展物资', specification: '1m*2m', unit: '块', quantity: 10 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP015', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 5 },
+    products: [
+      { id: 'WP014', productId: 'PRD001', productCode: 'P10001', productName: '钢板', categoryName: '会展物资', specification: '1m*2m', unit: '块', ratio: 10},
+      { id: 'WP015', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', ratio: 5},
     ],
     boothName: 'A馆',
     boothNo: 'A-10',
@@ -2793,11 +2775,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '上海锦华',
     category: '管理费/管理费/地毯管理费',
-    mainProducts: [
-      { id: 'WP016', productId: 'PRD003', productCode: 'P10003', productName: '地毯', categoryName: '会展物资', specification: '加厚型', unit: '平方米', quantity: 200 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP017', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', quantity: 10 },
+    products: [
+      { id: 'WP016', productId: 'PRD003', productCode: 'P10003', productName: '地毯', categoryName: '会展物资', specification: '加厚型', unit: '平方米', ratio: 200},
+      { id: 'WP017', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', ratio: 10},
     ],
     boothName: 'W馆',
     boothNo: 'W-05',
@@ -2815,12 +2795,10 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '上海锦华',
     category: '管理费/管理费/特装管理费',
-    mainProducts: [
-      { id: 'WP018', productId: 'PRD001', productCode: 'P10001', productName: '钢板', categoryName: '会展物资', specification: '1m*2m', unit: '块', quantity: 25 },
-      { id: 'WP019', productId: 'PRD002', productCode: 'P10002', productName: '铝板', categoryName: '会展物资', specification: '铝合金', unit: '套', quantity: 15 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP020', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '维修用', unit: '套', quantity: 4 },
+    products: [
+      { id: 'WP018', productId: 'PRD001', productCode: 'P10001', productName: '钢板', categoryName: '会展物资', specification: '1m*2m', unit: '块', ratio: 25},
+      { id: 'WP019', productId: 'PRD002', productCode: 'P10002', productName: '铝板', categoryName: '会展物资', specification: '铝合金', unit: '套', ratio: 15},
+      { id: 'WP020', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '维修用', unit: '套', ratio: 4},
     ],
     boothName: 'W馆',
     boothNo: 'W-06',
@@ -2838,11 +2816,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '上海锦华',
     category: '管理费/管理费/管理费',
-    mainProducts: [
-      { id: 'WP021', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', quantity: 30 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP022', productId: 'PRD011', productCode: 'P40002', productName: '说明书', categoryName: '低值易耗', specification: '标准', unit: '本', quantity: 15 },
+    products: [
+      { id: 'WP021', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', ratio: 30},
+      { id: 'WP022', productId: 'PRD011', productCode: 'P40002', productName: '说明书', categoryName: '低值易耗', specification: '标准', unit: '本', ratio: 15},
     ],
     boothName: '整体',
     boothNo: '整体',
@@ -2860,11 +2836,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '湖南警安',
     category: '保洁/物业安保/布撤展-保洁加班',
-    mainProducts: [
-      { id: 'WP023', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 15 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP024', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '保洁用', unit: '套', quantity: 5 },
+    products: [
+      { id: 'WP023', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', ratio: 15},
+      { id: 'WP024', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '保洁用', unit: '套', ratio: 5},
     ],
     boothName: '整体',
     boothNo: '整体',
@@ -2882,11 +2856,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '湖南警安',
     category: '保洁/物业安保/布撤展-保洁',
-    mainProducts: [
-      { id: 'WP025', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 12 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP026', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '保洁用', unit: '套', quantity: 4 },
+    products: [
+      { id: 'WP025', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', ratio: 12},
+      { id: 'WP026', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '保洁用', unit: '套', ratio: 4},
     ],
     boothName: '整体',
     boothNo: '整体',
@@ -2904,11 +2876,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '湖南警安',
     category: '保洁/物业安保/展期-保洁加班',
-    mainProducts: [
-      { id: 'WP027', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 10 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP028', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '保洁用', unit: '套', quantity: 3 },
+    products: [
+      { id: 'WP027', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', ratio: 10},
+      { id: 'WP028', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '保洁用', unit: '套', ratio: 3},
     ],
     boothName: '整体',
     boothNo: '整体',
@@ -2926,11 +2896,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '湖南警安',
     category: '保洁/物业安保/展期-保洁',
-    mainProducts: [
-      { id: 'WP029', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 8 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP030', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '保洁用', unit: '套', quantity: 2 },
+    products: [
+      { id: 'WP029', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', ratio: 8},
+      { id: 'WP030', productId: 'PRD012', productCode: 'P30003', productName: '工具套装', categoryName: '低值易耗', specification: '保洁用', unit: '套', ratio: 2},
     ],
     boothName: '整体',
     boothNo: '整体',
@@ -2948,11 +2916,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '湖南警安',
     category: '安保/物业安保/展期-安保加班',
-    mainProducts: [
-      { id: 'WP031', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', quantity: 20 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP032', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', quantity: 6 },
+    products: [
+      { id: 'WP031', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', ratio: 20},
+      { id: 'WP032', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', ratio: 6},
     ],
     boothName: '整体',
     boothNo: '整体',
@@ -2970,11 +2936,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '上海锦华',
     category: '安保/物业安保/布撤展--安保加班',
-    mainProducts: [
-      { id: 'WP033', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', quantity: 15 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP034', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', quantity: 4 },
+    products: [
+      { id: 'WP033', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', ratio: 15},
+      { id: 'WP034', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', ratio: 4},
     ],
     boothName: '整体',
     boothNo: '整体',
@@ -2992,11 +2956,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '上海锦华',
     category: '安保/物业安保/展期-物业安保',
-    mainProducts: [
-      { id: 'WP035', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', quantity: 12 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP036', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', quantity: 3 },
+    products: [
+      { id: 'WP035', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', ratio: 12},
+      { id: 'WP036', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', ratio: 3},
     ],
     boothName: '整体',
     boothNo: '整体',
@@ -3014,11 +2976,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '上海锦华',
     category: '安保/物业安保/布撤展-物业安保',
-    mainProducts: [
-      { id: 'WP037', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', quantity: 10 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP038', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', quantity: 2 },
+    products: [
+      { id: 'WP037', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', ratio: 10},
+      { id: 'WP038', productId: 'PRD004', productCode: 'P10004', productName: '桌椅套装', categoryName: '会展物资', specification: '会议用', unit: '套', ratio: 2},
     ],
     boothName: '整体',
     boothNo: '整体',
@@ -3036,11 +2996,9 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     exhibitionName: '2026上海国际会展',
     constructionUnit: '中裕电力',
     category: '水/气/水气作业/给排水',
-    mainProducts: [
-      { id: 'WP039', productId: 'PRD008', productCode: 'P40001', productName: '水管接头', categoryName: '低值易耗', specification: 'DN50', unit: '个', quantity: 20 },
-    ],
-    auxiliaryProducts: [
-      { id: 'WP040', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', quantity: 1 },
+    products: [
+      { id: 'WP039', productId: 'PRD008', productCode: 'P40001', productName: '水管接头', categoryName: '低值易耗', specification: 'DN50', unit: '个', ratio: 20},
+      { id: 'WP040', productId: 'PRD010', productCode: 'P30001', productName: '清洁用品', categoryName: '低值易耗', specification: '套装', unit: '箱', ratio: 1},
     ],
     boothName: 'W馆',
     boothNo: 'W-A15',

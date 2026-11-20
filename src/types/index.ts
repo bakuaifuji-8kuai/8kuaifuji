@@ -568,7 +568,6 @@ export interface OutboundDetail {
   workOrderId?: string;       // 工单出库时关联的工单ID
   workOrderCode?: string;     // 工单出库时关联的工单号
   workOrderName?: string;     // 工单出库时关联的工单名称
-  isMain?: boolean;           // 是否为主料
 }
 
 export interface OutboundOrder {
@@ -678,7 +677,6 @@ export interface StockTransferDetail {
   workItemName?: string; // 关联作业项名称（展示用，替代工单名称）
   boothNo?: string; // 施工摊位号（如 A馆A-03、B馆B-12、整体）
   workOrderQty?: number; // 作业数量（同一作业项下所有物资共享，默认50）
-  isMain?: boolean; // 是否主料
   remark?: string; // 明细备注
 }
 
@@ -1060,7 +1058,7 @@ export interface WorkOrderProductItem {
   categoryName: string;
   specification?: string;
   unit: string;
-  quantity: number;
+  ratio: number; // 比例系数，默认 1:1；实际调度数量 = workOrderQty × ratio
 }
 
 // 工单物资配置
@@ -1078,8 +1076,7 @@ export interface WorkOrderProductConfig {
   workItemName?: string; // 作业项目（电箱220V室内）
   workItemQty?: number; // 作业数量
   category: string;
-  mainProducts: WorkOrderProductItem[];
-  auxiliaryProducts: WorkOrderProductItem[];
+  products: WorkOrderProductItem[]; // 合并了原 mainProducts + auxiliaryProducts；数量字段已改为 ratio
   remark?: string;
   createTime: string;
   updateTime?: string;

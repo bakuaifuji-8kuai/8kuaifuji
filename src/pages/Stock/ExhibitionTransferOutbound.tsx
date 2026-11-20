@@ -315,11 +315,13 @@ export default function ExhibitionTransferOutboundPage() {
 
     const newDetails: StockTransferDetail[] = [];
     selectedItems.forEach((item) => {
-      // 真实作业数量：优先取 item.workItemQty，没有则从主料数量算
-      const itemQty = item.workItemQty ?? item.mainProducts.reduce((s, p) => s + p.quantity, 0);
+      const itemQty = item.workItemQty ?? 1;
       const itemWorkItemName = item.workItemName || item.workOrderName;
 
-      [...item.mainProducts, ...item.auxiliaryProducts].forEach((product) => {
+      // 同作业项合并（场景 4）：已选里如果有相同 workItemName 的，productId 去重
+      // ratio 取 max，workOrderQty 累加
+      // 但这里按 item 顺序 push，合并交给 workItemSummary 处理
+      item.products.forEach((product) => {
         newDetails.push({
           id: 'TFD' + Date.now() + Math.random().toString(36).slice(2, 7),
           stockTransferId: editItem.id,
@@ -330,19 +332,19 @@ export default function ExhibitionTransferOutboundPage() {
           fromPositionName: '',
           toPositionId: '',
           toPositionName: '',
-          quantity: 0,
+          quantity: 0, // 默认 0，页面渲染时根据 workOrderQty × ratio 计算默认值
           workOrderId: item.workOrderId,
           workOrderCode: item.workOrderCode,
           workOrderName: itemWorkItemName,
           workItemName: itemWorkItemName,
           workOrderQty: itemQty,
-          isMain: item.mainProducts.some((p) => p.productId === product.productId),
         });
       });
     });
 
-    const existingIds = new Set(editItem.details.map((d) => `${d.workOrderId || ''}::${d.productId}`));
-    const toAdd = newDetails.filter((d) => !existingIds.has(`${d.workOrderId}::${d.productId}`));
+    // 按 workItemName + productId 去重，重复的跳过（同一工单选两次相同的）
+    const existingIds = new Set(editItem.details.map((d) => `${d.workItemName || ''}::${d.productId}`));
+    const toAdd = newDetails.filter((d) => !existingIds.has(`${d.workItemName}::${d.productId}`));
 
     setEditItem({ ...editItem, details: [...editItem.details, ...toAdd] });
     setWorkOrderPickerOpen(false);
@@ -725,7 +727,7 @@ export default function ExhibitionTransferOutboundPage() {
 
               // 找工单配置
               const config = workOrderConfigs.find((c) => group.workOrderIds.includes(c.workOrderId));
-              const hasConfig = !!config && (config.mainProducts.length > 0 || config.auxiliaryProducts.length > 0);
+              const hasConfig = !!config && config.products.length > 0;
 
               return (
                 <div key={group.workItemName} className="border-b border-slate-100 last:border-b-0">
@@ -779,7 +781,6 @@ export default function ExhibitionTransferOutboundPage() {
                           <th className="px-4 py-2 text-left w-14">单位</th>
                           <th className="px-4 py-2 text-right w-28">调拨数量</th>
                           <th className="px-4 py-2 text-right w-24">可用库存</th>
-                          <th className="px-4 py-2 text-center w-14">类型</th>
                           <th className="px-4 py-2 text-center w-32">操作</th>
                         </tr>
                       </thead>
@@ -820,12 +821,6 @@ export default function ExhibitionTransferOutboundPage() {
                               </td>
                               <td className={`px-4 py-2 text-right font-medium ${qtyShort ? 'text-red-600' : 'text-emerald-600'}`}>
                                 {available}{qtyShort ? ' ⚠️' : ''}
-                              </td>
-                              <td className="px-4 py-2 text-center">
-                                {d.isMain
-                                  ? <span className="px-1.5 py-0.5 text-[10px] bg-blue-50 text-blue-600 rounded">主料</span>
-                                  : <span className="px-1.5 py-0.5 text-[10px] bg-amber-50 text-amber-600 rounded">辅料</span>
-                                }
                               </td>
                               <td className="px-4 py-2 text-center">
                                 <button

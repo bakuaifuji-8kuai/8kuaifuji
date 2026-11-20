@@ -1650,7 +1650,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 20,
+      version: 21,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -2114,6 +2114,29 @@ export const useStore = create<WarehouseState>()(
             });
             if (patched > 0) console.log(`[store migrate v20] 全局预警设置补 ${patched} 个新字段默认值`);
           }
+        }
+        if (version < 21) {
+          // v20→v21：工单物资配置 结构重构
+          // 1. mainProducts + auxiliaryProducts 合并为 products
+          // 2. 每条 quantity → ratio（默认 1，比例系数）
+          // 3. OutboundOrderDetail / StockTransferDetail 删除 isMain 字段（前端读取时自动 fallback 忽略即可）
+          const cfgs = (persistedState.workOrderConfigs as any[]) || [];
+          cfgs.forEach((cfg: any) => {
+            let products: any[] = [];
+            const oldMain = cfg.mainProducts || [];
+            const oldAux = cfg.auxiliaryProducts || [];
+            products = [...oldMain, ...oldAux].map((p: any) => ({
+              ...p,
+              ratio: typeof p.ratio === 'number'
+                ? p.ratio
+                : (typeof p.quantity === 'number' && p.quantity > 0 ? 1 : 1), // 默认 1
+            })).map(({ quantity, ...rest }) => rest); // 移除旧 quantity 字段
+            cfg.products = products;
+            delete cfg.mainProducts;
+            delete cfg.auxiliaryProducts;
+          });
+          persistedState.workOrderConfigs = cfgs;
+          console.log(`[store migrate v21] 工单配置合并：${cfgs.length} 条已迁移 (main+aux → products, quantity → ratio)`);
         }
         return persistedState;
       },
