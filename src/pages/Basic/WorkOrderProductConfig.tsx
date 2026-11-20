@@ -9,7 +9,6 @@ export default function WorkOrderProductConfig() {
   const [showModal, setShowModal] = useState(false);
   const [editingConfig, setEditingConfig] = useState<WorkOrderProductConfig | null>(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<{ id: string; name: string; category: string } | null>(null);
-  const [exhibitionName, setExhibitionName] = useState('');
   const [productsList, setProductsList] = useState<WorkOrderProductItem[]>([]);
   const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [productSearch, setProductSearch] = useState('');
@@ -38,7 +37,6 @@ export default function WorkOrderProductConfig() {
   const handleAddConfig = () => {
     setEditingConfig(null);
     setSelectedWorkOrder(null);
-    setExhibitionName('');
     setProductsList([]);
     setShowModal(true);
   };
@@ -46,7 +44,6 @@ export default function WorkOrderProductConfig() {
   const handleEditConfig = (config: WorkOrderProductConfig) => {
     setEditingConfig(config);
     setSelectedWorkOrder({ id: config.workOrderId, name: config.workOrderName, category: config.category });
-    setExhibitionName(config.exhibitionName || '');
     setProductsList([...config.products]);
     setShowModal(true);
   };
@@ -119,7 +116,6 @@ export default function WorkOrderProductConfig() {
           ...editingConfig,
           workOrderId: selectedWorkOrder.id,
           workOrderName: selectedWorkOrder.name,
-          exhibitionName,
           category: selectedWorkOrder.category,
           products: productsList,
           updateTime: now,
@@ -131,7 +127,6 @@ export default function WorkOrderProductConfig() {
           workOrderName: selectedWorkOrder.name,
           projectId,
           projectName,
-          exhibitionName,
           category: selectedWorkOrder.category,
           products: productsList,
           createTime: now,
@@ -250,17 +245,6 @@ export default function WorkOrderProductConfig() {
                   <option key={wo.id} value={wo.id}>{wo.name} ({wo.category})</option>
                 ))}
               </select>
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm text-[#606266] mb-1">展会名称 *</label>
-              <input
-                type="text"
-                value={exhibitionName}
-                onChange={(e) => setExhibitionName(e.target.value)}
-                placeholder="请输入展会名称"
-                className="w-full px-3 py-2 border border-[#dcdfe6] rounded text-sm focus:outline-none focus:border-[#2f54eb]"
-              />
             </div>
 
             {/* 合并后的单一物资表 */}

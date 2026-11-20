@@ -1069,7 +1069,7 @@ export interface WorkOrderProductConfig {
   workOrderName: string;
   projectId: string;
   projectName: string;
-  exhibitionName: string;
+  exhibitionName?: string;
   constructionUnit?: string; // 施工单位（上海锦华 / 湖南警安 / 中裕电力）
   boothName?: string; // 展馆（A馆 / W馆 / 整体）
   boothNo?: string; // 施工档位号（A-03 / W馆A-12 / 整体）
