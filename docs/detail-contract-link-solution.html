@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>招采需求明细多合同关联 & 明细级聚合预警 · 完整方案 v2</title>
+<style>
+  :root {
+    --indigo: #6366f1;
+    --purple: #8b5cf6;
+    --slate-900: #0f172a;
+    --slate-800: #1e293b;
+    --slate-600: #475569;
+    --slate-500: #64748b;
+    --slate-400: #94a3b8;
+    --slate-200: #e2e8f0;
+    --slate-100: #f1f5f9;
+    --slate-50: #f8fafc;
+    --green: #10b981;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --bg-grad: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Source Han Sans CN', '思源黑体', -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif;
+    background: var(--bg-grad);
+    color: var(--slate-800);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  .page { max-width: 1200px; margin: 0 auto; padding: 48px 40px; }
+
+  .cover { padding: 60px 0 48px; border-bottom: 1px solid var(--slate-200); margin-bottom: 48px; }
+  .cover .tag { display: inline-block; background: linear-gradient(135deg, var(--indigo), var(--purple)); color: white; font-size: 12px; padding: 6px 14px; border-radius: 20px; font-weight: 500; margin-bottom: 20px; }
+  .cover h1 { font-size: 36px; font-weight: 700; background: linear-gradient(135deg, var(--indigo), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.3; margin-bottom: 12px; }
+  .cover .subtitle { font-size: 16px; color: var(--slate-600); max-width: 780px; margin-bottom: 28px; }
+  .cover .meta { display: flex; gap: 32px; font-size: 13px; color: var(--slate-500); }
+  .cover .meta strong { color: var(--slate-800); font-weight: 600; }
+
+  section { margin-bottom: 56px; }
+  section h2 { font-size: 26px; font-weight: 700; color: var(--slate-800); margin-bottom: 20px; padding-bottom: 10px; border-bottom: 3px solid var(--slate-100); display: flex; align-items: center; gap: 12px; }
+  section h2 .num { display: inline-flex; width: 36px; height: 36px; background: linear-gradient(135deg, var(--indigo), var(--purple)); color: white; border-radius: 10px; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+  section h3 { font-size: 18px; font-weight: 600; color: var(--slate-800); margin: 24px 0 12px; display: flex; align-items: center; gap: 10px; }
+  section h4 { font-size: 15px; font-weight: 600; color: var(--slate-600); margin: 16px 0 8px; }
+
+  .card { background: white; border: 1px solid var(--slate-200); border-radius: 14px; padding: 22px 26px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+  .card-new { background: linear-gradient(135deg, #fffbeb 0%, white 30%); border: 2px solid #fbbf24; }
+
+  .table-wrap { overflow-x: auto; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { background: var(--slate-100); padding: 10px 12px; text-align: left; font-weight: 600; color: var(--slate-700); border-bottom: 2px solid var(--slate-200); font-size: 13px; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--slate-100); vertical-align: top; }
+  tr:hover td { background: var(--slate-50); }
+  tr.new td { background: linear-gradient(90deg, #fffbeb, white); }
+  tr.new td:first-child { border-left: 3px solid var(--amber); }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+  .badge-red { background: #fef2f2; color: var(--red); }
+  .badge-amber { background: #fffbeb; color: var(--amber); }
+  .badge-green { background: #ecfdf5; color: var(--green); }
+  .badge-indigo { background: #eef2ff; color: var(--indigo); }
+  .badge-slate { background: var(--slate-100); color: var(--slate-600); }
+  .badge-purple { background: #f5f3ff; color: var(--purple); }
+  .badge-new { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: white; font-weight: 600; }
+
+  .code-block { background: #0f172a; color: #e2e8f0; border-radius: 12px; padding: 16px 20px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.65; overflow-x: auto; margin: 12px 0; }
+  .code-block .kw { color: #a78bfa; }
+  .code-block .fn { color: #60a5fa; }
+  .code-block .cm { color: #64748b; }
+  .code-block .str { color: #34d399; }
+  .code-block .num { color: #fbbf24; }
+  .code-block .hl { background: rgba(251, 191, 36, 0.15); color: #fbbf24; padding: 0 4px; border-radius: 3px; }
+
+  .highlight { background: linear-gradient(90deg, #fef3c7 0%, white 20%); border-left: 4px solid var(--amber); padding: 14px 18px; border-radius: 0 12px 12px 0; margin: 14px 0; font-size: 14px; }
+
+  .compare-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0; }
+  .compare-box { padding: 16px; border-radius: 12px; }
+  .compare-box.before { background: #fef2f2; border: 1px solid #fecaca; }
+  .compare-box.after { background: #ecfdf5; border: 1px solid #a7f3d0; }
+  .compare-box h5 { margin-bottom: 8px; font-size: 13px; font-weight: 600; }
+  .compare-box.before h5 { color: var(--red); }
+  .compare-box.after h5 { color: var(--green); }
+
+  .ui-mock { background: white; border: 1px solid var(--slate-200); border-radius: 12px; padding: 18px; font-family: 'SF Mono', 'JetBrains Mono', monospace; font-size: 12px; color: var(--slate-700); line-height: 1.8; margin: 12px 0; white-space: pre; overflow-x: auto; }
+  .ui-mock .hl { color: var(--indigo); font-weight: 600; }
+  .ui-mock .new { color: var(--amber); font-weight: 600; }
+  .ui-mock .del { color: var(--red); text-decoration: line-through; }
+  .ui-mock .ok { color: var(--green); font-weight: 500; }
+
+  .flow-diagram { background: white; border: 1px solid var(--slate-200); border-radius: 14px; padding: 24px; margin: 14px 0; }
+  .flow-node { background: linear-gradient(135deg, #eef2ff, #f5f3ff); border: 2px solid var(--indigo); border-radius: 12px; padding: 16px 20px; text-align: center; }
+  .flow-node.contract { border-color: var(--purple); background: linear-gradient(135deg, #f5f3ff, #faf5ff); }
+  .flow-node h5 { font-size: 13px; font-weight: 600; color: var(--slate-800); margin-bottom: 4px; }
+  .flow-node .amt { font-size: 18px; font-weight: 700; color: var(--indigo); }
+  .flow-node.contract .amt { color: var(--purple); }
+  .flow-node .sub { font-size: 11px; color: var(--slate-500); margin-top: 3px; }
+
+  .callout { padding: 14px 18px; border-radius: 10px; font-size: 13.5px; margin: 12px 0; display: flex; gap: 12px; align-items: flex-start; }
+  .callout .icon { font-size: 20px; flex-shrink: 0; }
+  .callout-info { background: #eff6ff; border-left: 4px solid #3b82f6; color: #1e40af; }
+  .callout-warn { background: #fffbeb; border-left: 4px solid #f59e0b; color: #92400e; }
+  .callout-new { background: #ecfdf5; border-left: 4px solid #10b981; color: #065f46; }
+
+  .checklist { list-style: none; margin: 10px 0; }
+  .checklist li { padding: 4px 0 4px 28px; position: relative; font-size: 14px; }
+  .checklist li::before { content: '✅'; position: absolute; left: 0; font-size: 12px; }
+  .checklist li.no::before { content: '❌'; }
+  .checklist li.warn::before { content: '⚠️'; }
+  .checklist li.new::before { content: '🆕'; }
+
+  @media (max-width: 768px) {
+    .compare-row { grid-template-columns: 1fr; }
+    .page { padding: 20px; }
+    .cover h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="cover">
+  <span class="tag">功能方案 · v2.0 · 待确认</span>
+  <h1>招采需求明细多合同关联<br>& 明细级聚合预警</h1>
+  <p class="subtitle">让合同精确关联到需求明细行，多条合同可全额关联同一明细，预警取 MAX 对比预算；招采执行清单展开多供应商报价；帮助手册 + 变更记录同步更新。</p>
+  <div class="meta">
+    <div>📅 <strong>提出日期</strong>：2026-11-23</div>
+    <div>🏗️ <strong>涉及页面</strong>：18 个（含 2 个新增展开交互）</div>
+    <div>📝 <strong>帮助手册</strong>：6 章节</div>
+    <div>🔄 <strong>版本</strong>：v2（补招采执行多供应商报价展开）</div>
+  </div>
+</div>
+
+<!-- ========= S1 ========= -->
+<section>
+  <h2><span class="num">1</span> 需求原文 + 业务场景</h2>
+
+  <div class="card">
+    <h3>需求原文（两版）</h3>
+    <div class="highlight">
+      <strong>Round 1：</strong>招采模块，一个项目中的招采需求中的需求明细项需要 100 个，单价 500 元，可能需要几个供应商一起来做。<strong>但是每个供应商签的合同都是 100×500=50000 元</strong>。合同预警又需要按照项目中该条需求明细总金额 50000 元来预警。
+    </div>
+    <div class="highlight" style="background: linear-gradient(90deg, #ecfdf5 0%, white 20%); border-left-color: var(--green);">
+      <strong>Round 2（补充）：</strong>招采执行页面中，清单列表中也要展示<strong>同一条需求明细，对应多个中标供应商及其报价</strong>。
+    </div>
+
+    <h3>完整业务链路</h3>
+    <div class="flow-diagram" style="display:grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 10px;">
+      <div class="flow-node">
+        <h5>需求明细 #d1</h5>
+        <div class="amt">¥50,000</div>
+        <div class="sub">LED屏 100×500<br><span style="color:#22c55e">预算</span></div>
+      </div>
+      <div style="text-align:center; font-size:18px; color:#8b5cf6;">↕</div>
+      <div class="flow-node">
+        <h5>招采执行清单</h5>
+        <div style="font-size:12px; color:#64748b; margin-top:6px;">
+          CatalogCompareItem<br>🆕 展开多供应商报价
+        </div>
+      </div>
+      <div style="text-align:center; font-size:18px; color:#8b5cf6;">↕</div>
+      <div class="flow-node contract">
+        <h5>合同 × N</h5>
+        <div style="font-size:12px; color:#64748b; margin-top:6px;">
+          每个合同都是全额<br>detailLinks ← detailId
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========= S2 ========= -->
+<section>
+  <h2><span class="num">2</span> 核心数据模型改动 · 3 处（v2 新增 2 处）</h2>
+
+  <div class="card">
+    <h3>① ContractLedger（合同侧，v1 已有）</h3>
+    <div class="code-block"><span class="cm">// ContractLedger · 加 1 个可选字段</span>
+<span class="kw">detailLinks</span>?: <span class="fn">Array</span><<span class="kw">interface</span> {
+  demandId: <span class="kw">string</span>;
+  demandNo?: <span class="kw">string</span>;
+  detailId: <span class="kw">string</span>;      <span class="cm hl">// 精确到需求明细行</span>
+}>;</div>
+  </div>
+
+  <div class="card card-new">
+    <h3>② CatalogCompareItem（招采执行明细，🆕 v2 新增）</h3>
+    <div class="code-block"><span class="cm">// CatalogCompareItem · 加精确外键 + 多中标供应商</span>
+<span class="kw">demandId</span>?: <span class="kw">string</span>;               <span class="cm hl">🆕 关联的需求单 ID</span>
+<span class="kw">demandDetailId</span>?: <span class="kw">string</span>;          <span class="cm hl">🆕 关联的需求明细行 ID</span>
+
+<span class="cm">// 原来只有 1 个中标供应商字段 → 扩成数组</span>
+<span class="cm">// winningSupplierName?: string;  // ⚠️ 旧字段保留兼容</span>
+<span class="kw">winningSuppliers</span>?: <span class="fn">Array</span><<span class="kw">interface</span> {    <span class="cm hl">🆕 多中标供应商</span>
+  supplierId: <span class="kw">string</span>;
+  supplierName: <span class="kw">string</span>;
+  unitPrice: <span class="kw">number</span>;       <span class="cm">// 该供应商的中标单价</span>
+  quoteId?: <span class="kw">string</span>;          <span class="cm">// 关联 BiddingQuote.id</span>
+  confirmedAt?: <span class="kw">string</span>;
+}>;</div>
+  </div>
+
+  <div class="card card-new">
+    <h3>③ OfflineDetailItem（线下录入明细，🆕 v2 新增）</h3>
+    <div class="code-block"><span class="cm">// OfflineDetailItem · 加精确外键（线下流程也能勾到需求明细）</span>
+<span class="kw">demandId</span>?: <span class="kw">string</span>;               <span class="cm hl">🆕</span>
+<span class="kw">demandDetailId</span>?: <span class="kw">string</span>;          <span class="cm hl">🆕</span>
+<span class="kw">winningSuppliers</span>?: <span class="fn">Array</span><...>;    <span class="cm hl">🆕 同 CatalogCompareItem</span></div>
+  </div>
+
+  <div class="callout callout-warn">
+    <span class="icon">💡</span>
+    <div>
+      <strong>为什么加外键而不是靠 productCode 匹配？</strong>
+      理论上 CatalogCompareItem.productCode 和需求明细 productCode 能对上，但多个需求单里可能出现相同 productCode 的不同物资。<br>
+      显式 demandId + demandDetailId 外键是精确匹配，不会串单。<br>
+      外键在招采执行工单从需求单导入明细时自动写入，用户不用手动填。
+    </div>
+  </div>
+
+  <div class="callout callout-info">
+    <span class="icon">🔄</span>
+    <div>
+      <strong>persist 迁移计划</strong>：version 21 → version 22<br>
+      · ContractLedger 补 detailLinks = []（可选，老数据无风险）<br>
+      · CatalogCompareItem / OfflineDetailItem 补 demandId / demandDetailId = undefined（可选）<br>
+      · winningSupplierName 旧字段保留，winningSuppliers 数组如果存在则保留，不存在自动从单个字段包装成 [{ supplierId: '', supplierName: oldName }]
+    </div>
+  </div>
+</section>
+
+<!-- ========= S3 ========= -->
+<section>
+  <h2><span class="num">3</span> 🆕 招采执行清单 · 多供应商报价展开交互</h2>
+
+  <div class="callout callout-new">
+    <span class="icon">🎯</span>
+    <div>
+      <strong>Round 2 用户补充需求</strong>：招采执行页面清单列表中，同一条需求明细要能看到<strong>多个中标供应商及其报价</strong>。这是整条链路的源头展示——<br>
+      供应商通过小程序对每条物资报价 → 报价单回传后台 → 采购方在招采执行页看到每条物资的所有报价 → 选中/采纳 → 合同关联时自动带出。
+    </div>
+  </div>
+
+  <h3>改前 vs 改后</h3>
+  <div class="compare-row">
+    <div class="compare-box before">
+      <h5>❌ 改前</h5>
+      <div class="ui-mock">┌─ 招采执行工单 GD-001 ──────────────────┐
+│ 清单明细：                                │
+│  商品   │ 数量 │ 上限价  │ 状态            │
+│  LED屏  │ 100  │ ¥550   │ ✅ 已定标        │
+│  网线   │ 200  │ ¥12    │ ⏳ 待标          │
+│                                            │
+│  ⚠️ 问题：                                 │
+│  1. LED屏只能看到 1 个中标供应商           │
+│  2. 不知道这个报价对应哪个需求明细          │
+│  3. 看不到供应商的原始报价 vs 采纳价        │
+└────────────────────────────────────────────┘</div>
+    </div>
+    <div class="compare-box after">
+      <h5>✅ 改后（🆕 v2 新增展开区）</h5>
+      <div class="ui-mock">┌─ 招采执行工单 GD-001 ──────────────────────────┐
+│ 📌 关联需求：DEM-001 LED屏采购                    │
+│                                                   │
+│ 清单明细（按需求明细展开多供应商报价）：           │
+│ ┌─ ▼ LED屏 100×500 预算¥50,000 🆕 🔗 关联明细 #d1 ─┐ │
+│ │ 🆕 原始需求：¥500/个 · 预算 ¥50,000              │ │
+│ │ 🆕 中标供应商（2 家）：                             │ │
+│ │ ┌──────────────────────────────────────────┐       │ │
+│ │ │ ✅ 供应商A 报价 ¥495 → 采纳 ¥495 ✅ 中标  │       │ │
+│ │ │ ✅ 供应商B 报价 ¥498 → 采纳 ¥498 ✅ 中标  │       │ │
+│ │ │ ⚪ 供应商C 报价 ¥520 → 超出上限，未采纳    │       │ │
+│ │ └──────────────────────────────────────────┘       │ │
+│ │ 🆕 合计中标金额 MAX ¥49,800 vs 预算 ¥50,000 🟢    │ │
+│ └────────────────────────────────────────────────────┘ │
+│                                                   │
+│ ┌─ ▼ 网线 200×10 预算¥2,000 🔗 关联明细 #d2 ──────┐   │
+│ │ 🆕 供应商D 报价 ¥9.5 → 采纳 ✅                    │   │
+│ └────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────┘</div>
+    </div>
+  </div>
+
+  <h3>交互细节</h3>
+  <table>
+    <thead>
+      <tr><th>场景</th><th>展示内容</th><th>数据来源</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge badge-indigo">目录内比价</span><br>framework_catalog</td>
+        <td>✅ 完整展开：需求明细预算 → 所有供应商报价（含未采纳的）→ 中标供应商 → MAX vs 预算状态</td>
+        <td><code>bidding.items[].winningSuppliers[]</code> + <code>bidding.quotes[].details</code> 按 productCode 聚合</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-amber">线下流程</span><br>询比/竞价/谈判</td>
+        <td>⚠️ 简化展开：需求明细预算 + 中标供应商 + 中标单价（线下流程通常只有 1 个中标供应商）</td>
+        <td><code>bidding.offlineDetails[].winningSuppliers[]</code></td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-slate">随机抽取</span><br>framework_random</td>
+        <td>⚪ 不展开（无物资明细）</td>
+        <td>N/A</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>对应页面改动</h3>
+  <table>
+    <thead>
+      <tr><th>#</th><th>页面</th><th>改什么</th></tr>
+    </thead>
+    <tbody>
+      <tr class="new">
+        <td>1</td><td><code>CompetitiveBiddingPage.tsx</code> 🆕 v2 重点</td><td>编辑弹窗里的物资清单表格：每行可点击展开 → 显示该物资的所有供应商报价（从 bidding.quotes 聚合）+ 中标供应商 + MAX vs 预算</td>
+      </tr>
+      <tr class="new">
+        <td>2</td><td><code>SupplierQuotePage.tsx</code> 🆕 v2 重点</td><td>物资视图：每条物资追加"原始需求明细"列（从 demandDetailId 反查）+ "已关联合同"chip</td>
+      </tr>
+      <tr>
+        <td>3</td><td><code>ProcurementBiddingLedgerPage.tsx</code></td><td>招采执行台账详情弹窗：追加"中标物资明细 + 各供应商报价"只读区</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========= S4 ========= -->
+<section>
+  <h2><span class="num">4</span> 完整改动清单 · 18 个页面（v2 新增 3 个 + 调整 2 个）</h2>
+
+  <h3>🔴 核心必改（15 个）</h3>
+
+  <h4>数据层 + 工具（3 个，底层）</h4>
+  <table>
+    <thead><tr><th>#</th><th>文件</th><th>类型</th><th>改什么</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>src/types/index.ts</code></td><td>改</td><td>ContractLedger 加 detailLinks?；CatalogCompareItem 加 demandId/demandDetailId + winningSuppliers[]；OfflineDetailItem 同</td></tr>
+      <tr><td>2</td><td><code>src/store/useStore.ts</code></td><td>改</td><td>persist v21→v22 迁移：三个类型字段补空值/包装</td></tr>
+      <tr><td>3</td><td><code>src/utils/detailContractAggregate.ts</code></td><td>🆕</td><td>3 个聚合函数（buildDetailContractMap / computeDetailStatus / getAllDetailAlerts）</td></tr>
+    </tbody>
+  </table>
+
+  <h4>招采执行侧（3 个，🆕 v2 重点补充）</h4>
+  <table>
+    <thead><tr><th>#</th><th>页面</th><th>改什么</th></tr></thead>
+    <tbody>
+      <tr class="new"><td>4</td><td><code>CompetitiveBiddingPage.tsx</code></td><td>编辑弹窗物资清单表格：🆕 展开多供应商报价 + 中标供应商 chip + MAX vs 预算状态；目录内比价/线下流程分别处理</td></tr>
+      <tr class="new"><td>5</td><td><code>SupplierQuotePage.tsx</code></td><td>物资视图：🆕 每条物资追加"原始需求明细"列 + "已关联合同"chip</td></tr>
+      <tr><td>6</td><td><code>ProcurementPlanPage.tsx</code></td><td>招采计划明细：🆕 只读展示"预估合同状态"chip（MAX vs 预算）</td></tr>
+    </tbody>
+  </table>
+
+  <h4>合同侧（4 个）</h4>
+  <table>
+    <thead><tr><th>#</th><th>页面</th><th>改什么</th></tr></thead>
+    <tbody>
+      <tr><td>7</td><td><code>ContractProcurementPage.tsx</code></td><td>新增/编辑：选完需求后追加"关联需求明细"checkbox 表格 → 保存写入 detailLinks[]；选完招采执行工单时，自动从 winningSuppliers 带入已选明细作为默认勾选</td></tr>
+      <tr><td>8</td><td><code>ContractExhibitionPage.tsx</code></td><td>同上，合办展合同支持 detailLinks</td></tr>
+      <tr><td>9</td><td><code>ContractNonProcurementPage.tsx</code></td><td>条件显示：仅 contractNature='procurement' 时显示明细勾选区</td></tr>
+      <tr><td>10</td><td><code>ContractLedgerPage.tsx</code></td><td>合同详情弹窗追加"关联明细行"只读表 → 从 detailLinks 反查需求明细渲染</td></tr>
+    </tbody>
+  </table>
+
+  <h4>需求侧（3 个）</h4>
+  <table>
+    <thead><tr><th>#</th><th>页面</th><th>改什么</th></tr></thead>
+    <tbody>
+      <tr><td>11</td><td><code>ProcurementDemandPage.tsx</code></td><td>明细表格加"合同关联状态"列 → 关联合同数、各合同金额、MAX vs 预算、🟢/🟡/🔴 状态标签；🆕 点击状态展开显示合同列表</td></tr>
+      <tr><td>12</td><td><code>ProcurementDemandConfirmPage.tsx</code></td><td>立项确认按钮上方加"明细合同状态"提示区</td></tr>
+      <tr><td>13</td><td><code>ProcurementDemandLedgerPage.tsx</code></td><td>需求台账明细区加只读"合同关联状态"</td></tr>
+    </tbody>
+  </table>
+
+  <h4>台账/预警/履约（4 个）</h4>
+  <table>
+    <thead><tr><th>#</th><th>页面</th><th>改什么</th></tr></thead>
+    <tbody>
+      <tr><td>14</td><td><code>ProcurementBiddingLedgerPage.tsx</code></td><td>招采执行台账详情弹窗：追加"中标物资明细 + 各供应商报价 + 合同关联状态"只读区</td></tr>
+      <tr><td>15</td><td><code>ProcurementAlertDashboard.tsx</code></td><td>新增"需求明细聚合预警"区块（computeDetailStatus 输出 🔴/🟡/🟢 列表）</td></tr>
+      <tr><td>16</td><td><code>ProcurementOrderPage.tsx</code></td><td>订单明细旁加"原需求预算 vs 关联合同 MAX"只读提示</td></tr>
+      <tr><td>17</td><td><code>ContractPurchaseOrderPage.tsx</code></td><td>从需求导入明细时 contractQuantity 按 MAX 自动填充</td></tr>
+      <tr><td>18</td><td><code>ContractPerformancePage.tsx</code></td><td>履约评估表单追加"本合同覆盖的需求明细及预算"只读表</td></tr>
+    </tbody>
+  </table>
+
+  <h3>🟡 只读展示（2 个，P2）</h3>
+  <table>
+    <thead><tr><th>#</th><th>页面</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>—</td><td><code>ContractArchivePage.tsx</code></td><td>合同归档详情追加关联明细只读表（同 contractLedger）</td></tr>
+      <tr><td>—</td><td><code>BiddingScenePage.tsx</code></td><td>场景模板页目录内比价模板加"未来显示多供应商报价"提示</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========= S5 ========= -->
+<section>
+  <h2><span class="num">5</span> 招采执行 10 种采购方式 · 适配策略</h2>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>分类</th><th>采购方式</th><th>明细字段</th><th>多供应商？</th><th>detailLinks 适配</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-indigo">线上报价</span></td>
+          <td><code>framework_catalog</code><br>目录内比价</td>
+          <td><code>items[]</code></td>
+          <td><span class="badge badge-green">✅ 天然支持</span><br>一个物资多供应商报价</td>
+          <td><span class="badge badge-green">✅ 全链路通</span><br>合同新增时 → 自动带入已采纳物资 → 勾选 detailLinks</td>
+        </tr>
+        <tr>
+          <td rowspan="4"><span class="badge badge-purple">线下流程</span></td>
+          <td><code>inquiry_open</code> 询比公开</td>
+          <td rowspan="4"><code>offlineDetails[]</code></td>
+          <td rowspan="4"><span class="badge badge-amber">⚠️ 通常 1 家中标</span></td>
+          <td rowspan="4"><span class="badge badge-amber">⚠️ 半自动</span><br>合同关联工单时 → 自动勾该工单 demandId 下<strong>全部</strong>需求明细</td>
+        </tr>
+        <tr><td><code>inquiry_invited</code> 询比邀请</td></tr>
+        <tr><td><code>competitive_bidding</code> 竞价</td></tr>
+        <tr><td><code>negotiation_*</code> 谈判</td></tr>
+        <tr>
+          <td><span class="badge badge-slate">简化线下</span></td>
+          <td><code>direct</code> 直接采购<br><code>e_mall</code> 电子商城</td>
+          <td><code>offlineDetails[]</code></td>
+          <td><span class="badge badge-slate">1 家</span></td>
+          <td><span class="badge badge-amber">⚠️ 半自动</span><br>同上</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-slate">特殊</span></td>
+          <td><code>framework_random</code> 随机抽取</td>
+          <td>无物资明细</td>
+          <td><span class="badge badge-slate">N/A</span></td>
+          <td><span class="badge badge-slate">⚠️ 降级</span><br>只用 linkedDemandIds 粗粒度，不强制 detailLinks</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ========= S6 ========= -->
+<section>
+  <h2><span class="num">6</span> 帮助手册 · 6 章节补全</h2>
+
+  <div class="card">
+    <p style="color:#64748b; margin-bottom:14px;">统一放在 <code>src/constants/procurementHelp.ts</code>，FeatureHelpButton 右上角弹出。</p>
+
+    <table>
+      <thead><tr><th>章节 key</th><th>页面</th><th>类型</th><th>新增内容</th></tr></thead>
+      <tbody>
+        <tr><td><code>contractProcurement</code></td><td>招采类合同新增/编辑</td><td>修改</td><td>新增「关联需求明细」子章节 + detailLinks 说明</td></tr>
+        <tr><td><code>contractLedger</code></td><td>合同台账</td><td>修改</td><td>新增「按明细行聚合预警」子章节（MAX 口径）</td></tr>
+        <tr><td><code>demand</code></td><td>招采需求申请</td><td>修改</td><td>明细表格新增「合同关联状态列」子章节</td></tr>
+        <tr><td><code>bidding</code></td><td>招采执行</td><td>修改</td><td>🆕 新增「清单多供应商报价展开」+「10 种采购方式明细粒度差异」两个子章节</td></tr>
+        <tr><td><code>supplierQuote</code></td><td>目录内供应商报价</td><td>修改</td><td>🆕 新增「物资视图 ↔ 需求明细 ↔ 合同」链路说明</td></tr>
+        <tr class="new"><td><code>detailAlert</code></td><td><strong>新增独立章节</strong></td><td>🆕</td><td>完整说明：口径（MAX）、状态定义、点击跳转路径</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ========= S7 ========= -->
+<section>
+  <h2><span class="num">7</span> 变更记录 · 3 份文件同步</h2>
+
+  <div class="card">
+    <table>
+      <thead><tr><th>文件</th><th>更新方式</th><th>关键内容</th></tr></thead>
+      <tbody>
+        <tr><td><code>.trae/SESSION_HEAD.md</code></td><td>追加章节</td><td>标题「2026-11 需求明细多合同关联 & 明细级聚合预警（persist v22）」，含数据模型/18 页面改动/commit 链</td></tr>
+        <tr><td><code>.trae/SESSION_LOG.md</code></td><td>逐轮追加</td><td>每轮对话追加 1 条（用户原话 + AI 要点 + 改动清单）</td></tr>
+        <tr><td><code>docs/requirements.md</code></td><td>追加完整需求章节</td><td>需求 #N：原文 + 规范化描述 + 需求拆解 + 方案对比 + 改动清单 + 执行记录</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ========= S8 ========= -->
+<section>
+  <h2><span class="num">8</span> 3 波实施顺序 + 明确不做什么</h2>
+
+  <div class="card">
+    <h3>第 1 波 · 核心数据层 + 合同侧（可独立部署）</h3>
+    <ul class="checklist new">
+      <li>types/index.ts — ContractLedger.detailLinks + CatalogCompareItem/OfflineDetailItem 加外键 + winningSuppliers[]</li>
+      <li>store/useStore.ts — persist v21 → v22 迁移</li>
+      <li>utils/detailContractAggregate.ts — 3 个聚合函数 🆕</li>
+      <li>ContractProcurementPage.tsx — 合同新增页明细勾选表格</li>
+      <li>ContractExhibitionPage.tsx — 同上</li>
+      <li>Mock 演示数据补 2-3 个"多合同关联同一条明细"</li>
+    </ul>
+
+    <h3>第 2 波 · 🆕 招采执行多供应商报价展开（v2 核心补充）</h3>
+    <ul class="checklist new">
+      <li>CompetitiveBiddingPage.tsx — 编辑弹窗物资清单展开多供应商报价（目录内比价/线下流程分别处理）</li>
+      <li>SupplierQuotePage.tsx — 物资视图追加需求明细 + 合同关联 chip</li>
+      <li>ProcurementPlanPage.tsx — 招采计划明细只读 chip</li>
+      <li>Mock 数据补 2-3 个"Bidding.quotes 多供应商 + 同一 productCode 多报价"</li>
+    </ul>
+
+    <h3>第 3 波 · 需求侧 + 台账 + 预警 + 帮助手册 + 变更记录</h3>
+    <ul class="checklist">
+      <li>ProcurementDemandPage.tsx — 明细表格合同关联状态列</li>
+      <li>ProcurementDemandConfirmPage.tsx — 立项确认提示</li>
+      <li>ProcurementDemandLedgerPage.tsx — 只读展示</li>
+      <li>ContractLedgerPage.tsx — 合同详情加明细只读表</li>
+      <li>ContractNonProcurementPage.tsx — 条件显示</li>
+      <li>ProcurementBiddingLedgerPage.tsx — 台账详情只读区</li>
+      <li>ProcurementAlertDashboard.tsx — 预警看板新增区块</li>
+      <li>ProcurementOrderPage.tsx + ContractPurchaseOrderPage.tsx — 订单侧提示</li>
+      <li>ContractPerformancePage.tsx — 履约评估加参考表</li>
+      <li>src/constants/procurementHelp.ts — 6 章节补全</li>
+      <li>.trae/SESSION_HEAD.md + SESSION_LOG.md + docs/requirements.md — 变更记录同步</li>
+    </ul>
+  </div>
+
+  <div class="card" style="background:#fef2f2; border-color:#fecaca;">
+    <h3 style="color:#dc2626;">❌ 不做什么</h3>
+    <ul class="checklist no">
+      <li>不自动按明细预算填合同金额——合同金额用户自己填</li>
+      <li>不做分摊金额字段——取 MAX 不取 SUM</li>
+      <li>不限制一条明细能被几个合同关联</li>
+      <li>不改 linkedDemandIds 粗粒度关联——继续保留，detailLinks 是精确补充</li>
+      <li>合同删除不事件同步回写——靠 useMemo 自动重算</li>
+      <li>随机抽取（framework_random）不强制 detailLinks——降级</li>
+      <li>非招采合同默认不显示 detailLinks</li>
+      <li>不做需求侧任何类型定义——聚合纯计算</li>
+      <li>不引入第三方 UI 库</li>
+    </ul>
+  </div>
+</section>
+
+<div style="text-align:center; padding:40px 0; color:#94a3b8; border-top:1px solid var(--slate-200); margin-top:40px;">
+  <p style="font-size:14px;">方案 v2.0 — 请确认后进入编码阶段</p>
+  <p style="font-size:12px; margin-top:6px;">🆕 v2 补充：招采执行清单多供应商报价展开 · CatalogCompareItem/OfflineDetailItem 加 demandId/detailId + winningSuppliers[]</p>
+</div>
+
+</div>
+</body>
+</html>

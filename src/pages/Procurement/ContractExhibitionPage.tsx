@@ -194,6 +194,7 @@ export default function ContractExhibitionPage() {
         enablePaidAlert: finalForm.enablePaidAlert ?? true,
         enableEvalAlert: finalForm.enableEvalAlert ?? true,
         isOnsite: finalForm.isOnsite,
+        detailLinks: finalForm.detailLinks ?? [],
       };
       addContractLedger(newLedger);
     }
@@ -407,6 +408,20 @@ function ContractExhibitionForm({ form, update, biddings, procurementDemands, is
     .filter(([v]) => v === 'self_host' || v === 'joint_host')
     .map(([v, l]) => ({ value: v, label: l }));
 
+  // 🆕 PL-01: 子组件内的明细相关变量（供 checkbox 表格使用）
+  const currentDemand = form.demandId
+    ? procurementDemands.find((d) => d.id === form.demandId) ?? null
+    : null;
+  const currentDemandDetails = currentDemand?.details ?? [];
+  const selectedDetailIds = new Set((form.detailLinks ?? []).map((l) => l.detailId));
+  const toggleDetailLink = (detailId: string, checked: boolean) => {
+    const cur = (form.detailLinks ?? []).filter((l) => l.detailId !== detailId);
+    if (checked && form.demandId) {
+      cur.push({ detailId, demandId: form.demandId, demandNo: form.demandNo });
+    }
+    update({ detailLinks: cur });
+  };
+
   // ========== 关联采购需求自动带入 ==========
   // 自办展/合办展合同属于 non_procurement，不需要从需求推导 contractType/formation
   // 但仍可带入项目名称、对方单位、金额等通用字段
@@ -438,9 +453,17 @@ function ContractExhibitionForm({ form, update, biddings, procurementDemands, is
       supplierId: bidding?.winningSupplierId || '',
     };
 
-    if (demand.estimatedAmount != null && demand.estimatedAmount > 0) {
+  if (demand.estimatedAmount != null && demand.estimatedAmount > 0) {
       patch.amount = demand.estimatedAmount;
     }
+
+    // 🆕 PL-01: 选完关联需求 → 自动初始化 detailLinks（默认全选该需求所有明细行）
+    const allDetails = Array.isArray(demand.details) ? demand.details : [];
+    patch.detailLinks = allDetails.map((d) => ({
+      demandId: demand.id,
+      demandNo: demand.demandNo,
+      detailId: d.id,
+    }));
 
     update(patch);
   };

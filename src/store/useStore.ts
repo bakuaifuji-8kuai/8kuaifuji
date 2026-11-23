@@ -1650,7 +1650,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 21,
+      version: 22,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -2137,6 +2137,52 @@ export const useStore = create<WarehouseState>()(
           });
           persistedState.workOrderConfigs = cfgs;
           console.log(`[store migrate v21] 工单配置合并：${cfgs.length} 条已迁移 (main+aux → products, quantity → ratio)`);
+        }
+        if (version < 22) {
+          // v21→v22：PL-01 招采需求明细多合同关联 & 明细级聚合预警
+          // 1. ContractLedger 补 detailLinks = []（可选字段，老合同空数组，零破坏）
+          // 2. Bidding.items (CatalogCompareItem) 补 demandId/demandDetailId/winningSuppliers = undefined（可选）
+          // 3. Bidding.offlineDetails (OfflineDetailItem) 同上
+          // 全量遍历补字段；不主动写入业务外键（demandId/detailId 从前端招采执行页从需求导入时自动写入）
+          const ledgers = (persistedState.contractLedgers as any[]) || [];
+          let patchedLedgers = 0;
+          ledgers.forEach((c: any) => {
+            if (c.detailLinks === undefined || c.detailLinks === null) {
+              c.detailLinks = [];
+              patchedLedgers++;
+            }
+          });
+          persistedState.contractLedgers = ledgers;
+
+          const biddings = (persistedState.biddings as any[]) || [];
+          let patchedBiddingItems = 0;
+          let patchedOfflineDetails = 0;
+          biddings.forEach((b: any) => {
+            if (Array.isArray(b.items)) {
+              b.items.forEach((item: any) => {
+                if (item.demandId === undefined) item.demandId = undefined;
+                if (item.demandDetailId === undefined) item.demandDetailId = undefined;
+                if (!Array.isArray(item.winningSuppliers) && item.winningSupplierName) {
+                  // 旧中标供应商单字段 → 包装成数组（旧字段保留兼容）
+                  item.winningSuppliers = [{ supplierId: item.winningSupplierId || '', supplierName: item.winningSupplierName, unitPrice: item.supplierUnitPrice || item.unitPrice || 0 }];
+                }
+                patchedBiddingItems++;
+              });
+            }
+            if (Array.isArray(b.offlineDetails)) {
+              b.offlineDetails.forEach((d: any) => {
+                if (d.demandId === undefined) d.demandId = undefined;
+                if (d.demandDetailId === undefined) d.demandDetailId = undefined;
+                if (!Array.isArray(d.winningSuppliers) && d.winningSupplierName) {
+                  d.winningSuppliers = [{ supplierId: '', supplierName: d.winningSupplierName, unitPrice: d.unitPriceIncludingTax || 0 }];
+                }
+                patchedOfflineDetails++;
+              });
+            }
+          });
+          persistedState.biddings = biddings;
+
+          console.log(`[store migrate v22] PL-01：合同补 detailLinks=${patchedLedgers}, bidding.items 补外键=${patchedBiddingItems}, offlineDetails=${patchedOfflineDetails}`);
         }
         return persistedState;
       },

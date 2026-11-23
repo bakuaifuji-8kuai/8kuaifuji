@@ -208,6 +208,7 @@ export default function ContractProcurementPage() {
         enablePaidAlert: finalForm.enablePaidAlert ?? true,
         enableEvalAlert: finalForm.enableEvalAlert ?? true,
         isOnsite: finalForm.isOnsite,
+        detailLinks: finalForm.detailLinks ?? [],
       };
       addContractLedger(newLedger);
     }
@@ -419,6 +420,20 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
   const formationOptions = Object.entries(PROCUREMENT_FORMATION_LABELS).map(([v, l]) => ({ value: v, label: l }));
   const contractTypeOptions = Object.entries(PROCUREMENT_CONTRACT_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }));
 
+  // 🆕 PL-01: 子组件内的明细相关 useMemo（供 JSX checkbox 表格使用）
+  const currentDemand = form.demandId
+    ? procurementDemands.find((d) => d.id === form.demandId) ?? null
+    : null;
+  const currentDemandDetails = currentDemand?.details ?? [];
+  const selectedDetailIds = new Set((form.detailLinks ?? []).map((l) => l.detailId));
+  const toggleDetailLink = (detailId: string, checked: boolean) => {
+    const cur = (form.detailLinks ?? []).filter((l) => l.detailId !== detailId);
+    if (checked && form.demandId) {
+      cur.push({ detailId, demandId: form.demandId, demandNo: form.demandNo });
+    }
+    update({ detailLinks: cur });
+  };
+
   // ========== 招采工单自动带入 ==========
   // ========== 关联采购需求自动带入 ==========
   // 需求背景：立项确认 needContract='yes' 的需求走标准链路 → 建工单 → 建合同
@@ -466,6 +481,14 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
     if (demand.estimatedAmount != null && demand.estimatedAmount > 0) {
       patch.amount = demand.estimatedAmount;
     }
+
+    // 🆕 PL-01: 选完关联需求 → 自动初始化 detailLinks（默认全选该需求所有明细行）
+    const allDetails = Array.isArray(demand.details) ? demand.details : [];
+    patch.detailLinks = allDetails.map((d) => ({
+      demandId: demand.id,
+      demandNo: demand.demandNo,
+      detailId: d.id,
+    }));
 
     update(patch);
   };
@@ -547,6 +570,78 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
             onChange={(e) => handleDemandChange(e.target.value)}
             placeholder="选了之后自动从工单带入类型/方式/对方单位/中标时间"
           />
+
+          {/* 🆕 PL-01: 关联需求明细勾选表格 */}
+          {form.demandId && currentDemandDetails.length > 0 && (
+            <div className="col-span-2 rounded-lg border border-amber-200 bg-amber-50/50 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="text-sm font-semibold text-amber-900">
+                  📌 关联需求明细（共 {currentDemandDetails.length} 条，已勾选{' '}
+                  {(form.detailLinks ?? []).length} 条）
+                </div>
+                <div className="text-xs text-amber-700">
+                  合同默认覆盖全部明细，可手动取消不需要的行
+                </div>
+              </div>
+              <div className="max-h-52 overflow-auto rounded-md border border-amber-100 bg-white">
+                <table className="w-full text-xs">
+                  <thead className="bg-amber-100/60 text-amber-800">
+                    <tr>
+                      <th className="w-10 px-2 py-1.5 text-center">☑</th>
+                      <th className="px-2 py-1.5 text-left">商品名称</th>
+                      <th className="px-2 py-1.5 text-left">规格</th>
+                      <th className="px-2 py-1.5 text-right">数量</th>
+                      <th className="px-2 py-1.5 text-right">单价(元)</th>
+                      <th className="px-2 py-1.5 text-right">预算(元)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentDemandDetails.map((d) => {
+                      const checked = selectedDetailIds.has(d.id);
+                      const unitPrice = d.unitPriceIncludingTax ?? d.unitPriceExcludingTax ?? 0;
+                      const budget = d.amountIncludingTax ?? 0;
+                      return (
+                        <tr
+                          key={d.id}
+                          className={checked ? 'bg-indigo-50/60' : 'hover:bg-slate-50'}
+                        >
+                          <td className="px-2 py-1.5 text-center">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => toggleDetailLink(d.id, e.target.checked)}
+                              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                          </td>
+                          <td className="px-2 py-1.5 font-medium text-slate-800">
+                            {d.productName}
+                          </td>
+                          <td className="px-2 py-1.5 text-slate-500">
+                            {d.specification || '-'}
+                          </td>
+                          <td className="px-2 py-1.5 text-right text-slate-700">
+                            {d.quantity} {d.unit}
+                          </td>
+                          <td className="px-2 py-1.5 text-right text-slate-700">
+                            ¥{unitPrice.toLocaleString()}
+                          </td>
+                          <td className="px-2 py-1.5 text-right font-semibold text-indigo-600">
+                            ¥{budget.toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {(form.detailLinks ?? []).length === 0 && (
+                <div className="mt-2 rounded-md bg-red-50 px-3 py-1.5 text-xs text-red-600">
+                  ⚠️ 合同没有勾选任何明细行，预警看板将无法关联到需求明细级预警
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 合同名称* */}
           <Input
             label="合同名称 *"

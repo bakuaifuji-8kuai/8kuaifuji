@@ -1451,6 +1451,17 @@ export interface CatalogCompareItem {
   supplierAmountExTax?: number;       // 供应商不含税金额（自动算）
   winningSupplierName?: string;       // 中标供应商名称
   contractNo?: string;                // 关联合同编号
+  /** 🆕 PL-01: 精确关联需求明细（招采执行从需求导入时自动写入） */
+  demandId?: string;
+  demandDetailId?: string;
+  /** 🆕 PL-01: 多中标供应商数组（目录内比价可多家同时中标；旧 winningSupplierName 保留兼容） */
+  winningSuppliers?: Array<{
+    supplierId: string;
+    supplierName: string;
+    unitPrice: number;
+    quoteId?: string;
+    confirmedAt?: string;
+  }>;
 }
 
 /**
@@ -1489,6 +1500,17 @@ export interface OfflineDetailItem {
   supplierAmountExTax?: number;       // 供应商不含税金额（= supplierUnitPriceExTax × quantity，自动算）
   winningSupplierName?: string;       // 中标供应商名称
   contractNo?: string;                // 关联合同编号
+  /** 🆕 PL-01: 精确关联需求明细 */
+  demandId?: string;
+  demandDetailId?: string;
+  /** 🆕 PL-01: 多中标供应商数组（旧 winningSupplierName 保留兼容） */
+  winningSuppliers?: Array<{
+    supplierId: string;
+    supplierName: string;
+    unitPrice: number;
+    quoteId?: string;
+    confirmedAt?: string;
+  }>;
 }
 
 // ============== 旧报价结构（兼容） ==============
@@ -2266,6 +2288,12 @@ export interface ContractLedger {
    * 用于 paidAmount 自动聚合 + 合同详情 tab 展示关联需求
    */
   linkedDemandIds?: string[];
+  /** 🆕 PL-01: 精确关联到需求明细行（可选，老合同自动空数组；多条合同可关联同一明细） */
+  detailLinks?: Array<{
+    demandId: string;
+    demandNo?: string;
+    detailId: string;
+  }>;
 }
 
 // ===== 合约管理 label 常量（Excel 原始选项）=====
