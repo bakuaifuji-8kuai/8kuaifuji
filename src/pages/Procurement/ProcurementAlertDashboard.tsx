@@ -9,8 +9,10 @@ import Modal from '@/components/common/Modal';
 import { DefaultButton, PrimaryButton } from '@/components/common/Button';
 import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
 import { useStore } from '@/store/useStore';
-import type { ContractLedger, Supplier, Bidding, ContractReminderSettings, EvalReminderConfig } from '@/types';
+import type { ContractLedger, Supplier, Bidding, ContractReminderSettings, EvalReminderConfig, ProcurementDemand } from '@/types';
 import { EVAL_REMINDER_KINDS } from '@/types';
+// 🆕 PL-01: 需求明细聚合预警
+import { getAllDetailAlerts, formatYuan } from '@/utils/detailContractAggregate';
 
 // ==================== 类型定义 ====================
 type AlertType =
@@ -64,8 +66,16 @@ export default function ProcurementAlertDashboard() {
   const contractLedgers = useStore((s) => s.contractLedgers) || [];
   const suppliers = useStore((s) => s.suppliers) || [];
   const biddings = useStore((s) => s.biddings) || [];
+  const procurementDemands = useStore((s) => s.procurementDemands) || [];
   const reminderSettings = useStore((s) => s.contractReminderSettings);
   const setReminderSettings = useStore((s) => s.setContractReminderSettings);
+
+  // 🆕 PL-01: 需求明细级聚合预警
+  const detailAlerts = useMemo(() => {
+    return getAllDetailAlerts(contractLedgers, procurementDemands, { includeOk: false });
+  }, [contractLedgers, procurementDemands]);
+  const detailDangerCount = detailAlerts.filter((a) => a.status === 'danger').length;
+  const detailWarningCount = detailAlerts.filter((a) => a.status === 'warning').length;
 
   // 预警设置弹窗状态
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -505,6 +515,14 @@ function DashboardBody({
   navigate: ReturnType<typeof useNavigate>;
   onOpenSettings: () => void;
 }) {
+  // 🆕 PL-01: 子组件内直接读 store 算需求明细聚合预警
+  const contractLedgers = useStore((s) => s.contractLedgers) || [];
+  const procurementDemands = useStore((s) => s.procurementDemands) || [];
+  const detailAlerts = useMemo(() => {
+    return getAllDetailAlerts(contractLedgers, procurementDemands, { includeOk: false });
+  }, [contractLedgers, procurementDemands]);
+  const detailDangerCount = detailAlerts.filter((a) => a.status === 'danger').length;
+  const detailWarningCount = detailAlerts.filter((a) => a.status === 'warning').length;
   // Tab + 严重度筛选（组件级 state）
   const [activeTab, setActiveTab] = useState<AlertType | 'all'>('all');
   const [levelFilter, setLevelFilter] = useState<AlertLevel | 'all'>('all');
@@ -583,6 +601,89 @@ function DashboardBody({
             </button>
           );
         })}
+      </div>
+
+      {/* ===== 🆕 PL-01: 需求明细级聚合预警 ===== */}
+      <div className="bg-white border border-indigo-200 rounded-xl p-4 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white">
+              <FileWarning className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-slate-800">📌 需求明细聚合预警</div>
+              <div className="text-xs text-slate-400">
+                同一需求明细关联的所有合同金额取 MAX vs 明细预算 · 共 {detailAlerts.length} 条有关联合同的明细
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2 text-xs">
+            {detailDangerCount > 0 && (
+              <span className="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700">🔴 超支 {detailDangerCount}</span>
+            )}
+            {detailWarningCount > 0 && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700">🟠 接近 {detailWarningCount}</span>
+            )}
+          </div>
+        </div>
+
+        {detailAlerts.length === 0 ? (
+          <div className="py-6 text-center text-sm text-slate-400">
+            暂无关联合同的需求明细 · 多签合同后这里会自动出现预警
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-indigo-50/50 text-slate-600">
+                  <th className="px-3 py-2 text-left font-medium">级别</th>
+                  <th className="px-3 py-2 text-left font-medium">需求编号</th>
+                  <th className="px-3 py-2 text-left font-medium">明细商品</th>
+                  <th className="px-3 py-2 text-right font-medium">明细预算</th>
+                  <th className="px-3 py-2 text-center font-medium">关联合同数</th>
+                  <th className="px-3 py-2 text-right font-medium">合同 MAX</th>
+                  <th className="px-3 py-2 text-right font-medium">超支比</th>
+                  <th className="px-3 py-2 text-left font-medium">状态说明</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detailAlerts.slice(0, 8).map((a) => {
+                  const isDanger = a.status === 'danger';
+                  const isWarn = a.status === 'warning';
+                  return (
+                    <tr key={a.detailId} className="border-t border-slate-100 hover:bg-indigo-50/30 transition-colors">
+                      <td className="px-3 py-2">
+                        {isDanger ? (
+                          <span className="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700">🔴 超支</span>
+                        ) : isWarn ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700">🟠 警告</span>
+                        ) : (
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700">🟢 正常</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-slate-500 font-mono">{a.demandNo || '-'}</td>
+                      <td className="px-3 py-2 text-slate-700 font-medium">{a.productName}</td>
+                      <td className="px-3 py-2 text-right text-slate-600">{formatYuan(a.budget)}</td>
+                      <td className="px-3 py-2 text-center text-slate-600">{a.linkedContracts.length}</td>
+                      <td className={`px-3 py-2 text-right font-semibold ${isDanger ? 'text-red-600' : isWarn ? 'text-amber-600' : 'text-emerald-600'}`}>
+                        {formatYuan(a.maxContractAmountYuan)}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <span className={isDanger ? 'text-red-600 font-medium' : 'text-slate-500'}>
+                          {(a.ratio * 100).toFixed(0)}%
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-slate-500">{a.statusLabel}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {detailAlerts.length > 8 && (
+              <div className="mt-2 text-center text-xs text-slate-400">还有 {detailAlerts.length - 8} 条…</div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ===== Tab 筛选条 ===== */}

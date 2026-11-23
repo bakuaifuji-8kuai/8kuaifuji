@@ -13,6 +13,7 @@ import { PROCUREMENT_FORMATION_LABELS, NON_PROCUREMENT_FORMATION_LABELS, PROCURE
 import { Printer, FileSpreadsheet, FileDown, Bell, ExternalLink } from 'lucide-react';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
 import { PROCUREMENT_HELP } from '@/constants/procurementHelp';
+import { buildDetailContractMap, formatYuan } from '@/utils/detailContractAggregate';
 
 const categoryMap: Record<string, string> = {
   exhibition_service: '展览服务',
@@ -1727,6 +1728,94 @@ export default function ContractLedgerPage() {
                 </PrimaryButton>
               </div>
             )}
+
+            {/* 关联需求明细（detailLinks 只读表） */}
+            {(() => {
+              const links = (viewItem.detailLinks || []) as Array<{ demandId?: string; demandNo?: string; detailId: string }>;
+              if (links.length === 0) return null;
+              const contractAmountYuan = (viewItem.amount ?? 0) * 10000;
+              const map = buildDetailContractMap(contractLedgers);
+              const rows = links.map((link) => {
+                const demand = procurementDemands.find((d) => d.id === link.demandId);
+                const detail = demand?.details?.find((dt) => dt.id === link.detailId);
+                const linked = map.get(link.detailId) ?? [];
+                const maxYuan = linked.reduce((m, c) => Math.max(m, (c.amount ?? 0) * 10000), 0);
+                const budget = detail?.amountIncludingTax ?? 0;
+                return { link, demand, detail, budget, linked, maxYuan };
+              });
+              return (
+                <div className="p-3 rounded-lg border border-indigo-100 bg-gradient-to-br from-indigo-50/60 to-purple-50/60">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm font-semibold text-indigo-700 flex items-center gap-1.5">
+                      <span>📋</span> 关联需求明细
+                      <span className="text-xs font-normal text-slate-500">（{rows.length} 条）</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      合同金额 <span className="text-indigo-600 font-medium">{formatYuan(contractAmountYuan)}</span>
+                      {'  '}vs 明细预算 MAX
+                    </div>
+                  </div>
+                  <table className="w-full text-[11px] border-collapse">
+                    <thead>
+                      <tr className="bg-white/60 text-slate-600">
+                        <th className="px-2 py-1.5 text-left border border-indigo-100">需求编号</th>
+                        <th className="px-2 py-1.5 text-left border border-indigo-100">物资/规格</th>
+                        <th className="px-2 py-1.5 text-right border border-indigo-100">明细预算</th>
+                        <th className="px-2 py-1.5 text-right border border-indigo-100">关联合同数</th>
+                        <th className="px-2 py-1.5 text-right border border-indigo-100">合同 MAX</th>
+                        <th className="px-2 py-1.5 text-center border border-indigo-100">状态</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r, idx) => {
+                        const ratio = r.budget > 0 ? r.maxYuan / r.budget : 0;
+                        const status = ratio > 1 ? 'danger' : ratio >= 0.9 ? 'warning' : 'ok';
+                        const ratioLabel = ratio > 1 ? `超支 ${Math.round((ratio - 1) * 100)}%`
+                          : ratio >= 0.9 ? `接近 ${Math.round(ratio * 100)}%`
+                          : `预算内 ${Math.round(ratio * 100)}%`;
+                        const badgeColor = status === 'danger'
+                          ? 'bg-red-100 text-red-700'
+                          : status === 'warning'
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-green-100 text-green-700';
+                        const emoji = status === 'danger' ? '🔴' : status === 'warning' ? '🟡' : '🟢';
+                        return (
+                          <tr key={idx} className="hover:bg-white/50">
+                            <td className="px-2 py-1.5 border border-indigo-100 font-medium text-indigo-600">
+                              {r.demand?.demandNo || r.link.demandNo || '-'}
+                            </td>
+                            <td className="px-2 py-1.5 border border-indigo-100">
+                              <div className="font-medium text-slate-700">{r.detail?.productName || '-'}</div>
+                              {r.detail?.specification && (
+                                <div className="text-[10px] text-slate-400 truncate max-w-[180px]">{r.detail.specification}</div>
+                              )}
+                            </td>
+                            <td className="px-2 py-1.5 border border-indigo-100 text-right font-mono text-slate-700">
+                              {r.budget > 0 ? formatYuan(r.budget) : '-'}
+                            </td>
+                            <td className="px-2 py-1.5 border border-indigo-100 text-center">
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                                {r.linked.length} 份
+                              </span>
+                            </td>
+                            <td className="px-2 py-1.5 border border-indigo-100 text-right font-mono font-medium">
+                              <span className={status === 'danger' ? 'text-red-600' : status === 'warning' ? 'text-amber-600' : 'text-slate-700'}>
+                                {r.maxYuan > 0 ? formatYuan(r.maxYuan) : '-'}
+                              </span>
+                            </td>
+                            <td className="px-2 py-1.5 border border-indigo-100 text-center">
+                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${badgeColor}`}>
+                                {emoji} {ratioLabel}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
 
             <div className="grid grid-cols-3 gap-y-2 gap-x-4 p-3 border border-[#ebeef5] rounded bg-[#f5f7fa]">
               <div><span className="text-[#909399]">合同编码：</span>{viewItem.contractNo}</div>
