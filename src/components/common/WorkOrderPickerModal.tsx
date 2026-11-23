@@ -84,10 +84,52 @@ export default function WorkOrderPickerModal({
     setExpandedOrders(next);
   };
 
+  /** 解析父组号：从 workOrderCode 提取 "父组-子序号"，返回 null 表示非父子组格式 */
+  const parseBondGroup = (code: string): { parent: string; seq: number } | null => {
+    const m = code.match(/^(.+)-(\d+)$/);
+    if (!m) return null;
+    // 子序号必须是纯数字且父组号不为空
+    const parent = m[1];
+    const seq = parseInt(m[2], 10);
+    if (!parent || Number.isNaN(seq)) return null;
+    return { parent, seq };
+  };
+
+  /** 找同父组的所有 config ids（仅 workOrderCode 匹配 "父-子" 格式的） */
+  const getBondGroupIds = (parent: string): string[] => {
+    return workOrderConfigs
+      .filter((o) => {
+        const g = parseBondGroup(o.workOrderCode);
+        return g && g.parent === parent;
+      })
+      .map((o) => o.id);
+  };
+
   const toggleItem = (orderId: string) => {
+    const config = workOrderConfigs.find((o) => o.id === orderId);
+    if (!config) return;
+
+    const bond = parseBondGroup(config.workOrderCode);
     const next = new Set(selectedItems);
-    if (next.has(orderId)) next.delete(orderId);
-    else next.add(orderId);
+
+    if (bond) {
+      // 父子组格式 → 组是原子的，必须一起选/一起取消
+      const groupIds = getBondGroupIds(bond.parent);
+      const allSelected = groupIds.every((id) => next.has(id));
+
+      if (allSelected) {
+        // 组已全选 → 点击 = 全取消
+        groupIds.forEach((id) => next.delete(id));
+      } else {
+        // 组未全选 → 点击 = 全选
+        groupIds.forEach((id) => next.add(id));
+      }
+    } else {
+      // 非父子组格式 → 单条 toggle
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+    }
+
     setSelectedItems(next);
   };
 
@@ -194,6 +236,8 @@ export default function WorkOrderPickerModal({
             const workItemQty = order.workItemQty;
             const bizType = getBizType(order.category);
             const pCount = order.products.length;
+            const bond = parseBondGroup(order.workOrderCode);
+            const bondGroupSize = bond ? getBondGroupIds(bond.parent).length : 0;
 
             return (
               <div key={order.id}>
@@ -208,8 +252,13 @@ export default function WorkOrderPickerModal({
                       className="accent-[#2f54eb] cursor-pointer"
                     />
                   </div>
-                  <div className="w-28 text-[#303133] font-medium truncate" title={order.workOrderCode}>
-                    {order.workOrderCode}
+                  <div className="w-28 text-[#303133] font-medium truncate flex items-center gap-1" title={order.workOrderCode}>
+                    {bond && (
+                      <span className="inline-flex items-center text-[#e6a23c]" title={`父子组（${bond.parent}）· 同组共 ${bondGroupSize} 张须一起选`}>
+                        🔗
+                      </span>
+                    )}
+                    <span className="truncate">{order.workOrderCode}</span>
                   </div>
                   <div className="w-14 text-center text-[#606266]">{order.boothName || '-'}</div>
                   <div className="w-20 text-center text-[#606266] truncate" title={order.boothNo || ''}>{order.boothNo || '-'}</div>

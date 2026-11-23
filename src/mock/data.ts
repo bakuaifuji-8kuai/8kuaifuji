@@ -766,7 +766,9 @@ export const products: Product[] = [
   { id: 'PRD785', code: 'QD2016', name: '手拉吊葫芦', categoryId: 'CAT002', unit: '个', specification: '1T/12米', origin: '', material: '', stockQuantity: 0, isContractItem: false, status: 'enabled' },
   { id: 'PRD786', code: 'QD2017', name: '黑色吊带（蓝色头）', categoryId: 'CAT002', unit: '根', specification: '2T/2米', origin: '', material: '', stockQuantity: 0, isContractItem: false, status: 'enabled' },
   { id: 'PRD787', code: 'QD2018', name: '黑色吊带（红色头）', categoryId: 'CAT002', unit: '根', specification: '2T/4米', origin: '', material: '', stockQuantity: 0, isContractItem: false, status: 'enabled' },
-  { id: 'PRD788', code: 'QD2019', name: '黑色吊带（绿色头）', categoryId: 'CAT002', unit: '根', specification: '2T/8米', origin: '', material: '', stockQuantity: 0, isContractItem: false, status: 'enabled' }
+  { id: 'PRD788', code: 'QD2019', name: '黑色吊带（绿色头）', categoryId: 'CAT002', unit: '根', specification: '2T/8米', origin: '', material: '', stockQuantity: 0, isContractItem: false, status: 'enabled' },
+  // === 智能电箱组合产品 ===
+  { id: 'PRD803', code: 'QD2020', name: '智慧电箱', categoryId: 'CAT002', unit: '台', specification: '220V/16A 智慧款（含智慧模块）', origin: '', material: '配电箱+智慧模块套装', stockQuantity: 0, isContractItem: false, status: 'enabled' },
 ];
 
 // 供应商数据
@@ -3093,6 +3095,109 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     workItemName: '音响调试',
     workItemQty: 3,
     createTime: '2026-06-10T16:40:00Z',
+  },
+
+  // ==================== PL-01 BONUS：父子组联动测试数据（电箱+智慧模块 组合场景）====================
+  // 组 001：001-1（电箱220V 16A ×10）+ 001-2（智慧模块 ×8）→ 组合后：智慧电箱×8 + 普通电箱×2
+  {
+    id: 'WPC-BOND-001-1',
+    workOrderId: 'BOND001-1',
+    workOrderCode: '001-1',
+    workOrderName: '电箱220V 16A',
+    projectId: 'PROJ001',
+    projectName: '会展电力配套项目',
+    exhibitionName: '2026上海国际会展',
+    constructionUnit: '中裕电力',
+    category: '电力/电箱/室内',
+    products: [
+      { id: 'WP-BOND-101', productId: 'PRD783', productCode: 'QD2014', productName: '配电箱', categoryName: '低值易耗', specification: '16A/220V', unit: '个', ratio: 1 },
+      { id: 'WP-BOND-102', productId: 'PRD774', productCode: 'QD2005', productName: '电缆', categoryName: '低值易耗', specification: '4㎡3芯/16A/10米（16A电箱）', unit: '根', ratio: 1 },
+    ],
+    boothName: 'A馆',
+    boothNo: 'A-12',
+    workItemName: '电箱220V 16A',
+    workItemQty: 10,
+    createTime: '2026-11-23T10:00:00Z',
+  },
+  {
+    id: 'WPC-BOND-001-2',
+    workOrderId: 'BOND001-2',
+    workOrderCode: '001-2',
+    workOrderName: '智慧模块',
+    projectId: 'PROJ001',
+    projectName: '会展电力配套项目',
+    exhibitionName: '2026上海国际会展',
+    constructionUnit: '中裕电力',
+    category: '电力/智慧/模块',
+    products: [], // 纯虚拟，组合逻辑里用不上
+    boothName: 'A馆',
+    boothNo: 'A-12',
+    workItemName: '智慧模块',
+    workItemQty: 8,
+    createTime: '2026-11-23T10:01:00Z',
+  },
+
+  // ==================== 同作业项目不同工单测试数据 ====================
+  // 组 002：三张工单 workItemName 都是 "投影仪作业"，数量 3/4/5 —— 验证 workItemSummary 自动累加
+  {
+    id: 'WPC-SAME-002-1',
+    workOrderId: 'SAME002-1',
+    workOrderCode: '002-1',
+    workOrderName: '投影仪作业',
+    projectId: 'PROJ003',
+    projectName: '会议中心配套项目',
+    exhibitionName: '2026上海国际会展',
+    constructionUnit: '湖南警安',
+    category: '音视频/投影/作业',
+    products: [
+      { id: 'WP-SAME-201', productId: 'PRD007', productCode: 'P20002', productName: '投影仪', categoryName: '会展物资', specification: '高清', unit: '台', ratio: 1 },
+      { id: 'WP-SAME-202', productId: 'PRD008', productCode: 'P20003', productName: '音响设备', categoryName: '会展物资', specification: '专业级', unit: '套', ratio: 0.5 },
+    ],
+    boothName: 'B馆',
+    boothNo: 'B-03',
+    workItemName: '投影仪作业',
+    workItemQty: 3,
+    createTime: '2026-11-23T10:10:00Z',
+  },
+  {
+    id: 'WPC-SAME-002-2',
+    workOrderId: 'SAME002-2',
+    workOrderCode: '002-2',
+    workOrderName: '投影仪作业',
+    projectId: 'PROJ003',
+    projectName: '会议中心配套项目',
+    exhibitionName: '2026上海国际会展',
+    constructionUnit: '长沙金音',
+    category: '音视频/投影/作业',
+    products: [
+      { id: 'WP-SAME-211', productId: 'PRD007', productCode: 'P20002', productName: '投影仪', categoryName: '会展物资', specification: '高清', unit: '台', ratio: 1 },
+      { id: 'WP-SAME-212', productId: 'PRD009', productCode: 'P20004', productName: '电脑', categoryName: '会展物资', specification: 'i7/16G/512G', unit: '台', ratio: 1 },
+    ],
+    boothName: 'C馆',
+    boothNo: 'C-05',
+    workItemName: '投影仪作业',
+    workItemQty: 4,
+    createTime: '2026-11-23T10:11:00Z',
+  },
+  {
+    id: 'WPC-SAME-002-3',
+    workOrderId: 'SAME002-3',
+    workOrderCode: '002-3',
+    workOrderName: '投影仪作业',
+    projectId: 'PROJ003',
+    projectName: '会议中心配套项目',
+    exhibitionName: '2026上海国际会展',
+    constructionUnit: '上海声远',
+    category: '音视频/投影/作业',
+    products: [
+      { id: 'WP-SAME-221', productId: 'PRD007', productCode: 'P20002', productName: '投影仪', categoryName: '会展物资', specification: '高清', unit: '台', ratio: 1 },
+      { id: 'WP-SAME-222', productId: 'PRD005', productCode: 'P10005', productName: '指示牌', categoryName: '会展物资', specification: '立式', unit: '个', ratio: 1 },
+    ],
+    boothName: '主舞台',
+    boothNo: '整体',
+    workItemName: '投影仪作业',
+    workItemQty: 5,
+    createTime: '2026-11-23T10:12:00Z',
   },
 ];
 

@@ -344,21 +344,88 @@ export default function ExhibitionTransferOutboundPage() {
     }).length;
   }, [workItemSummary, workOrderConfigs]);
 
-  const handleWorkOrderConfirm = (selectedItems: WorkOrderPickerItem[]) => {
-    if (!editItem) return;
+  /** 父子组正则：workOrderCode 形如 "父组-子序号"，提取父组号 */
+  const getBondParent = (code: string): string | null => {
+    const m = code.match(/^(.+)-\d+$/);
+    return m ? m[1] : null;
+  };
 
-    const newDetails: StockTransferDetail[] = [];
-    selectedItems.forEach((item) => {
-      const itemQty = item.workItemQty ?? 1;
-      const itemWorkItemName = item.workItemName || item.workOrderName;
+  /** 硬编码：父子组组合 —— 电箱(含"电箱") + 智慧模块(含"智慧") → 智慧电箱真产品 */
+  const COMBINE_RULE_ELECTRIC_SMART = {
+    // 匹配规则
+    baseKeyword: '电箱',
+    addonKeyword: '智慧',
+    // 组合后真产品（已在 products 表里新增）
+    combinedProductId: 'PRD803',
+    combinedProductCode: 'QD2020',
+    combinedProductName: '智慧电箱',
+    combinedSpecification: '220V/16A 智慧款（含智慧模块）',
+    combinedUnit: '台',
+    combinedWorkItemName: '智慧电箱 220V 16A',
+    // 剩余（未组合的电箱）的 workItemName 用 base 原来的
+  };
 
-      // 同作业项合并（场景 4）：已选里如果有相同 workItemName 的，productId 去重
-      // ratio 取 max，workOrderQty 累加
-      // 但这里按 item 顺序 push，合并交给 workItemSummary 处理
-      item.products.forEach((product) => {
-        newDetails.push({
+  /** 处理单个父子组的组合逻辑，返回要加入 newDetails 的明细数组；不匹配返回 null 让外面走常规流程 */
+  const tryCombineBondGroup = (
+    parent: string,
+    groupItems: WorkOrderPickerItem[]
+  ): StockTransferDetail[] | null => {
+    // 按 workItemName 关键词分组
+    const baseItems = groupItems.filter((i) =>
+      (i.workItemName || i.workOrderName || '').includes(COMBINE_RULE_ELECTRIC_SMART.baseKeyword)
+    );
+    const addonItems = groupItems.filter((i) =>
+      (i.workItemName || i.workOrderName || '').includes(COMBINE_RULE_ELECTRIC_SMART.addonKeyword)
+    );
+
+    if (baseItems.length === 0 || addonItems.length === 0) return null;
+
+    // base 和 addon 各取子序号最小的那条（就是 workOrderCode 里最后一个 -数字 最小的）
+    const pickLowestSeq = (arr: WorkOrderPickerItem[]) => {
+      return [...arr].sort((a, b) => {
+        const sa = parseInt(a.workOrderCode.match(/(\d+)$/)?.[1] || '9999', 10);
+        const sb = parseInt(b.workOrderCode.match(/(\d+)$/)?.[1] || '9999', 10);
+        return sa - sb;
+      })[0];
+    };
+
+    const base = pickLowestSeq(baseItems);
+    const addon = pickLowestSeq(addonItems);
+
+    const baseQty = base.workItemQty ?? 1;
+    const addonQty = addon.workItemQty ?? 1;
+    const combinedQty = Math.min(baseQty, addonQty);
+    const remainderQty = baseQty - combinedQty;
+
+    // 生成两条作业项：组合的"智慧电箱" + 剩余的"普通电箱"
+    const out: StockTransferDetail[] = [];
+
+    // ① 智慧电箱 × combinedQty —— 用真产品 PRD803
+    out.push({
+      id: 'TFD' + Date.now() + Math.random().toString(36).slice(2, 7),
+      stockTransferId: '',
+      productId: COMBINE_RULE_ELECTRIC_SMART.combinedProductId,
+      productCode: COMBINE_RULE_ELECTRIC_SMART.combinedProductCode,
+      productName: COMBINE_RULE_ELECTRIC_SMART.combinedProductName,
+      fromPositionId: '',
+      fromPositionName: '',
+      toPositionId: '',
+      toPositionName: '',
+      quantity: 0,
+      workOrderId: base.workOrderId,
+      workOrderCode: base.workOrderCode + '+' + addon.workOrderCode,
+      workOrderName: COMBINE_RULE_ELECTRIC_SMART.combinedWorkItemName,
+      workItemName: COMBINE_RULE_ELECTRIC_SMART.combinedWorkItemName,
+      workOrderQty: combinedQty,
+    });
+
+    // ② 剩余 base 作业项 × remainderQty —— 用 base 自己的 products
+    if (remainderQty > 0 && base.products.length > 0) {
+      const itemWorkItemName = base.workItemName || base.workOrderName;
+      base.products.forEach((product) => {
+        out.push({
           id: 'TFD' + Date.now() + Math.random().toString(36).slice(2, 7),
-          stockTransferId: editItem.id,
+          stockTransferId: '',
           productId: product.productId,
           productCode: product.productCode,
           productName: product.productName,
@@ -366,7 +433,91 @@ export default function ExhibitionTransferOutboundPage() {
           fromPositionName: '',
           toPositionId: '',
           toPositionName: '',
-          quantity: 0, // 默认 0，页面渲染时根据 workOrderQty × ratio 计算默认值
+          quantity: 0,
+          workOrderId: base.workOrderId,
+          workOrderCode: base.workOrderCode,
+          workOrderName: itemWorkItemName,
+          workItemName: itemWorkItemName,
+          workOrderQty: remainderQty,
+        });
+      });
+    }
+
+    return out;
+  };
+
+  const handleWorkOrderConfirm = (selectedItems: WorkOrderPickerItem[]) => {
+    if (!editItem) return;
+
+    // 先按父子组分桶
+    const bondMap = new Map<string, WorkOrderPickerItem[]>();
+    const standalone: WorkOrderPickerItem[] = [];
+    selectedItems.forEach((item) => {
+      const parent = getBondParent(item.workOrderCode);
+      if (parent) {
+        const arr = bondMap.get(parent) ?? [];
+        arr.push(item);
+        bondMap.set(parent, arr);
+      } else {
+        standalone.push(item);
+      }
+    });
+
+    const newDetails: StockTransferDetail[] = [];
+
+    // 1. 处理父子组（可能组合，也可能只是普通组）
+    bondMap.forEach((groupItems, parent) => {
+      const combined = tryCombineBondGroup(parent, groupItems);
+      if (combined) {
+        // 命中组合规则
+        combined.forEach((d) => {
+          d.stockTransferId = editItem!.id;
+          newDetails.push(d);
+        });
+      } else {
+        // 不命中组合规则 → 常规处理（同作业项合并交给 workItemSummary）
+        groupItems.forEach((item) => {
+          const itemQty = item.workItemQty ?? 1;
+          const itemWorkItemName = item.workItemName || item.workOrderName;
+          item.products.forEach((product) => {
+            newDetails.push({
+              id: 'TFD' + Date.now() + Math.random().toString(36).slice(2, 7),
+              stockTransferId: editItem!.id,
+              productId: product.productId,
+              productCode: product.productCode,
+              productName: product.productName,
+              fromPositionId: '',
+              fromPositionName: '',
+              toPositionId: '',
+              toPositionName: '',
+              quantity: 0,
+              workOrderId: item.workOrderId,
+              workOrderCode: item.workOrderCode,
+              workOrderName: itemWorkItemName,
+              workItemName: itemWorkItemName,
+              workOrderQty: itemQty,
+            });
+          });
+        });
+      }
+    });
+
+    // 2. 处理非父子组的普通工单
+    standalone.forEach((item) => {
+      const itemQty = item.workItemQty ?? 1;
+      const itemWorkItemName = item.workItemName || item.workOrderName;
+      item.products.forEach((product) => {
+        newDetails.push({
+          id: 'TFD' + Date.now() + Math.random().toString(36).slice(2, 7),
+          stockTransferId: editItem!.id,
+          productId: product.productId,
+          productCode: product.productCode,
+          productName: product.productName,
+          fromPositionId: '',
+          fromPositionName: '',
+          toPositionId: '',
+          toPositionName: '',
+          quantity: 0,
           workOrderId: item.workOrderId,
           workOrderCode: item.workOrderCode,
           workOrderName: itemWorkItemName,
@@ -376,7 +527,7 @@ export default function ExhibitionTransferOutboundPage() {
       });
     });
 
-    // 按 workItemName + productId 去重，重复的跳过（同一工单选两次相同的）
+    // 按 workItemName + productId 去重
     const existingIds = new Set(editItem.details.map((d) => `${d.workItemName || ''}::${d.productId}`));
     const toAdd = newDetails.filter((d) => !existingIds.has(`${d.workItemName}::${d.productId}`));
 
