@@ -3142,7 +3142,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
   {
     id: 'WPC-SAME-002-1',
     workOrderId: 'SAME002-1',
-    workOrderCode: '002-1',
+    workOrderCode: 'WX2611010001',
     workOrderName: '投影仪作业',
     projectId: 'PROJ003',
     projectName: '会议中心配套项目',
@@ -3162,7 +3162,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
   {
     id: 'WPC-SAME-002-2',
     workOrderId: 'SAME002-2',
-    workOrderCode: '002-2',
+    workOrderCode: 'WX2611010002',
     workOrderName: '投影仪作业',
     projectId: 'PROJ003',
     projectName: '会议中心配套项目',
@@ -3182,7 +3182,7 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
   {
     id: 'WPC-SAME-002-3',
     workOrderId: 'SAME002-3',
-    workOrderCode: '002-3',
+    workOrderCode: 'WX2611010003',
     workOrderName: '投影仪作业',
     projectId: 'PROJ003',
     projectName: '会议中心配套项目',

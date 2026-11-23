@@ -1650,7 +1650,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 23,
+      version: 24,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -2222,6 +2222,24 @@ export const useStore = create<WarehouseState>()(
           }
 
           console.log(`[store migrate v23] 父子组工单联动：注入 workOrderConfigs +${newWorkOrders.length} 条, products +${newProduct ? 1 : 0} 条`);
+        }
+        if (version < 24) {
+          // v23→v24：父子组格式 -1/-2 只给"电箱+智慧模块"组合场景，普通同作业项工单改独立长编码
+          const SAME_CODE_MAP: Record<string, string> = {
+            '002-1': 'WX2611010001',
+            '002-2': 'WX2611010002',
+            '002-3': 'WX2611010003',
+          };
+          let patched = 0;
+          if (Array.isArray(persistedState.workOrderConfigs)) {
+            persistedState.workOrderConfigs.forEach((c: any) => {
+              if (SAME_CODE_MAP[c.workOrderCode]) {
+                c.workOrderCode = SAME_CODE_MAP[c.workOrderCode];
+                patched++;
+              }
+            });
+          }
+          console.log(`[store migrate v24] 普通工单 code 去父子组格式：更新 ${patched} 条`);
         }
         return persistedState;
       },
