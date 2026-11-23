@@ -9,6 +9,8 @@ import TimePickerModal from '@/components/common/TimePickerModal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import { exportOfflineList, parseOfflineList } from '@/utils/excelImport';
+// 🆕 PL-01: 招采执行多供应商报价展开 ↔ 需求明细 ↔ 合同聚合函数
+import { computeDetailStatus, formatYuan } from '@/utils/detailContractAggregate';
 import { MOCK_BIDDINGS, MOCK_SUPPLIER_QUOTES } from '@/mock/biddingMockData';
 import type {
   Bidding, BiddingQuote, BiddingItem, BiddingQuoteDetail,
@@ -332,6 +334,16 @@ export default function CompetitiveBiddingPage() {
   const [detailListOpen, setDetailListOpen] = useState(false);
   const [detailSearch, setDetailSearch] = useState('');
   const [detailPage, setDetailPage] = useState(1);
+  // 🆕 PL-01: 目录内比价物资清单行展开多供应商报价的状态（按原索引）
+  const [expandedCatalogRows, setExpandedCatalogRows] = useState<Set<number>>(new Set());
+  const toggleCatalogRowExpand = (idx: number) => {
+    setExpandedCatalogRows((prev) => {
+      const s = new Set(prev);
+      if (s.has(idx)) s.delete(idx);
+      else s.add(idx);
+      return s;
+    });
+  };
 
   // ===== 附件处理函数 =====
   const handleAnnouncementUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1319,9 +1331,54 @@ export default function CompetitiveBiddingPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {detailPageRows.map(({ row: item, i: idx }) => {
-                            return (
-                              <tr key={idx} className="border-t border-slate-100 hover:bg-amber-50/15 transition-colors">
+                          {detailPageRows.flatMap(({ row: item, i: idx }) => {
+                            // 🆕 PL-01: 聚合该物资的所有供应商报价（同下标对应 bidding.quotes[].details[idx]）
+                            const biddingQuotes = editItem?.quotes || [];
+                            const rowQuotes = biddingQuotes
+                              .map((q) => {
+                                const d = q.details?.[idx];
+                                if (!d) return null;
+                                return {
+                                  supplierId: q.supplierId,
+                                  supplierName: q.supplierName,
+                                  unitPrice: d.unitPrice,
+                                  unitPriceExTax: d.unitPriceExcludingTax,
+                                  amount: d.amount,
+                                  amountExTax: d.amountExcludingTax,
+                                  taxRate: d.taxRate,
+                                  isQualified: q.isQualified,
+                                  isOverLimit: d.isOverSingleLimit,
+                                };
+                              })
+                              .filter(Boolean) as Array<{
+                                supplierId: string; supplierName: string;
+                                unitPrice: number; unitPriceExTax?: number; amount: number; amountExTax?: number;
+                                taxRate?: number; isQualified?: boolean; isOverLimit?: boolean;
+                              }>;
+
+                            // 🆕 PL-01: 聚合关联的需求明细 → 合同状态（如果 item 有 demandDetailId）
+                            const detailContractStatus = (() => {
+                              if (!item.demandDetailId) return null;
+                              const allDemands = procurementDemands || [];
+                              const allContracts = contracts || [];
+                              let targetDetail: any = null;
+                              for (const d of allDemands) {
+                                const found = (d.details || []).find((x: any) => x.id === item.demandDetailId);
+                                if (found) { targetDetail = found; break; }
+                              }
+                              if (!targetDetail) return null;
+                              return computeDetailStatus(targetDetail, allContracts);
+                            })();
+
+                            const isExpanded = expandedCatalogRows.has(idx);
+                            const hasQuotes = rowQuotes.length > 0;
+                            const lowPrice = hasQuotes ? Math.min(...rowQuotes.map((q) => q.unitPrice)) : 0;
+                            const qualifiedQuotes = rowQuotes.filter((q) => q.isQualified && !q.isOverLimit);
+                            const winningSupplierNames = (item as any).winningSuppliers?.map((s: any) => s.supplierName) || ((item as any).winningSupplierName ? [(item as any).winningSupplierName] : []);
+
+                            return [
+                              // ===== 主行 =====
+                              <tr key={`row-${idx}`} className="border-t border-slate-100 hover:bg-amber-50/15 transition-colors">
                                 <td className="px-2 py-2 text-slate-400 text-[12px]">{idx + 1}</td>
                                 <td className="px-2 py-2">
                                   <input className={common}
@@ -1358,9 +1415,105 @@ export default function CompetitiveBiddingPage() {
                                     value={item.unit}
                                     onChange={(e) => updateItem(idx, { unit: e.target.value })} />
                                 </td>
-                              </tr>
-                            );
-                          })}
+                                {/* 🆕 PL-01: 展开按钮 + 状态指示列 */}
+                                <td className="px-2 py-2 text-center">
+                                  <div className="flex flex-col items-center gap-1">
+                                    {hasQuotes ? (
+                                      <button
+                                        onClick={() => toggleCatalogRowExpand(idx)}
+                                        className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700 hover:bg-indigo-100 transition"
+                                        title="展开/收起供应商报价"
+                                      >
+                                        {isExpanded ? '▼' : '▶'} {rowQuotes.length} 报价
+                                      </button>
+                                    ) : (
+                                      <span className="text-[10px] text-slate-300">—</span>
+                                    )}
+                                    {qualifiedQuotes.length > 0 && (
+                                      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                                        最低 ¥{lowPrice.toFixed(2)}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>,
+
+                              // 🆕 PL-01: 展开详情行 — 条件渲染，flatMap 里 filter 掉 false
+                              (isExpanded && hasQuotes) ? (
+                                <tr key={`detail-${idx}`} className="bg-indigo-50/30 border-t border-indigo-100">
+                                  <td colSpan={8} className="px-3 py-3">
+                                    <div className="rounded-lg border border-indigo-100 bg-white p-3">
+                                      {/* 顶部概要：需求明细 + 合同聚合状态 */}
+                                      <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-indigo-50 pb-2">
+                                        <span className="text-[11px] font-semibold text-slate-500">
+                                          📌 原始需求预算：¥{(item as any).demandUnitPriceIncludingTax ? ((item as any).demandUnitPriceIncludingTax * item.quantity).toLocaleString() : '-'}
+                                        </span>
+
+                                        {winningSupplierNames.length > 0 && (
+                                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                                            ✅ 中标：{winningSupplierNames.join(' / ')}
+                                          </span>
+                                        )}
+
+                                        {detailContractStatus && (
+                                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                                            detailContractStatus.status === 'danger' ? 'bg-red-100 text-red-700' :
+                                            detailContractStatus.status === 'warning' ? 'bg-amber-100 text-amber-700' :
+                                            'bg-emerald-100 text-emerald-700'
+                                          }`}>
+                                            {detailContractStatus.status === 'danger' ? '🔴' : detailContractStatus.status === 'warning' ? '🟡' : '🟢'}
+                                            合同 MAX {formatYuan(detailContractStatus.maxContractAmountYuan)} vs 预算 {formatYuan(detailContractStatus.budget)}
+                                            （{detailContractStatus.statusLabel}）
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      {/* 供应商报价表格 */}
+                                      <table className="w-full text-[12px]">
+                                        <thead>
+                                          <tr className="bg-indigo-50 text-indigo-700">
+                                            <th className="px-2 py-1 text-left">供应商</th>
+                                            <th className="px-2 py-1 text-right">含税单价</th>
+                                            <th className="px-2 py-1 text-right">不含税单价</th>
+                                            <th className="px-2 py-1 text-right">税率</th>
+                                            <th className="px-2 py-1 text-right">含税总额</th>
+                                            <th className="px-2 py-1 text-center">状态</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {rowQuotes
+                                            .sort((a, b) => (a.isQualified ? 0 : 1) - (b.isQualified ? 0 : 1) || a.unitPrice - b.unitPrice)
+                                            .map((q, qi) => {
+                                              const priceLabel = q.unitPrice === lowPrice && qualifiedQuotes.some((qq) => qq.supplierId === q.supplierId) ? 'font-bold text-emerald-600' : '';
+                                              return (
+                                                <tr key={qi} className="border-t border-indigo-50">
+                                                  <td className="px-2 py-1">
+                                                    <div className="font-medium text-slate-800">{q.supplierName}</div>
+                                                  </td>
+                                                  <td className={`px-2 py-1 text-right text-slate-700 ${priceLabel}`}>¥{q.unitPrice.toFixed(2)}</td>
+                                                  <td className="px-2 py-1 text-right text-slate-500">¥{(q.unitPriceExTax ?? 0).toFixed(2)}</td>
+                                                  <td className="px-2 py-1 text-right text-slate-500">{q.taxRate != null ? `${(q.taxRate * 100).toFixed(0)}%` : '-'}</td>
+                                                  <td className="px-2 py-1 text-right text-slate-700">¥{q.amount.toLocaleString()}</td>
+                                                  <td className="px-2 py-1 text-center">
+                                                    {q.isOverLimit ? (
+                                                      <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700">超上限</span>
+                                                    ) : q.isQualified === false ? (
+                                                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">不合格</span>
+                                                    ) : (
+                                                      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">✓ 合格</span>
+                                                    )}
+                                                  </td>
+                                                </tr>
+                                              );
+                                            })}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ) : null,
+                            ];
+                          }).filter(Boolean)}
                         </tbody>
                         <tfoot>
                           <tr className="bg-gradient-to-r from-amber-50 to-orange-50/30 border-t border-slate-200">
