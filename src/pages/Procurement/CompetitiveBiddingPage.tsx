@@ -615,14 +615,43 @@ export default function CompetitiveBiddingPage() {
       return;
     }
 
-    const lowestQuote = qualifiedQuotes.reduce((min, q) =>
-      q.totalAmount < min.totalAmount ? q : min
-    );
+    // 🆕 多供应商中标：遍历目录内比价明细，用户手动选了就用手动的，没选兜底取最低
+    const items = (bidding.items || []).map((item, idx) => {
+      const ws = (item as any).winningSuppliers;
+      if (ws && ws.length > 0) {
+        // 用户手动勾了中标供应商 → 用它（兼容旧单字段，取第一个）
+        return {
+          ...item,
+          winningSupplierId: ws[0]?.supplierId,
+          winningSupplierName: ws[0]?.supplierName,
+        };
+      }
+      // 兜底：找这条明细对应的最低合格报价
+      const rowQuotes = qualifiedQuotes
+        .map((q) => {
+          const d = q.details?.[idx];
+          if (!d) return null;
+          return { supplierId: q.supplierId, supplierName: q.supplierName, unitPrice: d.unitPrice, isOverLimit: !!d.isOverSingleLimit };
+        })
+        .filter((x): x is { supplierId: string; supplierName: string; unitPrice: number; isOverLimit: boolean } =>
+          !!x && !x.isOverLimit
+        );
+      if (rowQuotes.length === 0) return item;
+      const lowest = rowQuotes.reduce((m, q) => (q.unitPrice < m.unitPrice ? q : m));
+      return {
+        ...item,
+        winningSuppliers: [{ supplierId: lowest.supplierId, supplierName: lowest.supplierName, unitPrice: lowest.unitPrice }],
+        winningSupplierId: lowest.supplierId,
+        winningSupplierName: lowest.supplierName,
+      } as any;
+    });
 
     updateBidding?.(bidding.id, {
       status: 'completed',
-      winningSupplierId: lowestQuote.supplierId,
-      winningSupplierName: lowestQuote.supplierName,
+      items: items as any,
+      // 旧单字段兜底（取第一个明细的第一个中标供应商）
+      winningSupplierId: (items[0] as any)?.winningSupplierId,
+      winningSupplierName: (items[0] as any)?.winningSupplierName,
     });
   };
 
@@ -1478,6 +1507,7 @@ export default function CompetitiveBiddingPage() {
                                             <th className="px-2 py-1 text-right">税率</th>
                                             <th className="px-2 py-1 text-right">含税总额</th>
                                             <th className="px-2 py-1 text-center">状态</th>
+                                            <th className="px-2 py-1 text-center w-16">中标 ✅</th>
                                           </tr>
                                         </thead>
                                         <tbody>
@@ -1502,6 +1532,34 @@ export default function CompetitiveBiddingPage() {
                                                     ) : (
                                                       <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">✓ 合格</span>
                                                     )}
+                                                  </td>
+                                                  {/* 🆕 多供应商中标操作列 */}
+                                                  <td className="px-2 py-1 text-center">
+                                                    {(() => {
+                                                      const ws = (item as any).winningSuppliers || [];
+                                                      const checked = ws.some((s: any) => s.supplierId === q.supplierId);
+                                                      const disabled = q.isOverLimit || q.isQualified === false;
+                                                      return (
+                                                        <input
+                                                          type="checkbox"
+                                                          checked={checked}
+                                                          disabled={disabled}
+                                                          onChange={() => {
+                                                            const updated = checked
+                                                              ? ws.filter((s: any) => s.supplierId !== q.supplierId)
+                                                              : [...ws, { supplierId: q.supplierId, supplierName: q.supplierName, unitPrice: q.unitPrice }];
+                                                            updateItem(idx, {
+                                                              winningSuppliers: updated,
+                                                              // 兼容旧单字段（取第一个中标的）
+                                                              winningSupplierId: updated[0]?.supplierId || undefined,
+                                                              winningSupplierName: updated[0]?.supplierName || undefined,
+                                                            });
+                                                          }}
+                                                          className="accent-emerald-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed w-4 h-4"
+                                                          title={disabled ? '仅合格报价可标记中标' : checked ? '取消中标' : '标记此供应商为中标方'}
+                                                        />
+                                                      );
+                                                    })()}
                                                   </td>
                                                 </tr>
                                               );
