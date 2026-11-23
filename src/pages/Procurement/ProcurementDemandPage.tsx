@@ -6,6 +6,8 @@ import Modal from '@/components/common/Modal';
 import ProductPickerModal, { ProductPickerItem } from '@/components/common/ProductPickerModal';
 import ImportPreviewModal from '@/components/common/ImportPreviewModal';
 import { useStore } from '@/store/useStore';
+// 🆕 PL-01: 需求明细 ↔ 合同聚合
+import { computeDetailStatus, formatYuan } from '@/utils/detailContractAggregate';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
 import { exportDetailList, parseAndValidateExcel, type RowResult } from '@/utils/excelImport';
 import type { ProcurementDemand, ProcurementDemandDetail, Contract, ProductContract, ProcurementType, ProcurementMode, ProjectRow, Project, ContractPurchaseOrder, ContractPurchaseOrderDetail } from '@/types';
@@ -286,6 +288,19 @@ export default function ProcurementDemandPage() {
   const [editItem, setEditItem] = useState<ProcurementDemand | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [details, setDetails] = useState<ProcurementDemandDetail[]>([]);
+  // 🆕 PL-01: 预计算所有需求明细的合同关联状态 Map<detailId, DetailStatusItem>
+  const detailContractStatusMap = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof computeDetailStatus>>();
+    procurementDemands.forEach((demand) => {
+      (demand.details || []).forEach((d) => {
+        map.set(d.id, computeDetailStatus(d, contracts));
+      });
+    });
+    details.forEach((d) => {
+      if (!map.has(d.id)) map.set(d.id, computeDetailStatus(d, contracts));
+    });
+    return map;
+  }, [procurementDemands, contracts, details]);
   const [projectRows, setProjectRows] = useState<ProjectRow[]>([]);
   const [viewItem, setViewItem] = useState<ProcurementDemand | null>(null);
   // 撤销（已通过待立项 → 草稿）
@@ -1059,7 +1074,27 @@ export default function ProcurementDemandPage() {
                                 {showStockQtyCol && (
                                   <td className="px-2 py-1.5 text-right text-amber-600 font-medium">{(d as any).stockQuantity ?? 0}</td>
                                 )}
-                                <td className="px-2 py-1.5 text-right text-slate-800 font-medium">{(d.amountExcludingTax || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1.5 text-right text-slate-800 font-medium">
+                                  {(d.amountExcludingTax || 0).toFixed(2)}
+                                  {/* 🆕 PL-01: 合同关联状态 chip */}
+                                  {(() => {
+                                    const cs = detailContractStatusMap.get(d.id);
+                                    if (!cs || cs.linkedContracts.length === 0) return null;
+                                    const badgeClass = cs.status === 'danger'
+                                      ? 'bg-red-100 text-red-700'
+                                      : cs.status === 'warning'
+                                      ? 'bg-amber-100 text-amber-700'
+                                      : 'bg-emerald-100 text-emerald-700';
+                                    const icon = cs.status === 'danger' ? '🔴' : cs.status === 'warning' ? '🟡' : '🟢';
+                                    return (
+                                      <div className="mt-1 flex justify-end">
+                                        <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${badgeClass}`}>
+                                          {icon} {cs.linkedContracts.length} 合同 · MAX {formatYuan(cs.maxContractAmountYuan)}
+                                        </span>
+                                      </div>
+                                    );
+                                  })()}
+                                </td>
                                 <td className="px-2 py-1.5 text-center">
                                   <span className={`px-1.5 py-0.5 rounded text-xs ${(d as any).contractInside ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
                                     {(d as any).contractInside ? '清单内' : '清单外'}
@@ -1128,7 +1163,27 @@ export default function ProcurementDemandPage() {
                                     onChange={(e) => updateDetail(idx, 'unitPriceRemark', e.target.value)} />
                                 </td>
                                 <td className="px-2 py-1.5 text-right text-amber-600 font-medium">{(d as any).stockQuantity ?? 0}</td>
-                                <td className="px-2 py-1.5 text-right text-slate-800 font-medium">{(d.amountExcludingTax || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1.5 text-right text-slate-800 font-medium">
+                                  {(d.amountExcludingTax || 0).toFixed(2)}
+                                  {/* 🆕 PL-01: 合同关联状态 chip */}
+                                  {(() => {
+                                    const cs = detailContractStatusMap.get(d.id);
+                                    if (!cs || cs.linkedContracts.length === 0) return null;
+                                    const badgeClass = cs.status === 'danger'
+                                      ? 'bg-red-100 text-red-700'
+                                      : cs.status === 'warning'
+                                      ? 'bg-amber-100 text-amber-700'
+                                      : 'bg-emerald-100 text-emerald-700';
+                                    const icon = cs.status === 'danger' ? '🔴' : cs.status === 'warning' ? '🟡' : '🟢';
+                                    return (
+                                      <div className="mt-1 flex justify-end">
+                                        <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${badgeClass}`}>
+                                          {icon} {cs.linkedContracts.length} 合同 · MAX {formatYuan(cs.maxContractAmountYuan)}
+                                        </span>
+                                      </div>
+                                    );
+                                  })()}
+                                </td>
                                 <td className="px-2 py-1.5 text-center">
                                   <button className="text-rose-500 hover:underline" onClick={() => { setDetails(details.filter(x => x.id !== d.id)); }}>删除</button>
                                 </td>
@@ -1195,7 +1250,27 @@ export default function ProcurementDemandPage() {
                                 {showStockQtyCol && (
                                   <td className="px-2 py-1.5 text-right text-amber-600 font-medium">{(d as any).stockQuantity ?? 0}</td>
                                 )}
-                                <td className="px-2 py-1.5 text-right text-slate-800 font-medium">{(d.amountExcludingTax || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1.5 text-right text-slate-800 font-medium">
+                                  {(d.amountExcludingTax || 0).toFixed(2)}
+                                  {/* 🆕 PL-01: 合同关联状态 chip */}
+                                  {(() => {
+                                    const cs = detailContractStatusMap.get(d.id);
+                                    if (!cs || cs.linkedContracts.length === 0) return null;
+                                    const badgeClass = cs.status === 'danger'
+                                      ? 'bg-red-100 text-red-700'
+                                      : cs.status === 'warning'
+                                      ? 'bg-amber-100 text-amber-700'
+                                      : 'bg-emerald-100 text-emerald-700';
+                                    const icon = cs.status === 'danger' ? '🔴' : cs.status === 'warning' ? '🟡' : '🟢';
+                                    return (
+                                      <div className="mt-1 flex justify-end">
+                                        <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${badgeClass}`}>
+                                          {icon} {cs.linkedContracts.length} 合同 · MAX {formatYuan(cs.maxContractAmountYuan)}
+                                        </span>
+                                      </div>
+                                    );
+                                  })()}
+                                </td>
                                 <td className="px-2 py-1.5 text-center">
                                   <button className="text-rose-500 hover:underline" onClick={() => { setDetails(details.filter(x => x.id !== d.id)); }}>删除</button>
                                 </td>
@@ -1461,7 +1536,27 @@ export default function ProcurementDemandPage() {
                                       onChange={(e) => updateDetail(idx, 'stockQuantity', e.target.value === '' ? undefined : Number(e.target.value))} />
                                   </td>
                                 )}
-                                <td className="px-2 py-1.5 text-right text-slate-800 font-medium">{(d.amountExcludingTax || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1.5 text-right text-slate-800 font-medium">
+                                  {(d.amountExcludingTax || 0).toFixed(2)}
+                                  {/* 🆕 PL-01: 合同关联状态 chip */}
+                                  {(() => {
+                                    const cs = detailContractStatusMap.get(d.id);
+                                    if (!cs || cs.linkedContracts.length === 0) return null;
+                                    const badgeClass = cs.status === 'danger'
+                                      ? 'bg-red-100 text-red-700'
+                                      : cs.status === 'warning'
+                                      ? 'bg-amber-100 text-amber-700'
+                                      : 'bg-emerald-100 text-emerald-700';
+                                    const icon = cs.status === 'danger' ? '🔴' : cs.status === 'warning' ? '🟡' : '🟢';
+                                    return (
+                                      <div className="mt-1 flex justify-end">
+                                        <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${badgeClass}`}>
+                                          {icon} {cs.linkedContracts.length} 合同 · MAX {formatYuan(cs.maxContractAmountYuan)}
+                                        </span>
+                                      </div>
+                                    );
+                                  })()}
+                                </td>
                                 <td className="px-2 py-1.5">
                                   <input
                                     className="w-full h-6 px-1 border border-slate-200 rounded text-xs"
