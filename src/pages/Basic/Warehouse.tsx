@@ -17,6 +17,12 @@ const warehousePropertyOptions: { value: WarehouseProperty; label: string }[] = 
   { value: 'virtual', label: '虚拟仓' },
 ];
 
+// 根据展会名 + 施工单位生成虚拟仓默认名称
+function buildVirtualName(exhibitionName?: string, constructionUnit?: string): string {
+  if (!exhibitionName || !constructionUnit) return '';
+  return `${exhibitionName}${constructionUnit}`;
+}
+
 // 施工单位选项（项目里实际用的 3 家）
 const constructionUnitOptions: string[] = ['上海锦华', '湖南警安', '中裕电力'];
 
@@ -176,7 +182,6 @@ export default function WarehousePage() {
                 onChange={(e) => {
                   const prop = e.target.value as WarehouseProperty;
                   const opt = warehousePropertyOptions.find(o => o.value === prop);
-                  // 从虚拟仓切回实物仓时，清空虚拟仓专属字段
                   if (prop === 'physical') {
                     setEditItem({
                       ...editItem,
@@ -187,9 +192,9 @@ export default function WarehousePage() {
                       constructionUnit: undefined,
                     });
                   } else {
-                    // 切到虚拟仓时，如果已经有展会+施工单位，自动生成名称
-                    const autoName = editItem.exhibitionName && editItem.constructionUnit
-                      ? `${editItem.exhibitionName}${editItem.constructionUnit}仓库`
+                    // 切到虚拟仓：如果已经有展会+施工单位，且用户没手动改过名称，自动生成
+                    const autoName = !nameEditedRef.current
+                      ? (buildVirtualName(editItem.exhibitionName, editItem.constructionUnit) || editItem.name)
                       : editItem.name;
                     setEditItem({
                       ...editItem,
@@ -218,10 +223,9 @@ export default function WarehousePage() {
                       const proj = exhibitionProjects.find(p => p.id === e.target.value);
                       const newExhibitionId = e.target.value;
                       const newExhibitionName = proj?.projectName || '';
-                      // 自动生成名称：展会名 + 施工单位 + 仓库（仅当用户没手动改过名称时）
                       let autoName = editItem.name;
-                      if (!nameEditedRef.current && newExhibitionName && editItem.constructionUnit) {
-                        autoName = `${newExhibitionName}${editItem.constructionUnit}仓库`;
+                      if (!nameEditedRef.current) {
+                        autoName = buildVirtualName(newExhibitionName, editItem.constructionUnit) || editItem.name;
                       }
                       setEditItem({ ...editItem, exhibitionId: newExhibitionId, exhibitionName: newExhibitionName, name: autoName });
                     }}
@@ -239,10 +243,9 @@ export default function WarehousePage() {
                     value={editItem.constructionUnit || ''}
                     onChange={(e) => {
                       const newUnit = e.target.value;
-                      // 自动生成名称：展会名 + 施工单位 + 仓库（仅当用户没手动改过名称时）
                       let autoName = editItem.name;
-                      if (!nameEditedRef.current && editItem.exhibitionName && newUnit) {
-                        autoName = `${editItem.exhibitionName}${newUnit}仓库`;
+                      if (!nameEditedRef.current) {
+                        autoName = buildVirtualName(editItem.exhibitionName, newUnit) || editItem.name;
                       }
                       setEditItem({ ...editItem, constructionUnit: newUnit, name: autoName });
                     }}
@@ -277,15 +280,34 @@ export default function WarehousePage() {
               </div>
               <div>
                 <div className="mb-1 text-[#606266]">仓库名称 <span className="text-[#f56c6c]">*</span></div>
-                <input
-                  className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-[#303133] focus:outline-none focus:border-[#2f54eb]"
-                  value={editItem.name}
-                  onChange={(e) => {
-                    // 用户手动改了名称，标记一下，后面不再自动覆盖
-                    if (e.target.value !== editItem.name) nameEditedRef.current = true;
-                    setEditItem({ ...editItem, name: e.target.value });
-                  }}
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    className="flex-1 h-8 px-2 border border-[#dcdfe6] rounded text-[#303133] focus:outline-none focus:border-[#2f54eb]"
+                    value={editItem.name}
+                    onChange={(e) => {
+                      if (e.target.value !== editItem.name) nameEditedRef.current = true;
+                      setEditItem({ ...editItem, name: e.target.value });
+                    }}
+                  />
+                  {(() => {
+                    const defaultName = buildVirtualName(editItem.exhibitionName, editItem.constructionUnit);
+                    const showRestore = editItem.property === 'virtual'
+                      && !!defaultName
+                      && editItem.name !== defaultName;
+                    if (!showRestore) return null;
+                    return (
+                      <button
+                        type="button"
+                        className="shrink-0 h-8 px-2 text-xs text-[#2f54eb] border border-[#dcdfe6] rounded hover:bg-[#f0f3ff] hover:border-[#2f54eb] transition-colors"
+                        title={`恢复为默认命名：${defaultName}`}
+                        onClick={() => {
+                          nameEditedRef.current = false;
+                          setEditItem({ ...editItem, name: defaultName });
+                        }}
+                      >恢复默认</button>
+                    );
+                  })()}
+                </div>
               </div>
               <div>
                 <div className="mb-1 text-[#606266]">仓库类别 <span className="text-[#f56c6c]">*</span></div>
