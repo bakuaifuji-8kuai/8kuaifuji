@@ -1650,7 +1650,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 22,
+      version: 23,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -2183,6 +2183,45 @@ export const useStore = create<WarehouseState>()(
           persistedState.biddings = biddings;
 
           console.log(`[store migrate v22] PL-01：合同补 detailLinks=${patchedLedgers}, bidding.items 补外键=${patchedBiddingItems}, offlineDetails=${patchedOfflineDetails}`);
+        }
+        if (version < 23) {
+          // v22→v23：调拨出库父子组联动 — 注入新工单配置 + 新组合产品（幂等合并）
+          const dedupeById = (arr: any[]) => {
+            const seen = new Set();
+            return arr.filter((x) => {
+              if (seen.has(x.id)) return false;
+              seen.add(x.id);
+              return true;
+            });
+          };
+
+          // 1. workOrderConfigs：注入父子组工单（001-1/001-2 电箱+智慧模块组合 + 002-1/002-2/002-3 同作业项多工单）
+          const NEW_WORK_ORDER_ID_PREFIXES = ['WPC-BOND-', 'WPC-SAME-'];
+          const newWorkOrders = (mockData.workOrderConfigs || []).filter((c: any) =>
+            NEW_WORK_ORDER_ID_PREFIXES.some((p) => c.id.startsWith(p))
+          );
+          if (Array.isArray(persistedState.workOrderConfigs)) {
+            persistedState.workOrderConfigs = dedupeById([
+              ...persistedState.workOrderConfigs,
+              ...newWorkOrders,
+            ]);
+          } else {
+            persistedState.workOrderConfigs = newWorkOrders;
+          }
+
+          // 2. products：注入智慧电箱 PRD803（组合后真产品）
+          const newProduct = (mockData.products || []).find((p: any) => p.id === 'PRD803');
+          if (newProduct) {
+            if (Array.isArray(persistedState.products)) {
+              if (!persistedState.products.some((p: any) => p.id === 'PRD803')) {
+                persistedState.products = [...persistedState.products, newProduct];
+              }
+            } else {
+              persistedState.products = [newProduct];
+            }
+          }
+
+          console.log(`[store migrate v23] 父子组工单联动：注入 workOrderConfigs +${newWorkOrders.length} 条, products +${newProduct ? 1 : 0} 条`);
         }
         return persistedState;
       },
