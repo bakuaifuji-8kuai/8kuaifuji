@@ -5770,6 +5770,108 @@ export const biddings = [
       totalAmountIncludingTax: 1200000,
       creator: "张三",
       createTime: "2026-09-01"
+    },
+
+    // ==================== 多供应商中标测试数据（目录内比价 state_owned_jingjia）====================
+    {
+      id: "BID-MULTI-001",
+      biddingNo: "BP-20261123-MULTI",
+      projectName: "会展物资多供应商中标比价测试",
+      procurementMethod: "state_owned_jingjia",
+      demandId: "DEM-001",
+      demandNo: "DMP-20261123-MULTI",
+      status: "completed",
+      totalAmountIncludingTax: 0,
+      creator: "测试用户",
+      createTime: "2026-11-23",
+      inviteSupplierIds: ['SUP001', 'SUP002', 'SUP003'],
+      // ===== 目录内比价物资清单（3 条明细，其中 2 条多中标、1 条单中标）=====
+      items: [
+        {
+          productCode: 'P10001', productName: '标准摊位搭建', unit: '个', quantity: 50,
+          specification: '3m×3m·包含基础搭建·不含电力',
+          singlePriceLimit: 1800,
+          demandUnitPriceIncludingTax: 1750, demandUnitPriceExcludingTax: 1548.67,
+          // 🎯 多中标：供应商 A（最低）+ 供应商 C（次低，但用户也勾了）
+          winningSupplierId: 'SUP001', winningSupplierName: '中裕会展',
+          winningSuppliers: [
+            { supplierId: 'SUP001', supplierName: '中裕会展', unitPrice: 1680 },
+            { supplierId: 'SUP003', supplierName: '上海展艺', unitPrice: 1720 },
+          ],
+          isCatalogCompare: true, rowNo: 1,
+        },
+        {
+          productCode: 'P20001', productName: '音响设备', unit: '套', quantity: 10,
+          specification: '专业级线阵音响·含调音台·含运输',
+          singlePriceLimit: 35000,
+          demandUnitPriceIncludingTax: 34000, demandUnitPriceExcludingTax: 30088.50,
+          // 🎯 多中标：三家都勾了（质量都合格，用户想分散风险）
+          winningSupplierId: 'SUP002', winningSupplierName: '长沙金音',
+          winningSuppliers: [
+            { supplierId: 'SUP002', supplierName: '长沙金音', unitPrice: 32000 },
+            { supplierId: 'SUP001', supplierName: '中裕会展', unitPrice: 32800 },
+            { supplierId: 'SUP003', supplierName: '上海展艺', unitPrice: 33200 },
+          ],
+          isCatalogCompare: true, rowNo: 2,
+        },
+        {
+          productCode: 'P30001', productName: '指示牌', unit: '个', quantity: 200,
+          specification: '立式A4·铝合金边框·高清打印',
+          singlePriceLimit: 150,
+          demandUnitPriceIncludingTax: 145, demandUnitPriceExcludingTax: 128.32,
+          // 🎯 单中标：只有最低一家（常规场景）
+          winningSupplierId: 'SUP001', winningSupplierName: '中裕会展',
+          winningSuppliers: [
+            { supplierId: 'SUP001', supplierName: '中裕会展', unitPrice: 132 },
+          ],
+          isCatalogCompare: true, rowNo: 3,
+        },
+      ],
+      // ===== 3 家供应商报价（每家含 3 个明细，items 一一对应）=====
+      quotes: [
+        {
+          id: 'Q-MULTI-001-A', biddingId: 'BID-MULTI-001',
+          supplierId: 'SUP001', supplierName: '中裕会展',
+          taxRate: 0.13,
+          totalAmount: 1680 * 50 + 32800 * 10 + 132 * 200, // 84000 + 328000 + 26400 = 438400
+          totalAmountExcludingTax: Math.round((1680*50 + 32800*10 + 132*200) / 1.13),
+          isOverSingleLimit: false, isOverTotalLimit: false,
+          isQualified: true, submittedAt: '2026-11-23T09:30:00Z',
+          details: [
+            { productCode: 'P10001', productName: '标准摊位搭建', specification: '3m×3m·包含基础搭建·不含电力', unit: '个', quantity: 50, unitPrice: 1680, unitPriceExcludingTax: 1486.73, taxRate: 0.13, amount: 84000, amountExcludingTax: 74336.28, isOverSingleLimit: false },
+            { productCode: 'P20001', productName: '音响设备', specification: '专业级线阵音响·含调音台·含运输', unit: '套', quantity: 10, unitPrice: 32800, unitPriceExcludingTax: 29026.55, taxRate: 0.13, amount: 328000, amountExcludingTax: 290265.49, isOverSingleLimit: false },
+            { productCode: 'P30001', productName: '指示牌', specification: '立式A4·铝合金边框·高清打印', unit: '个', quantity: 200, unitPrice: 132, unitPriceExcludingTax: 116.81, taxRate: 0.13, amount: 26400, amountExcludingTax: 23362.83, isOverSingleLimit: false },
+          ],
+        },
+        {
+          id: 'Q-MULTI-001-B', biddingId: 'BID-MULTI-001',
+          supplierId: 'SUP002', supplierName: '长沙金音',
+          taxRate: 0.13,
+          totalAmount: 1740 * 50 + 32000 * 10 + 140 * 200, // 87000 + 320000 + 28000 = 435000
+          totalAmountExcludingTax: Math.round((1740*50 + 32000*10 + 140*200) / 1.13),
+          isOverSingleLimit: false, isOverTotalLimit: false,
+          isQualified: true, submittedAt: '2026-11-23T09:45:00Z',
+          details: [
+            { productCode: 'P10001', productName: '标准摊位搭建', specification: '3m×3m·包含基础搭建·不含电力', unit: '个', quantity: 50, unitPrice: 1740, unitPriceExcludingTax: 1539.82, taxRate: 0.13, amount: 87000, amountExcludingTax: 76991.15, isOverSingleLimit: false },
+            { productCode: 'P20001', productName: '音响设备', specification: '专业级线阵音响·含调音台·含运输', unit: '套', quantity: 10, unitPrice: 32000, unitPriceExcludingTax: 28318.58, taxRate: 0.13, amount: 320000, amountExcludingTax: 283185.84, isOverSingleLimit: false },
+            { productCode: 'P30001', productName: '指示牌', specification: '立式A4·铝合金边框·高清打印', unit: '个', quantity: 200, unitPrice: 140, unitPriceExcludingTax: 123.89, taxRate: 0.13, amount: 28000, amountExcludingTax: 24778.76, isOverSingleLimit: false },
+          ],
+        },
+        {
+          id: 'Q-MULTI-001-C', biddingId: 'BID-MULTI-001',
+          supplierId: 'SUP003', supplierName: '上海展艺',
+          taxRate: 0.13,
+          totalAmount: 1720 * 50 + 33200 * 10 + 138 * 200, // 86000 + 332000 + 27600 = 445600
+          totalAmountExcludingTax: Math.round((1720*50 + 33200*10 + 138*200) / 1.13),
+          isOverSingleLimit: false, isOverTotalLimit: false,
+          isQualified: true, submittedAt: '2026-11-23T10:00:00Z',
+          details: [
+            { productCode: 'P10001', productName: '标准摊位搭建', specification: '3m×3m·包含基础搭建·不含电力', unit: '个', quantity: 50, unitPrice: 1720, unitPriceExcludingTax: 1522.12, taxRate: 0.13, amount: 86000, amountExcludingTax: 76106.19, isOverSingleLimit: false },
+            { productCode: 'P20001', productName: '音响设备', specification: '专业级线阵音响·含调音台·含运输', unit: '套', quantity: 10, unitPrice: 33200, unitPriceExcludingTax: 29389.38, taxRate: 0.13, amount: 332000, amountExcludingTax: 293893.81, isOverSingleLimit: false },
+            { productCode: 'P30001', productName: '指示牌', specification: '立式A4·铝合金边框·高清打印', unit: '个', quantity: 200, unitPrice: 138, unitPriceExcludingTax: 122.12, taxRate: 0.13, amount: 27600, amountExcludingTax: 24424.78, isOverSingleLimit: false },
+          ],
+        },
+      ],
     }
   ];
 

@@ -1650,7 +1650,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 24,
+      version: 25,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -2240,6 +2240,21 @@ export const useStore = create<WarehouseState>()(
             });
           }
           console.log(`[store migrate v24] 普通工单 code 去父子组格式：更新 ${patched} 条`);
+        }
+        if (version < 25) {
+          // v24→v25：注入多供应商中标测试数据（目录内比价完整结构，带 items+quotes）
+          const NEW_BIDDING_ID = 'BID-MULTI-001';
+          const newBidding = (mockData.biddings || []).find((b: any) => b.id === NEW_BIDDING_ID);
+          if (newBidding) {
+            if (Array.isArray(persistedState.biddings)) {
+              if (!persistedState.biddings.some((b: any) => b.id === NEW_BIDDING_ID)) {
+                persistedState.biddings = [newBidding, ...persistedState.biddings];
+              }
+            } else {
+              persistedState.biddings = [newBidding];
+            }
+          }
+          console.log(`[store migrate v25] 注入多供应商中标测试 bidding: ${newBidding ? newBidding.biddingNo : 'not found'}`);
         }
         return persistedState;
       },
