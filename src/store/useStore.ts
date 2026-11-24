@@ -1650,7 +1650,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 26,
+      version: 27,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -2286,6 +2286,48 @@ export const useStore = create<WarehouseState>()(
             });
           }
           console.log(`[store migrate v26] 合同时间字段升级：补齐 ${patched} 条`);
+        }
+        // 🆕 v26→v27：父子组联动 — 注入 A001 组（电箱380V/400A + 智能模块）+ 380V 规格产品
+        if (version < 27) {
+          // 1. 产品：幂等注入 PRD785 + PRD804
+          const existingProducts = persistedState.products || [];
+          const newProducts = [
+            { id: 'PRD785', code: 'QD2016', name: '配电箱', categoryId: 'CAT002', unit: '个', specification: '380V/400A', origin: '', material: '', stockQuantity: 0, isContractItem: false, status: 'enabled' },
+            { id: 'PRD804', code: 'QD2021', name: '智慧电箱', categoryId: 'CAT002', unit: '台', specification: '380V/400A 智慧款（含智慧模块）', origin: '', material: '配电箱+智慧模块套装', stockQuantity: 0, isContractItem: false, status: 'enabled' },
+          ];
+          const productIds = new Set(existingProducts.map((p: any) => p.id));
+          const addedProducts = newProducts.filter((p) => !productIds.has(p.id));
+          if (addedProducts.length > 0) {
+            persistedState.products = [...existingProducts, ...addedProducts];
+          }
+
+          // 2. 工单配置：幂等注入 A001-1 / A001-2
+          const cfgs = persistedState.workOrderConfigs || [];
+          const existingIds = new Set(cfgs.map((c: any) => c.id));
+          const newWorkOrders = [
+            {
+              id: 'WPC-BOND-A001-1', workOrderId: 'BONDA001-1', workOrderCode: 'A001-1', workOrderName: '电箱380V/400A',
+              projectId: 'PROJ001', projectName: '会展电力配套项目', exhibitionName: '2026上海国际会展', constructionUnit: '中裕电力',
+              category: '电力/电箱/动力',
+              products: [{ id: 'WP-BOND-A101', productId: 'PRD785', productCode: 'QD2016', productName: '配电箱', categoryName: '低值易耗', specification: '380V/400A', unit: '个', ratio: 1 }],
+              boothName: 'B馆', boothNo: 'B-06', workItemName: '电箱380V/400A', workItemQty: 10,
+              createTime: '2026-11-24T09:00:00Z',
+            },
+            {
+              id: 'WPC-BOND-A001-2', workOrderId: 'BONDA001-2', workOrderCode: 'A001-2', workOrderName: '智能模块',
+              projectId: 'PROJ001', projectName: '会展电力配套项目', exhibitionName: '2026上海国际会展', constructionUnit: '中裕电力',
+              category: '电力/智慧/模块',
+              products: [],
+              boothName: 'B馆', boothNo: 'B-06', workItemName: '智能模块', workItemQty: 8,
+              createTime: '2026-11-24T09:01:00Z',
+            },
+          ];
+          const addedOrders = newWorkOrders.filter((o) => !existingIds.has(o.id));
+          if (addedOrders.length > 0) {
+            persistedState.workOrderConfigs = [...cfgs, ...addedOrders];
+          }
+
+          console.log(`[store migrate v27] A001父子组联动：products +${addedProducts.length} 条, workOrderConfigs +${addedOrders.length} 条`);
         }
         return persistedState;
       },

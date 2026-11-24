@@ -769,6 +769,9 @@ export const products: Product[] = [
   { id: 'PRD788', code: 'QD2019', name: '黑色吊带（绿色头）', categoryId: 'CAT002', unit: '根', specification: '2T/8米', origin: '', material: '', stockQuantity: 0, isContractItem: false, status: 'enabled' },
   // === 智能电箱组合产品 ===
   { id: 'PRD803', code: 'QD2020', name: '智慧电箱', categoryId: 'CAT002', unit: '台', specification: '220V/16A 智慧款（含智慧模块）', origin: '', material: '配电箱+智慧模块套装', stockQuantity: 0, isContractItem: false, status: 'enabled' },
+  // === 🆕 380V/400A 系列（父子组组合场景） ===
+  { id: 'PRD785', code: 'QD2016', name: '配电箱', categoryId: 'CAT002', unit: '个', specification: '380V/400A', origin: '', material: '', stockQuantity: 0, isContractItem: false, status: 'enabled' },
+  { id: 'PRD804', code: 'QD2021', name: '智慧电箱', categoryId: 'CAT002', unit: '台', specification: '380V/400A 智慧款（含智慧模块）', origin: '', material: '配电箱+智慧模块套装', stockQuantity: 0, isContractItem: false, status: 'enabled' },
 ];
 
 // 供应商数据
@@ -3135,6 +3138,44 @@ export const workOrderConfigs: WorkOrderProductConfig[] = [
     workItemName: '智慧模块',
     workItemQty: 8,
     createTime: '2026-11-23T10:01:00Z',
+  },
+
+  // 🆕 组 A001：A001-1（电箱380V/400A ×10）+ A001-2（智能模块 ×8）→ 组合后：智慧电箱380V/400A ×8 + 普通电箱×2
+  {
+    id: 'WPC-BOND-A001-1',
+    workOrderId: 'BONDA001-1',
+    workOrderCode: 'A001-1',
+    workOrderName: '电箱380V/400A',
+    projectId: 'PROJ001',
+    projectName: '会展电力配套项目',
+    exhibitionName: '2026上海国际会展',
+    constructionUnit: '中裕电力',
+    category: '电力/电箱/动力',
+    products: [
+      { id: 'WP-BOND-A101', productId: 'PRD785', productCode: 'QD2016', productName: '配电箱', categoryName: '低值易耗', specification: '380V/400A', unit: '个', ratio: 1 },
+    ],
+    boothName: 'B馆',
+    boothNo: 'B-06',
+    workItemName: '电箱380V/400A',
+    workItemQty: 10,
+    createTime: '2026-11-24T09:00:00Z',
+  },
+  {
+    id: 'WPC-BOND-A001-2',
+    workOrderId: 'BONDA001-2',
+    workOrderCode: 'A001-2',
+    workOrderName: '智能模块',
+    projectId: 'PROJ001',
+    projectName: '会展电力配套项目',
+    exhibitionName: '2026上海国际会展',
+    constructionUnit: '中裕电力',
+    category: '电力/智慧/模块',
+    products: [], // 纯虚拟，组合逻辑里用不上
+    boothName: 'B馆',
+    boothNo: 'B-06',
+    workItemName: '智能模块',
+    workItemQty: 8,
+    createTime: '2026-11-24T09:01:00Z',
   },
 
   // ==================== 同作业项目不同工单测试数据 ====================

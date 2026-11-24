@@ -350,19 +350,76 @@ export default function ExhibitionTransferOutboundPage() {
     return m ? m[1] : null;
   };
 
-  /** 硬编码：父子组组合 —— 电箱(含"电箱") + 智慧模块(含"智慧") → 智慧电箱真产品 */
-  const COMBINE_RULE_ELECTRIC_SMART = {
-    // 匹配规则
-    baseKeyword: '电箱',
-    addonKeyword: '智慧',
-    // 组合后真产品（已在 products 表里新增）
-    combinedProductId: 'PRD803',
-    combinedProductCode: 'QD2020',
-    combinedProductName: '智慧电箱',
-    combinedSpecification: '220V/16A 智慧款（含智慧模块）',
-    combinedUnit: '台',
-    combinedWorkItemName: '智慧电箱 220V 16A',
-    // 剩余（未组合的电箱）的 workItemName 用 base 原来的
+  /** 🆕 父子组组合规则数组 —— 电箱 + 智慧/智能模块 → 智慧电箱真产品（多规格） */
+  const COMBINE_RULES = [
+    {
+      /** 用于在 base（电箱工单）的 workItemName/workOrderName/products.specification 里匹配规格 */
+      baseSpecKeyword: '220V',
+      baseKeyword: '电箱',
+      addonKeyword: '智慧',
+      combinedProductId: 'PRD803',
+      combinedProductCode: 'QD2020',
+      combinedProductName: '智慧电箱',
+      combinedSpecification: '220V/16A 智慧款（含智慧模块）',
+      combinedUnit: '台',
+      combinedWorkItemName: '智慧电箱 220V 16A',
+    },
+    {
+      baseSpecKeyword: '380V',
+      baseKeyword: '电箱',
+      addonKeyword: '智能',   // 兼容"智能模块"和"智慧模块"两种叫法
+      combinedProductId: 'PRD804',
+      combinedProductCode: 'QD2021',
+      combinedProductName: '智慧电箱',
+      combinedSpecification: '380V/400A 智慧款（含智慧模块）',
+      combinedUnit: '台',
+      combinedWorkItemName: '智慧电箱 380V 400A',
+    },
+    {
+      baseSpecKeyword: '380V',
+      baseKeyword: '电箱',
+      addonKeyword: '智慧',   // 380V 电箱 + 智慧模块 也匹配这条
+      combinedProductId: 'PRD804',
+      combinedProductCode: 'QD2021',
+      combinedProductName: '智慧电箱',
+      combinedSpecification: '380V/400A 智慧款（含智慧模块）',
+      combinedUnit: '台',
+      combinedWorkItemName: '智慧电箱 380V 400A',
+    },
+  ] as const;
+
+  /** 从 base 工单（电箱）里提取能匹配的规格关键词 */
+  const extractBaseSpec = (base: WorkOrderPickerItem): string => {
+    const haystack = [
+      base.workItemName || '',
+      base.workOrderName || '',
+      ...(base.products || []).map((p) => p.specification || ''),
+    ].join(' ');
+    for (const rule of COMBINE_RULES) {
+      if (rule.baseSpecKeyword && haystack.includes(rule.baseSpecKeyword)) {
+        return rule.baseSpecKeyword;
+      }
+    }
+    return '';
+  };
+
+  /** 匹配 base+addon 关键词都命中的那条规则（不区分规格，先筛 base/addon 关键词，再按规格精准匹配） */
+  const resolveCombineRule = (base: WorkOrderPickerItem, addon: WorkOrderPickerItem) => {
+    const baseText = [base.workItemName || '', base.workOrderName || ''].join(' ');
+    const addonText = [addon.workItemName || '', addon.workOrderName || ''].join(' ');
+    const baseSpec = extractBaseSpec(base);
+    // 先按规格精准匹配
+    const specMatch = COMBINE_RULES.find(
+      (r) =>
+        baseText.includes(r.baseKeyword) &&
+        addonText.includes(r.addonKeyword) &&
+        (baseSpec ? r.baseSpecKeyword === baseSpec : true)
+    );
+    if (specMatch) return specMatch;
+    // 再降级：只按 base/addon 关键词匹配（不看规格），取第一条
+    return COMBINE_RULES.find(
+      (r) => baseText.includes(r.baseKeyword) && addonText.includes(r.addonKeyword)
+    );
   };
 
   /** 处理单个父子组的组合逻辑，返回要加入 newDetails 的明细数组；不匹配返回 null 让外面走常规流程 */
@@ -370,17 +427,17 @@ export default function ExhibitionTransferOutboundPage() {
     parent: string,
     groupItems: WorkOrderPickerItem[]
   ): StockTransferDetail[] | null => {
-    // 按 workItemName 关键词分组
+    // 按关键词分组
     const baseItems = groupItems.filter((i) =>
-      (i.workItemName || i.workOrderName || '').includes(COMBINE_RULE_ELECTRIC_SMART.baseKeyword)
+      COMBINE_RULES.some((r) => (i.workItemName || i.workOrderName || '').includes(r.baseKeyword))
     );
     const addonItems = groupItems.filter((i) =>
-      (i.workItemName || i.workOrderName || '').includes(COMBINE_RULE_ELECTRIC_SMART.addonKeyword)
+      COMBINE_RULES.some((r) => (i.workItemName || i.workOrderName || '').includes(r.addonKeyword))
     );
 
     if (baseItems.length === 0 || addonItems.length === 0) return null;
 
-    // base 和 addon 各取子序号最小的那条（就是 workOrderCode 里最后一个 -数字 最小的）
+    // base 和 addon 各取子序号最小的那条
     const pickLowestSeq = (arr: WorkOrderPickerItem[]) => {
       return [...arr].sort((a, b) => {
         const sa = parseInt(a.workOrderCode.match(/(\d+)$/)?.[1] || '9999', 10);
@@ -392,21 +449,24 @@ export default function ExhibitionTransferOutboundPage() {
     const base = pickLowestSeq(baseItems);
     const addon = pickLowestSeq(addonItems);
 
+    // 🆕 根据 base/addon 实际内容解析出对应的组合规则
+    const rule = resolveCombineRule(base, addon);
+    if (!rule) return null;
+
     const baseQty = base.workItemQty ?? 1;
     const addonQty = addon.workItemQty ?? 1;
     const combinedQty = Math.min(baseQty, addonQty);
     const remainderQty = baseQty - combinedQty;
 
-    // 生成两条作业项：组合的"智慧电箱" + 剩余的"普通电箱"
     const out: StockTransferDetail[] = [];
 
-    // ① 智慧电箱 × combinedQty —— 用真产品 PRD803
+    // ① 智慧电箱 × combinedQty —— 用匹配到的真产品
     out.push({
       id: 'TFD' + Date.now() + Math.random().toString(36).slice(2, 7),
       stockTransferId: '',
-      productId: COMBINE_RULE_ELECTRIC_SMART.combinedProductId,
-      productCode: COMBINE_RULE_ELECTRIC_SMART.combinedProductCode,
-      productName: COMBINE_RULE_ELECTRIC_SMART.combinedProductName,
+      productId: rule.combinedProductId,
+      productCode: rule.combinedProductCode,
+      productName: rule.combinedProductName,
       fromPositionId: '',
       fromPositionName: '',
       toPositionId: '',
@@ -414,8 +474,8 @@ export default function ExhibitionTransferOutboundPage() {
       quantity: 0,
       workOrderId: base.workOrderId,
       workOrderCode: base.workOrderCode + '+' + addon.workOrderCode,
-      workOrderName: COMBINE_RULE_ELECTRIC_SMART.combinedWorkItemName,
-      workItemName: COMBINE_RULE_ELECTRIC_SMART.combinedWorkItemName,
+      workOrderName: rule.combinedWorkItemName,
+      workItemName: rule.combinedWorkItemName,
       workOrderQty: combinedQty,
     });
 
