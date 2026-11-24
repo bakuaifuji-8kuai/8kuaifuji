@@ -7,6 +7,7 @@ import type {
   Bidding,
   ProcurementDemand,
   BiddingProcurementMethod,
+  Supplier,
 } from '@/types';
 import {
   PROCUREMENT_FORMATION_LABELS,
@@ -74,6 +75,7 @@ export default function ContractProcurementPage() {
   const updateContractLedger = useStore((s) => s.updateContractLedger);
   const biddings = useStore((s) => s.biddings);
   const procurementDemands = useStore((s) => s.procurementDemands);
+  const suppliers = useStore((s) => s.suppliers);
   const currentUser = useStore((s) => s.currentUser);
 
   // ========== 审批视角列表过滤 ==========
@@ -104,10 +106,65 @@ export default function ContractProcurementPage() {
   // ========== 状态筛选 ==========
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
+  // ========== 🆕 中标供应商提取（从需求关联工单的中标结果带出供应商） ==========
+  /**
+   * 汇总工单内全部中标供应商 —— 任何采购方式的需求都可能定标给多家，不预设单/多：
+   * - 明细级多中标数组：items[].winningSuppliers[]（含旧单值字段兜底）
+   * - 工单顶层单值：winningSupplierId/Name、randomSupplierId/Name
+   * - 明细级供应商名：offlineDetails[].supplierName
+   * 最后按名称去重 + 在供应商档案里按名称反查修正真实档案 ID（绕开工单侧 SUP001 vs 档案 SUP-001 的格式不一致）
+   */
+  const extractWinningSuppliers = (bidding?: Bidding): Array<{ supplierId: string; supplierName: string }> => {
+    if (!bidding) return [];
+    const raw: Array<{ supplierId: string; supplierName: string }> = [];
+
+    (bidding.items || []).forEach((it) => {
+      (it.winningSuppliers || []).forEach((w) =>
+        raw.push({ supplierId: w.supplierId, supplierName: w.supplierName })
+      );
+      if (!(it.winningSuppliers || []).length && it.winningSupplierName) {
+        raw.push({ supplierId: '', supplierName: it.winningSupplierName });
+      }
+    });
+    if (bidding.randomSupplierName) {
+      raw.push({ supplierId: bidding.randomSupplierId || '', supplierName: bidding.randomSupplierName });
+    }
+    if (bidding.winningSupplierName) {
+      raw.push({ supplierId: bidding.winningSupplierId || '', supplierName: bidding.winningSupplierName });
+    }
+    (bidding.offlineDetails || []).forEach((d) => {
+      if (d.supplierName) raw.push({ supplierId: '', supplierName: d.supplierName });
+    });
+
+    // 按名称去重
+    const seen = new Set<string>();
+    const deduped = raw.filter((r) => {
+      if (!r.supplierName || seen.has(r.supplierName)) return false;
+      seen.add(r.supplierName);
+      return true;
+    });
+
+    // 名称反查供应商档案修正 ID（档案匹配不到就保留工单侧原值）
+    return deduped.map((r) => {
+      const hit = suppliers.find((s) => s.name === r.supplierName);
+      return { supplierId: hit?.id || r.supplierId, supplierName: r.supplierName };
+    });
+  };
+
   // ========== 弹窗状态 ==========
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ContractLedger | null>(null);
   const [form, setForm] = useState<Partial<ContractLedger>>({});
+
+  // ========== 当前表单所选需求对应工单的全部中标供应商（供应商下拉回显 + 多中标提示共用）==========
+  const formWinningSuppliers = useMemo(() => {
+    if (!form.demandId) return [];
+    const demand = procurementDemands.find((d) => d.id === form.demandId);
+    if (!demand) return [];
+    const bidding = biddings.find((b) => b.id === demand.relatedOrderId || b.demandId === demand.id);
+    return extractWinningSuppliers(bidding);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.demandId, procurementDemands, biddings, suppliers]);
 
   // ========== 补充序号自动计算（依赖 form.parentContractId，所以必须在 form 声明之后）==========
   const currentSupplementCount = useMemo(() => {
@@ -398,6 +455,9 @@ export default function ContractProcurementPage() {
           contractLedgers={contractLedgers}
           primaryOptions={primaryOptions}
           currentSupplementCount={currentSupplementCount}
+          suppliers={suppliers}
+          extractWinningSuppliers={extractWinningSuppliers}
+          formWinningSuppliers={formWinningSuppliers}
         />
       </Modal>
     </div>
@@ -414,9 +474,15 @@ interface FormProps {
   contractLedgers: ContractLedger[];
   primaryOptions: Array<{ value: string; label: string }>;
   currentSupplementCount: number;
+  /** 供应商档案（对方单位下拉候选） */
+  suppliers: Supplier[];
+  /** 从工单中标结果提取供应商（含名称反查档案修正 ID） */
+  extractWinningSuppliers: (bidding?: Bidding) => Array<{ supplierId: string; supplierName: string }>;
+  /** 当前表单所选需求对应工单的全部中标供应商 */
+  formWinningSuppliers: Array<{ supplierId: string; supplierName: string }>;
 }
 
-function ContractProcurementForm({ form, update, biddings, procurementDemands, isEdit, contractLedgers, primaryOptions, currentSupplementCount }: FormProps) {
+function ContractProcurementForm({ form, update, biddings, procurementDemands, isEdit, contractLedgers, primaryOptions, currentSupplementCount, suppliers, extractWinningSuppliers, formWinningSuppliers }: FormProps) {
   const formationOptions = Object.entries(PROCUREMENT_FORMATION_LABELS).map(([v, l]) => ({ value: v, label: l }));
   const contractTypeOptions = Object.entries(PROCUREMENT_CONTRACT_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }));
 
@@ -450,6 +516,10 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
     const autoFormation: ProcurementFormation | undefined =
       bidding?.procurementMethod ? BIDDING_METHOD_TO_FORMATION[bidding.procurementMethod] : undefined;
 
+    // 🆕 方案A：从中标结果提取供应商（覆盖目录内比价多中标/随机抽取/线下单中标），主中标人 = 第一家
+    const winningList = extractWinningSuppliers(bidding);
+    const primaryWinner = winningList[0];
+
     // ====== 自动回填规则：需求有值就覆盖（以需求为准） ======
     const patch: Partial<ContractLedger> = {
       biddingId: bidding?.id || '',
@@ -462,7 +532,7 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
       // —— 已有（之前就带的）——
       projectName: bidding?.projectName || demand.projectName,
       contractName: bidding?.projectName || demand.projectName || '',
-      counterpartyName: bidding?.winningSupplierName || '',
+      counterpartyName: primaryWinner?.supplierName || '',
       winningDate: bidding?.awardTime || demand.approveTime || '',
 
       // —— 新增：从需求带 ——
@@ -474,7 +544,8 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
       // —— 新增：从工单带 ——
       handlingDepartment: bidding?.implementationUnit || '',
       counterpartyContact: bidding?.winningSupplierLegalPerson || '',
-      supplierId: bidding?.winningSupplierId || '',
+      // 🆕 供应商 = 需求物资明细的中标供应商（名称反查档案后的真实档案 ID）
+      supplierId: primaryWinner?.supplierId || '',
 
       // 🆕 合同时间：生效时间 = 中标时间（或现在），有效期默认长期有效
       effectDateTime: bidding?.awardTime || '',
@@ -813,6 +884,41 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>对方单位
             </div>
             <div className="space-y-3">
+              {/* 🆕 方案A：关联供应商档案下拉（选需求自动带中标供应商，可手动改） */}
+              <div>
+                <Select
+                  label="关联供应商档案"
+                  options={[
+                    { value: '', label: '未关联档案（手填下方单位名称）' },
+                    ...suppliers.filter((s) => s.status === 'enabled').map((s) => ({
+                      value: s.id,
+                      label: s.name,
+                    })),
+                  ]}
+                  value={form.supplierId || ''}
+                  onChange={(e) => {
+                    const sup = suppliers.find((s) => s.id === e.target.value);
+                    // 选中档案 → supplierId 更新 + 单位名称自动同步；清空 → 保留手填名称
+                    update({
+                      supplierId: e.target.value,
+                      ...(sup ? { counterpartyName: sup.name } : {}),
+                    });
+                  }}
+                />
+                {form.supplierId && !suppliers.find((s) => s.id === form.supplierId) && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    ⚠ 关联的供应商未在档案中找到（可能来自工单侧旧数据），请重新选择
+                  </p>
+                )}
+                {/* 🆕 多中标提示：一份合同一个供应商；一个需求中标多家 → 多家分别建合同 */}
+                {formWinningSuppliers.length >= 2 && (
+                  <div className="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700 leading-relaxed">
+                    ⚠️ 该需求共中标 <b>{formWinningSuppliers.length}</b> 家供应商
+                    （{formWinningSuppliers.map((s) => s.supplierName).join('、')}）。
+                    一份合同对应一个供应商，可在上方下拉切换选择本合同的供应商；其余中标供应商请分别新建合同。
+                  </div>
+                )}
+              </div>
               <Input label="单位名称 *" required value={form.counterpartyName || ''}
                 onChange={(e) => update({ counterpartyName: e.target.value })} placeholder="中标供应商全称" />
               <Input label="负责人" value={form.counterpartyContact || ''}
