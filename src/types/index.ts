@@ -1441,6 +1441,11 @@ export interface CatalogCompareItem {
   /** @deprecated 旧字段，等同 unitPriceLimitIncludingTax，兼容历史数据 */
   singlePriceLimit?: number;
 
+  /** 🆕 招采执行确认的不含税单价（可编辑；须 ≤ demandUnitPriceExcludingTax 预算审定） */
+  execUnitPriceExcludingTax?: number;
+  /** 🆕 招采执行确认的含税单价（可编辑；自动联动或手工填） */
+  execUnitPriceIncludingTax?: number;
+
   // ===== 框架协议采购专属字段（对齐 916 文档"框架协议采购-目录内项目内比价"）=====
   projectName?: string;               // 项目名称（可覆盖 productName）
   description?: string;               // 项目概况/物料名称

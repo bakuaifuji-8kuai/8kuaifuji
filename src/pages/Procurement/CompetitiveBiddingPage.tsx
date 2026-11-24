@@ -791,6 +791,19 @@ export default function CompetitiveBiddingPage() {
         alert(`比价结果不含税总金额与清单明细合计不一致！\n您填写：¥${cmpEx.toFixed(2)}\n清单合计：¥${catalogSumEx.toFixed(2)}\n请核对清单明细或修正输入值。`);
         return;
       }
+      // 🆕 招采执行确认单价 ≤ 不含税预算审定单价 + 执行总金额 ≤ 预算审定总金额
+      const overBudgetLines: string[] = [];
+      for (const item of editItem.items) {
+        const exec = (item as any).execUnitPriceExcludingTax;
+        const budget = item.demandUnitPriceExcludingTax;
+        if (exec != null && budget != null && exec > budget) {
+          overBudgetLines.push(`${item.productName || item.description || '#'}：执行价 ¥${exec.toFixed(2)} > 审定 ¥${budget.toFixed(2)}`);
+        }
+      }
+      if (overBudgetLines.length > 0) {
+        alert(`⚠️ 有 ${overBudgetLines.length} 条招采执行单价超过不含税预算审定单价：\n\n${overBudgetLines.join('\n')}\n\n请先在"清单明细"中修正，再保存。`);
+        return;
+      }
     } else if (!isFrameworkRandom(procurementMethod)) {
       // === 线下录入类（排除随机抽取，它不用物资明细） ===
       if (!editItem.offlineDetails || editItem.offlineDetails.length === 0) {
@@ -1066,6 +1079,23 @@ export default function CompetitiveBiddingPage() {
     if (!editItem || !editItem.items) return;
     const newItems = editItem.items.filter((_, i) => i !== index);
     setEditItem({ ...editItem, items: newItems });
+  };
+
+  // 🆕 复制明细行：在当前行下方插入一条完全相同的新明细（清空外键，避免重复关联）
+  const cloneItem = (index: number) => {
+    if (!editItem || !editItem.items) return;
+    const newItems = [...editItem.items];
+    const source = newItems[index];
+    const cloned: any = {
+      ...JSON.parse(JSON.stringify(source)),
+      // 外键清空（复制的新行不属于原需求明细）
+      demandDetailId: undefined,
+      rowNo: (index + 2), // 顺序号自动 +1
+    };
+    newItems.splice(index + 1, 0, cloned);
+    setEditItem({ ...editItem, items: newItems });
+    // 展开行集合里加新行索引（shift 后面所有 +1）
+    setExpandedCatalogRows(new Set([...expandedCatalogRows].filter(i => i <= index).concat([...expandedCatalogRows].filter(i => i > index).map(i => i + 1))));
   };
 
   // 更新某条线下录入明细 — 含税/不含税自动联动
@@ -1352,7 +1382,8 @@ export default function CompetitiveBiddingPage() {
                             <th className="px-2 py-2 text-left w-10 text-[12px] text-slate-600 font-semibold">#</th>
                             <th className="px-2 py-2 text-left w-24 text-[12px] text-slate-600 font-semibold">项目概况/物料名称</th>
                             <th className="px-2 py-2 text-left w-20 text-[12px] text-slate-600 font-semibold">合同费率(元/月)</th>
-                            <th className="px-2 py-2 text-left w-20 text-[12px] text-slate-600 font-semibold">不含税单价</th>
+                            <th className="px-2 py-2 text-left w-20 text-[12px] text-slate-600 font-semibold">不含税预算审定单价</th>
+                            <th className="px-2 py-2 text-left w-20 text-[12px] text-indigo-600 font-semibold">不含税招采执行单价 *</th>
                             <th className="px-2 py-2 text-left w-20 text-[12px] text-slate-600 font-semibold">单价说明</th>
                             <th className="px-2 py-2 text-left w-14 text-[12px] text-slate-600 font-semibold">数量 *</th>
                             <th className="px-2 py-2 text-left w-12 text-[12px] text-slate-600 font-semibold">单位 *</th>
@@ -1420,10 +1451,35 @@ export default function CompetitiveBiddingPage() {
                                     value={item.contractRatePerMonth ?? ''}
                                     onChange={(e) => updateItem(idx, { contractRatePerMonth: Number(e.target.value) })} />
                                 </td>
+                                {/* 🆕 预算审定单价（只读灰底，来源于需求侧自动带） */}
                                 <td className="px-2 py-2">
-                                  <input type="number" step="0.01" className={common}
-                                    value={item.demandUnitPriceExcludingTax ?? ''}
-                                    onChange={(e) => updateItem(idx, { demandUnitPriceExcludingTax: Number(e.target.value) })} />
+                                  <div className="h-7 px-2 py-1 border border-slate-200 rounded text-[12px] bg-slate-50 text-slate-500 leading-6 text-right">
+                                    {item.demandUnitPriceExcludingTax != null
+                                      ? `¥${item.demandUnitPriceExcludingTax.toFixed(2)}`
+                                      : <span className="text-slate-300">—</span>}
+                                  </div>
+                                </td>
+                                {/* 🆕 招采执行确认单价（可编辑，须 ≤ 预算审定） */}
+                                <td className="px-2 py-2">
+                                  <input type="number" step="0.01" min={0}
+                                    className={common + (
+                                      item.execUnitPriceExcludingTax != null &&
+                                      item.demandUnitPriceExcludingTax != null &&
+                                      item.execUnitPriceExcludingTax > item.demandUnitPriceExcludingTax
+                                        ? ' !border-red-500 !bg-red-50 !ring-red-400'
+                                        : ''
+                                    )}
+                                    placeholder="≤ 审定"
+                                    value={item.execUnitPriceExcludingTax ?? ''}
+                                    onChange={(e) => updateItem(idx, {
+                                      execUnitPriceExcludingTax: e.target.value === '' ? undefined : Number(e.target.value)
+                                    })}
+                                    title="招采执行确认的不含税单价，须 ≤ 不含税预算审定单价" />
+                                  {item.execUnitPriceExcludingTax != null &&
+                                   item.demandUnitPriceExcludingTax != null &&
+                                   item.execUnitPriceExcludingTax > item.demandUnitPriceExcludingTax && (
+                                    <div className="text-[10px] text-red-500 mt-0.5 leading-tight">⚠ 超预算</div>
+                                  )}
                                 </td>
                                 <td className="px-2 py-2">
                                   <select className={common + ' cursor-pointer'}
@@ -1444,9 +1500,17 @@ export default function CompetitiveBiddingPage() {
                                     value={item.unit}
                                     onChange={(e) => updateItem(idx, { unit: e.target.value })} />
                                 </td>
-                                {/* 🆕 PL-01: 展开按钮 + 状态指示列 */}
+                                {/* 🆕 操作列：复制 + PL-01 展开按钮 + 状态指示 */}
                                 <td className="px-2 py-2 text-center">
                                   <div className="flex flex-col items-center gap-1">
+                                    {/* 🆕 复制按钮 */}
+                                    <button
+                                      onClick={() => cloneItem(idx)}
+                                      className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100 transition"
+                                      title="复制这条明细（在下方插入一条相同记录）"
+                                    >
+                                      📋 复制
+                                    </button>
                                     {hasQuotes ? (
                                       <button
                                         onClick={() => toggleCatalogRowExpand(idx)}
@@ -1470,7 +1534,7 @@ export default function CompetitiveBiddingPage() {
                               // 🆕 PL-01: 展开详情行 — 条件渲染，flatMap 里 filter 掉 false
                               (isExpanded && hasQuotes) ? (
                                 <tr key={`detail-${idx}`} className="bg-indigo-50/30 border-t border-indigo-100">
-                                  <td colSpan={8} className="px-3 py-3">
+                                  <td colSpan={9} className="px-3 py-3">
                                     <div className="rounded-lg border border-indigo-100 bg-white p-3">
                                       {/* 顶部概要：需求明细 + 合同聚合状态 */}
                                       <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-indigo-50 pb-2">
@@ -1735,7 +1799,7 @@ export default function CompetitiveBiddingPage() {
                       </tbody>
                       <tfoot>
                         <tr className="bg-gradient-to-r from-slate-100 to-indigo-50/40 border-t border-slate-200">
-                          <td colSpan={8} className="px-3 py-2.5 text-right text-slate-600 font-semibold text-[13px]">合计：</td>
+                          <td colSpan={9} className="px-3 py-2.5 text-right text-slate-600 font-semibold text-[13px]">合计：</td>
                           <td className="px-3 py-2.5 text-slate-700 font-semibold text-[13px]">¥{offlineTotals.ex.toLocaleString()}</td>
                           <td className="px-3 py-2.5 text-purple-700 font-bold text-[13px]">¥{offlineTotals.in.toLocaleString()}</td>
                           <td></td>
@@ -2992,7 +3056,7 @@ export default function CompetitiveBiddingPage() {
                           </tr>
                           {confirmedSupplierQuote.taxRate != null && confirmedSupplierQuote.taxAmount != null && (
                             <tr className="border-t border-[#ebeef5] bg-white">
-                              <td colSpan={8} className="px-3 py-2 text-xs text-right text-[#909399]">不含税金额（差额）</td>
+                              <td colSpan={9} className="px-3 py-2 text-xs text-right text-[#909399]">不含税金额（差额）</td>
                               <td colSpan={1}></td>
                               <td className="px-3 py-2 text-xs text-right text-[#909399]">
                                 ¥{(confirmedSupplierQuote.totalAmount - confirmedSupplierQuote.taxAmount).toLocaleString()}
