@@ -1489,8 +1489,14 @@ export interface OfflineDetailItem {
   quantity: number;
   unit: string;
   taxRate?: number;                   // 税率（询比/竞价/谈判用）
-  unitPriceExcludingTax?: number;     // 不含税单价
-  unitPriceIncludingTax?: number;     // 含税单价（自动算或手填）
+  /** 🆕 预算审定不含税单价（灰底只读，来源于采购需求） */
+  demandUnitPriceExcludingTax?: number;
+  /** 🆕 预算审定含税单价（可选，备用） */
+  demandUnitPriceIncludingTax?: number;
+  /** 🆕 招采执行确认的不含税单价（可编辑；须 ≤ demandUnitPriceExcludingTax 预算审定） */
+  unitPriceExcludingTax?: number;
+  /** 🆕 招采执行确认的含税单价（可编辑；自动联动或手工填） */
+  unitPriceIncludingTax?: number;
   priceRemark?: string;               // 单价备注（询比需求）
   amountExcludingTax?: number;        // 不含税金额
   amountIncludingTax?: number;         // 含税金额

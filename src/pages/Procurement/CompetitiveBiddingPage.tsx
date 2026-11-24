@@ -813,6 +813,19 @@ export default function CompetitiveBiddingPage() {
       for (const r of editItem.offlineDetails) {
         if (!r.itemName) { alert('清单条目名称不能为空！'); return; }
       }
+      // 🆕 线下录入类：招采执行单价 ≤ 不含税预算审定单价
+      const overBudgetOffline: string[] = [];
+      for (const r of editItem.offlineDetails) {
+        const exec = r.unitPriceExcludingTax;
+        const budget = r.demandUnitPriceExcludingTax;
+        if (exec != null && budget != null && exec > budget) {
+          overBudgetOffline.push(`${r.itemName || '#'}：执行价 ¥${exec.toFixed(2)} > 审定 ¥${budget.toFixed(2)}`);
+        }
+      }
+      if (overBudgetOffline.length > 0) {
+        alert(`⚠️ 有 ${overBudgetOffline.length} 条招采执行单价超过不含税预算审定单价：\n\n${overBudgetOffline.join('\n')}\n\n请先在"清单明细"中修正，再保存。`);
+        return;
+      }
       // ===== 清单合计金额手填校验：至少填一项 + 与明细合计必须一致 =====
       const exclInput = editItem.totalAmountExcludingTaxInput;
       const inclInput = editItem.totalAmountIncludingTaxInput;
@@ -967,13 +980,28 @@ export default function CompetitiveBiddingPage() {
       setEditItem({ ...editItem, ...basePatch, items, offlineDetails: [] });
     } else {
       // 线下录入类 → offlineDetails
-      const offlineDetails: any[] = (demand.details || []).map((d, idx) => ({
-        rowNo: idx + 1,
-        itemName: d.productName,
-        quantity: d.quantity,
-        unit: d.unit,
-        taxRate: 0.13,
-      }));
+      // 🆕 带预算审定单价 + 招采执行默认值（执行价默认=预算审定，用户可改）
+      const offlineDetails: any[] = (demand.details || []).map((d, idx) => {
+        const exPrice = d.unitPriceExcludingTax;
+        const inPrice = d.unitPriceIncludingTax;
+        return {
+          rowNo: idx + 1,
+          itemName: d.productName,
+          description: d.specification,
+          quantity: d.quantity,
+          unit: d.unit,
+          taxRate: 0.13,
+          // 预算审定（灰底只读，来源于需求）
+          demandUnitPriceExcludingTax: exPrice,
+          demandUnitPriceIncludingTax: inPrice,
+          // 招采执行（可编辑，默认等于预算审定）
+          unitPriceExcludingTax: exPrice,
+          unitPriceIncludingTax: inPrice,
+          // 自动算金额
+          amountExcludingTax: exPrice != null && d.quantity ? Math.round(exPrice * d.quantity * 100) / 100 : undefined,
+          amountIncludingTax: inPrice != null && d.quantity ? Math.round(inPrice * d.quantity * 100) / 100 : undefined,
+        };
+      });
       setEditItem({ ...editItem, ...basePatch, offlineDetails, items: [] });
     }
   };
@@ -1662,7 +1690,7 @@ export default function CompetitiveBiddingPage() {
 
                 const commonInput = 'w-full h-8 px-2.5 border border-slate-200 rounded-md text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-400 transition-all';
 
-                // ===== 直接采购 / 电子商城采购 简化表格 =====
+                // ===== 直接采购 / 电子商城采购 简化表格（双价格列：预算审定 + 招采执行） =====
                 if (isDirectOrMall(editItem.procurementMethod)) {
                   return (
                     <div className="overflow-x-auto">
@@ -1674,67 +1702,86 @@ export default function CompetitiveBiddingPage() {
                             <th className="px-3 py-2.5 text-left text-[13px] text-slate-600 font-semibold">项目概况/物料名称</th>
                             <th className="px-3 py-2.5 text-left w-16 text-[13px] text-slate-600 font-semibold">数量 *</th>
                             <th className="px-3 py-2.5 text-left w-14 text-[13px] text-slate-600 font-semibold">单位 *</th>
-                            <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">不含税单价（元）</th>
+                            <th className="px-3 py-2.5 text-left w-24 text-[13px] text-slate-600 font-semibold">不含税预算审定单价</th>
+                            <th className="px-3 py-2.5 text-left w-28 text-[13px] text-indigo-600 font-semibold">不含税招采执行单价 *</th>
+                            <th className="px-3 py-2.5 text-left w-24 text-[13px] text-indigo-600 font-semibold">不含税金额（自动）</th>
                             <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">单价备注</th>
-                            <th className="px-3 py-2.5 text-left w-28 text-[13px] text-indigo-600 font-semibold">不含税金额（元）</th>
                             <th className="px-3 py-2.5 text-left w-32 text-[13px] text-slate-600 font-semibold">供应商名称</th>
-                            <th className="px-3 py-2.5 text-center w-14 text-[13px] text-slate-600 font-semibold">操作</th>
+                            <th className="px-3 py-2.5 text-center w-16 text-[13px] text-slate-600 font-semibold">操作</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {detailPageRows.map(({ row, i: idx }) => (
-                            <tr key={idx} className="border-t border-slate-100 transition-colors hover:bg-emerald-50/20">
-                              <td className="px-3 py-2 text-slate-400 text-[13px]">{idx + 1}</td>
-                              <td className="px-3 py-2">
-                                <input className={commonInput} value={row.itemName}
-                                  onChange={(e) => updateOfflineItem(idx, { itemName: e.target.value })} />
-                              </td>
-                              <td className="px-3 py-2">
-                                <input className={commonInput} value={row.description || ''}
-                                  placeholder="项目概况/物料名称"
-                                  onChange={(e) => updateOfflineItem(idx, { description: e.target.value })} />
-                              </td>
-                              <td className="px-3 py-2">
-                                <input type="number" min={0} className={commonInput} value={row.quantity}
-                                  onChange={(e) => updateOfflineItem(idx, { quantity: Number(e.target.value) })} />
-                              </td>
-                              <td className="px-3 py-2">
-                                <input className={commonInput} value={row.unit}
-                                  onChange={(e) => updateOfflineItem(idx, { unit: e.target.value })} />
-                              </td>
-                              <td className="px-3 py-2">
-                                <input type="number" step="0.01" className={commonInput}
-                                  value={row.unitPriceExcludingTax ?? ''}
-                                  onChange={(e) => updateOfflineItem(idx, { unitPriceExcludingTax: Number(e.target.value) })} />
-                              </td>
-                              <td className="px-3 py-2">
-                                <input className={commonInput} value={row.priceRemark || ''}
-                                  placeholder="单价备注（可选）"
-                                  onChange={(e) => updateOfflineItem(idx, { priceRemark: e.target.value })} />
-                              </td>
-                              <td className="px-3 py-2 text-indigo-600 font-semibold text-[13px]">
-                                ¥{(row.amountExcludingTax ?? 0).toLocaleString()}
-                              </td>
-                              <td className="px-3 py-2">
-                                <input className={commonInput} value={row.supplierName || ''}
-                                  placeholder="供应商名称"
-                                  onChange={(e) => updateOfflineItem(idx, { supplierName: e.target.value })} />
-                              </td>
-                              {/* 🆕 操作列：复制 + 删除 */}
-                              <td className="px-3 py-2 text-center whitespace-nowrap">
-                                <button type="button" title="复制"
-                                  onClick={() => cloneOfflineItem(idx)}
-                                  className="inline-flex items-center justify-center w-7 h-7 rounded-md text-indigo-500 hover:bg-indigo-50 hover:text-indigo-700 transition-colors">📋</button>
-                                <button type="button" title="删除"
-                                  onClick={() => { if (confirm('确定删除此条明细？')) removeOfflineItem(idx); }}
-                                  className="inline-flex items-center justify-center w-7 h-7 rounded-md text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-colors">🗑️</button>
-                              </td>
-                            </tr>
-                          ))}
+                          {detailPageRows.map(({ row, i: idx }) => {
+                            // 🆕 超预算判断
+                            const budgetPrice = row.demandUnitPriceExcludingTax;
+                            const execPrice = row.unitPriceExcludingTax;
+                            const isOverBudget = budgetPrice != null && execPrice != null && execPrice > budgetPrice;
+                            return (
+                              <tr key={idx} className={`border-t border-slate-100 transition-colors hover:bg-emerald-50/20 ${isOverBudget ? 'bg-rose-50/50' : ''}`}>
+                                <td className="px-3 py-2 text-slate-400 text-[13px]">{idx + 1}</td>
+                                <td className="px-3 py-2">
+                                  <input className={commonInput} value={row.itemName}
+                                    onChange={(e) => updateOfflineItem(idx, { itemName: e.target.value })} />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input className={commonInput} value={row.description || ''}
+                                    placeholder="项目概况/物料名称"
+                                    onChange={(e) => updateOfflineItem(idx, { description: e.target.value })} />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input type="number" min={0} className={commonInput} value={row.quantity}
+                                    onChange={(e) => updateOfflineItem(idx, { quantity: Number(e.target.value) })} />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input className={commonInput} value={row.unit}
+                                    onChange={(e) => updateOfflineItem(idx, { unit: e.target.value })} />
+                                </td>
+                                {/* 预算审定单价（灰底只读） */}
+                                <td className="px-3 py-2">
+                                  <div className={`h-8 px-2.5 py-1.5 rounded-md text-[13px] leading-5 text-right border ${isOverBudget ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
+                                    {budgetPrice != null
+                                      ? `¥${budgetPrice.toFixed(2)}`
+                                      : <span className="text-slate-300">—</span>}
+                                  </div>
+                                </td>
+                                {/* 招采执行单价（可编辑） */}
+                                <td className="px-3 py-2">
+                                  <input type="number" step="0.01" min={0}
+                                    className={`${commonInput} ${isOverBudget ? 'border-rose-400 bg-rose-50 text-rose-700 font-semibold ring-2 ring-rose-200' : ''}`}
+                                    placeholder={budgetPrice != null ? `≤ ¥${budgetPrice.toFixed(2)}` : undefined}
+                                    value={execPrice ?? ''}
+                                    onChange={(e) => updateOfflineItem(idx, { unitPriceExcludingTax: Number(e.target.value) })} />
+                                </td>
+                                <td className={`px-3 py-2 font-semibold text-[13px] ${isOverBudget ? 'text-rose-600' : 'text-indigo-600'}`}>
+                                  ¥{(row.amountExcludingTax ?? 0).toLocaleString()}
+                                  {isOverBudget && <span className="ml-1 text-[11px] text-rose-500 font-normal">⚠超预算</span>}
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input className={commonInput} value={row.priceRemark || ''}
+                                    placeholder="单价备注（可选）"
+                                    onChange={(e) => updateOfflineItem(idx, { priceRemark: e.target.value })} />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input className={commonInput} value={row.supplierName || ''}
+                                    placeholder="供应商名称"
+                                    onChange={(e) => updateOfflineItem(idx, { supplierName: e.target.value })} />
+                                </td>
+                                {/* 操作列：复制 + 删除 */}
+                                <td className="px-3 py-2 text-center whitespace-nowrap">
+                                  <button type="button" title="复制"
+                                    onClick={() => cloneOfflineItem(idx)}
+                                    className="inline-flex items-center justify-center w-7 h-7 rounded-md text-indigo-500 hover:bg-indigo-50 hover:text-indigo-700 transition-colors">📋</button>
+                                  <button type="button" title="删除"
+                                    onClick={() => { if (confirm('确定删除此条明细？')) removeOfflineItem(idx); }}
+                                    className="inline-flex items-center justify-center w-7 h-7 rounded-md text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-colors">🗑️</button>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                         <tfoot>
                           <tr className="bg-gradient-to-r from-emerald-50/40 to-teal-50/30 border-t border-slate-200">
-                            <td colSpan={7} className="px-3 py-2 text-right text-slate-600 font-semibold text-[13px]">不含税金额合计（元）：</td>
+                            <td colSpan={8} className="px-3 py-2 text-right text-slate-600 font-semibold text-[13px]">不含税金额合计（元）：</td>
                             <td className="px-3 py-2 text-indigo-600 font-bold text-[13px]">¥{offlineTotals.ex.toLocaleString()}</td>
                             <td colSpan={2}></td>
                           </tr>
@@ -1744,7 +1791,7 @@ export default function CompetitiveBiddingPage() {
                   );
                 }
 
-                // ===== 询比 / 竞价 / 谈判 / 招标 完整表格 =====
+                // ===== 询比 / 竞价 / 谈判 / 招标 完整表格（双价格列：预算审定 + 招采执行） =====
                 return (
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
@@ -1756,77 +1803,100 @@ export default function CompetitiveBiddingPage() {
                           <th className="px-3 py-2.5 text-left w-20 text-[13px] text-slate-600 font-semibold">数量</th>
                           <th className="px-3 py-2.5 text-left w-16 text-[13px] text-slate-600 font-semibold">单位</th>
                           <th className="px-3 py-2.5 text-left w-20 text-[13px] text-slate-600 font-semibold">税率</th>
-                          <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">不含税单价</th>
-                          <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">单价备注</th>
-                          <th className="px-3 py-2.5 text-left w-28 text-[13px] text-indigo-600 font-semibold">含税单价 (自动)</th>
+                          <th className="px-3 py-2.5 text-left w-24 text-[13px] text-slate-600 font-semibold">不含税预算审定单价</th>
+                          <th className="px-3 py-2.5 text-left w-28 text-[13px] text-indigo-600 font-semibold">不含税招采执行单价 *</th>
+                          <th className="px-3 py-2.5 text-left w-24 text-[13px] text-indigo-600 font-semibold">含税单价(自动)</th>
                           <th className="px-3 py-2.5 text-left w-24 text-[13px] text-slate-600 font-semibold">不含税金额</th>
                           <th className="px-3 py-2.5 text-left w-24 text-[13px] text-purple-600 font-semibold">含税金额</th>
+                          <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">单价备注</th>
                           <th className="px-3 py-2.5 text-center w-16 text-[13px] text-slate-600 font-semibold">操作</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {detailPageRows.map(({ row, i: idx }) => (
-                          <tr key={idx} className="border-t border-slate-100 transition-colors hover:bg-indigo-50/20">
-                            <td className="px-3 py-2.5 text-slate-400 text-[13px]">{idx + 1}</td>
-                            <td className="px-3 py-2.5">
-                              <input className={commonInput} value={row.supplierName || ''}
-                                placeholder="线下已确定的供应商"
-                                onChange={(e) => updateOfflineItem(idx, { supplierName: e.target.value })} />
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <input className={commonInput} value={row.itemName}
-                                onChange={(e) => updateOfflineItem(idx, { itemName: e.target.value })} />
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <input type="number" min={0} className={commonInput} value={row.quantity}
-                                onChange={(e) => updateOfflineItem(idx, { quantity: Number(e.target.value) })} />
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <input className={commonInput} value={row.unit}
-                                onChange={(e) => updateOfflineItem(idx, { unit: e.target.value })} />
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <select className={commonInput + ' cursor-pointer'}
-                                value={row.taxRate ?? 0.13}
-                                onChange={(e) => updateOfflineItem(idx, { taxRate: Number(e.target.value) })}>
-                                <option value={0.13}>13%</option>
-                                <option value={0.09}>9%</option>
-                                <option value={0.06}>6%</option>
-                                <option value={0.03}>3%</option>
-                                <option value={0}>0%</option>
-                              </select>
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <input type="number" step="0.01" className={commonInput}
-                                value={row.unitPriceExcludingTax ?? ''}
-                                onChange={(e) => updateOfflineItem(idx, { unitPriceExcludingTax: Number(e.target.value) })} />
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <input className={commonInput}
-                                value={row.priceRemark || ''}
-                                placeholder="单价备注（可选）"
-                                onChange={(e) => updateOfflineItem(idx, { priceRemark: e.target.value })} />
-                            </td>
-                            <td className="px-3 py-2.5 text-indigo-600 font-semibold text-[13px]">
-                              ¥{(row.unitPriceIncludingTax ?? 0).toLocaleString()}
-                            </td>
-                            <td className="px-3 py-2.5 text-slate-700 text-[13px]">¥{(row.amountExcludingTax ?? 0).toLocaleString()}</td>
-                            <td className="px-3 py-2.5 text-purple-600 font-semibold text-[13px]">¥{(row.amountIncludingTax ?? 0).toLocaleString()}</td>
-                            {/* 🆕 操作列：复制 + 删除 */}
-                            <td className="px-3 py-2.5 text-center whitespace-nowrap">
-                              <button type="button" title="复制"
-                                onClick={() => cloneOfflineItem(idx)}
-                                className="inline-flex items-center justify-center w-7 h-7 rounded-md text-indigo-500 hover:bg-indigo-50 hover:text-indigo-700 transition-colors">📋</button>
-                              <button type="button" title="删除"
-                                onClick={() => { if (confirm('确定删除此条明细？')) removeOfflineItem(idx); }}
-                                className="inline-flex items-center justify-center w-7 h-7 rounded-md text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-colors">🗑️</button>
-                            </td>
-                          </tr>
-                        ))}
+                        {detailPageRows.map(({ row, i: idx }) => {
+                          // 🆕 超预算判断
+                          const budgetPrice = row.demandUnitPriceExcludingTax;
+                          const execPrice = row.unitPriceExcludingTax;
+                          const isOverBudget = budgetPrice != null && execPrice != null && execPrice > budgetPrice;
+                          return (
+                            <tr key={idx} className={`border-t border-slate-100 transition-colors hover:bg-indigo-50/20 ${isOverBudget ? 'bg-rose-50/50' : ''}`}>
+                              <td className="px-3 py-2.5 text-slate-400 text-[13px]">{idx + 1}</td>
+                              <td className="px-3 py-2.5">
+                                <input className={commonInput} value={row.supplierName || ''}
+                                  placeholder="线下已确定的供应商"
+                                  onChange={(e) => updateOfflineItem(idx, { supplierName: e.target.value })} />
+                              </td>
+                              <td className="px-3 py-2.5">
+                                <input className={commonInput} value={row.itemName}
+                                  onChange={(e) => updateOfflineItem(idx, { itemName: e.target.value })} />
+                              </td>
+                              <td className="px-3 py-2.5">
+                                <input type="number" min={0} className={commonInput} value={row.quantity}
+                                  onChange={(e) => updateOfflineItem(idx, { quantity: Number(e.target.value) })} />
+                              </td>
+                              <td className="px-3 py-2.5">
+                                <input className={commonInput} value={row.unit}
+                                  onChange={(e) => updateOfflineItem(idx, { unit: e.target.value })} />
+                              </td>
+                              <td className="px-3 py-2.5">
+                                <select className={commonInput + ' cursor-pointer'}
+                                  value={row.taxRate ?? 0.13}
+                                  onChange={(e) => updateOfflineItem(idx, { taxRate: Number(e.target.value) })}>
+                                  <option value={0.13}>13%</option>
+                                  <option value={0.09}>9%</option>
+                                  <option value={0.06}>6%</option>
+                                  <option value={0.03}>3%</option>
+                                  <option value={0}>0%</option>
+                                </select>
+                              </td>
+                              {/* 预算审定单价（灰底只读） */}
+                              <td className="px-3 py-2.5">
+                                <div className={`h-8 px-2.5 py-1.5 rounded-md text-[13px] leading-5 text-right border ${isOverBudget ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
+                                  {budgetPrice != null
+                                    ? `¥${budgetPrice.toFixed(2)}`
+                                    : <span className="text-slate-300">—</span>}
+                                </div>
+                              </td>
+                              {/* 招采执行单价（可编辑） */}
+                              <td className="px-3 py-2.5">
+                                <input type="number" step="0.01" min={0}
+                                  className={`${commonInput} ${isOverBudget ? 'border-rose-400 bg-rose-50 text-rose-700 font-semibold ring-2 ring-rose-200' : ''}`}
+                                  placeholder={budgetPrice != null ? `≤ ¥${budgetPrice.toFixed(2)}` : undefined}
+                                  value={execPrice ?? ''}
+                                  onChange={(e) => updateOfflineItem(idx, { unitPriceExcludingTax: Number(e.target.value) })} />
+                              </td>
+                              <td className={`px-3 py-2.5 font-semibold text-[13px] ${isOverBudget ? 'text-rose-600' : 'text-indigo-600'}`}>
+                                ¥{(row.unitPriceIncludingTax ?? 0).toLocaleString()}
+                                {isOverBudget && <span className="ml-1 text-[11px] text-rose-500 font-normal">⚠超预算</span>}
+                              </td>
+                              <td className={`px-3 py-2.5 text-[13px] ${isOverBudget ? 'text-rose-500' : 'text-slate-700'}`}>
+                                ¥{(row.amountExcludingTax ?? 0).toLocaleString()}
+                              </td>
+                              <td className={`px-3 py-2.5 font-semibold text-[13px] ${isOverBudget ? 'text-rose-600' : 'text-purple-600'}`}>
+                                ¥{(row.amountIncludingTax ?? 0).toLocaleString()}
+                              </td>
+                              <td className="px-3 py-2.5">
+                                <input className={commonInput}
+                                  value={row.priceRemark || ''}
+                                  placeholder="单价备注（可选）"
+                                  onChange={(e) => updateOfflineItem(idx, { priceRemark: e.target.value })} />
+                              </td>
+                              {/* 操作列：复制 + 删除 */}
+                              <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                                <button type="button" title="复制"
+                                  onClick={() => cloneOfflineItem(idx)}
+                                  className="inline-flex items-center justify-center w-7 h-7 rounded-md text-indigo-500 hover:bg-indigo-50 hover:text-indigo-700 transition-colors">📋</button>
+                                <button type="button" title="删除"
+                                  onClick={() => { if (confirm('确定删除此条明细？')) removeOfflineItem(idx); }}
+                                  className="inline-flex items-center justify-center w-7 h-7 rounded-md text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-colors">🗑️</button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                       <tfoot>
                         <tr className="bg-gradient-to-r from-slate-100 to-indigo-50/40 border-t border-slate-200">
-                          <td colSpan={9} className="px-3 py-2.5 text-right text-slate-600 font-semibold text-[13px]">合计：</td>
+                          <td colSpan={10} className="px-3 py-2.5 text-right text-slate-600 font-semibold text-[13px]">合计：</td>
                           <td className="px-3 py-2.5 text-slate-700 font-semibold text-[13px]">¥{offlineTotals.ex.toLocaleString()}</td>
                           <td className="px-3 py-2.5 text-purple-700 font-bold text-[13px]">¥{offlineTotals.in.toLocaleString()}</td>
                           <td></td>
