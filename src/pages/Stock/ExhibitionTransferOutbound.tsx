@@ -126,7 +126,7 @@ export default function ExhibitionTransferOutboundPage() {
     return warehouses.filter(w => w.category === 'exhibition' && w.property === 'physical');
   }, [warehouses]);
 
-  // 调入仓库：展会物资仓 + 虚拟仓
+  // 调入仓库：展会物资仓 + 虚拟仓（基础列表）
   const toWarehouses = useMemo(() => {
     return warehouses.filter(w => w.category === 'exhibition' && w.property === 'virtual');
   }, [warehouses]);
@@ -283,18 +283,45 @@ export default function ExhibitionTransferOutboundPage() {
   const [workOrderPickerOpen, setWorkOrderPickerOpen] = useState(false);
   const [workItemExpanded, setWorkItemExpanded] = useState(false);
 
+  // 🆕 施工单位去重列表（从虚拟仓 constructionUnit 提取 + 从工单配置提取）
+  const constructionUnits = useMemo(() => {
+    const fromWH = toWarehouses.map((w) => w.constructionUnit).filter(Boolean) as string[];
+    const fromCfg = workOrderConfigs.map((c) => c.constructionUnit).filter(Boolean) as string[];
+    return Array.from(new Set([...fromWH, ...fromCfg]));
+  }, [toWarehouses, workOrderConfigs]);
+
+  // 🆕 联动过滤：按所选展会项目 + 施工单位缩窄虚拟仓下拉
+  const filteredToWarehouses = useMemo(() => {
+    if (!editItem) return toWarehouses;
+    return toWarehouses.filter((w) => {
+      if (editItem.projectId && w.exhibitionId && w.exhibitionId !== editItem.projectId) return false;
+      if (editItem.constructionUnit) {
+        if (w.constructionUnit && w.constructionUnit !== editItem.constructionUnit) return false;
+      }
+      return true;
+    });
+  }, [toWarehouses, editItem?.projectId, editItem?.constructionUnit]);
+
   // ===== 替换物资 =====
   const [replaceTargetIdx, setReplaceTargetIdx] = useState<number | null>(null);
   const [replacePickerOpen, setReplacePickerOpen] = useState(false);
 
   const openAdd = () => {
+    // 🆕 默认展会项目：ongoing 状态的第一个
+    const defaultProject = exhibitionProjects.find((p) => p.status === 'ongoing') || exhibitionProjects[0];
+    // 🆕 默认调入仓库：该展会下、第一个虚拟仓
+    const defaultTo = toWarehouses.find(
+      (w) => defaultProject && w.exhibitionId === defaultProject.id && !w.constructionUnit
+    ) || toWarehouses[0];
     const newOrder: StockTransfer = {
       id: 'TF' + Date.now(),
       transferNo: generateTransferNo(),
+      projectId: defaultProject?.id || '',
+      projectName: defaultProject?.projectName || '',
       fromWarehouseId: fromWarehouses[0]?.id || '',
       fromWarehouseName: fromWarehouses[0]?.name || '',
-      toWarehouseId: toWarehouses[0]?.id || '',
-      toWarehouseName: toWarehouses[0]?.name || '',
+      toWarehouseId: defaultTo?.id || '',
+      toWarehouseName: defaultTo?.name || '',
       status: 'pending',
       creator: currentUser.name,
       createTime: new Date().toISOString().slice(0, 16).replace('T', ' '),
@@ -303,6 +330,26 @@ export default function ExhibitionTransferOutboundPage() {
     };
     setIsNew(true);
     setEditItem(newOrder);
+  };
+
+  /** 🆕 切换展会项目 / 施工单位后，自动找匹配的虚拟仓回填调入仓库 */
+  const autoMatchToWarehouse = (item: StockTransfer) => {
+    const candidates = toWarehouses.filter((w) => {
+      if (item.projectId && w.exhibitionId && w.exhibitionId !== item.projectId) return false;
+      if (item.constructionUnit && w.constructionUnit && w.constructionUnit !== item.constructionUnit) return false;
+      return true;
+    });
+    // 优先匹配 "展会+施工单位" 完全一致的
+    const best = candidates.find(
+      (w) =>
+        w.exhibitionId === item.projectId &&
+        (!item.constructionUnit || w.constructionUnit === item.constructionUnit)
+    ) || candidates[0];
+    if (best) {
+      item.toWarehouseId = best.id;
+      item.toWarehouseName = best.name;
+    }
+    return item;
   };
 
   const handlePickerConfirm = (selectedProducts: ProductPickerItem[]) => {
@@ -645,7 +692,24 @@ export default function ExhibitionTransferOutboundPage() {
     const existingIds = new Set(editItem.details.map((d) => `${d.workItemName || ''}::${d.productId}`));
     const toAdd = newDetails.filter((d) => !existingIds.has(`${d.workItemName}::${d.productId}`));
 
-    setEditItem({ ...editItem, details: [...editItem.details, ...toAdd] });
+    // 🆕 从已选工单自动带出 projectId / projectName / constructionUnit（仅当当前为空时）
+    const first = selectedItems[0];
+    const projectId = editItem.projectId || first?.projectId || '';
+    const projectName = editItem.projectName || first?.projectName || '';
+    const constructionUnit =
+      editItem.constructionUnit ||
+      selectedItems.find((i) => i.constructionUnit)?.constructionUnit ||
+      '';
+
+    const next: StockTransfer = {
+      ...editItem,
+      projectId,
+      projectName,
+      constructionUnit,
+      details: [...editItem.details, ...toAdd],
+    };
+    // 🆕 自动匹配调入虚拟仓（如果之前没选或选得不匹配）
+    setEditItem(autoMatchToWarehouse(next));
     setWorkOrderPickerOpen(false);
   };
 
@@ -873,6 +937,7 @@ export default function ExhibitionTransferOutboundPage() {
         <div className="p-6 max-w-[1400px] mx-auto space-y-4">
           {/* ==== 基础信息 ==== */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            {/* 第一行：单号 / 展会项目 / 施工单位 / 制单人 */}
             <div className="grid grid-cols-4 gap-4">
               <div>
                 <label className="text-xs text-slate-500 block mb-1">调拨单号</label>
@@ -884,7 +949,60 @@ export default function ExhibitionTransferOutboundPage() {
               </div>
               <div>
                 <label className="text-xs text-slate-500 block mb-1">
+                  <span className="text-red-500">*</span> 展会项目
+                </label>
+                <select
+                  className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-indigo-400"
+                  value={editItem.projectId || ''}
+                  onChange={(e) => {
+                    const proj = exhibitionProjects.find((p) => p.id === e.target.value);
+                    const next: StockTransfer = {
+                      ...editItem,
+                      projectId: e.target.value,
+                      projectName: proj?.projectName || '',
+                    };
+                    // 🆕 选展会后自动匹配虚拟仓
+                    setEditItem(autoMatchToWarehouse(next));
+                  }}
+                >
+                  <option value="">请选择展会项目</option>
+                  {exhibitionProjects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.projectName}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 block mb-1">施工单位</label>
+                <select
+                  className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-indigo-400"
+                  value={editItem.constructionUnit || ''}
+                  onChange={(e) => {
+                    const next: StockTransfer = { ...editItem, constructionUnit: e.target.value };
+                    // 🆕 选施工单位后自动匹配虚拟仓
+                    setEditItem(autoMatchToWarehouse(next));
+                  }}
+                >
+                  <option value="">不指定（通用仓）</option>
+                  {constructionUnits.map((u) => (
+                    <option key={u} value={u}>{u}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 block mb-1">制单人</label>
+                <input
+                  className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm bg-slate-50 text-slate-600 focus:outline-none"
+                  value={editItem.creator}
+                  readOnly
+                />
+              </div>
+            </div>
+            {/* 第二行：调出仓库 / 调入仓库（联动过滤） */}
+            <div className="grid grid-cols-4 gap-4 mt-4">
+              <div>
+                <label className="text-xs text-slate-500 block mb-1">
                   <span className="text-red-500">*</span> 调出仓库（实物仓）
+                  <span className="ml-1 text-[10px] text-slate-400">默认=展会物资仓，可修改</span>
                 </label>
                 <select
                   className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-indigo-400"
@@ -902,30 +1020,35 @@ export default function ExhibitionTransferOutboundPage() {
               <div>
                 <label className="text-xs text-slate-500 block mb-1">
                   <span className="text-red-500">*</span> 调入仓库（虚拟仓）
+                  <span className="ml-1 text-[10px] text-slate-400">根据所选展会+施工单位自动匹配</span>
                 </label>
                 <select
                   className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-indigo-400"
                   value={editItem.toWarehouseId}
                   onChange={(e) => {
-                    const wh = toWarehouses.find((w) => w.id === e.target.value);
+                    const wh = warehouses.find((w) => w.id === e.target.value);
                     setEditItem({ ...editItem, toWarehouseId: e.target.value, toWarehouseName: wh?.name });
                   }}
                 >
-                  {toWarehouses.map((w) => (
-                    <option key={w.id} value={w.id}>{w.name}</option>
+                  {filteredToWarehouses.length === 0 && (
+                    <option value="">无匹配虚拟仓（请调整展会/施工单位）</option>
+                  )}
+                  {filteredToWarehouses.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                      {w.exhibitionName && w.exhibitionName !== editItem.projectName
+                        ? ` · ${w.exhibitionName}`
+                        : ''}
+                      {w.constructionUnit ? ` · ${w.constructionUnit}` : ''}
+                    </option>
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="text-xs text-slate-500 block mb-1">制单人</label>
-                <input
-                  className="w-full h-9 px-3 border border-slate-300 rounded-lg text-sm bg-slate-50 text-slate-600 focus:outline-none"
-                  value={editItem.creator}
-                  readOnly
-                />
-              </div>
+              <div />
+              <div />
             </div>
-            <div className="mt-3">
+            {/* 备注 */}
+            <div className="mt-4">
               <label className="text-xs text-slate-500 block mb-1">备注</label>
               <textarea
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-400"

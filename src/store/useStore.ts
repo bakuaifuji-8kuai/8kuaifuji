@@ -1650,7 +1650,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 27,
+      version: 28,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -2328,6 +2328,23 @@ export const useStore = create<WarehouseState>()(
           }
 
           console.log(`[store migrate v27] A001父子组联动：products +${addedProducts.length} 条, workOrderConfigs +${addedOrders.length} 条`);
+        }
+        // 🆕 v27→v28：虚拟仓补 exhibitionId/exhibitionName/constructionUnit 字段（展会+施工单位联动）
+        if (version < 28) {
+          const whs = persistedState.warehouses || [];
+          const patches: Record<string, Partial<any>> = {
+            WH004: { exhibitionId: 'PRJ004', exhibitionName: '2026北京科技博览会' },
+            WH005: { exhibitionId: 'PRJ004', exhibitionName: '2026北京科技博览会', constructionUnit: '上海锦华' },
+            WH006: { exhibitionId: 'PRJ004', exhibitionName: '2026北京科技博览会', constructionUnit: '湖南警安' },
+            WH007: { exhibitionId: 'PRJ004', exhibitionName: '2026北京科技博览会', constructionUnit: '中裕电力' },
+          };
+          let patched = 0;
+          persistedState.warehouses = whs.map((w: any) => {
+            const p = patches[w.id];
+            if (p && !w.exhibitionId) { patched++; return { ...w, ...p }; }
+            return w;
+          });
+          console.log(`[store migrate v28] 虚拟仓补展会/施工单位字段：${patched} 条`);
         }
         return persistedState;
       },
