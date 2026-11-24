@@ -2227,11 +2227,21 @@ export interface ContractLedger {
   counterpartyContact?: string;  // 对方单位-负责人
   supplierId?: string;           // 关联供应商档案 ID（招采类合同从工单自动带入，非招采类手动选）
   mainContent?: string;          // 合同主要内容
-  signingDate?: string;          // 合同签订日期
-  effectiveDate?: string;        // 合同约定生效日期
+  signingDate?: string;          // 合同签订日期（纯 YYYY-MM-DD，向后兼容）
+  effectiveDate?: string;        // 合同约定生效日期（纯 YYYY-MM-DD，向后兼容；推荐用 effectDateTime）
   terminationDate?: string;      // 合同约定终止日期
   endDate?: string;              // 合同结束日期
   expireDate?: string;           // 合同到期日期
+
+  // 🆕 精确到时分的合同时间字段（方案 A 新增，与旧纯日期字段并存）
+  /** 合同生效时间（精确到时分，如 "2026-11-24T09:30"） */
+  effectDateTime?: string;
+  /** 合同有效期-起始（精确到时分，长期有效时必填） */
+  validityStart?: string;
+  /** 合同有效期-结束（精确到时分，长期有效时为 null/undefined） */
+  validityEnd?: string;
+  /** 是否长期有效（默认 false；true 时 validityEnd 不填） */
+  isLongTerm?: boolean;
   /** 合同到期预警开关 — 默认 true，为 false 时合同台账顶部到期预警条跳过该合同 */
   enableExpireAlert?: boolean;
   /** 合同已支付占比预警开关 — 默认 true */

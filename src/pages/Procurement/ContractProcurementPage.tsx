@@ -475,6 +475,11 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
       handlingDepartment: bidding?.implementationUnit || '',
       counterpartyContact: bidding?.winningSupplierLegalPerson || '',
       supplierId: bidding?.winningSupplierId || '',
+
+      // 🆕 合同时间：生效时间 = 中标时间（或现在），有效期默认长期有效
+      effectDateTime: bidding?.awardTime || '',
+      validityStart: bidding?.awardTime || '',
+      isLongTerm: true,
     };
 
     // 合同金额：需求有预估金额 → 直接带入（现在统一为元，不需要换算）
@@ -685,6 +690,60 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
             value={form.winningDate || ''}
             onChange={(e) => update({ winningDate: e.target.value })}
           />
+
+          {/* 🆕 生效时间（精确到时分） */}
+          <div className="w-64">
+            <label className="block text-[13px] font-medium text-slate-700 mb-1">
+              合同生效时间
+              <span className="text-slate-400 font-normal">（精确到时分）</span>
+            </label>
+            <input
+              type="datetime-local"
+              value={form.effectDateTime || ''}
+              onChange={(e) => update({ effectDateTime: e.target.value })}
+              className="h-9 px-3 w-full border border-slate-300 rounded-lg text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-500 transition"
+              step="60"
+            />
+          </div>
+
+          {/* 🆕 合同有效期（起止 + 长期开关） */}
+          <div className="w-full">
+            <label className="block text-[13px] font-medium text-slate-700 mb-1">
+              合同有效期
+            </label>
+            <div className="flex items-center gap-3 flex-wrap">
+              <input
+                type="datetime-local"
+                value={form.validityStart || ''}
+                onChange={(e) => update({ validityStart: e.target.value })}
+                className="h-9 px-3 w-52 border border-slate-300 rounded-lg text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-500 transition disabled:bg-slate-100 disabled:text-slate-400"
+                step="60"
+                placeholder="起始时间"
+              />
+              <span className="text-slate-400 text-sm">→</span>
+              <input
+                type="datetime-local"
+                disabled={form.isLongTerm === true}
+                value={form.validityEnd || ''}
+                onChange={(e) => update({ validityEnd: e.target.value })}
+                className="h-9 px-3 w-52 border border-slate-300 rounded-lg text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-500 transition disabled:bg-slate-100 disabled:text-slate-400"
+                step="60"
+                placeholder={form.isLongTerm ? '长期有效（不填）' : '结束时间'}
+              />
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={form.isLongTerm === true}
+                  onChange={(e) => update({
+                    isLongTerm: e.target.checked,
+                    validityEnd: e.target.checked ? undefined : form.validityEnd,
+                  })}
+                  className="w-4 h-4 accent-indigo-500"
+                />
+                <span className="text-sm text-slate-700">长期有效</span>
+              </label>
+            </div>
+          </div>
 
           {/* ===== 第四行：示范文本 + 是否展会现场相关 ===== */}
           <div className="flex items-end gap-4">

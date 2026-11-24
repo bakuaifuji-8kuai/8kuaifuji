@@ -1650,7 +1650,7 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 25,
+      version: 26,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
@@ -2255,6 +2255,37 @@ export const useStore = create<WarehouseState>()(
             }
           }
           console.log(`[store migrate v25] 注入多供应商中标测试 bidding: ${newBidding ? newBidding.biddingNo : 'not found'}`);
+        }
+        if (version < 26) {
+          // v25→v26：合同时间字段升级（effectDateTime + validityStart + validityEnd + isLongTerm）
+          let patched = 0;
+          if (Array.isArray(persistedState.contractLedgers)) {
+            persistedState.contractLedgers.forEach((c: any) => {
+              const needs = !c.effectDateTime || c.isLongTerm === undefined;
+              if (!needs) return;
+              // 从旧字段兜底：effectiveDate（纯 YYYY-MM-DD）→ 拼个 09:00 变成 datetime-local
+              if (!c.effectDateTime && c.effectiveDate) {
+                c.effectDateTime = `${c.effectiveDate}T09:00`;
+              }
+              if (!c.effectDateTime && c.signingDate) {
+                c.effectDateTime = `${c.signingDate}T09:00`;
+              }
+              if (!c.validityStart && c.effectDateTime) {
+                c.validityStart = c.effectDateTime;
+              }
+              if (c.isLongTerm === undefined) {
+                // 有终止日期/到期日期 → 非长期；无 → 长期
+                c.isLongTerm = !c.terminationDate && !c.endDate && !c.expireDate;
+              }
+              // 非长期 → 用旧终止/到期日期填充 validityEnd
+              if (!c.isLongTerm && !c.validityEnd) {
+                const oldEnd = c.terminationDate || c.expireDate || c.endDate;
+                if (oldEnd) c.validityEnd = `${oldEnd}T18:00`;
+              }
+              patched++;
+            });
+          }
+          console.log(`[store migrate v26] 合同时间字段升级：补齐 ${patched} 条`);
         }
         return persistedState;
       },
