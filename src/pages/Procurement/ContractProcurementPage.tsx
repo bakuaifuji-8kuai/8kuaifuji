@@ -156,16 +156,6 @@ export default function ContractProcurementPage() {
   const [editing, setEditing] = useState<ContractLedger | null>(null);
   const [form, setForm] = useState<Partial<ContractLedger>>({});
 
-  // ========== 当前表单所选需求对应工单的全部中标供应商（供应商下拉回显 + 多中标提示共用）==========
-  const formWinningSuppliers = useMemo(() => {
-    if (!form.demandId) return [];
-    const demand = procurementDemands.find((d) => d.id === form.demandId);
-    if (!demand) return [];
-    const bidding = biddings.find((b) => b.id === demand.relatedOrderId || b.demandId === demand.id);
-    return extractWinningSuppliers(bidding);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.demandId, procurementDemands, biddings, suppliers]);
-
   // ========== 补充序号自动计算（依赖 form.parentContractId，所以必须在 form 声明之后）==========
   const currentSupplementCount = useMemo(() => {
     if (!form.parentContractId) return 0;
@@ -220,6 +210,22 @@ export default function ContractProcurementPage() {
   // ========== 保存 ==========
   const save = (submit: boolean) => {
     const now = getNowString();
+
+    // 🆕 防重复签约：每条「明细+中标供应商」记录只能被一份合同占用（编辑时排除本合同自身）
+    const conflict = (form.detailLinks ?? []).some((l) => {
+      if (!l.supplierId) return false;
+      return contractLedgers.some((c) => {
+        if (editing && c.id === editing.id) return false;
+        return (c.detailLinks ?? []).some(
+          (o) => o.detailId === l.detailId && o.supplierId && o.supplierId === l.supplierId
+        );
+      });
+    });
+    if (conflict) {
+      alert('勾选的明细中标记录已被其他合同签约（每条中标记录只能签一份合同），请取消勾选后再保存！');
+      return;
+    }
+
     const finalForm: Partial<ContractLedger> = {
       ...form,
       contractNature: 'procurement', // 强制兜底
@@ -457,7 +463,7 @@ export default function ContractProcurementPage() {
           currentSupplementCount={currentSupplementCount}
           suppliers={suppliers}
           extractWinningSuppliers={extractWinningSuppliers}
-          formWinningSuppliers={formWinningSuppliers}
+          editing={editing}
         />
       </Modal>
     </div>
@@ -478,24 +484,24 @@ interface FormProps {
   suppliers: Supplier[];
   /** 从工单中标结果提取供应商（含名称反查档案修正 ID） */
   extractWinningSuppliers: (bidding?: Bidding) => Array<{ supplierId: string; supplierName: string }>;
-  /** 当前表单所选需求对应工单的全部中标供应商 */
-  formWinningSuppliers: Array<{ supplierId: string; supplierName: string }>;
+  /** 当前正在编辑的合同（防重复签约时排除自身占用；新增时为 null） */
+  editing: ContractLedger | null;
 }
 
-function ContractProcurementForm({ form, update, biddings, procurementDemands, isEdit, contractLedgers, primaryOptions, currentSupplementCount, suppliers, extractWinningSuppliers, formWinningSuppliers }: FormProps) {
+function ContractProcurementForm({ form, update, biddings, procurementDemands, isEdit, contractLedgers, primaryOptions, currentSupplementCount, suppliers, extractWinningSuppliers, editing }: FormProps) {
   const formationOptions = Object.entries(PROCUREMENT_FORMATION_LABELS).map(([v, l]) => ({ value: v, label: l }));
   const contractTypeOptions = Object.entries(PROCUREMENT_CONTRACT_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }));
 
-  // 🆕 PL-01: 子组件内的明细相关 useMemo（供 JSX checkbox 表格使用）
+  // 🆕 PL-01: 子组件内的明细相关数据（供 JSX 中标记录勾选表格使用）
   const currentDemand = form.demandId
     ? procurementDemands.find((d) => d.id === form.demandId) ?? null
     : null;
-  const currentDemandDetails = currentDemand?.details ?? [];
 
-  // 🆕 需求关联的招采工单（明细表格展示定标结果的数据源）
+  // 需求关联的招采工单
   const currentBidding = currentDemand
     ? biddings.find((b) => b.id === currentDemand.relatedOrderId || b.demandId === currentDemand.id) ?? null
     : null;
+
   // 需求明细 → 工单定标行（目录内比价 items / 线下录入 offlineDetails 均以 demandDetailId 精确关联）
   const findBidLineForDetail = (demandDetailId: string) => {
     if (!currentBidding) return null;
@@ -504,14 +510,96 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
     return (currentBidding.offlineDetails || []).find((o) => o.demandDetailId === demandDetailId) ?? null;
   };
 
-  const selectedDetailIds = new Set((form.detailLinks ?? []).map((l) => l.detailId));
-  const toggleDetailLink = (detailId: string, checked: boolean) => {
-    const cur = (form.detailLinks ?? []).filter((l) => l.detailId !== detailId);
-    if (checked && form.demandId) {
-      cur.push({ detailId, demandId: form.demandId, demandNo: form.demandNo });
+  // ===== 🆕 按中标记录签约：需求明细 × 各家中标 展开成行 =====
+  // 一条明细多家中标 = 多行，每行「供应商+单价」是一条独立签约记录，只能被一份合同占用
+  // 已被其他合同签约的「明细+供应商」记录（编辑时排除本合同自身，防止自己锁自己）
+  const occupiedRecords = new Map<string, string>(); // key: detailId|supplierId → 占用合同编号
+  contractLedgers.forEach((c) => {
+    if (editing && c.id === editing.id) return;
+    (c.detailLinks ?? []).forEach((l) => {
+      if (l.supplierId) occupiedRecords.set(`${l.detailId}|${l.supplierId}`, c.contractNo || c.contractName || '');
+    });
+  });
+
+  const winningRecordRows = (currentDemand?.details ?? []).flatMap((d) => {
+    const line = findBidLineForDetail(d.id);
+    const base = {
+      detailId: d.id, detailName: d.productName, specification: d.specification,
+      quantity: d.quantity, unit: d.unit,
+    };
+    const winners = line?.winningSuppliers ?? [];
+    if (winners.length > 0) {
+      // 明细级多中标：每家中标记录一行
+      return winners.map((w) => ({
+        ...base,
+        supplierId: w.supplierId, supplierName: w.supplierName, unitPrice: w.unitPrice,
+        signedBy: occupiedRecords.get(`${d.id}|${w.supplierId}`),
+      }));
     }
-    update({ detailLinks: cur });
+    if (line?.winningSupplierName) {
+      // 旧单值兜底：主中标一行（名称反查供应商档案取 ID）
+      const sid = suppliers.find((s) => s.name === line.winningSupplierName)?.id || '';
+      const legacy = line as { execUnitPriceIncludingTax?: number; unitPriceIncludingTax?: number };
+      return [{
+        ...base,
+        supplierId: sid, supplierName: line.winningSupplierName,
+        unitPrice: legacy.execUnitPriceIncludingTax ?? legacy.unitPriceIncludingTax ?? 0,
+        signedBy: occupiedRecords.get(`${d.id}|${sid}`),
+      }];
+    }
+    // 未定标：占位行，不可勾选（提醒先回工单完成定标）
+    return [{ ...base, supplierId: '', supplierName: '', unitPrice: 0, signedBy: undefined }];
+  });
+
+  // 勾选状态：按「明细+供应商」精确匹配
+  const isRecordChecked = (detailId: string, supplierId: string) =>
+    (form.detailLinks ?? []).some((l) => l.detailId === detailId && l.supplierId === supplierId);
+
+  // 勾选/取消一条中标记录：联动合同金额（Σ所选单价×数量）与供应商（唯一供应商时自动带出）
+  const toggleWinningRecord = (row: (typeof winningRecordRows)[number], checked: boolean) => {
+    if (!form.demandId || !row.supplierId) return;
+    const next = (form.detailLinks ?? []).filter(
+      (l) => !(l.detailId === row.detailId && l.supplierId === row.supplierId)
+    );
+    if (checked) {
+      next.push({
+        demandId: form.demandId,
+        demandNo: form.demandNo,
+        detailId: row.detailId,
+        supplierId: row.supplierId,
+        unitPrice: row.unitPrice,
+      });
+    }
+    const patch: Partial<ContractLedger> = { detailLinks: next };
+    if (next.length > 0) {
+      let total = 0;
+      next.forEach((l) => {
+        const r = winningRecordRows.find((w) => w.detailId === l.detailId && w.supplierId === l.supplierId);
+        if (l.unitPrice && r) total += l.unitPrice * r.quantity;
+      });
+      patch.amount = Math.round(total * 100) / 100;
+    }
+    // 供应商联动：勾选记录只涉及一家供应商时自动带出；多家时保留用户手选 + 黄条提醒
+    const supIds = new Set(next.filter((l) => l.supplierId).map((l) => l.supplierId as string));
+    if (supIds.size === 1) {
+      const sid = [...supIds][0];
+      const rec = winningRecordRows.find((w) => w.supplierId === sid);
+      patch.supplierId = sid;
+      if (rec) patch.counterpartyName = rec.supplierName;
+    }
+    update(patch);
   };
+
+  // 当前勾选记录涉及的供应商（≥2 家时黄条提醒：一份合同对应一个供应商）
+  const checkedSuppliers = (() => {
+    const map = new Map<string, string>();
+    (form.detailLinks ?? []).forEach((l) => {
+      if (!l.supplierId) return;
+      const rec = winningRecordRows.find((w) => w.detailId === l.detailId && w.supplierId === l.supplierId);
+      map.set(l.supplierId, rec?.supplierName || '');
+    });
+    return [...map.entries()].map(([id, name]) => ({ id, name }));
+  })();
 
   // ========== 招采工单自动带入 ==========
   // ========== 关联采购需求自动带入 ==========
@@ -571,13 +659,8 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
       patch.amount = demand.estimatedAmount;
     }
 
-    // 🆕 PL-01: 选完关联需求 → 自动初始化 detailLinks（默认全选该需求所有明细行）
-    const allDetails = Array.isArray(demand.details) ? demand.details : [];
-    patch.detailLinks = allDetails.map((d) => ({
-      demandId: demand.id,
-      demandNo: demand.demandNo,
-      detailId: d.id,
-    }));
+    // 🆕 按中标记录签约：选需求后清空勾选，由用户在中标记录表格按「明细+供应商」逐条挑选（每条记录只能签一份合同）
+    patch.detailLinks = [];
 
     update(patch);
   };
@@ -660,79 +743,80 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
             placeholder="选了之后自动从工单带入类型/方式/对方单位/中标时间"
           />
 
-          {/* 🆕 PL-01: 关联需求明细勾选表格 */}
-          {form.demandId && currentDemandDetails.length > 0 && (
+          {/* 🆕 按中标记录签约：需求明细 × 各家中标 展开成行，每条记录只能被一份合同占用 */}
+          {form.demandId && winningRecordRows.length > 0 && (
             <div className="col-span-2 rounded-lg border border-amber-200 bg-amber-50/50 p-4">
               <div className="mb-3 flex items-center justify-between">
                 <div className="text-sm font-semibold text-amber-900">
-                  📌 关联需求明细（共 {currentDemandDetails.length} 条，已勾选{' '}
+                  📌 关联需求明细·中标记录（共 {winningRecordRows.length} 条记录，已勾选{' '}
                   {(form.detailLinks ?? []).length} 条）
                 </div>
                 <div className="text-xs text-amber-700">
-                  合同默认覆盖全部明细，可手动取消不需要的行
+                  每条中标记录只能签一份合同，已被其他合同签约的行锁定不可再选
                 </div>
               </div>
-              <div className="max-h-52 overflow-auto rounded-md border border-amber-100 bg-white">
+              <div className="max-h-60 overflow-auto rounded-md border border-amber-100 bg-white">
                 <table className="w-full text-xs">
                   <thead className="bg-amber-100/60 text-amber-800">
                     <tr>
-                      <th className="w-10 px-2 py-1.5 text-center">☑</th>
-                      <th className="px-2 py-1.5 text-left">商品名称</th>
-                      <th className="px-2 py-1.5 text-left">规格</th>
-                      <th className="px-2 py-1.5 text-right">数量</th>
+                      <th className="w-10 px-2 py-1.5 text-center">签</th>
+                      <th className="px-2 py-1.5 text-left">需求明细</th>
                       <th className="px-2 py-1.5 text-left">中标供应商</th>
                       <th className="px-2 py-1.5 text-right">中标单价(元)</th>
-                      <th className="px-2 py-1.5 text-right">中标总价(元)</th>
+                      <th className="px-2 py-1.5 text-right">数量</th>
+                      <th className="px-2 py-1.5 text-right">本合同金额(元)</th>
+                      <th className="px-2 py-1.5 text-left">状态</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {currentDemandDetails.map((d) => {
-                      const checked = selectedDetailIds.has(d.id);
-                      // 🆕 方案A：按 demandDetailId 匹配工单定标行，展示招采执行已确定的供应商/单价/总价（不再展示预算口径）
-                      const bidLine = findBidLineForDetail(d.id);
-                      const winners = bidLine?.winningSuppliers ?? [];
-                      // 中标供应商：多中标数组全部名称 → 旧单值 winningSupplierName → 线下 supplierName 兜底
-                      const supplierNames = winners.length
-                        ? winners.map((w) => w.supplierName).join('、')
-                        : bidLine?.winningSupplierName
-                          || (bidLine as { supplierName?: string } | null)?.supplierName
-                          || '';
-                      // 中标单价：主中标（第一家）→ 工单执行确认单价兜底（目录内 exec / 线下 unit）
-                      const bidUnitPrice = winners[0]?.unitPrice
-                        ?? (bidLine as { execUnitPriceIncludingTax?: number } | null)?.execUnitPriceIncludingTax
-                        ?? (bidLine as { unitPriceIncludingTax?: number } | null)?.unitPriceIncludingTax
-                        ?? 0;
-                      const bidTotal = bidUnitPrice > 0 ? bidUnitPrice * d.quantity : 0;
+                    {winningRecordRows.map((r, idx) => {
+                      const undecided = !r.supplierId;
+                      const locked = !!r.signedBy;
+                      const checked = !undecided && isRecordChecked(r.detailId, r.supplierId);
                       return (
                         <tr
-                          key={d.id}
-                          className={checked ? 'bg-indigo-50/60' : 'hover:bg-slate-50'}
+                          key={`${r.detailId}|${r.supplierId}|${idx}`}
+                          className={locked ? 'bg-red-50/50' : checked ? 'bg-indigo-50/60' : 'hover:bg-slate-50'}
                         >
                           <td className="px-2 py-1.5 text-center">
                             <input
                               type="checkbox"
                               checked={checked}
-                              onChange={(e) => toggleDetailLink(d.id, e.target.checked)}
+                              disabled={locked || undecided}
+                              onChange={(e) => toggleWinningRecord(r, e.target.checked)}
                               className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                             />
                           </td>
-                          <td className="px-2 py-1.5 font-medium text-slate-800">
-                            {d.productName}
-                          </td>
-                          <td className="px-2 py-1.5 text-slate-500">
-                            {d.specification || '-'}
-                          </td>
-                          <td className="px-2 py-1.5 text-right text-slate-700">
-                            {d.quantity} {d.unit}
+                          <td className="px-2 py-1.5">
+                            <div className="font-medium text-slate-800">{r.detailName}</div>
+                            {r.specification && <div className="text-slate-400">{r.specification}</div>}
                           </td>
                           <td className="px-2 py-1.5 text-slate-700">
-                            {supplierNames || <span className="text-slate-400">未定标</span>}
+                            {undecided ? <span className="text-slate-400">未定标</span> : r.supplierName}
                           </td>
                           <td className="px-2 py-1.5 text-right text-slate-700">
-                            {bidUnitPrice > 0 ? `¥${bidUnitPrice.toLocaleString()}` : '-'}
+                            {undecided ? '-' : `¥${r.unitPrice.toLocaleString()}`}
+                          </td>
+                          <td className="px-2 py-1.5 text-right text-slate-700">
+                            {r.quantity} {r.unit}
                           </td>
                           <td className="px-2 py-1.5 text-right font-semibold text-indigo-600">
-                            {bidTotal > 0 ? `¥${bidTotal.toLocaleString()}` : '-'}
+                            {checked ? `¥${(r.unitPrice * r.quantity).toLocaleString()}` : '—'}
+                          </td>
+                          <td className="px-2 py-1.5">
+                            {locked ? (
+                              <span className="inline-block whitespace-nowrap px-1.5 py-0.5 rounded text-[11px] bg-red-50 text-red-600 border border-red-200">
+                                🔒 已签约 {r.signedBy}
+                              </span>
+                            ) : undecided ? (
+                              <span className="inline-block px-1.5 py-0.5 rounded text-[11px] bg-slate-100 text-slate-400 border border-slate-200">
+                                未定标·不可签
+                              </span>
+                            ) : (
+                              <span className="inline-block px-1.5 py-0.5 rounded text-[11px] bg-green-50 text-green-700 border border-green-200">
+                                可签
+                              </span>
+                            )}
                           </td>
                         </tr>
                       );
@@ -740,9 +824,17 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
                   </tbody>
                 </table>
               </div>
+              {/* 🆕 勾选记录涉及多家供应商时提醒：一份合同对应一个供应商 */}
+              {checkedSuppliers.length >= 2 && (
+                <div className="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700 leading-relaxed">
+                  ⚠️ 本次勾选了 <b>{checkedSuppliers.length}</b> 家供应商的记录
+                  （{checkedSuppliers.map((s) => s.name).join('、')}）。
+                  一份合同对应一个供应商，可在上方下拉切换本合同供应商；其余供应商请分别新建合同。
+                </div>
+              )}
               {(form.detailLinks ?? []).length === 0 && (
                 <div className="mt-2 rounded-md bg-red-50 px-3 py-1.5 text-xs text-red-600">
-                  ⚠️ 合同没有勾选任何明细行，预警看板将无法关联到需求明细级预警
+                  ⚠️ 合同没有勾选任何中标记录，预警看板将无法关联到需求明细级预警
                 </div>
               )}
             </div>
@@ -948,14 +1040,7 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
                     ⚠ 关联的供应商未在档案中找到（可能来自工单侧旧数据），请重新选择
                   </p>
                 )}
-                {/* 🆕 多中标提示：一份合同一个供应商；一个需求中标多家 → 多家分别建合同 */}
-                {formWinningSuppliers.length >= 2 && (
-                  <div className="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700 leading-relaxed">
-                    ⚠️ 该需求共中标 <b>{formWinningSuppliers.length}</b> 家供应商
-                    （{formWinningSuppliers.map((s) => s.supplierName).join('、')}）。
-                    一份合同对应一个供应商，可在上方下拉切换选择本合同的供应商；其余中标供应商请分别新建合同。
-                  </div>
-                )}
+                {/* 🆕 多供应商提醒已并入下方「明细·中标记录」表格（勾选多家时黄条提醒） */}
               </div>
               <Input label="单位名称 *" required value={form.counterpartyName || ''}
                 onChange={(e) => update({ counterpartyName: e.target.value })} placeholder="中标供应商全称" />

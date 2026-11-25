@@ -17,7 +17,6 @@ export default function SupplierQuotePage() {
   const supplierQuotes = useStore((s) => s.supplierQuotes) as SupplierQuote[];
   const setSupplierQuotes = useStore((s) => s.setSupplierQuotes) as ((data: SupplierQuote[]) => void) | undefined;
   const updateSupplierQuote = useStore((s) => s.updateSupplierQuote) as ((id: string, data: Partial<SupplierQuote>) => void) | undefined;
-  const deleteSupplierQuote = useStore((s) => s.deleteSupplierQuote) as ((id: string) => void) | undefined;
   const biddings = useStore((s) => s.biddings || []) as Bidding[];
   const setBiddings = useStore((s) => s.setBiddings) as ((data: Bidding[]) => void) | undefined;
   const updateBidding = useStore((s) => s.updateBidding) as ((id: string, data: any) => void) | undefined;
@@ -305,12 +304,6 @@ export default function SupplierQuotePage() {
           {row.status === 'accepted' && (
             <TextButton type="primary" onClick={() => handleSyncToBidding(row)}>回写工单</TextButton>
           )}
-          <TextButton
-            type="danger"
-            onClick={() => {
-              if (confirm(`确认删除报价单 ${row.quoteNo}？`)) deleteSupplierQuote?.(row.id);
-            }}
-          >删除</TextButton>
         </div>
       ),
     },
@@ -386,14 +379,6 @@ export default function SupplierQuotePage() {
       return;
     }
     handleSyncToBidding(acceptedQuote);
-  };
-
-  // 删除：该工单+该物资，删除所有报价
-  const handleMaterialDelete = (row: MaterialQuoteRow) => {
-    if (!confirm(`确认删除工单 ${row.biddingNo} 下「${row.productName}」的所有报价？`)) return;
-    const productQuotes = supplierQuotes.filter((q) => q.biddingId === row.biddingId);
-    productQuotes.forEach((q) => deleteSupplierQuote?.(q.id));
-    alert(`已删除 ${productQuotes.length} 份报价`);
   };
 
   const handleAccept = (quote: SupplierQuote) => {
@@ -807,10 +792,6 @@ export default function SupplierQuotePage() {
                           {row.quotes.some((q) => q.status === 'accepted') && (
                             <TextButton onClick={() => handleMaterialSync(row)}>回写工单</TextButton>
                           )}
-                          <TextButton
-                            type="danger"
-                            onClick={() => handleMaterialDelete(row)}
-                          >删除</TextButton>
                           <TextButton
                             onClick={() => setCompareModal({
                               key: row.key,

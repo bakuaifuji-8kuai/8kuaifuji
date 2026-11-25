@@ -2314,6 +2314,10 @@ export interface ContractLedger {
     demandId: string;
     demandNo?: string;
     detailId: string;
+    /** 🆕 按中标记录签约：该合同选用的中标供应商 ID（一条明细多家中标时，合同按「明细+供应商」粒度签约） */
+    supplierId?: string;
+    /** 🆕 按中标记录签约：该家中标单价（合同金额 = Σ 单价×数量 的取数依据） */
+    unitPrice?: number;
   }>;
 }
 
