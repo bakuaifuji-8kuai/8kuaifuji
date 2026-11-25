@@ -1650,8 +1650,12 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 28,
+      version: 29,
       migrate: (persistedState: any, version: number) => {
+        if (version < 29) {
+          // v28→v29：刷新 1125 测试数据（需求明细×多中标记录→按记录签约、3份合同、3家供应商档案），旧缓存数据整体废弃
+          return undefined as any;
+        }
         if (version < 2) {
           // v1→v2：内置考核模板刷新为最新 mock 数据（补齐月度考核模板等），用户自建模板保留
           const builtin = (mockData.evaluationTemplates || []).filter((t: any) => t.isBuiltin);
