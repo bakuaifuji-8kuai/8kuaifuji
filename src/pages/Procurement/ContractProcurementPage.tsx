@@ -757,6 +757,14 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
             placeholder="招采类合同名称"
           />
 
+          {/* 🆕 所属项目：选关联需求后自动从需求 projectName 带出（台账列表、预警按项目归类用），可编辑 */}
+          <Input
+            label="所属项目"
+            value={form.projectName || ''}
+            onChange={(e) => update({ projectName: e.target.value })}
+            placeholder={form.demandId ? '已从关联需求自动带出' : '选关联需求后自动带出，也可手动填写'}
+          />
+
           {/* ===== 第二行：需求类型 + 合同形成方式 — 选了关联采购需求后自动带出并锁定 ===== */}
           <Select
             label="需求类型 *"

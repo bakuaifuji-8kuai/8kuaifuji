@@ -851,6 +851,8 @@ export default function ContractLedgerPage() {
     // 2. 合同编号
     { key: 'contractNo', title: '合同编号', render: (row) => row.contractNo,
       footer: (data) => `合计 ${data.length} 份` },
+    // 🆕 所属项目（从关联需求带出；同一项目下多份按明细签约的合同可按项目归类做金额预警）
+    { key: 'projectName', title: '所属项目', render: (row) => row.projectName || '-', footer: '' },
     // 3. 合同类型
     { key: 'contractType', title: '合同类型', render: (row) => getContractTypeLabel(row), footer: '' },
     // 4. 合同形成方式
@@ -1165,6 +1167,7 @@ export default function ContractLedgerPage() {
                         <th className="text-left py-2 px-3 font-medium">严重度</th>
                         <th className="text-left py-2 px-3 font-medium">合同编号</th>
                         <th className="text-left py-2 px-3 font-medium">合同名称</th>
+                        <th className="text-left py-2 px-3 font-medium">所属项目</th>
                         <th className="text-left py-2 px-3 font-medium">对方单位</th>
                         <th className="text-left py-2 px-3 font-medium">详情</th>
                         <th className="text-center py-2 px-3 font-medium w-24">操作</th>
@@ -1189,6 +1192,7 @@ export default function ContractLedgerPage() {
                           </td>
                           <td className="py-2 px-3 text-slate-700 font-mono">{r.contract.contractNo}</td>
                           <td className="py-2 px-3 text-slate-800">{r.contract.contractName}</td>
+                          <td className="py-2 px-3 text-slate-600">{r.contract.projectName || '-'}</td>
                           <td className="py-2 px-3 text-slate-600">{r.contract.counterpartyName || '-'}</td>
                           <td className={`py-2 px-3 ${r.level === 'danger' ? 'text-rose-600 font-medium' : 'text-amber-700'}`}>{r.message}</td>
                           <td className="py-2 px-3 text-center">
