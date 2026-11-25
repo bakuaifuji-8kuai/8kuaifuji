@@ -491,6 +491,19 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
     ? procurementDemands.find((d) => d.id === form.demandId) ?? null
     : null;
   const currentDemandDetails = currentDemand?.details ?? [];
+
+  // 🆕 需求关联的招采工单（明细表格展示定标结果的数据源）
+  const currentBidding = currentDemand
+    ? biddings.find((b) => b.id === currentDemand.relatedOrderId || b.demandId === currentDemand.id) ?? null
+    : null;
+  // 需求明细 → 工单定标行（目录内比价 items / 线下录入 offlineDetails 均以 demandDetailId 精确关联）
+  const findBidLineForDetail = (demandDetailId: string) => {
+    if (!currentBidding) return null;
+    const item = (currentBidding.items || []).find((it) => it.demandDetailId === demandDetailId);
+    if (item) return item;
+    return (currentBidding.offlineDetails || []).find((o) => o.demandDetailId === demandDetailId) ?? null;
+  };
+
   const selectedDetailIds = new Set((form.detailLinks ?? []).map((l) => l.detailId));
   const toggleDetailLink = (detailId: string, checked: boolean) => {
     const cur = (form.detailLinks ?? []).filter((l) => l.detailId !== detailId);
@@ -667,15 +680,29 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
                       <th className="px-2 py-1.5 text-left">商品名称</th>
                       <th className="px-2 py-1.5 text-left">规格</th>
                       <th className="px-2 py-1.5 text-right">数量</th>
-                      <th className="px-2 py-1.5 text-right">单价(元)</th>
-                      <th className="px-2 py-1.5 text-right">预算(元)</th>
+                      <th className="px-2 py-1.5 text-left">中标供应商</th>
+                      <th className="px-2 py-1.5 text-right">中标单价(元)</th>
+                      <th className="px-2 py-1.5 text-right">中标总价(元)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {currentDemandDetails.map((d) => {
                       const checked = selectedDetailIds.has(d.id);
-                      const unitPrice = d.unitPriceIncludingTax ?? d.unitPriceExcludingTax ?? 0;
-                      const budget = d.amountIncludingTax ?? 0;
+                      // 🆕 方案A：按 demandDetailId 匹配工单定标行，展示招采执行已确定的供应商/单价/总价（不再展示预算口径）
+                      const bidLine = findBidLineForDetail(d.id);
+                      const winners = bidLine?.winningSuppliers ?? [];
+                      // 中标供应商：多中标数组全部名称 → 旧单值 winningSupplierName → 线下 supplierName 兜底
+                      const supplierNames = winners.length
+                        ? winners.map((w) => w.supplierName).join('、')
+                        : bidLine?.winningSupplierName
+                          || (bidLine as { supplierName?: string } | null)?.supplierName
+                          || '';
+                      // 中标单价：主中标（第一家）→ 工单执行确认单价兜底（目录内 exec / 线下 unit）
+                      const bidUnitPrice = winners[0]?.unitPrice
+                        ?? (bidLine as { execUnitPriceIncludingTax?: number } | null)?.execUnitPriceIncludingTax
+                        ?? (bidLine as { unitPriceIncludingTax?: number } | null)?.unitPriceIncludingTax
+                        ?? 0;
+                      const bidTotal = bidUnitPrice > 0 ? bidUnitPrice * d.quantity : 0;
                       return (
                         <tr
                           key={d.id}
@@ -698,11 +725,14 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
                           <td className="px-2 py-1.5 text-right text-slate-700">
                             {d.quantity} {d.unit}
                           </td>
+                          <td className="px-2 py-1.5 text-slate-700">
+                            {supplierNames || <span className="text-slate-400">未定标</span>}
+                          </td>
                           <td className="px-2 py-1.5 text-right text-slate-700">
-                            ¥{unitPrice.toLocaleString()}
+                            {bidUnitPrice > 0 ? `¥${bidUnitPrice.toLocaleString()}` : '-'}
                           </td>
                           <td className="px-2 py-1.5 text-right font-semibold text-indigo-600">
-                            ¥{budget.toLocaleString()}
+                            {bidTotal > 0 ? `¥${bidTotal.toLocaleString()}` : '-'}
                           </td>
                         </tr>
                       );
