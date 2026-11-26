@@ -35,7 +35,8 @@ export default function SupplierQuotePage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterProductKeyword, setFilterProductKeyword] = useState('');
   const [applied, setApplied] = useState({ no: '', biddingId: '', supplier: '', status: '' });
-  const [selectModal, setSelectModal] = useState<{ biddingId: string; biddingNo: string; candidates: SupplierQuote[]; selectedId: string | null } | null>(null);
+  // 🆕 并列最低价人工指定弹窗：scene 区分整单采纳（quote）与单物资采纳（material）
+  const [selectModal, setSelectModal] = useState<{ biddingId: string; biddingNo: string; candidates: SupplierQuote[]; selectedId: string | null; scene: 'quote' | 'material'; productCode?: string } | null>(null);
 
   // 新增报价单弹窗状态
   const [newQuoteModal, setNewQuoteModal] = useState(false);
@@ -90,6 +91,7 @@ export default function SupplierQuotePage() {
       taxAmount?: number;
       deliveryDate?: string;
       status: SupplierQuote['status'];
+      adoption: 'pending' | 'accepted' | 'rejected'; // 🆕 明细级采纳状态（旧整单 accepted 数据归一化为 accepted）
       contactPhone?: string;
       submittedAt?: string;
     }[];
@@ -143,6 +145,8 @@ export default function SupplierQuotePage() {
           taxAmount: d.taxAmount,
           deliveryDate: d.deliveryDate,
           status: q.status,
+          // 🆕 明细级采纳状态（旧数据整单 accepted 视为全部明细已采纳）
+          adoption: d.adoptionStatus ?? (q.status === 'accepted' ? 'accepted' : 'pending'),
           contactPhone: q.contactPhone,
           submittedAt: q.submittedAt,
         });
@@ -284,6 +288,7 @@ export default function SupplierQuotePage() {
         const map: Record<string, { label: string; color: string }> = {
           submitted: { label: '已提交', color: 'text-[#e6a23c]' },
           accepted: { label: '已采纳', color: 'text-[#67c23a]' },
+          partial: { label: '部分采纳', color: 'text-[#409eff]' },
           rejected: { label: '已驳回', color: 'text-[#f56c6c]' },
         };
         return <span className={map[row.status]?.color}>{map[row.status]?.label}</span>;
@@ -301,7 +306,8 @@ export default function SupplierQuotePage() {
               <TextButton type="danger" onClick={() => handleReject(row)}>驳回</TextButton>
             </>
           )}
-          {row.status === 'accepted' && (
+          {/* 🆕 部分采纳/已采纳均可回写（回写只含已采纳明细）；部分采纳请到「按物资视图」继续裁决剩余物资 */}
+          {(row.status === 'accepted' || row.status === 'partial') && (
             <TextButton type="primary" onClick={() => handleSyncToBidding(row)}>回写工单</TextButton>
           )}
         </div>
@@ -322,14 +328,49 @@ export default function SupplierQuotePage() {
     setMaterialDetailRow(row);
   };
 
-  // 采纳：对该工单+该物资，按总金额最低采纳（同一报价单内可能有多条明细，取报价单维度最低总价）
-  const handleMaterialAccept = (row: MaterialQuoteRow) => {
-    // 找出所有报价该物资的报价单（submitted 状态）
-    const productQuotes = supplierQuotes.filter(
-      (q) => q.biddingId === row.biddingId && q.status === 'submitted'
+  // ===== 🆕 明细级采纳：报价采纳按「单条物资」粒度 =====
+  // 整单状态由明细推导：全采=accepted / 全驳=rejected / 混合=partial(部分采纳) / 未裁决=submitted
+  const deriveQuoteStatus = (details: SupplierQuoteDetail[]): SupplierQuote['status'] => {
+    const st = details.map((d) => d.adoptionStatus ?? 'pending');
+    if (st.every((s) => s === 'accepted')) return 'accepted';
+    if (st.every((s) => s === 'rejected')) return 'rejected';
+    if (st.some((s) => s !== 'pending')) return 'partial';
+    return 'submitted';
+  };
+
+  // 只改指定报价单的某一条物资明细，整单 status 自动重算（不碰其他物资行）
+  const setDetailAdoption = (quoteId: string, productCode: string, status: 'accepted' | 'rejected', remark?: string) => {
+    const q = supplierQuotes.find((x) => x.id === quoteId);
+    if (!q) return;
+    const details = q.details.map((d) =>
+      d.productCode === productCode
+        ? { ...d, adoptionStatus: status as 'accepted' | 'rejected', adoptedAt: new Date().toISOString().replace('T', ' ').slice(0, 19) }
+        : d
     );
+    updateSupplierQuote?.(quoteId, { details, status: deriveQuoteStatus(details), ...(remark ? { remark: (q.remark ? q.remark + '\n' : '') + remark } : {}) });
+  };
+
+  // 整单级：全部明细统一设置（报价单视图的整单采纳/驳回 = 明细全采/全驳）
+  const setWholeQuoteAdoption = (quoteId: string, status: 'accepted' | 'rejected', remark?: string) => {
+    const q = supplierQuotes.find((x) => x.id === quoteId);
+    if (!q) return;
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const details = q.details.map((d) => ({ ...d, adoptionStatus: status as 'accepted' | 'rejected', adoptedAt: now }));
+    updateSupplierQuote?.(quoteId, { details, status, ...(remark ? { remark: (q.remark ? q.remark + '\n' : '') + remark } : {}) });
+  };
+
+  // 该工单+该物资：adoptionStatus 仍为 pending 的报价单（可参与本物资的采纳/驳回裁决）
+  const pendingProductQuotes = (biddingId: string, productCode: string) =>
+    supplierQuotes.filter(
+      (q) => q.biddingId === biddingId &&
+        q.details.some((d) => d.productCode === productCode && (d.adoptionStatus ?? 'pending') === 'pending')
+    );
+
+  // 采纳（按物资视图）：该物资最低价那家的该明细 accepted，同物资其他家 rejected——不碰这张单里其他物资
+  const handleMaterialAccept = (row: MaterialQuoteRow) => {
+    const productQuotes = pendingProductQuotes(row.biddingId, row.productCode);
     if (productQuotes.length === 0) {
-      alert('没有可采纳的报价！');
+      alert('该物资没有待裁决（评审中）的报价！');
       return;
     }
 
@@ -344,50 +385,53 @@ export default function SupplierQuotePage() {
     const lowest = prices.filter((p) => p.price === minPrice);
 
     if (lowest.length >= 2) {
-      // 最低价相同，弹出手动选择窗口
+      // 最低价相同，弹出手动选择窗口（物资级场景）
       setSelectModal({
         biddingId: row.biddingId,
         biddingNo: row.biddingNo,
         candidates: lowest.map((p) => p.quote),
         selectedId: null,
+        scene: 'material',
+        productCode: row.productCode,
       });
     } else {
-      // 只有一个最低价，直接采纳该报价单
-      updateSupplierQuote?.(lowest[0].quote.id, { status: 'accepted' });
+      // 只有一个最低价：明细级采纳（中选家该物资 accepted，同物资其余家 rejected）
+      const winner = lowest[0].quote;
+      productQuotes.forEach((q) =>
+        setDetailAdoption(q.id, row.productCode, q.id === winner.id ? 'accepted' : 'rejected')
+      );
     }
   };
 
-  // 驳回：该工单+该物资，驳回所有 submitted 状态的报价
+  // 驳回：该工单+该物资，只驳回该物资仍为评审中的明细行（不连坐其他物资）
   const handleMaterialReject = (row: MaterialQuoteRow) => {
-    if (!confirm(`确认驳回工单 ${row.biddingNo} 下「${row.productName}」的所有报价？`)) return;
-    const productQuotes = supplierQuotes.filter(
-      (q) => q.biddingId === row.biddingId && q.status === 'submitted'
-    );
-    productQuotes.forEach((q) => {
-      updateSupplierQuote?.(q.id, { status: 'rejected' });
-    });
-    alert(`已驳回 ${productQuotes.length} 份报价`);
+    if (!confirm(`确认驳回工单 ${row.biddingNo} 下「${row.productName}」的所有评审中报价？`)) return;
+    const productQuotes = pendingProductQuotes(row.biddingId, row.productCode);
+    productQuotes.forEach((q) => setDetailAdoption(q.id, row.productCode, 'rejected'));
+    alert(`已驳回 ${productQuotes.length} 条该物资报价（仅影响此物资，不涉及报价单内其他物资）`);
   };
 
-  // 回写工单：该工单+该物资，如有已采纳报价则回写
+  // 回写工单（物资视图入口）：找该工单下存在已采纳明细的报价单
   const handleMaterialSync = (row: MaterialQuoteRow) => {
     const acceptedQuote = supplierQuotes.find(
-      (q) => q.biddingId === row.biddingId && q.status === 'accepted'
+      (q) => q.biddingId === row.biddingId &&
+        (q.status === 'accepted' || q.details.some((d) => d.adoptionStatus === 'accepted'))
     );
     if (!acceptedQuote) {
-      alert('没有已采纳的报价！');
+      alert('没有已采纳的物资报价！');
       return;
     }
     handleSyncToBidding(acceptedQuote);
   };
 
+  // 采纳（按报价单视图）：整单采 = 该单全部明细 accepted + 同工单其余评审中报价全部明细 rejected
   const handleAccept = (quote: SupplierQuote) => {
-    // 找出该工单下所有已提交的报价
+    // 找出该工单下所有未裁决（submitted）的报价
     const biddingQuotes = supplierQuotes.filter(
       (q) => q.biddingId === quote.biddingId && q.status === 'submitted'
     );
     if (biddingQuotes.length === 0) {
-      updateSupplierQuote?.(quote.id, { status: 'accepted' });
+      setWholeQuoteAdoption(quote.id, 'accepted');
       return;
     }
 
@@ -397,23 +441,29 @@ export default function SupplierQuotePage() {
     const lowestQuotes = biddingQuotes.filter((q) => q.totalAmount === minPrice);
 
     if (lowestQuotes.length >= 2) {
-      // 有两个及以上相同最低价，弹出手动选择窗口
+      // 有两个及以上相同最低价，弹出手动选择窗口（整单场景）
       setSelectModal({
         biddingId: quote.biddingId,
         biddingNo: quote.biddingNo,
         candidates: lowestQuotes,
         selectedId: null,
+        scene: 'quote',
       });
     } else {
-      // 只有一个最低价，直接采纳
-      updateSupplierQuote?.(quote.id, { status: 'accepted' });
+      // 只有一个最低价，直接采纳（明细级：中选家全采，其余家全驳）
+      const winner = lowestQuotes[0];
+      biddingQuotes.forEach((q) =>
+        setWholeQuoteAdoption(q.id, q.id === winner.id ? 'accepted' : 'rejected')
+      );
     }
   };
 
+  // 驳回（按报价单视图）：只驳回当前这一张（全部明细 rejected），不联动其他家
   const handleReject = (quote: SupplierQuote) => {
-    updateSupplierQuote?.(quote.id, { status: 'rejected' });
+    setWholeQuoteAdoption(quote.id, 'rejected');
   };
 
+  // 并列最低价人工指定确认：按 scene 分流——物资级只裁该物资明细，整单级裁全部明细
   const handleConfirmSelect = () => {
     if (!selectModal || !selectModal.selectedId) {
       alert('请先选择一家供应商！');
@@ -421,18 +471,26 @@ export default function SupplierQuotePage() {
     }
     const selected = selectModal.candidates.find(q => q.id === selectModal.selectedId);
     if (!selected) return;
-    
-    // 选中的标记为已采纳，其余驳回
-    selectModal.candidates.forEach((q) => {
-      updateSupplierQuote?.(q.id, {
-        status: q.id === selected.id ? 'accepted' : 'rejected',
-        remark: q.id === selected.id ? '最低价人工选择确认' : `最低价相同未选中（报价${q.totalAmount.toLocaleString()}）`,
+
+    if (selectModal.scene === 'material' && selectModal.productCode) {
+      // 物资级：选中的该物资明细 accepted，该工单该物资其余评审中报价 rejected
+      const code = selectModal.productCode;
+      pendingProductQuotes(selectModal.biddingId, code).forEach((q) => {
+        setDetailAdoption(q.id, code, q.id === selected.id ? 'accepted' : 'rejected');
       });
-    });
+    } else {
+      // 整单级：选中的全部明细 accepted，其余评审中报价全部明细 rejected
+      supplierQuotes
+        .filter((q) => q.biddingId === selectModal.biddingId && q.status === 'submitted')
+        .forEach((q) => {
+          setWholeQuoteAdoption(q.id, q.id === selected.id ? 'accepted' : 'rejected',
+            q.id === selected.id ? '最低价人工选择确认' : `最低价相同未选中（报价${q.totalAmount.toLocaleString()}）`);
+        });
+    }
     setSelectModal(null);
   };
 
-  // 将已采纳报价回写到采购工单（BiddingQuote 列表）
+  // 将报价回写到采购工单（BiddingQuote 列表）——🆕 只回写「已采纳」的物资明细（部分采纳时不含被驳回/评审中的行）
   const handleSyncToBidding = (quote: SupplierQuote) => {
     const bidding = biddings.find((b) => b.id === quote.biddingId);
     if (!bidding) {
@@ -444,7 +502,16 @@ export default function SupplierQuotePage() {
       return;
     }
 
-    const details = quote.details.map((qd) => {
+    // 🆕 明细级口径：只取已采纳明细（旧数据整单 accepted 视为全部明细已采纳）
+    const adoptedDetails = quote.details.filter(
+      (d) => (d.adoptionStatus ?? (quote.status === 'accepted' ? 'accepted' : 'pending')) === 'accepted'
+    );
+    if (adoptedDetails.length === 0) {
+      alert('该报价单没有已采纳的物资明细，无法回写！\n（部分采纳的报价单只有被采纳的物资会回写）');
+      return;
+    }
+
+    const details = adoptedDetails.map((qd) => {
       const item = bidding.items?.find((it) => it.productCode === qd.productCode);
       return {
         productCode: qd.productCode,
@@ -496,7 +563,7 @@ export default function SupplierQuotePage() {
       quotes: [...existing, biddingQuote],
       status: (bidding.status === 'draft' || bidding.status === 'published') ? 'bidding' : bidding.status,
     });
-    alert(`报价已成功回写到工单「${bidding.biddingNo}」！`);
+    alert(`报价已成功回写到工单「${bidding.biddingNo}」！\n本次回写 ${details.length} 条已采纳物资明细，合计 ¥${total.toLocaleString()}`);
   };
 
   // ======== 新增报价单相关逻辑 ========
@@ -696,6 +763,7 @@ export default function SupplierQuotePage() {
             { value: '', label: '全部' },
             { value: 'submitted', label: '已提交' },
             { value: 'accepted', label: '已采纳' },
+            { value: 'partial', label: '部分采纳' },
             { value: 'rejected', label: '已驳回' },
           ]}
         />
@@ -783,13 +851,14 @@ export default function SupplierQuotePage() {
                       <td className="px-3 py-2 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1 flex-wrap">
                           <TextButton type="primary" onClick={() => handleMaterialViewDetail(row)}>查看详情</TextButton>
-                          {row.quotes.some((q) => q.status === 'submitted') && (
+                          {/* 🆕 明细级：该物资仍有评审中(pending)明细才可采纳/驳回 */}
+                          {row.quotes.some((q) => q.adoption === 'pending') && (
                             <>
                               <TextButton onClick={() => handleMaterialAccept(row)}>采纳</TextButton>
                               <TextButton type="danger" onClick={() => handleMaterialReject(row)}>驳回</TextButton>
                             </>
                           )}
-                          {row.quotes.some((q) => q.status === 'accepted') && (
+                          {row.quotes.some((q) => q.adoption === 'accepted') && (
                             <TextButton onClick={() => handleMaterialSync(row)}>回写工单</TextButton>
                           )}
                           <TextButton
@@ -1565,12 +1634,13 @@ export default function SupplierQuotePage() {
                         </td>
                         <td className="px-3 py-2 text-center whitespace-nowrap">{q.deliveryDate || '-'}</td>
                         <td className="px-3 py-2 text-center whitespace-nowrap">
+                          {/* 🆕 明细级采纳状态（旧整单 accepted 归一化显示） */}
                           <span className={{
-                            submitted: 'text-[#e6a23c]',
+                            pending: 'text-[#e6a23c]',
                             accepted: 'text-[#67c23a]',
                             rejected: 'text-[#f56c6c]',
-                          }[q.status]}>
-                            {{ submitted: '已提交', accepted: '已采纳', rejected: '已驳回' }[q.status]}
+                          }[q.adoption]}>
+                            {{ pending: '评审中', accepted: '已采纳', rejected: '已驳回' }[q.adoption]}
                           </span>
                         </td>
                       </tr>
@@ -1582,13 +1652,13 @@ export default function SupplierQuotePage() {
 
             {/* 操作按钮 */}
             <div className="flex gap-2">
-              {materialDetailRow.quotes.some((q) => q.status === 'submitted') && (
+              {materialDetailRow.quotes.some((q) => q.adoption === 'pending') && (
                 <>
                   <PrimaryButton onClick={() => { setMaterialDetailRow(null); handleMaterialAccept(materialDetailRow); }}>采纳最低价</PrimaryButton>
                   <DefaultButton onClick={() => { setMaterialDetailRow(null); handleMaterialReject(materialDetailRow); }}>驳回全部</DefaultButton>
                 </>
               )}
-              {materialDetailRow.quotes.some((q) => q.status === 'accepted') && (
+              {materialDetailRow.quotes.some((q) => q.adoption === 'accepted') && (
                 <PrimaryButton onClick={() => { setMaterialDetailRow(null); handleMaterialSync(materialDetailRow); }}>回写工单</PrimaryButton>
               )}
             </div>

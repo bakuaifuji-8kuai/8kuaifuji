@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import { useStore } from "@/store/useStore";
-import { build1125Demo } from "@/mock/data";
+import { build1125Demo, build1126Demo } from "@/mock/data";
 import AppLayout from "@/components/layout/AppLayout";
 import WarehousePage from "@/pages/Basic/Warehouse";
 import PositionPage from "@/pages/Basic/Position";
@@ -94,6 +94,18 @@ export default function App() {
       procurementDemands: [...s.procurementDemands.filter((x) => !x.id.startsWith("DEM-1125")), ...demo.demands] as any,
       biddings: [...s.biddings.filter((x) => !x.id.startsWith("BID-1125")), ...demo.biddings] as any,
       contractLedgers: [...s.contractLedgers.filter((x) => !x.id.startsWith("CL-1125")), ...demo.contracts] as any,
+    } as any);
+  }, []);
+
+  // 🆕 1126 测试数据启动注入：报价「明细级采纳」三端联动演示（工单×2 + 报价单×5，部分采纳 partial 场景）
+  useEffect(() => {
+    const s = useStore.getState();
+    if (s.procurementDemands.some((d) => d.id.startsWith("DEM-1126"))) return;
+    const demo = build1126Demo();
+    useStore.setState({
+      procurementDemands: [...s.procurementDemands.filter((x) => !x.id.startsWith("DEM-1126")), ...demo.demands] as any,
+      biddings: [...s.biddings.filter((x) => !x.id.startsWith("BID-1126")), ...demo.biddings] as any,
+      supplierQuotes: [...(s.supplierQuotes || []).filter((x: any) => !String(x.id).startsWith("SQ-1126")), ...demo.quotes] as any,
     } as any);
   }, []);
 

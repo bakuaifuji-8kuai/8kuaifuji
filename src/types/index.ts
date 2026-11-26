@@ -1727,6 +1727,8 @@ export interface SupplierQuoteDetail {
   taxAmount?: number; // 税额 = 含税金额 / (1 + 税率) × 税率
   deliveryDate?: string; // 交货日期
   remark?: string;
+  adoptionStatus?: 'pending' | 'accepted' | 'rejected'; // 🆕 明细级采纳状态：报价采纳按单条物资粒度（pending=评审中，默认值）
+  adoptedAt?: string; // 🆕 采纳/驳回时间留痕
 }
 
 // 供应商报价单（APP端上传）
@@ -1745,7 +1747,9 @@ export interface SupplierQuote {
   taxAmount?: number; // 税额合计
   quoteDate: string; // 报价日期
   submittedAt: string; // 提交时间
-  status: 'submitted' | 'accepted' | 'rejected'; // 报价状态
+  // 报价状态：submitted=已提交（供应商动作）；accepted/rejected/partial 为采购方裁决结果，由明细 adoptionStatus 自动推导，不再手工设置
+  // partial = 部分采纳（同一张报价单里部分物资被采纳、部分被驳回——采纳粒度是单条物资）
+  status: 'submitted' | 'accepted' | 'rejected' | 'partial';
   details: SupplierQuoteDetail[]; // 物料明细
   attachments?: Attachment[]; // 附件（可上传扫描件等）
   remark?: string;

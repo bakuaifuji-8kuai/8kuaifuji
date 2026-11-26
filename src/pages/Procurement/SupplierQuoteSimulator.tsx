@@ -18,6 +18,10 @@ const MOCK_SUPPLIER_USERS: MockSupplierUser[] = [
   { id: 'SUP007', name: '会展设备租赁中心', contact: '陈主管', phone: '136****8888' },
   { id: 'SUP003', name: '星辰办公家具供应商', contact: '刘经理', phone: '135****7777' },
   { id: 'SUP009', name: '视界投影科技有限公司', contact: '赵工', phone: '134****6666' },
+  // 🆕 1126 测试身份：与供应商档案(SUP-112501~503)同源，切换身份可查看 1126 报价单的明细级采纳结果
+  { id: 'SUP-112501', name: '长沙湘展会展服务有限公司', contact: '刘经理', phone: '0731-85001125' },
+  { id: 'SUP-112502', name: '湖南声光智能科技有限公司', contact: '陈工', phone: '0731-85001225' },
+  { id: 'SUP-112503', name: '广州视联展示工程有限公司', contact: '黄总', phone: '020-38991125' },
 ];
 
 // ========== 5 种需求类型 → 报价视角映射 ==========
@@ -751,17 +755,22 @@ export default function SupplierQuoteSimulator() {
             mySubmittedQuotes.length > 0 ? mySubmittedQuotes.map((q) => {
               const bidding = biddings.find((b) => b.id === q.biddingId);
               const dt = getDemandType(bidding?.demandId);
+              // 🆕 采纳按单条物资粒度：整单只显示"已提交"（供应商自己的动作）；采购方裁决结果逐物资展示
+              const detailRows = q.details.map((d) => ({
+                ...d,
+                adoption: d.adoptionStatus ?? (q.status === 'accepted' ? 'accepted' : 'pending') as 'pending' | 'accepted' | 'rejected',
+              }));
+              const acceptedCount = detailRows.filter((d) => d.adoption === 'accepted').length;
+              const rejectedCount = detailRows.filter((d) => d.adoption === 'rejected').length;
               return (
                 <div key={q.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-3">
                   <div className="flex justify-between items-start mb-1">
                     <div className="text-[11px] text-slate-400 flex items-center gap-1">
                       <Hash size={11} />{q.biddingNo}
                     </div>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                      q.status === 'submitted' ? 'bg-green-50 text-green-600' :
-                      q.status === 'accepted' ? 'bg-indigo-50 text-indigo-600' : 'bg-red-50 text-red-600'
-                    }`}>
-                      {q.status === 'submitted' ? '已提交' : q.status === 'accepted' ? '已接受' : '已拒绝'}
+                    {/* 🆕 整单只显示提交状态，不再显示整单级"已接受/已拒绝"（采纳是物资级的） */}
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-50 text-green-600">
+                      已提交
                     </span>
                   </div>
                   <div className="text-[14px] font-semibold text-slate-800 mb-1">{bidding?.projectName || q.biddingName}</div>
@@ -776,6 +785,32 @@ export default function SupplierQuoteSimulator() {
                   </div>
                   <div className="text-[11px] text-slate-400 mt-1">
                     提交于 {new Date(q.submittedAt).toLocaleString('zh-CN')}
+                  </div>
+
+                  {/* 🆕 逐物资采纳结果（采购方裁决，按物资粒度） */}
+                  <div className="mt-2.5 pt-2.5 border-t border-slate-100">
+                    <div className="text-[11px] text-slate-400 mb-1.5">
+                      物资采纳结果{acceptedCount > 0 && <span className="text-green-600 font-medium"> · 已采纳 {acceptedCount} 条</span>}{rejectedCount > 0 && <span className="text-red-500 font-medium"> · 已驳回 {rejectedCount} 条</span>}
+                    </div>
+                    <div className="space-y-1">
+                      {detailRows.map((d, i) => (
+                        <div key={i} className="flex items-center justify-between text-[12px]">
+                          <span className="text-slate-600 truncate flex-1 mr-2">
+                            {d.productName}
+                            <span className="text-slate-400 ml-1">×{d.quantity}{d.unit}</span>
+                          </span>
+                          <span className="flex items-center gap-1.5 whitespace-nowrap">
+                            <span className="text-slate-500">¥{d.unitPrice.toLocaleString()}</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                              d.adoption === 'accepted' ? 'bg-green-50 text-green-600' :
+                              d.adoption === 'rejected' ? 'bg-red-50 text-red-500' : 'bg-slate-100 text-slate-400'
+                            }`}>
+                              {d.adoption === 'accepted' ? '已采纳' : d.adoption === 'rejected' ? '已驳回' : '评审中'}
+                            </span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               );

@@ -6183,3 +6183,160 @@ export function build1125Demo() {
   };
 }
 
+// ===== 🆕 1126 测试数据生成器：报价「明细级采纳」三端联动演示 =====
+// 完整链路（一切数据皆有源）：
+//   需求(DEM-1126xx, 立项确认通过) → 目录内比价工单(BID-1126xx, 招标中, 报价窗口已截止) → 供应商报价单(SQ-1126xx)
+//   工单A(BP-20261126001)：3 条物资——W1电缆已采纳湘展(398最低)、W2照明模块已采纳声光(2980最低)、W3 LED三家仍评审中
+//     → 三张报价单整单状态=partial(部分采纳)：同一工单不同物资采不同供应商
+//   工单B(BP-20261126002)：2 条物资全部未裁决(整单submitted)，供手动演示 采纳→回写工单→招采执行联动
+//   供应商复用 1125 档案：湘展SUP-112501 / 声光SUP-112502 / 视联SUP-112503（小程序端切换身份即可看到对应报价单）
+export function build1126Demo() {
+  const TAX = 0.13;
+  const toEx = (p: number) => Math.round((p / 1.13) * 100) / 100;
+  const supA = { id: 'SUP-112501', name: '长沙湘展会展服务有限公司', contact: '刘经理', phone: '0731-85001125' };
+  const supB = { id: 'SUP-112502', name: '湖南声光智能科技有限公司', contact: '陈工', phone: '0731-85001225' };
+  const supC = { id: 'SUP-112503', name: '广州视联展示工程有限公司', contact: '黄总', phone: '020-38991125' };
+  const ADOPT_AT = '2026-11-26T10:00:00';
+
+  // 明细行工厂：含税单价 × 数量自动算金额/税额；adoptionStatus 缺省=评审中(pending)
+  const mkDetail = (
+    productCode: string, productName: string, unit: string, quantity: number,
+    unitPrice: number, adoptionStatus?: 'accepted' | 'rejected' | 'pending'
+  ) => {
+    const amount = Math.round(unitPrice * quantity * 100) / 100;
+    return {
+      productCode, productName, specification: '1126 演示物资', unit, quantity,
+      unitPrice, taxRate: TAX, amount,
+      taxAmount: Math.round((amount / (1 + TAX)) * TAX * 100) / 100,
+      ...(adoptionStatus && adoptionStatus !== 'pending'
+        ? { adoptionStatus: adoptionStatus as 'accepted' | 'rejected', adoptedAt: ADOPT_AT }
+        : {}),
+    };
+  };
+
+  // ===== 工单 A：3 条物资（电缆/照明模块/LED屏），物资1、2 已按明细裁决，物资3 仍评审中 =====
+  const demandA = {
+    id: 'DEM-1126001', demandNo: 'DMP-20261126-001',
+    demandType: 'service_non_engineering', businessCategory: 'non_engineering', subType: 'goods',
+    procurementType: 'within_framework', procurementMode: 'application_form',
+    applicant: '测试用户', applicantDept: '工程部', applyDate: '2026-11-24',
+    projectName: '1126报价明细级采纳演示—展馆强电与LED', estimatedAmount: 100000,
+    requiredDeliveryDate: '2026-12-25',
+    reason: '1126 演示：报价按单条物资采纳，同一工单不同物资可采不同供应商（部分采纳 partial）',
+    status: 'confirm_approved', createTime: '2026-11-24',
+    approveTime: '2026-11-24 10:00:00', approver: '采购主管-李',
+    needContract: 'yes', confirmApprover: '副总经理-陈', confirmApproveTime: '2026-11-24 15:00:00',
+    relatedOrderId: 'BID-1126001',
+    details: [
+      { id: 'DD-1126001-1', demandId: 'DEM-1126001', productCode: 'QD2004', productName: '强电电缆 YJV-4×35', unit: '米', quantity: 500, unitPriceExcludingTax: toEx(428), unitPriceIncludingTax: 428, taxRate: TAX, amountExcludingTax: Math.round(toEx(428) * 500), amountIncludingTax: 214000 },
+      { id: 'DD-1126001-2', demandId: 'DEM-1126001', productCode: 'QD2011', productName: '智能照明控制模块', unit: '套', quantity: 20, unitPriceExcludingTax: toEx(3200), unitPriceIncludingTax: 3200, taxRate: TAX, amountExcludingTax: Math.round(toEx(3200) * 20), amountIncludingTax: 64000 },
+      { id: 'DD-1126001-3', demandId: 'DEM-1126001', productCode: 'PRD005', productName: 'LED 显示屏 P2.5', unit: '块', quantity: 8, unitPriceExcludingTax: toEx(15000), unitPriceIncludingTax: 15000, taxRate: TAX, amountExcludingTax: Math.round(toEx(15000) * 8), amountIncludingTax: 120000 },
+    ],
+  };
+
+  const biddingA = {
+    id: 'BID-1126001', biddingNo: 'BP-20261126001',
+    biddingName: '1126报价明细级采纳演示—展馆强电与LED',
+    projectName: '1126报价明细级采纳演示—展馆强电与LED',
+    procurementMethod: 'framework_catalog',
+    demandId: 'DEM-1126001', demandNo: 'DMP-20261126-001',
+    approvalStatus: 'approved', status: 'bidding',
+    creator: '测试用户', createTime: '2026-11-24',
+    startTime: '2026-11-24T09:00:00', endTime: '2026-11-25T18:00:00', // 报价窗口已截止 → PC端金额可见、可采纳
+    inviteSupplierIds: [supA.id, supB.id, supC.id],
+    totalPriceLimit: 400000,
+    items: [
+      { productCode: 'QD2004', productName: '强电电缆 YJV-4×35', specification: '1126 演示物资', unit: '米', quantity: 500, singlePriceLimit: 428, demandDetailId: 'DD-1126001-1', demandId: 'DEM-1126001', demandUnitPriceIncludingTax: 428, demandUnitPriceExcludingTax: toEx(428), isCatalogCompare: true, rowNo: 1 },
+      { productCode: 'QD2011', productName: '智能照明控制模块', specification: '1126 演示物资', unit: '套', quantity: 20, singlePriceLimit: 3200, demandDetailId: 'DD-1126001-2', demandId: 'DEM-1126001', demandUnitPriceIncludingTax: 3200, demandUnitPriceExcludingTax: toEx(3200), isCatalogCompare: true, rowNo: 2 },
+      { productCode: 'PRD005', productName: 'LED 显示屏 P2.5', specification: '1126 演示物资', unit: '块', quantity: 8, singlePriceLimit: 15000, demandDetailId: 'DD-1126001-3', demandId: 'DEM-1126001', demandUnitPriceIncludingTax: 15000, demandUnitPriceExcludingTax: toEx(15000), isCatalogCompare: true, rowNo: 3 },
+    ],
+    quotes: [], // 尚未回写工单 → 供用户演示「回写工单」联动动作
+  };
+
+  // ===== 工单 B：2 条物资（展架/地毯），全部未裁决 → 手动演示采纳/驳回 → 回写 =====
+  const demandB = {
+    ...demandA,
+    id: 'DEM-1126002', demandNo: 'DMP-20261126-002',
+    projectName: '1126报价明细级采纳演示—展架与地铺设装', estimatedAmount: 70000,
+    applyDate: '2026-11-25', createTime: '2026-11-25',
+    approveTime: '2026-11-25 10:00:00', confirmApproveTime: '2026-11-25 15:00:00',
+    reason: '1126 演示：全部物资评审中，可手动操作「按物资采纳→回写工单」全流程',
+    relatedOrderId: 'BID-1126002',
+    details: [
+      { id: 'DD-1126002-1', demandId: 'DEM-1126002', productCode: 'QD2001', productName: '铝型材展架 3m', unit: '根', quantity: 120, unitPriceExcludingTax: toEx(260), unitPriceIncludingTax: 260, taxRate: TAX, amountExcludingTax: Math.round(toEx(260) * 120), amountIncludingTax: 31200 },
+      { id: 'DD-1126002-2', demandId: 'DEM-1126002', productCode: 'PRD003', productName: '防火地毯 B1 级', unit: '平方米', quantity: 800, unitPriceExcludingTax: toEx(68), unitPriceIncludingTax: 68, taxRate: TAX, amountExcludingTax: Math.round(toEx(68) * 800), amountIncludingTax: 54400 },
+    ],
+  };
+  // 防止浅拷贝共享 details 数组引用
+  demandB.details = demandB.details.map((d) => ({ ...d }));
+
+  const biddingB = {
+    ...biddingA,
+    id: 'BID-1126002', biddingNo: 'BP-20261126002',
+    biddingName: '1126报价明细级采纳演示—展架与地铺设装',
+    projectName: '1126报价明细级采纳演示—展架与地铺设装',
+    demandId: 'DEM-1126002', demandNo: 'DMP-20261126-002',
+    createTime: '2026-11-25',
+    startTime: '2026-11-25T09:00:00', endTime: '2026-11-26T12:00:00',
+    totalPriceLimit: 80000,
+    items: [
+      { productCode: 'QD2001', productName: '铝型材展架 3m', specification: '1126 演示物资', unit: '根', quantity: 120, singlePriceLimit: 260, demandDetailId: 'DD-1126002-1', demandId: 'DEM-1126002', demandUnitPriceIncludingTax: 260, demandUnitPriceExcludingTax: toEx(260), isCatalogCompare: true, rowNo: 1 },
+      { productCode: 'PRD003', productName: '防火地毯 B1 级', specification: '1126 演示物资', unit: '平方米', quantity: 800, singlePriceLimit: 68, demandDetailId: 'DD-1126002-2', demandId: 'DEM-1126002', demandUnitPriceIncludingTax: 68, demandUnitPriceExcludingTax: toEx(68), isCatalogCompare: true, rowNo: 2 },
+    ],
+    quotes: [],
+    inviteSupplierIds: [supA.id, supB.id, supC.id], // 视联未报价 → 小程序端视联可见"待报价"
+  };
+  biddingB.items = biddingB.items.map((it: any) => ({ ...it }));
+
+  // ===== 报价单工厂 =====
+  const mkQuote = (
+    seq: string, bidding: typeof biddingA, sup: typeof supA,
+    rows: Array<{ code: string; name: string; unit: string; qty: number; price: number; adoption?: 'accepted' | 'rejected' }>,
+    status: 'submitted' | 'partial'
+  ) => {
+    const details = rows.map((r) => mkDetail(r.code, r.name, r.unit, r.qty, r.price, r.adoption));
+    const totalAmount = Math.round(details.reduce((s, d) => s + d.amount, 0) * 100) / 100;
+    return {
+      id: `SQ-${seq}`,
+      quoteNo: `BJS20261126${seq.slice(-3)}`,
+      biddingId: bidding.id, biddingNo: bidding.biddingNo, biddingName: bidding.projectName,
+      supplierId: sup.id, supplierName: sup.name,
+      contactPerson: sup.contact, contactPhone: sup.phone,
+      totalAmount, taxRate: TAX,
+      taxAmount: Math.round(details.reduce((s, d) => s + (d.taxAmount || 0), 0) * 100) / 100,
+      quoteDate: '2026-11-25T14:00:00', submittedAt: '2026-11-25T14:00:00',
+      status, details,
+    };
+  };
+
+  const quotes = [
+    // 工单 A：W1 电缆 湘展 398 最低(采纳)、W2 模块 声光 2980 最低(采纳)、W3 LED 视联 13600 最低(仍评审中)
+    mkQuote('1126001A', biddingA, supA, [
+      { code: 'QD2004', name: '强电电缆 YJV-4×35', unit: '米', qty: 500, price: 398, adoption: 'accepted' },
+      { code: 'QD2011', name: '智能照明控制模块', unit: '套', qty: 20, price: 3150, adoption: 'rejected' },
+      { code: 'PRD005', name: 'LED 显示屏 P2.5', unit: '块', qty: 8, price: 14200 },
+    ], 'partial'),
+    mkQuote('1126001B', biddingA, supB, [
+      { code: 'QD2004', name: '强电电缆 YJV-4×35', unit: '米', qty: 500, price: 412, adoption: 'rejected' },
+      { code: 'QD2011', name: '智能照明控制模块', unit: '套', qty: 20, price: 2980, adoption: 'accepted' },
+      { code: 'PRD005', name: 'LED 显示屏 P2.5', unit: '块', qty: 8, price: 14500 },
+    ], 'partial'),
+    mkQuote('1126001C', biddingA, supC, [
+      { code: 'QD2004', name: '强电电缆 YJV-4×35', unit: '米', qty: 500, price: 405, adoption: 'rejected' },
+      { code: 'QD2011', name: '智能照明控制模块', unit: '套', qty: 20, price: 3080, adoption: 'rejected' },
+      { code: 'PRD005', name: 'LED 显示屏 P2.5', unit: '块', qty: 8, price: 13600 },
+    ], 'partial'),
+    // 工单 B：全部评审中（submitted）→ 用户手动演示按物资采纳
+    mkQuote('1126002A', biddingB, supA, [
+      { code: 'QD2001', name: '铝型材展架 3m', unit: '根', qty: 120, price: 238 },
+      { code: 'PRD003', name: '防火地毯 B1 级', unit: '平方米', qty: 800, price: 59 },
+    ], 'submitted'),
+    mkQuote('1126002B', biddingB, supB, [
+      { code: 'QD2001', name: '铝型材展架 3m', unit: '根', qty: 120, price: 245 },
+      { code: 'PRD003', name: '防火地毯 B1 级', unit: '平方米', qty: 800, price: 62 },
+    ], 'submitted'),
+  ];
+
+  return { demands: [demandA, demandB], biddings: [biddingA, biddingB], quotes };
+}
+
