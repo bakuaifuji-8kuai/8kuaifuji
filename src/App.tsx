@@ -86,7 +86,8 @@ export default function App() {
   // 覆盖：需求(明细级多中标) → 工单(报价+定标) → 合同(按中标记录签约，前5条已占用用于验证锁定)
   useEffect(() => {
     const s = useStore.getState();
-    if (s.procurementDemands.some((d) => d.id.startsWith("DEM-1125"))) return;
+    const existing = s.procurementDemands.filter((d) => d.id.startsWith("DEM-1125"));
+    if (existing.length >= 10) return;
     const demo = build1125Demo();
     useStore.setState({
       suppliers: [...s.suppliers.filter((x) => !x.id.startsWith("SUP-1125")), ...demo.suppliers] as any,
