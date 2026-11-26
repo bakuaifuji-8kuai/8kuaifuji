@@ -1463,6 +1463,7 @@ export interface CatalogCompareItem {
   winningSuppliers?: Array<{
     supplierId: string;
     supplierName: string;
+    /** 🆕 需求级统一含税单价（所有中标供应商共享；不含税 = unitPrice / (1 + taxRate)） */
     unitPrice: number;
     quoteId?: string;
     confirmedAt?: string;
@@ -1519,6 +1520,7 @@ export interface OfflineDetailItem {
   winningSuppliers?: Array<{
     supplierId: string;
     supplierName: string;
+    /** 🆕 需求级统一含税单价（所有中标供应商共享；不含税 = unitPrice / (1 + taxRate)） */
     unitPrice: number;
     quoteId?: string;
     confirmedAt?: string;
@@ -1677,8 +1679,16 @@ export interface Bidding {
   // ====== 框架协议采购-目录内比价：比价结果 ======
   frameworkCompareAmountExcludingTaxInput?: number; // 页面手填不含税总金额（保存时与items.supplierAmountExTax合计比对）
 
-  winningSupplierId?: string;           // 中标供应商
-  winningSupplierName?: string;
+  winningSupplierId?: string;           // 中标供应商（旧单值，取 winningSuppliers[0] 兜底）
+  winningSupplierName?: string;         // 旧单值兜底
+  /** 🆕 需求级多家中标供应商名单（贯穿全需求所有明细，所有中标供应商共享同一含税单价） */
+  winningSuppliers?: Array<{
+    supplierId: string;
+    supplierName: string;
+    /** 🆕 需求级统一含税单价；不含税 = unitPrice / (1 + taxRate) */
+    unitPrice: number;
+    confirmedAt?: string;
+  }>;
   winningSupplierLegalPerson?: string; // 中标单位法人名字
   winningSupplierScore?: number;        // 中标单位得分
   losingSupplier1Name?: string;         // 未中标单位1
@@ -2238,6 +2248,10 @@ export interface ContractLedger {
   counterpartyName?: string;     // 对方单位-单位名称
   counterpartyContact?: string;  // 对方单位-负责人
   supplierId?: string;           // 关联供应商档案 ID（招采类合同从工单自动带入，非招采类手动选）
+  /** 🆕 合同全局签约口径：按含税价签 or 按不含税价签（合同金额按口径自动换算） */
+  priceType?: 'incl_tax' | 'excl_tax';
+  /** 🆕 合同税率（用于不含税价换算；默认 0.13） */
+  taxRate?: number;
   mainContent?: string;          // 合同主要内容
   signingDate?: string;          // 合同签订日期（纯 YYYY-MM-DD，向后兼容）
   effectiveDate?: string;        // 合同约定生效日期（纯 YYYY-MM-DD，向后兼容；推荐用 effectDateTime）
@@ -2320,10 +2334,14 @@ export interface ContractLedger {
     demandId: string;
     demandNo?: string;
     detailId: string;
-    /** 🆕 按中标记录签约：该合同选用的中标供应商 ID（一条明细多家中标时，合同按「明细+供应商」粒度签约） */
+    /** 🆕 按中标记录签约：该合同选用的中标供应商 ID */
     supplierId?: string;
     /** 🆕 按中标记录签约：该家中标单价（合同金额 = Σ 单价×数量 的取数依据） */
     unitPrice?: number;
+    /** 🆕 签约口径：按含税价签（用 unitPrice 原值）或按不含税价签（unitPrice / (1 + taxRate)） */
+    priceType?: 'incl_tax' | 'excl_tax';
+    /** 🆕 不含税单价（不含税签时 = unitPrice / (1 + taxRate)，含税签时空） */
+    unitPriceExcludingTax?: number;
   }>;
 }
 
