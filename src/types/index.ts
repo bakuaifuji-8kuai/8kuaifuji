@@ -1501,7 +1501,8 @@ export interface OfflineDetailItem {
   amountExcludingTax?: number;        // 不含税金额
   amountIncludingTax?: number;         // 含税金额
   taxAmount?: number;                 // 税额
-  supplierName?: string;              // 供应商名称（直接/电子商城/询比）
+  supplierId?: string;                // 🆕 供应商档案ID（明细行供应商从供应商管理搜索选择，禁止手输）
+  supplierName?: string;              // 供应商名称（直接/电子商城/询比；随档案选择自动带出）
 
   // ===== 框架协议采购专属 =====
   contractRatePerMonth?: number;      // 合同费率（元/月）
@@ -1652,7 +1653,8 @@ export interface Bidding {
   bidderList?: BidderInfo[];               // 报名单位列表（询比 open/invited 共用）
 
   // ====== 直接采购 + 电子商城采购专属 ======
-  supplier?: string;                        // 供应商（直接/电子商城手动填）
+  supplierId?: string;                      // 🆕 供应商档案ID（直接/电子商城从供应商管理搜索选择，禁止手输）
+  supplier?: string;                        // 供应商名称（直接/电子商城；随档案选择自动带出）
   taxTotalAmount?: number;                 // 含税总金额（direct/ecommerce 页面输入，比对用）
   taxExclusiveTotalAmount?: number;         // 不含税总金额（direct/ecommerce 页面输入，比对用）
 

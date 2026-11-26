@@ -5,6 +5,7 @@ import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import Modal from '@/components/common/Modal';
 import SupplierPickerModal from '@/components/common/SupplierPickerModal';
 import DemandPickerModal from '@/components/common/DemandPickerModal';
+import SearchableSelect from '@/components/common/SearchableSelect';
 import TimePickerModal from '@/components/common/TimePickerModal';
 import { useStore } from '@/store/useStore';
 import { genSerialNo, SERIAL_CONFIG } from '@/utils/serialNumber';
@@ -15,7 +16,7 @@ import { MOCK_BIDDINGS, MOCK_SUPPLIER_QUOTES } from '@/mock/biddingMockData';
 import type {
   Bidding, BiddingQuote, BiddingItem, BiddingQuoteDetail,
   ProcurementDemand, Attachment, BiddingProcurementMethod, ProcurementOrder,
-  OfflineDetailItem,
+  OfflineDetailItem, Supplier,
 } from '@/types';
 import { BIDDING_METHOD_LABEL } from '@/types';
 import FeatureHelpButton from '@/components/common/FeatureHelpButton';
@@ -78,6 +79,12 @@ export default function CompetitiveBiddingPage() {
   const contracts = useStore((s) => s.contracts) as any[];
   const procurementDemands = useStore((s) => s.procurementDemands);
   const currentUser = useStore((s) => s.currentUser);
+
+  // 🆕 供应商档案下拉选项：明细行/主表单供应商一律从供应商管理搜索选择（禁止手输）
+  // role=联系人（下拉项展示 + 可按联系人关键字搜索）
+  const supplierOptions = (suppliers as Supplier[])
+    .filter((s) => s.status === 'enabled')
+    .map((s) => ({ id: s.id, label: s.name, role: s.contact || s.phone || '' }));
 
   // 同步从 store 中读取报价单数据
   const supplierQuotes = useStore((s) => s.supplierQuotes || []) as any[];
@@ -857,7 +864,7 @@ export default function CompetitiveBiddingPage() {
       if (!editItem.implementationUnit?.trim()) { alert('请填写招采实施单位！'); return; }
       if (!editItem.projectImplementationUnit?.trim()) { alert('请选择项目实施单位！'); return; }
       if (!editItem.procurementHandler?.trim()) { alert('请填写招采经办人！'); return; }
-      if (!editItem.supplier?.trim()) { alert('请填写供应商！'); return; }
+      if (!editItem.supplierId) { alert('请从供应商管理中搜索选择供应商（不支持手工输入）！'); return; }
       // 含税/不含税总金额至少填一项
       const hasTax = editItem.taxTotalAmount != null && editItem.taxTotalAmount > 0;
       const hasExcl = editItem.taxExclusiveTotalAmount != null && editItem.taxExclusiveTotalAmount > 0;
@@ -882,7 +889,7 @@ export default function CompetitiveBiddingPage() {
     // === 框架协议采购-随机抽取：6 字段必填 ===
     if (isFrameworkRandom(procurementMethod)) {
       if (!editItem.drawTime) { alert('请选择抽取时间！'); return; }
-      if (!editItem.randomSupplierName?.trim()) { alert('请填写供应商！'); return; }
+      if (!editItem.randomSupplierId) { alert('请从供应商管理中搜索选择供应商（不支持手工输入）！'); return; }
       if (!editItem.randomSupplierContact?.trim()) { alert('请填写供应商单位联系人！'); return; }
       if (!editItem.randomContractNo?.trim()) { alert('请填写关联合同编号！'); return; }
       // linkDemand 打开时 demandId 必填
@@ -1762,9 +1769,26 @@ export default function CompetitiveBiddingPage() {
                                     onChange={(e) => updateOfflineItem(idx, { priceRemark: e.target.value })} />
                                 </td>
                                 <td className="px-3 py-2">
-                                  <input className={commonInput} value={row.supplierName || ''}
-                                    placeholder="供应商名称"
-                                    onChange={(e) => updateOfflineItem(idx, { supplierName: e.target.value })} />
+                                  {/* 🆕 供应商从供应商管理搜索选择，禁止手输 */}
+                                  <SearchableSelect
+                                    value={row.supplierId || ''}
+                                    options={supplierOptions}
+                                    onChange={(id) => {
+                                      const sup = (suppliers as Supplier[]).find((s) => s.id === id);
+                                      updateOfflineItem(idx, {
+                                        supplierId: id || undefined,
+                                        ...(sup ? { supplierName: sup.name } : {}),
+                                      });
+                                    }}
+                                    placeholder="搜索选择供应商"
+                                    width="w-full"
+                                    emptyText="无匹配供应商"
+                                  />
+                                  {!row.supplierId && row.supplierName && (
+                                    <div className="text-[11px] text-amber-600 mt-0.5 leading-tight" title="历史手填名称，未关联供应商档案，请重新搜索选择">
+                                      ⚠ {row.supplierName}
+                                    </div>
+                                  )}
                                 </td>
                                 {/* 操作列：复制 + 删除 */}
                                 <td className="px-3 py-2 text-center whitespace-nowrap">
@@ -1822,9 +1846,27 @@ export default function CompetitiveBiddingPage() {
                             <tr key={idx} className={`border-t border-slate-100 transition-colors hover:bg-indigo-50/20 ${isOverBudget ? 'bg-rose-50/50' : ''}`}>
                               <td className="px-3 py-2.5 text-slate-400 text-[13px]">{idx + 1}</td>
                               <td className="px-3 py-2.5">
-                                <input className={commonInput} value={row.supplierName || ''}
-                                  placeholder="线下已确定的供应商"
-                                  onChange={(e) => updateOfflineItem(idx, { supplierName: e.target.value })} />
+                                {/* 🆕 供应商从供应商管理搜索选择，禁止手输 */}
+                                <SearchableSelect
+                                  value={row.supplierId || ''}
+                                  options={supplierOptions}
+                                  onChange={(id) => {
+                                    const sup = (suppliers as Supplier[]).find((s) => s.id === id);
+                                    updateOfflineItem(idx, {
+                                      supplierId: id || undefined,
+                                      ...(sup ? { supplierName: sup.name } : {}),
+                                    });
+                                  }}
+                                  placeholder="搜索选择供应商"
+                                  width="w-full"
+                                  emptyText="无匹配供应商"
+                                />
+                                {/* 历史手填名称未关联档案 → 黄字提示（不阻塞重新选择） */}
+                                {!row.supplierId && row.supplierName && (
+                                  <div className="text-[11px] text-amber-600 mt-0.5 leading-tight" title="历史手填名称，未关联供应商档案，请重新搜索选择">
+                                    ⚠ {row.supplierName}
+                                  </div>
+                                )}
                               </td>
                               <td className="px-3 py-2.5">
                                 <input className={commonInput} value={row.itemName}
@@ -2077,22 +2119,25 @@ export default function CompetitiveBiddingPage() {
                 </div>
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">供应商 <span className="text-[#f56c6c]">*</span></div>
-                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-                    list="_fwsup"
-                    value={editItem.randomSupplierName || ''}
-                    onChange={(e) => {
-                      const name = e.target.value;
-                      const sup = suppliers.find((s) => s.name === name);
-                      setEditItem({ ...editItem, randomSupplierName: name, randomSupplierId: sup?.id, randomSupplierContact: sup?.contact || editItem.randomSupplierContact });
-                      if (sup?.id) {
+                  {/* 🆕 供应商从供应商管理搜索选择，禁止手输；供应商变化时清空已选合同 */}
+                  <SearchableSelect
+                    value={editItem.randomSupplierId || ''}
+                    options={supplierOptions}
+                    onChange={(id) => {
+                      const sup = (suppliers as Supplier[]).find((s) => s.id === id);
+                      setEditItem((prev: any) => ({
+                        ...prev,
+                        randomSupplierId: id || undefined,
+                        ...(sup ? { randomSupplierName: sup.name, randomSupplierContact: sup.contact || prev.randomSupplierContact } : {}),
                         // 供应商变化时清空合同
-                        setEditItem((prev: any) => ({ ...prev, randomContractId: undefined, randomContractNo: undefined }));
-                      }
+                        randomContractId: undefined,
+                        randomContractNo: undefined,
+                      }));
                     }}
-                    placeholder="输入关键字模糊匹配供应商" />
-                  <datalist id="_fwsup">
-                    {suppliers.map((s) => <option key={s.id} value={s.name} />)}
-                  </datalist>
+                    placeholder="搜索选择供应商"
+                    width="w-full"
+                    emptyText="无匹配供应商"
+                  />
                 </div>
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">供应商单位联系人 <span className="text-[#f56c6c]">*</span></div>
@@ -2399,10 +2444,22 @@ export default function CompetitiveBiddingPage() {
                 {(editItem.procurementMethod === 'direct' || editItem.procurementMethod === 'e_mall') && (
                 <div>
                   <div className="mb-1 text-xs text-[#606266]">供应商 <span className="text-[#f56c6c]">*</span></div>
-                  <input className="w-full h-8 px-2 border border-[#dcdfe6] rounded text-sm"
-                    value={editItem.supplier || ''}
-                    onChange={(e) => setEditItem({ ...editItem, supplier: e.target.value })}
-                    placeholder="请输入供应商名称" />
+                  {/* 🆕 供应商从供应商管理搜索选择，禁止手输 */}
+                  <SearchableSelect
+                    value={editItem.supplierId || ''}
+                    options={supplierOptions}
+                    onChange={(id) => {
+                      const sup = (suppliers as Supplier[]).find((s) => s.id === id);
+                      setEditItem({
+                        ...editItem,
+                        supplierId: id || undefined,
+                        ...(sup ? { supplier: sup.name } : {}),
+                      });
+                    }}
+                    placeholder="搜索选择供应商"
+                    width="w-full"
+                    emptyText="无匹配供应商"
+                  />
                 </div>
                 )}
                 {/* 直接采购 + 电子商城专属：含税/不含税总金额（至少必填一项，保存时比对清单合计） */}
