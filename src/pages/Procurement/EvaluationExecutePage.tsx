@@ -149,11 +149,11 @@ export default function EvaluationExecutePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMode]);
 
-  // 【核心过滤】合同下拉只显示：招采类 + 有考核设置（assessmentManagement 或 yearlyEvaluation）+ 非草稿
+  // 【核心过滤】合同下拉只显示：招采类 + 有考核设置（assessmentManagement 或 yearlyEvaluation）+ 审核通过及以后（approved/履行中active；草稿、审批中、终止、到期不可考核）
   const availableContracts = useMemo(() => {
     return contractLedgers.filter((c: ContractLedger) => {
       if (c.contractNature !== 'procurement') return false;
-      if (c.status === 'draft') return false;
+      if (c.status !== 'approved' && c.status !== 'active') return false;
       // 有 assessmentManagement（single_project/monthly/quarterly 数组非空）或 yearlyEvaluation=true
       const am = c.assessmentManagement || [];
       const hasAm = am.length > 0;
@@ -405,7 +405,7 @@ export default function EvaluationExecutePage() {
                 </select>
                 {availableContracts.length === 0 && (
                   <div className="text-[11px] text-amber-600 mt-1">
-                    ⚠️ 当前没有"招采类+已设置考核方式+非草稿"的合同，请先在招采类合同表单里设置考核管理
+                    ⚠️ 当前没有"招采类+已设置考核方式+审核通过/履行中"的合同，请先在招采类合同表单里设置考核管理并将合同提交审批通过
                   </div>
                 )}
               </div>
