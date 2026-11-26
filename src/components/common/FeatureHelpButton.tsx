@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Modal from './Modal';
 import Badge from './Badge';
+import { HELP_STALE } from '@/constants/changelog.generated';
 import { HelpCircle, Compass, ArrowRight, Trash2, AlertTriangle, CheckCircle2, Info, FileText, ArrowUp, ArrowDown, GitBranch } from 'lucide-react';
 
 // ============ 功能操作说明弹窗数据结构 ============
@@ -120,6 +121,16 @@ export default function FeatureHelpButton({ content }: Props) {
         width="max-w-[900px]"
       >
         <div className="space-y-5 max-h-[72vh] overflow-auto pr-1">
+          {/* 🛡️ 功能说明防过期护栏（构建时自动检测，落后于功能改动时亮黄条） */}
+          {HELP_STALE.stale && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 flex items-start gap-2">
+              <AlertTriangle size={14} className="text-amber-500 mt-0.5 shrink-0" />
+              <div className="text-[12.5px] text-amber-800 leading-relaxed">
+                本说明最后更新于 <b>{HELP_STALE.helpDate}</b>，此后仍有 <b>{HELP_STALE.count}</b> 项功能改动（构建时自动检测）。
+                如描述与页面实际行为不一致，以页面实际为准，说明文档待同步。
+              </div>
+            </div>
+          )}
           {/* 🧭 业务边界卡（顶部，若有 businessSummary） */}
           {content.businessSummary && (
             <div className="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50/50 p-4 relative overflow-hidden">

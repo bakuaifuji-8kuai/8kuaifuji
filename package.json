@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "node scripts/gen-changelog.cjs && tsc --noEmit && vite build",
     "build:single": "tsc --noEmit && vite build --mode singlefile",
     "lint": "eslint .",
     "preview": "vite preview",
