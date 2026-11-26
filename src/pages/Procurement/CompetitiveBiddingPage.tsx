@@ -1583,6 +1583,105 @@ export default function CompetitiveBiddingPage() {
               </span>
             </div>
 
+            {/* 🆕 中标供应商统一选名单区（整单级，贯穿所有明细；明细行内不再选供应商） */}
+            <div className="mb-3 rounded-lg border border-indigo-200 bg-gradient-to-r from-indigo-50/70 to-purple-50/40 px-3 py-2.5">
+              <div className="flex items-start gap-3 flex-wrap">
+                <div className="shrink-0 pt-0.5">
+                  <span className="text-[13px] font-semibold text-indigo-700">🏆 中标供应商（整单统一）</span>
+                  <div className="text-[11px] text-slate-400 mt-0.5">所有中标供应商共享同一单价，贯穿本单全部明细</div>
+                </div>
+
+                <div className="flex-1 min-w-[280px]">
+                  {/* 已选中标供应商 chips */}
+                  {(editItem.winningSuppliers || []).length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {(editItem.winningSuppliers || []).map((w: any) => (
+                        <span key={w.supplierId}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-700 text-[12px] font-medium">
+                          ✅ {w.supplierName}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-[12px] text-slate-400 pt-0.5">尚未选中标供应商</div>
+                  )}
+                </div>
+
+                {/* 统一含税单价（可编辑）+ 不含税自动 */}
+                {(editItem.winningSuppliers || []).length > 0 && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[12px] text-indigo-700 font-medium whitespace-nowrap">统一含税单价：</span>
+                    <input type="number" step="0.01" min={0}
+                      className="w-28 h-8 px-2 border border-indigo-200 rounded-md text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      value={(editItem.winningSuppliers || [])[0]?.unitPrice ?? ''}
+                      onChange={(e) => {
+                        const v = e.target.value === '' ? 0 : Number(e.target.value);
+                        applyUnifiedPriceToEditLocal(v);
+                      }} />
+                    <span className="text-[11px] text-slate-500 whitespace-nowrap">
+                      不含税 ¥{((editItem.winningSuppliers || [])[0]?.unitPrice ?? 0) > 0
+                        ? ((editItem.winningSuppliers || [])[0].unitPrice / 1.13).toFixed(2)
+                        : '0.00'}
+                    </span>
+                  </div>
+                )}
+
+                {/* 操作按钮：目录内比价 = 从参与报价供应商勾选；线下 = 从供应商档案多选 */}
+                {isCatalogMode ? (
+                  <span className="text-[11px] text-slate-400 self-center">在下方报价供应商列表中勾选中标方</span>
+                ) : (
+                  <div className="flex gap-1.5 shrink-0">
+                    <button type="button" onClick={() => setEditWinningPickerOpen(true)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:opacity-90 transition-all duration-200 shadow-sm">
+                      🔍 选择中标供应商
+                    </button>
+                    {(editItem.winningSuppliers || []).length > 0 && (
+                      <button type="button" onClick={() => applyUnifiedWinningToEditLocal([])}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-300 text-slate-600 hover:border-rose-400 hover:text-rose-500 transition-all duration-200">
+                        清空
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 目录内比价专属：参与报价供应商统一勾选（整单级，替代原明细行内勾选） */}
+              {isCatalogMode && (editItem.quotes || []).length > 0 && (
+                <div className="mt-2 pt-2 border-t border-indigo-100 flex flex-wrap gap-x-4 gap-y-1.5">
+                  {(editItem.quotes || []).map((q) => {
+                    const checked = (editItem.winningSuppliers || []).some((s: any) => s.supplierId === q.supplierId);
+                    const disabled = q.isQualified === false;
+                    // 该供应商在所有明细里的最低合格报价
+                    const minPrice = Math.min(...(q.details || []).map((d) => d.unitPrice).filter((p) => p > 0));
+                    return (
+                      <label key={q.supplierId}
+                        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-[12px] transition-colors ${
+                          checked ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : disabled ? 'bg-slate-50 border-slate-200 text-slate-400 opacity-60' : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300'
+                        }`}>
+                        <input type="checkbox"
+                          checked={checked}
+                          disabled={disabled}
+                          onChange={() => {
+                            const prevIds = (editItem.winningSuppliers || []).map((s: any) => s.supplierId);
+                            const nextIds = checked
+                              ? prevIds.filter((id: string) => id !== q.supplierId)
+                              : [...prevIds, q.supplierId];
+                            const computed = computeUnifiedWinning(editItem as Bidding, nextIds);
+                            applyUnifiedWinningToEditLocal(computed.suppliers);
+                          }}
+                          className="accent-emerald-500 w-3.5 h-3.5 disabled:opacity-30"
+                          title={disabled ? '不合格报价不可中标' : checked ? '取消中标' : '标记为中标方（整单统一 + 统一单价自动同步）'} />
+                        <span className="font-medium">{q.supplierName}</span>
+                        {minPrice > 0 && <span className="text-[11px] text-slate-400">最低 ¥{minPrice.toFixed(2)}</span>}
+                        {q.isQualified === false && <span className="text-[10px] text-slate-400">不合格</span>}
+                        {checked && <span className="text-[10px] text-emerald-600">中标</span>}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {/* 明细表格：按采购方式渲染，分页切片（每页20条，保留原索引定位编辑） */}
             <div className="border border-slate-200 rounded-xl shadow-sm overflow-hidden">
               {(() => {
@@ -1776,7 +1875,7 @@ export default function CompetitiveBiddingPage() {
                                         )}
                                       </div>
 
-                                      {/* 供应商报价表格 */}
+                                      {/* 供应商报价表格（🆕 中标勾选已上移至弹窗顶部「中标供应商（整单统一）」区，此处只读展示） */}
                                       <table className="w-full text-[12px]">
                                         <thead>
                                           <tr className="bg-indigo-50 text-indigo-700">
@@ -1786,7 +1885,7 @@ export default function CompetitiveBiddingPage() {
                                             <th className="px-2 py-1 text-right">税率</th>
                                             <th className="px-2 py-1 text-right">含税总额</th>
                                             <th className="px-2 py-1 text-center">状态</th>
-                                            <th className="px-2 py-1 text-center w-16">中标 ✅</th>
+                                            <th className="px-2 py-1 text-center w-16">中标</th>
                                           </tr>
                                         </thead>
                                         <tbody>
@@ -1812,32 +1911,15 @@ export default function CompetitiveBiddingPage() {
                                                       <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">✓ 合格</span>
                                                     )}
                                                   </td>
-                                                  {/* 🆕 多供应商中标操作列 — 需求级统一：勾一家 → 全工单所有明细 + 统一单价同步 */}
+                                                  {/* 🆕 中标只读徽章（勾选入口在弹窗顶部整单统一区） */}
                                                   <td className="px-2 py-1 text-center">
                                                     {(() => {
-                                                      // 统一取工单顶层 winningSuppliers（需求级）；没有再看明细行（向下兼容）
-                                                      const topWs = (viewItem as any).winningSuppliers || [];
-                                                      const itemWs = topWs.length > 0
-                                                        ? topWs
-                                                        : ((item as any).winningSuppliers || []);
-                                                      const checked = itemWs.some((s: any) => s.supplierId === q.supplierId);
-                                                      const disabled = q.isOverLimit || q.isQualified === false;
-                                                      return (
-                                                        <input
-                                                          type="checkbox"
-                                                          checked={checked}
-                                                          disabled={disabled}
-                                                          onChange={() => {
-                                                            const prevIds = itemWs.map((s: any) => s.supplierId);
-                                                            const nextIds = checked
-                                                              ? prevIds.filter((id: string) => id !== q.supplierId)
-                                                              : [...prevIds, q.supplierId];
-                                                            const computed = computeUnifiedWinning(viewItem as Bidding, nextIds);
-                                                            applyUnifiedWinningToBidding(viewItem.id, computed.suppliers);
-                                                          }}
-                                                          className="accent-emerald-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed w-4 h-4"
-                                                          title={disabled ? '仅合格报价可标记中标' : checked ? '取消中标' : '标记此供应商为中标方（将同步全工单所有明细）'}
-                                                        />
+                                                      const topWs = (editItem.winningSuppliers || []);
+                                                      const isWinner = topWs.some((s: any) => s.supplierId === q.supplierId);
+                                                      return isWinner ? (
+                                                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">✅ 中标</span>
+                                                      ) : (
+                                                        <span className="text-slate-300 text-[10px]">—</span>
                                                       );
                                                     })()}
                                                   </td>
@@ -1869,7 +1951,7 @@ export default function CompetitiveBiddingPage() {
 
                 const commonInput = 'w-full h-8 px-2.5 border border-slate-200 rounded-md text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-400 transition-all';
 
-                // ===== 直接采购 / 电子商城采购 简化表格（双价格列：预算审定 + 招采执行） =====
+                // ===== 直接采购 / 电子商城采购 简化表格（双价格列；🆕 供应商列已删除 — 中标供应商整单统一选） =====
                 if (isDirectOrMall(editItem.procurementMethod)) {
                   return (
                     <div className="overflow-x-auto">
@@ -1885,7 +1967,6 @@ export default function CompetitiveBiddingPage() {
                             <th className="px-3 py-2.5 text-left w-28 text-[13px] text-indigo-600 font-semibold">不含税招采执行单价 *</th>
                             <th className="px-3 py-2.5 text-left w-24 text-[13px] text-indigo-600 font-semibold">不含税金额（自动）</th>
                             <th className="px-3 py-2.5 text-left w-28 text-[13px] text-slate-600 font-semibold">单价备注</th>
-                            <th className="px-3 py-2.5 text-left w-32 text-[13px] text-slate-600 font-semibold">供应商名称</th>
                             <th className="px-3 py-2.5 text-center w-16 text-[13px] text-slate-600 font-semibold">操作</th>
                           </tr>
                         </thead>
@@ -1940,28 +2021,6 @@ export default function CompetitiveBiddingPage() {
                                     placeholder="单价备注（可选）"
                                     onChange={(e) => updateOfflineItem(idx, { priceRemark: e.target.value })} />
                                 </td>
-                                <td className="px-3 py-2">
-                                  {/* 🆕 供应商从供应商管理搜索选择，禁止手输 */}
-                                  <SearchableSelect
-                                    value={row.supplierId || ''}
-                                    options={supplierOptions}
-                                    onChange={(id) => {
-                                      const sup = (suppliers as Supplier[]).find((s) => s.id === id);
-                                      updateOfflineItem(idx, {
-                                        supplierId: id || undefined,
-                                        ...(sup ? { supplierName: sup.name } : {}),
-                                      });
-                                    }}
-                                    placeholder="搜索选择供应商"
-                                    width="w-full"
-                                    emptyText="无匹配供应商"
-                                  />
-                                  {!row.supplierId && row.supplierName && (
-                                    <div className="text-[11px] text-amber-600 mt-0.5 leading-tight" title="历史手填名称，未关联供应商档案，请重新搜索选择">
-                                      ⚠ {row.supplierName}
-                                    </div>
-                                  )}
-                                </td>
                                 {/* 操作列：复制 + 删除 */}
                                 <td className="px-3 py-2 text-center whitespace-nowrap">
                                   <button type="button" title="复制"
@@ -1979,7 +2038,7 @@ export default function CompetitiveBiddingPage() {
                           <tr className="bg-gradient-to-r from-emerald-50/40 to-teal-50/30 border-t border-slate-200">
                             <td colSpan={8} className="px-3 py-2 text-right text-slate-600 font-semibold text-[13px]">不含税金额合计（元）：</td>
                             <td className="px-3 py-2 text-indigo-600 font-bold text-[13px]">¥{offlineTotals.ex.toLocaleString()}</td>
-                            <td colSpan={2}></td>
+                            <td colSpan={1}></td>
                           </tr>
                         </tfoot>
                       </table>
@@ -1987,14 +2046,13 @@ export default function CompetitiveBiddingPage() {
                   );
                 }
 
-                // ===== 询比 / 竞价 / 谈判 / 招标 完整表格（双价格列：预算审定 + 招采执行） =====
+                // ===== 询比 / 竞价 / 谈判 / 招标 完整表格（双价格列：预算审定 + 招采执行；🆕 供应商列已删除 — 中标供应商整单统一选） =====
                 return (
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-gradient-to-r from-slate-50 to-indigo-50/30">
                           <th className="px-3 py-2.5 text-left w-10 text-[13px] text-slate-600 font-semibold">#</th>
-                          <th className="px-3 py-2.5 text-left w-32 text-[13px] text-slate-600 font-semibold">供应商单位</th>
                           <th className="px-3 py-2.5 text-left text-[13px] text-slate-600 font-semibold">项目/物料名称 <span className="text-rose-500">*</span></th>
                           <th className="px-3 py-2.5 text-left w-20 text-[13px] text-slate-600 font-semibold">数量</th>
                           <th className="px-3 py-2.5 text-left w-16 text-[13px] text-slate-600 font-semibold">单位</th>
@@ -2017,29 +2075,6 @@ export default function CompetitiveBiddingPage() {
                           return (
                             <tr key={idx} className={`border-t border-slate-100 transition-colors hover:bg-indigo-50/20 ${isOverBudget ? 'bg-rose-50/50' : ''}`}>
                               <td className="px-3 py-2.5 text-slate-400 text-[13px]">{idx + 1}</td>
-                              <td className="px-3 py-2.5">
-                                {/* 🆕 供应商从供应商管理搜索选择，禁止手输 */}
-                                <SearchableSelect
-                                  value={row.supplierId || ''}
-                                  options={supplierOptions}
-                                  onChange={(id) => {
-                                    const sup = (suppliers as Supplier[]).find((s) => s.id === id);
-                                    updateOfflineItem(idx, {
-                                      supplierId: id || undefined,
-                                      ...(sup ? { supplierName: sup.name } : {}),
-                                    });
-                                  }}
-                                  placeholder="搜索选择供应商"
-                                  width="w-full"
-                                  emptyText="无匹配供应商"
-                                />
-                                {/* 历史手填名称未关联档案 → 黄字提示（不阻塞重新选择） */}
-                                {!row.supplierId && row.supplierName && (
-                                  <div className="text-[11px] text-amber-600 mt-0.5 leading-tight" title="历史手填名称，未关联供应商档案，请重新搜索选择">
-                                    ⚠ {row.supplierName}
-                                  </div>
-                                )}
-                              </td>
                               <td className="px-3 py-2.5">
                                 <input className={commonInput} value={row.itemName}
                                   onChange={(e) => updateOfflineItem(idx, { itemName: e.target.value })} />
@@ -2110,10 +2145,10 @@ export default function CompetitiveBiddingPage() {
                       </tbody>
                       <tfoot>
                         <tr className="bg-gradient-to-r from-slate-100 to-indigo-50/40 border-t border-slate-200">
-                          <td colSpan={10} className="px-3 py-2.5 text-right text-slate-600 font-semibold text-[13px]">合计：</td>
+                          <td colSpan={9} className="px-3 py-2.5 text-right text-slate-600 font-semibold text-[13px]">合计：</td>
                           <td className="px-3 py-2.5 text-slate-700 font-semibold text-[13px]">¥{offlineTotals.ex.toLocaleString()}</td>
                           <td className="px-3 py-2.5 text-purple-700 font-bold text-[13px]">¥{offlineTotals.in.toLocaleString()}</td>
-                          <td></td>
+                          <td colSpan={2}></td>
                         </tr>
                       </tfoot>
                     </table>

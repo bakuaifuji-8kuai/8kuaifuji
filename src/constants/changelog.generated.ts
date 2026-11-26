@@ -1,11 +1,17 @@
 // ⚠️ 此文件由 scripts/gen-changelog.cjs 构建时自动生成（数据源：git log），请勿手改
-// 生成时间：2026-11-26 20:39 · 统计范围：2026-10-12 起 · git 解析成功
+// 生成时间：2026-11-26 21:55 · 统计范围：2026-10-12 起 · git 解析成功
 import type { ChangeDay } from './changelog';
 
 export const AUTO_CHANGELOG: ChangeDay[] = [
   {
     "date": "2026-11-26",
     "entries": [
+      {
+        "type": "feat",
+        "scope": "采购需求",
+        "title": "定标模型纠偏 — 需求级多中标+统一单价+签约口径(含税/不含税)",
+        "commit": "0d9f50c"
+      },
       {
         "type": "feat",
         "scope": "文档",
@@ -888,7 +894,7 @@ export const AUTO_CHANGELOG: ChangeDay[] = [
   }
 ];
 
-export const AUTO_GENERATED_AT = '2026-11-26 20:39';
+export const AUTO_GENERATED_AT = '2026-11-26 21:55';
 
 // 功能说明防过期护栏：构建时检测「最近触碰页面代码的功能提交」是否晚于 procurementHelp.ts 最后更新
 export const HELP_STALE = {
