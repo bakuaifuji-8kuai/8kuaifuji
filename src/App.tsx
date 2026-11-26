@@ -1,4 +1,7 @@
+import { useEffect } from "react";
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
+import { useStore } from "@/store/useStore";
+import { build1125Demo } from "@/mock/data";
 import AppLayout from "@/components/layout/AppLayout";
 import WarehousePage from "@/pages/Basic/Warehouse";
 import PositionPage from "@/pages/Basic/Position";
@@ -79,6 +82,20 @@ import EvaluationTemplatePage from "@/pages/Procurement/EvaluationTemplatePage";
 import EvaluationExecutePage from "@/pages/Procurement/EvaluationExecutePage";
 
 export default function App() {
+  // 🆕 1125 测试数据启动注入：无论 localStorage 缓存什么版本，store 里没有 1125 数据就自动补齐
+  // 覆盖：需求(明细级多中标) → 工单(报价+定标) → 合同(按中标记录签约，前5条已占用用于验证锁定)
+  useEffect(() => {
+    const s = useStore.getState();
+    if (s.procurementDemands.some((d) => d.id.startsWith("DEM-1125"))) return;
+    const demo = build1125Demo();
+    useStore.setState({
+      suppliers: [...s.suppliers.filter((x) => !x.id.startsWith("SUP-1125")), ...demo.suppliers] as any,
+      procurementDemands: [...s.procurementDemands.filter((x) => !x.id.startsWith("DEM-1125")), ...demo.demands] as any,
+      biddings: [...s.biddings.filter((x) => !x.id.startsWith("BID-1125")), ...demo.biddings] as any,
+      contractLedgers: [...s.contractLedgers.filter((x) => !x.id.startsWith("CL-1125")), ...demo.contracts] as any,
+    } as any);
+  }, []);
+
   return (
     <Router>
       <Routes>

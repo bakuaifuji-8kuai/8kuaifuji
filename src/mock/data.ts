@@ -776,6 +776,7 @@ export const products: Product[] = [
 
 // 供应商数据
 export const suppliers = [
+  ...build1125Demo().suppliers,
     {
       id: "SUP-001",
       code: "SUP001",
@@ -852,40 +853,6 @@ export const suppliers = [
       status: "disabled",
       unifiedSocialCreditCode: "91430100MA4ABC007D",
       createTime: "2025-05-01"
-    },
-    // ===== 🆕 1125 测试数据：冬季展馆物资采购中标供应商（需求→工单定标→按明细签合同 链路） =====
-    {
-      id: "SUP-112501",
-      code: "SUP112501",
-      name: "长沙湘展会展服务有限公司",
-      contact: "刘经理",
-      phone: "0731-85001125",
-      address: "长沙市岳麓区展馆路 112 号",
-      status: "enabled",
-      unifiedSocialCreditCode: "91430100MA41125A01",
-      createTime: "2026-11-01"
-    },
-    {
-      id: "SUP-112502",
-      code: "SUP112502",
-      name: "湖南声光智能科技有限公司",
-      contact: "陈工",
-      phone: "0731-85001225",
-      address: "长沙市高新区麓谷二路 55 号",
-      status: "enabled",
-      unifiedSocialCreditCode: "91430100MA41125B02",
-      createTime: "2026-11-01"
-    },
-    {
-      id: "SUP-112503",
-      code: "SUP112503",
-      name: "广州视联展示工程有限公司",
-      contact: "黄总",
-      phone: "020-38991125",
-      address: "广州市海珠区新港东路 1006 号",
-      status: "enabled",
-      unifiedSocialCreditCode: "91440100MA41125C03",
-      createTime: "2026-11-01"
     }
   ];
 
@@ -3512,6 +3479,7 @@ export const approvalFlowInstances: ApprovalFlowInstance[] = [
 
 // 采购需求申请数据
 export const procurementDemands = [
+  ...build1125Demo().demands,
     {
       id: "DEM-001",
       demandNo: "DMP-20260901",
@@ -3911,72 +3879,6 @@ export const procurementDemands = [
           amountIncludingTax: 22600
         }
       ]
-    },
-    // ===== 🆕 1125 测试数据：一个需求按明细多供应商定标 → 按明细签多份合同 → 同项目合同金额预警 =====
-    {
-      id: "DEM-1125001",
-      demandNo: "DMP-20261125-001",
-      demandType: "service_non_engineering",
-      businessCategory: "non_engineering",
-      subType: "goods",
-      procurementType: "within_framework",
-      procurementMode: "application_form",
-      applicant: "测试用户",
-      applicantDept: "工程部",
-      applyDate: "2026-11-20",
-      projectName: "2026冬季展馆物资集中采购",
-      estimatedAmount: 398000,
-      requiredDeliveryDate: "2026-12-20",
-      reason: "2026年冬季展馆布展物资集中采购，按明细分别定标签约",
-      status: "confirm_approved",
-      createTime: "2026-11-20",
-      approveTime: "2026-11-21 10:00:00",
-      approver: "采购主管-李",
-      needContract: "yes",
-      confirmApprover: "副总经理-陈",
-      confirmApproveTime: "2026-11-21 15:30:00",
-      relatedOrderId: "BID-1125001",
-      details: [
-        {
-          id: "DD-1125001-1",
-          demandId: "DEM-1125001",
-          productCode: "QD2004",
-          productName: "强电电缆 YJV-4×35",
-          unit: "米",
-          quantity: 500,
-          unitPriceExcludingTax: 378.76,
-          unitPriceIncludingTax: 428,
-          taxRate: 0.13,
-          amountExcludingTax: 189380,
-          amountIncludingTax: 214000
-        },
-        {
-          id: "DD-1125001-2",
-          demandId: "DEM-1125001",
-          productCode: "QD2011",
-          productName: "智能照明控制模块",
-          unit: "套",
-          quantity: 20,
-          unitPriceExcludingTax: 2831.86,
-          unitPriceIncludingTax: 3200,
-          taxRate: 0.13,
-          amountExcludingTax: 56637,
-          amountIncludingTax: 64000
-        },
-        {
-          id: "DD-1125001-3",
-          demandId: "DEM-1125001",
-          productCode: "PRD005",
-          productName: "LED 显示屏 P2.5",
-          unit: "块",
-          quantity: 8,
-          unitPriceExcludingTax: 13274.34,
-          unitPriceIncludingTax: 15000,
-          taxRate: 0.13,
-          amountExcludingTax: 106195,
-          amountIncludingTax: 120000
-        }
-      ]
     }
   ];
 
@@ -4180,6 +4082,7 @@ export const contractPurchaseOrders = [
 
 // 合同台账数据
 export const contractLedgers = [
+  ...build1125Demo().contracts,
     {
       id: "HT-001",
       contractId: "HT-001",
@@ -4721,120 +4624,6 @@ export const contractLedgers = [
       isSalesContract: true,
       archiveStatus: "not_started",
       status: "active"
-    },
-    // ===== 🆕 1125 测试数据：同一需求按明细签多份合同（一份合同一个供应商），同项目可做合同金额预警 =====
-    // 合同1：湘展 = 明细1电缆(主中标398) + 明细3 LED屏(次中标14200)；支付 83.2% ≥80% 触发支付占比预警
-    {
-      id: "CL-1125001",
-      contractId: "HT-20261125001",
-      contractNo: "HT-20261125001",
-      contractName: "2026冬季展馆物资采购合同（电缆+LED屏）—长沙湘展会展",
-      contractNature: "procurement",
-      contractTier: "primary",
-      category: "procurement",
-      contractType: "non_engineering",
-      formation: "state_owned_framework",
-      supplierId: "SUP-112501",
-      counterpartyName: "长沙湘展会展服务有限公司",
-      handler: "测试用户",
-      handlerContact: "0731-85001101",
-      handlingDepartment: "采购部",
-      demandDepartment: "工程部",
-      signingDate: "2026-11-25",
-      effectiveDate: "2026-11-25",
-      terminationDate: "2027-11-24",
-      biddingId: "BID-1125001",
-      biddingNo: "BP-20261125001",
-      demandId: "DEM-1125001",
-      demandNo: "DMP-20261125-001",
-      projectName: "2026冬季展馆物资集中采购",
-      winningDate: "2026-11-24",
-      isModelText: true,
-      amount: 312600, // 398×500 + 14200×8
-      paidAmount: 260000,
-      settlementAmount: 260000,
-      businessCategory: "expense",
-      archiveStatus: "not_started",
-      status: "active",
-      detailLinks: [
-        { detailId: "DD-1125001-1", demandId: "DEM-1125001", demandNo: "DMP-20261125-001" },
-        { detailId: "DD-1125001-3", demandId: "DEM-1125001", demandNo: "DMP-20261125-001" }
-      ]
-    },
-    // 合同2：声光 = 明细1电缆(次中标412) + 明细2智能模块(单中标2980)
-    {
-      id: "CL-1125002",
-      contractId: "HT-20261125002",
-      contractNo: "HT-20261125002",
-      contractName: "2026冬季展馆物资采购合同（电缆+智能模块）—湖南声光智能",
-      contractNature: "procurement",
-      contractTier: "primary",
-      category: "procurement",
-      contractType: "non_engineering",
-      formation: "state_owned_framework",
-      supplierId: "SUP-112502",
-      counterpartyName: "湖南声光智能科技有限公司",
-      handler: "测试用户",
-      handlerContact: "0731-85001101",
-      handlingDepartment: "采购部",
-      demandDepartment: "工程部",
-      signingDate: "2026-11-25",
-      effectiveDate: "2026-11-25",
-      terminationDate: "2027-11-24",
-      biddingId: "BID-1125001",
-      biddingNo: "BP-20261125001",
-      demandId: "DEM-1125001",
-      demandNo: "DMP-20261125-001",
-      projectName: "2026冬季展馆物资集中采购",
-      winningDate: "2026-11-24",
-      isModelText: true,
-      amount: 265600, // 412×500 + 2980×20
-      paidAmount: 60000,
-      settlementAmount: 60000,
-      businessCategory: "expense",
-      archiveStatus: "not_started",
-      status: "active",
-      detailLinks: [
-        { detailId: "DD-1125001-1", demandId: "DEM-1125001", demandNo: "DMP-20261125-001" },
-        { detailId: "DD-1125001-2", demandId: "DEM-1125001", demandNo: "DMP-20261125-001" }
-      ]
-    },
-    // 合同3：视联 = 明细3 LED屏(主中标13600)
-    {
-      id: "CL-1125003",
-      contractId: "HT-20261125003",
-      contractNo: "HT-20261125003",
-      contractName: "2026冬季展馆物资采购合同（LED显示屏）—广州视联展示",
-      contractNature: "procurement",
-      contractTier: "primary",
-      category: "procurement",
-      contractType: "non_engineering",
-      formation: "state_owned_framework",
-      supplierId: "SUP-112503",
-      counterpartyName: "广州视联展示工程有限公司",
-      handler: "测试用户",
-      handlerContact: "0731-85001101",
-      handlingDepartment: "采购部",
-      demandDepartment: "工程部",
-      signingDate: "2026-11-25",
-      effectiveDate: "2026-11-25",
-      terminationDate: "2027-11-24",
-      biddingId: "BID-1125001",
-      biddingNo: "BP-20261125001",
-      demandId: "DEM-1125001",
-      demandNo: "DMP-20261125-001",
-      projectName: "2026冬季展馆物资集中采购",
-      winningDate: "2026-11-24",
-      isModelText: true,
-      amount: 108800, // 13600×8
-      paidAmount: 28000,
-      settlementAmount: 28000,
-      businessCategory: "expense",
-      archiveStatus: "not_started",
-      status: "active",
-      detailLinks: [
-        { detailId: "DD-1125001-3", demandId: "DEM-1125001", demandNo: "DMP-20261125-001" }
-      ]
     }
   ];
 
@@ -5870,6 +5659,7 @@ if (_procurementDemo.procurementPlans) { (_oldProcurementPlans as any).length = 
 
 // ------- 2. 新增 data.ts 原来没有的数组（直接 re-export）-------
 export const biddings = [
+  ...build1125Demo().biddings,
     {
       id: "BID-001",
       biddingNo: "BP-20260901",
@@ -6127,112 +5917,6 @@ export const biddings = [
           ],
         },
       ],
-    },
-    // ===== 🆕 1125 测试数据：冬季展馆物资 目录内比价工单（明细级多供应商定标） =====
-    // 链路：需求 DEM-1125001 (DMP-20261125-001) → 本工单 BID-1125001 → 合同 HT-20261125001/002/003（按明细分别签约）
-    {
-      id: 'BID-1125001',
-      biddingNo: 'BP-20261125001',
-      projectName: '2026冬季展馆物资集中采购',
-      procurementMethod: 'framework_catalog',
-      demandId: 'DEM-1125001',
-      demandNo: 'DMP-20261125-001',
-      status: 'completed',
-      awardTime: '2026-11-24',
-      totalAmountExcludingTax: Math.round(367400 / 1.13),
-      totalAmountIncludingTax: 367400, // 定标总额：398×500 + 2980×20 + 13600×8
-      creator: '测试用户',
-      createTime: '2026-11-22',
-      inviteSupplierIds: ['SUP-112501', 'SUP-112502', 'SUP-112503'],
-      // ===== 目录内比价物资清单（3 条明细，demandDetailId 精确关联需求明细；2 条多中标 + 1 条单中标）=====
-      items: [
-        {
-          productCode: 'QD2004', productName: '强电电缆 YJV-4×35', unit: '米', quantity: 500,
-          specification: 'YJV-4×35+16 铠装·成盘',
-          demandUnitPriceIncludingTax: 428, demandUnitPriceExcludingTax: 378.76,
-          demandId: 'DEM-1125001', demandDetailId: 'DD-1125001-1',
-          // 🎯 多中标：湘展（主）+ 声光（次），一份合同一个供应商 → 两家分别签约
-          winningSupplierId: 'SUP-112501', winningSupplierName: '长沙湘展会展服务有限公司',
-          winningSuppliers: [
-            { supplierId: 'SUP-112501', supplierName: '长沙湘展会展服务有限公司', unitPrice: 398, confirmedAt: '2026-11-24T10:00:00Z' },
-            { supplierId: 'SUP-112502', supplierName: '湖南声光智能科技有限公司', unitPrice: 412, confirmedAt: '2026-11-24T10:00:00Z' },
-          ],
-          execUnitPriceIncludingTax: 398,
-          isCatalogCompare: true, rowNo: 1,
-        },
-        {
-          productCode: 'QD2011', productName: '智能照明控制模块', unit: '套', quantity: 20,
-          specification: '8回路·DALI协议',
-          demandUnitPriceIncludingTax: 3200, demandUnitPriceExcludingTax: 2831.86,
-          demandId: 'DEM-1125001', demandDetailId: 'DD-1125001-2',
-          // 🎯 单中标：声光报价最低
-          winningSupplierId: 'SUP-112502', winningSupplierName: '湖南声光智能科技有限公司',
-          winningSuppliers: [
-            { supplierId: 'SUP-112502', supplierName: '湖南声光智能科技有限公司', unitPrice: 2980, confirmedAt: '2026-11-24T10:00:00Z' },
-          ],
-          execUnitPriceIncludingTax: 2980,
-          isCatalogCompare: true, rowNo: 2,
-        },
-        {
-          productCode: 'PRD005', productName: 'LED 显示屏 P2.5', unit: '块', quantity: 8,
-          specification: '室内全彩·箱体 512×512mm',
-          demandUnitPriceIncludingTax: 15000, demandUnitPriceExcludingTax: 13274.34,
-          demandId: 'DEM-1125001', demandDetailId: 'DD-1125001-3',
-          // 🎯 多中标：视联（主）+ 湘展（次）
-          winningSupplierId: 'SUP-112503', winningSupplierName: '广州视联展示工程有限公司',
-          winningSuppliers: [
-            { supplierId: 'SUP-112503', supplierName: '广州视联展示工程有限公司', unitPrice: 13600, confirmedAt: '2026-11-24T10:00:00Z' },
-            { supplierId: 'SUP-112501', supplierName: '长沙湘展会展服务有限公司', unitPrice: 14200, confirmedAt: '2026-11-24T10:00:00Z' },
-          ],
-          execUnitPriceIncludingTax: 13600,
-          isCatalogCompare: true, rowNo: 3,
-        },
-      ],
-      // ===== 3 家供应商报价（每家含 3 个明细，items 一一对应）=====
-      quotes: [
-        {
-          id: 'Q-1125001-A', biddingId: 'BID-1125001',
-          supplierId: 'SUP-112501', supplierName: '长沙湘展会展服务有限公司',
-          taxRate: 0.13,
-          totalAmount: 398 * 500 + 3150 * 20 + 14200 * 8, // 199000 + 63000 + 113600 = 375600
-          totalAmountExcludingTax: Math.round((398 * 500 + 3150 * 20 + 14200 * 8) / 1.13),
-          isOverSingleLimit: false, isOverTotalLimit: false,
-          isQualified: true, submittedAt: '2026-11-23T09:00:00Z',
-          details: [
-            { productCode: 'QD2004', productName: '强电电缆 YJV-4×35', specification: 'YJV-4×35+16 铠装·成盘', unit: '米', quantity: 500, unitPrice: 398, unitPriceExcludingTax: 352.21, taxRate: 0.13, amount: 199000, amountExcludingTax: 176106.19, isOverSingleLimit: false },
-            { productCode: 'QD2011', productName: '智能照明控制模块', specification: '8回路·DALI协议', unit: '套', quantity: 20, unitPrice: 3150, unitPriceExcludingTax: 2787.61, taxRate: 0.13, amount: 63000, amountExcludingTax: 55752.21, isOverSingleLimit: false },
-            { productCode: 'PRD005', productName: 'LED 显示屏 P2.5', specification: '室内全彩·箱体 512×512mm', unit: '块', quantity: 8, unitPrice: 14200, unitPriceExcludingTax: 12566.37, taxRate: 0.13, amount: 113600, amountExcludingTax: 100530.97, isOverSingleLimit: false },
-          ],
-        },
-        {
-          id: 'Q-1125001-B', biddingId: 'BID-1125001',
-          supplierId: 'SUP-112502', supplierName: '湖南声光智能科技有限公司',
-          taxRate: 0.13,
-          totalAmount: 412 * 500 + 2980 * 20 + 14500 * 8, // 206000 + 59600 + 116000 = 381600
-          totalAmountExcludingTax: Math.round((412 * 500 + 2980 * 20 + 14500 * 8) / 1.13),
-          isOverSingleLimit: false, isOverTotalLimit: false,
-          isQualified: true, submittedAt: '2026-11-23T09:30:00Z',
-          details: [
-            { productCode: 'QD2004', productName: '强电电缆 YJV-4×35', specification: 'YJV-4×35+16 铠装·成盘', unit: '米', quantity: 500, unitPrice: 412, unitPriceExcludingTax: 364.60, taxRate: 0.13, amount: 206000, amountExcludingTax: 182300.88, isOverSingleLimit: false },
-            { productCode: 'QD2011', productName: '智能照明控制模块', specification: '8回路·DALI协议', unit: '套', quantity: 20, unitPrice: 2980, unitPriceExcludingTax: 2637.17, taxRate: 0.13, amount: 59600, amountExcludingTax: 52743.36, isOverSingleLimit: false },
-            { productCode: 'PRD005', productName: 'LED 显示屏 P2.5', specification: '室内全彩·箱体 512×512mm', unit: '块', quantity: 8, unitPrice: 14500, unitPriceExcludingTax: 12831.86, taxRate: 0.13, amount: 116000, amountExcludingTax: 102654.87, isOverSingleLimit: false },
-          ],
-        },
-        {
-          id: 'Q-1125001-C', biddingId: 'BID-1125001',
-          supplierId: 'SUP-112503', supplierName: '广州视联展示工程有限公司',
-          taxRate: 0.13,
-          totalAmount: 435 * 500 + 3080 * 20 + 13600 * 8, // 217500 + 61600 + 108800 = 387900
-          totalAmountExcludingTax: Math.round((435 * 500 + 3080 * 20 + 13600 * 8) / 1.13),
-          isOverSingleLimit: false, isOverTotalLimit: false,
-          isQualified: true, submittedAt: '2026-11-23T10:00:00Z',
-          details: [
-            { productCode: 'QD2004', productName: '强电电缆 YJV-4×35', specification: 'YJV-4×35+16 铠装·成盘', unit: '米', quantity: 500, unitPrice: 435, unitPriceExcludingTax: 384.96, taxRate: 0.13, amount: 217500, amountExcludingTax: 192477.88, isOverSingleLimit: false },
-            { productCode: 'QD2011', productName: '智能照明控制模块', specification: '8回路·DALI协议', unit: '套', quantity: 20, unitPrice: 3080, unitPriceExcludingTax: 2725.66, taxRate: 0.13, amount: 61600, amountExcludingTax: 54513.27, isOverSingleLimit: false },
-            { productCode: 'PRD005', productName: 'LED 显示屏 P2.5', specification: '室内全彩·箱体 512×512mm', unit: '块', quantity: 8, unitPrice: 13600, unitPriceExcludingTax: 12035.40, taxRate: 0.13, amount: 108800, amountExcludingTax: 96283.19, isOverSingleLimit: false },
-          ],
-        },
-      ],
     }
   ];
 
@@ -6284,4 +5968,218 @@ export const serviceApplications: ServiceApplication[] = [
     ],
   },
 ];
+
+// ===== 🆕 1125 测试数据生成器（10 条需求 → 10 个工单明细级多中标 → 按中标记录签 N 份合同）=====
+// 一切数据皆有源：报价(quotes) → 定标(winningSuppliers) → 合同(detailLinks 按「明细+供应商」占用，前5条需求已签约用于验证锁定)
+export function build1125Demo() {
+  const TAX = 0.13;
+  const toEx = (p: number) => Math.round((p / 1.13) * 100) / 100;
+  const supA = { id: 'SUP-112501', name: '长沙湘展会展服务有限公司', contact: '刘经理', phone: '0731-85001125', address: '长沙市岳麓区展馆路 112 号', unifiedSocialCreditCode: '91430100MA41125A01', createTime: '2026-11-01' };
+  const supB = { id: 'SUP-112502', name: '湖南声光智能科技有限公司', contact: '陈工', phone: '0731-85001225', address: '长沙市高新区麓谷二路 55 号', unifiedSocialCreditCode: '91430100MA41125B02', createTime: '2026-11-01' };
+  const supC = { id: 'SUP-112503', name: '广州视联展示工程有限公司', contact: '黄总', phone: '020-38991125', address: '广州市海珠区新港东路 1006 号', unifiedSocialCreditCode: '91440100MA41125C03', createTime: '2026-11-01' };
+  const supAll = [supA, supB, supC];
+
+  // 物料池（8 种轮换）：budget=预算审定含税单价；price=各家中标/报价含税单价
+  const catalog = [
+    { code: 'QD2004', name: '强电电缆 YJV-4×35', unit: '米', qty: 500, budget: 428, price: { a: 398, b: 412, c: 435 } },
+    { code: 'QD2011', name: '智能照明控制模块', unit: '套', qty: 20, budget: 3200, price: { a: 3150, b: 2980, c: 3080 } },
+    { code: 'PRD005', name: 'LED 显示屏 P2.5', unit: '块', qty: 8, budget: 15000, price: { a: 14200, b: 14500, c: 13600 } },
+    { code: 'QD2001', name: '铝型材展架 3m', unit: '根', qty: 120, budget: 260, price: { a: 238, b: 245, c: 252 } },
+    { code: 'PRD003', name: '防火地毯 B1 级', unit: '平方米', qty: 800, budget: 68, price: { a: 59, b: 62, c: 64 } },
+    { code: 'QD2012', name: '配电箱 63A', unit: '个', qty: 30, budget: 850, price: { a: 768, b: 795, c: 810 } },
+    { code: 'QD2016', name: '手拉吊葫芦 1T/12m', unit: '个', qty: 40, budget: 320, price: { a: 286, b: 295, c: 302 } },
+    { code: 'PRD001', name: '主视觉桁架 3m×2m', unit: '套', qty: 60, budget: 560, price: { a: 498, b: 515, c: 528 } },
+  ];
+  const spec = '1125 演示物资';
+  const demandNames = [
+    '2026冬季展馆物资集中采购', '冬季布展强电物资采购', '展馆照明与智能模块采购', 'LED 展示设备采购',
+    '展架桁架类物资采购', '地铺设装物资采购', '配电与吊装设备采购', '展具标准化物资采购',
+    '冬季巡展物资补充采购', '展馆应急物资备货采购',
+  ];
+  const supRef = { a: supA, b: supB, c: supC } as const;
+  type SupKey = keyof typeof supRef;
+
+  const demands: any[] = [];
+  const biddings: any[] = [];
+  const contracts: any[] = [];
+
+  for (let i = 1; i <= 10; i++) {
+    const seq = String(i).padStart(3, '0');
+    const demandId = `DEM-1125${seq}`;
+    const demandNo = `DMP-20261125-${seq}`;
+    const biddingId = `BID-1125${seq}`;
+    const biddingNo = `BP-20261125${seq}`;
+    // 每条需求 2 条明细（物料池轮换，不与自身重复）
+    const itemA = catalog[(i - 1) % catalog.length];
+    const itemB = catalog[(i + 3) % catalog.length];
+    // 中标模式轮换：偶数序号明细A=两家多中标、奇数=单中标；明细B 相反 → 覆盖单/多中标各场景
+    const dualA = i % 2 === 0;
+    const dualB = i % 3 !== 0;
+    const winnersA: Array<{ k: SupKey; sup: typeof supA }> = dualA
+      ? [{ k: 'a', sup: supA }, { k: 'b', sup: supB }]
+      : [{ k: 'b', sup: supB }];
+    const winnersB: Array<{ k: SupKey; sup: typeof supA }> = dualB
+      ? [{ k: 'c', sup: supC }, { k: 'a', sup: supA }]
+      : [{ k: 'c', sup: supC }];
+
+    const details = [itemA, itemB].map((it, idx) => ({
+      id: `DD-1125${seq}-${idx + 1}`,
+      demandId,
+      productCode: it.code,
+      productName: it.name,
+      unit: it.unit,
+      quantity: it.qty,
+      unitPriceExcludingTax: toEx(it.budget),
+      unitPriceIncludingTax: it.budget,
+      taxRate: TAX,
+      amountExcludingTax: Math.round(toEx(it.budget) * it.qty),
+      amountIncludingTax: it.budget * it.qty,
+    }));
+
+    demands.push({
+      id: demandId,
+      demandNo,
+      demandType: 'service_non_engineering',
+      businessCategory: 'non_engineering',
+      subType: 'goods',
+      procurementType: 'within_framework',
+      procurementMode: 'application_form',
+      applicant: '测试用户',
+      applicantDept: '工程部',
+      applyDate: '2026-11-20',
+      projectName: demandNames[i - 1],
+      estimatedAmount: (itemA.budget + itemB.budget) * 1,
+      requiredDeliveryDate: '2026-12-20',
+      reason: '1125 演示数据：一条明细多家中标 → 按中标记录分别签约',
+      status: 'confirm_approved',
+      createTime: '2026-11-20',
+      approveTime: '2026-11-21 10:00:00',
+      approver: '采购主管-李',
+      needContract: 'yes',
+      confirmApprover: '副总经理-陈',
+      confirmApproveTime: '2026-11-21 15:30:00',
+      relatedOrderId: biddingId,
+      details,
+    });
+
+    // ===== 工单：目录内比价，明细级定标 + 3 家全量报价 =====
+    const buildLine = (it: (typeof catalog)[number], idx: number, winners: Array<{ k: SupKey; sup: typeof supA }>) => ({
+      productCode: it.code,
+      productName: it.name,
+      unit: it.unit,
+      quantity: it.qty,
+      specification: spec,
+      demandUnitPriceIncludingTax: it.budget,
+      demandUnitPriceExcludingTax: toEx(it.budget),
+      demandId,
+      demandDetailId: `DD-1125${seq}-${idx}`,
+      winningSupplierId: winners[0].sup.id,
+      winningSupplierName: winners[0].sup.name,
+      winningSuppliers: winners.map((w) => ({ supplierId: w.sup.id, supplierName: w.sup.name, unitPrice: it.price[w.k], confirmedAt: '2026-11-24T10:00:00Z' })),
+      execUnitPriceIncludingTax: it.price[winners[0].k],
+      isCatalogCompare: true,
+      rowNo: idx,
+    });
+    const lines = [buildLine(itemA, 1, winnersA), buildLine(itemB, 2, winnersB)];
+    const totalInc = lines.reduce((s, l) => s + l.execUnitPriceIncludingTax * l.quantity, 0);
+
+    biddings.push({
+      id: biddingId,
+      biddingNo,
+      projectName: demandNames[i - 1],
+      procurementMethod: 'framework_catalog',
+      demandId,
+      demandNo,
+      status: 'completed',
+      awardTime: '2026-11-24',
+      totalAmountExcludingTax: Math.round(totalInc / 1.13),
+      totalAmountIncludingTax: totalInc,
+      creator: '测试用户',
+      createTime: '2026-11-22',
+      inviteSupplierIds: supAll.map((s) => s.id),
+      items: lines,
+      quotes: (['a', 'b', 'c'] as SupKey[]).map((k, qi) => {
+        const s = supRef[k];
+        const qDetails = [itemA, itemB].map((it) => ({
+          productCode: it.code, productName: it.name, specification: spec, unit: it.unit, quantity: it.qty,
+          unitPrice: it.price[k], unitPriceExcludingTax: toEx(it.price[k]), taxRate: TAX,
+          amount: it.price[k] * it.qty, amountExcludingTax: Math.round(toEx(it.price[k]) * it.qty),
+          isOverSingleLimit: false,
+        }));
+        const qTotal = qDetails.reduce((s2, d) => s2 + d.amount, 0);
+        return {
+          id: `Q-1125${seq}-${k.toUpperCase()}`,
+          biddingId,
+          supplierId: s.id,
+          supplierName: s.name,
+          taxRate: TAX,
+          totalAmount: qTotal,
+          totalAmountExcludingTax: Math.round(qTotal / 1.13),
+          isOverSingleLimit: false, isOverTotalLimit: false,
+          isQualified: true,
+          submittedAt: `2026-11-23T0${qi + 8}:00:00Z`,
+          details: qDetails,
+        };
+      }),
+    });
+
+    // ===== 合同：前 5 条需求已按「明细+供应商」主中标记录签约（验证锁定效果），后 5 条全部可签 =====
+    if (i <= 5) {
+      // 合同供应商 = 明细A主中标；detailLinks = 该家在两条明细中的全部中标记录
+      const mainSup = winnersA[0];
+      const links: any[] = [];
+      let amount = 0;
+      if (winnersA.some((w) => w.sup.id === mainSup.sup.id)) {
+        links.push({ detailId: `DD-1125${seq}-1`, demandId, demandNo, supplierId: mainSup.sup.id, unitPrice: itemA.price[mainSup.k] });
+        amount += itemA.price[mainSup.k] * itemA.qty;
+      }
+      const inB = winnersB.find((w) => w.sup.id === mainSup.sup.id);
+      if (inB) {
+        links.push({ detailId: `DD-1125${seq}-2`, demandId, demandNo, supplierId: mainSup.sup.id, unitPrice: itemB.price[inB.k] });
+        amount += itemB.price[inB.k] * itemB.qty;
+      }
+      contracts.push({
+        id: `CL-1125${seq}`,
+        contractId: `HT-20261125${seq}`,
+        contractNo: `HT-20261125${seq}`,
+        contractName: `${demandNames[i - 1]}合同—${mainSup.sup.name}`,
+        contractNature: 'procurement',
+        contractTier: 'primary',
+        category: 'procurement',
+        contractType: 'non_engineering',
+        formation: 'state_owned_framework',
+        supplierId: mainSup.sup.id,
+        counterpartyName: mainSup.sup.name,
+        handler: '测试用户',
+        handlerContact: '0731-85001101',
+        handlingDepartment: '采购部',
+        demandDepartment: '工程部',
+        signingDate: '2026-11-25',
+        effectiveDate: '2026-11-25',
+        terminationDate: '2027-11-24',
+        biddingId,
+        biddingNo,
+        demandId,
+        demandNo,
+        projectName: demandNames[i - 1],
+        winningDate: '2026-11-24',
+        isModelText: true,
+        amount,
+        paidAmount: i === 1 ? Math.round(amount * 0.85) : Math.round(amount * 0.3),
+        settlementAmount: i === 1 ? Math.round(amount * 0.85) : Math.round(amount * 0.3),
+        businessCategory: 'expense',
+        archiveStatus: 'not_started',
+        status: 'active',
+        detailLinks: links,
+      });
+    }
+  }
+
+  return {
+    suppliers: supAll.map((s) => ({ ...s, code: s.id.replace('SUP-', 'SUP'), status: 'enabled' })),
+    demands,
+    biddings,
+    contracts,
+  };
+}
 
