@@ -1463,8 +1463,10 @@ export interface CatalogCompareItem {
   winningSuppliers?: Array<{
     supplierId: string;
     supplierName: string;
-    /** 🆕 需求级统一含税单价（所有中标供应商共享；不含税 = unitPrice / (1 + taxRate)） */
+    /** 签约口径单价：taxRate 有值时 = 含税价；taxRate 为空时 = 不含税价（合同按此口径签） */
     unitPrice: number;
+    /** 🆕 税率：有值 = 该供应商按含税价签合同；为空 = 按不含税价签（招采执行定标时决定） */
+    taxRate?: number;
     quoteId?: string;
     confirmedAt?: string;
   }>;
@@ -1520,8 +1522,10 @@ export interface OfflineDetailItem {
   winningSuppliers?: Array<{
     supplierId: string;
     supplierName: string;
-    /** 🆕 需求级统一含税单价（所有中标供应商共享；不含税 = unitPrice / (1 + taxRate)） */
+    /** 签约口径单价：taxRate 有值时 = 含税价；taxRate 为空时 = 不含税价 */
     unitPrice: number;
+    /** 🆕 税率：有值 = 按含税价签合同；为空 = 按不含税价签 */
+    taxRate?: number;
     quoteId?: string;
     confirmedAt?: string;
   }>;
@@ -1681,12 +1685,14 @@ export interface Bidding {
 
   winningSupplierId?: string;           // 中标供应商（旧单值，取 winningSuppliers[0] 兜底）
   winningSupplierName?: string;         // 旧单值兜底
-  /** 🆕 需求级多家中标供应商名单（贯穿全需求所有明细，所有中标供应商共享同一含税单价） */
+  /** 🆕 需求级多家中标供应商名单（贯穿全需求所有明细；每家自己的签约口径单价） */
   winningSuppliers?: Array<{
     supplierId: string;
     supplierName: string;
-    /** 🆕 需求级统一含税单价；不含税 = unitPrice / (1 + taxRate) */
+    /** 签约口径单价：taxRate 有值时 = 含税价；taxRate 为空时 = 不含税价 */
     unitPrice: number;
+    /** 🆕 税率：有值 = 按含税价签合同（税率即合同税率）；为空 = 按不含税价签 */
+    taxRate?: number;
     confirmedAt?: string;
   }>;
   winningSupplierLegalPerson?: string; // 中标单位法人名字

@@ -1,11 +1,17 @@
 // ⚠️ 此文件由 scripts/gen-changelog.cjs 构建时自动生成（数据源：git log），请勿手改
-// 生成时间：2026-11-26 21:55 · 统计范围：2026-10-12 起 · git 解析成功
+// 生成时间：2026-11-27 11:25 · 统计范围：2026-10-12 起 · git 解析成功
 import type { ChangeDay } from './changelog';
 
 export const AUTO_CHANGELOG: ChangeDay[] = [
   {
     "date": "2026-11-26",
     "entries": [
+      {
+        "type": "fix",
+        "scope": "供应商",
+        "title": "中标供应商整单统一选 — 清单明细弹窗删除每行供应商列",
+        "commit": "3e45e0c"
+      },
       {
         "type": "feat",
         "scope": "采购需求",
@@ -894,7 +900,7 @@ export const AUTO_CHANGELOG: ChangeDay[] = [
   }
 ];
 
-export const AUTO_GENERATED_AT = '2026-11-26 21:55';
+export const AUTO_GENERATED_AT = '2026-11-27 11:25';
 
 // 功能说明防过期护栏：构建时检测「最近触碰页面代码的功能提交」是否晚于 procurementHelp.ts 最后更新
 export const HELP_STALE = {

@@ -521,166 +521,109 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
     ? biddings.find((b) => b.id === currentDemand.relatedOrderId || b.demandId === currentDemand.id) ?? null
     : null;
 
-  // 需求明细 → 工单定标行（目录内比价 items / 线下录入 offlineDetails 均以 demandDetailId 精确关联）
-  const findBidLineForDetail = (demandDetailId: string) => {
-    if (!currentBidding) return null;
-    const item = (currentBidding.items || []).find((it) => it.demandDetailId === demandDetailId);
-    if (item) return item;
-    return (currentBidding.offlineDetails || []).find((o) => o.demandDetailId === demandDetailId) ?? null;
-  };
-
-  // ===== 🆕 按中标记录签约：需求明细 × 各家中标 展开成行 =====
-  // 一条明细多家中标 = 多行，每行「供应商+单价」是一条独立签约记录，只能被一份合同占用
-  // 已被其他合同签约的「明细+供应商」记录（编辑时排除本合同自身，防止自己锁自己）
-  const occupiedRecords = new Map<string, string>(); // key: detailId|supplierId → 占用合同编号
+  // ===== 🆕 需求级多家中标：每家中标供应商一行（一份需求可签多个供应商，每家一份合同） =====
+  // 占用维度 = 需求×供应商（该供应商在本需求已有合同 → 已占用；编辑时排除本合同自身）
+  const occupiedSupplierMap = new Map<string, string>(); // key: demandId|supplierId → 占用合同编号
   contractLedgers.forEach((c) => {
     if (editing && c.id === editing.id) return;
     (c.detailLinks ?? []).forEach((l) => {
-      if (l.supplierId) occupiedRecords.set(`${l.detailId}|${l.supplierId}`, c.contractNo || c.contractName || '');
+      if (l.demandId && l.supplierId && !occupiedSupplierMap.has(`${l.demandId}|${l.supplierId}`)) {
+        occupiedSupplierMap.set(`${l.demandId}|${l.supplierId}`, c.contractNo || c.contractName || '');
+      }
     });
   });
 
-  const winningRecordRows = (currentDemand?.details ?? []).flatMap((d) => {
-    const line = findBidLineForDetail(d.id);
-    const taxRate = (d.taxRate ?? 0.13); // 🆕 需求明细税率，兜底 13%
-    const base = {
-      detailId: d.id, detailName: d.productName, specification: d.specification,
-      quantity: d.quantity, unit: d.unit, taxRate,
-    };
-    const winners = line?.winningSuppliers ?? [];
-    if (winners.length > 0) {
-      // 明细级多中标：每家中标记录一行
-      return winners.map((w) => ({
-        ...base,
-        supplierId: w.supplierId, supplierName: w.supplierName, unitPrice: w.unitPrice,
-        signedBy: occupiedRecords.get(`${d.id}|${w.supplierId}`),
-      }));
+  /** 从工单提取需求级中标供应商名单（每家含口径价与税率：taxRate 有值=按含税价签，空=按不含税价签） */
+  const extractDemandWinners = (bidding: (typeof biddings)[number] | null): Array<{
+    supplierId: string; supplierName: string; unitPrice: number; taxRate?: number;
+  }> => {
+    if (!bidding) return [];
+    const top = (bidding.winningSuppliers || []) as Array<{ supplierId: string; supplierName: string; unitPrice: number; taxRate?: number }>;
+    if (top.length > 0) return top;
+    // 兜底：明细行中标名单去重
+    const dedup = new Map<string, { supplierId: string; supplierName: string; unitPrice: number; taxRate?: number }>();
+    [...(bidding.items || []), ...((bidding as any).offlineDetails || [])].forEach((line: any) => {
+      (line.winningSuppliers || []).forEach((w: any) => {
+        if (!dedup.has(w.supplierId)) dedup.set(w.supplierId, { supplierId: w.supplierId, supplierName: w.supplierName, unitPrice: w.unitPrice || 0, taxRate: w.taxRate });
+      });
+    });
+    if (dedup.size === 0 && (bidding as any).winningSupplierName) {
+      // 旧单值兜底：旧数据只有含税价 → 默认含税 13% 口径
+      const sid = suppliers.find((s) => s.name === (bidding as any).winningSupplierName)?.id || '';
+      const price = (bidding as any).execUnitPriceIncludingTax ?? (bidding as any).unitPriceIncludingTax ?? 0;
+      if (sid) dedup.set(sid, { supplierId: sid, supplierName: (bidding as any).winningSupplierName, unitPrice: price, taxRate: 0.13 });
     }
-    if (line?.winningSupplierName) {
-      // 旧单值兜底：主中标一行（名称反查供应商档案取 ID）
-      const sid = suppliers.find((s) => s.name === line.winningSupplierName)?.id || '';
-      const legacy = line as { execUnitPriceIncludingTax?: number; unitPriceIncludingTax?: number };
-      return [{
-        ...base,
-        supplierId: sid, supplierName: line.winningSupplierName,
-        unitPrice: legacy.execUnitPriceIncludingTax ?? legacy.unitPriceIncludingTax ?? 0,
-        signedBy: occupiedRecords.get(`${d.id}|${sid}`),
-      }];
-    }
-    // 未定标：占位行，不可勾选（提醒先回工单完成定标）
-    return [{ ...base, supplierId: '', supplierName: '', unitPrice: 0, signedBy: undefined }];
-  });
-
-  // 勾选状态：按「明细+供应商」精确匹配
-  const isRecordChecked = (detailId: string, supplierId: string) =>
-    (form.detailLinks ?? []).some((l) => l.detailId === detailId && l.supplierId === supplierId);
-
-  // 勾选/取消一条中标记录：联动合同金额（Σ所选单价×数量）
-  // 🆕 签约口径单价换算：含税→原值；不含税→原值/(1+税率)
-  const priceForContract = (inclTaxPrice: number, taxRate: number | undefined, priceType: 'incl_tax' | 'excl_tax' | undefined) => {
-    const rate = taxRate ?? 0.13;
-    return priceType === 'excl_tax' ? inclTaxPrice / (1 + rate) : inclTaxPrice;
+    return Array.from(dedup.values());
   };
 
-  // 🆕 一合同一供应商：仅允许勾选「本合同供应商」的记录（供应商由上方下拉锁定）
-  const toggleWinningRecord = (row: (typeof winningRecordRows)[number], checked: boolean) => {
-    if (!form.demandId || !row.supplierId) return;
-    if (!form.supplierId || row.supplierId !== form.supplierId) return;
-    const priceType = form.priceType ?? 'incl_tax';
-    const taxRate = row.taxRate ?? 0.13;
-    const next = (form.detailLinks ?? []).filter(
-      (l) => !(l.detailId === row.detailId && l.supplierId === row.supplierId)
-    );
-    if (checked) {
-      next.push({
-        demandId: form.demandId,
-        demandNo: form.demandNo,
-        detailId: row.detailId,
-        supplierId: row.supplierId,
-        unitPrice: row.unitPrice,            // 存含税单价（原始）
-        priceType,                            // 🆕 签约口径
-        unitPriceExcludingTax: priceType === 'excl_tax' ? priceForContract(row.unitPrice, taxRate, priceType) : undefined,
-      });
-    }
-    const patch: Partial<ContractLedger> = { detailLinks: next };
-    if (next.length > 0) {
-      let total = 0;
-      next.forEach((l) => {
-        const r = winningRecordRows.find((w) => w.detailId === l.detailId && w.supplierId === l.supplierId);
-        if (!r) return;
-        // 🆕 按口径取单价算金额
-        const rowPriceType = l.priceType ?? priceType;
-        const rowTax = (r as any).taxRate ?? taxRate;
-        total += priceForContract(l.unitPrice ?? 0, rowTax, rowPriceType) * r.quantity;
-      });
-      patch.amount = Math.round(total * 100) / 100;
-    }
-    update(patch);
+  // 本需求的中标供应商行（含占用状态）+ 当前选中供应商的中标记录
+  const winningSupplierRows = extractDemandWinners(currentBidding).map((w) => ({
+    ...w,
+    signedBy: form.demandId ? occupiedSupplierMap.get(`${form.demandId}|${w.supplierId}`) : undefined,
+  }));
+  const selectedWinRow = winningSupplierRows.find((r) => r.supplierId === form.supplierId) || null;
+
+  // 🆕 口径换算：含税 → 不含税 = 含税 / (1 + 税率)
+  const inclToExcl = (inclPrice: number, taxRate: number | undefined) => inclPrice / (1 + (taxRate ?? 0.13));
+
+  /**
+   * 🆕 按中标供应商生成合同明细关联（一份合同自动关联该需求全部明细，无需手动勾选明细）
+   * 签约口径取自招采执行定标：中标时填了税率 → 按含税价签；没填税率 → 按不含税价签
+   */
+  const buildLinksForSupplier = (demand: (typeof procurementDemands)[number], row: { supplierId: string; unitPrice: number; taxRate?: number }) => {
+    const incl = row.taxRate != null;
+    const r2 = (v: number) => Math.round(v * 100) / 100;
+    return (demand.details ?? []).map((d) => ({
+      demandId: demand.id,
+      demandNo: demand.demandNo,
+      detailId: d.id,
+      supplierId: row.supplierId,
+      unitPrice: row.unitPrice,               // 口径单价（即合同单价）
+      priceType: incl ? ('incl_tax' as const) : ('excl_tax' as const),
+      unitPriceExcludingTax: incl ? r2(inclToExcl(row.unitPrice, row.taxRate)) : r2(row.unitPrice),
+    }));
   };
 
-  // 🆕 手动切换本合同供应商：自动全勾其全部可签记录，并联动相对方与金额
+  // 🆕 选择本合同供应商：签约口径自动取自招采执行（填了税率=按含税价签），明细关联自动生成，金额自动计算
   const handleContractSupplierChange = (sid: string) => {
     if (!currentDemand) return;
-    const priceType = form.priceType ?? 'incl_tax';
-    const taxRate = form.taxRate ?? 0.13;
-    const signable = computeSignableRecords(currentDemand, currentBidding);
-    const mine = signable.filter((r) => r.supplierId === sid);
+    const row = winningSupplierRows.find((r) => r.supplierId === sid);
+    if (!sid || !row) {
+      const sup = (suppliers as Supplier[]).find((s) => s.id === sid);
+      update({ supplierId: sid || undefined, counterpartyName: sup?.name || '', detailLinks: [] });
+      return;
+    }
+    const incl = row.taxRate != null;
+    const r2 = (v: number) => Math.round(v * 100) / 100;
+    const links = buildLinksForSupplier(currentDemand, row);
+    const total = (currentDemand.details ?? []).reduce((s, d) => s + row.unitPrice * d.quantity, 0);
     update({
       supplierId: sid,
-      counterpartyName: mine[0]?.supplierName || '',
-      detailLinks: mine.map((r) => {
-        const inclPrice = r.unitPrice;
-        return {
-          demandId: currentDemand.id,
-          demandNo: currentDemand.demandNo,
-          detailId: r.detailId,
-          supplierId: r.supplierId,
-          unitPrice: inclPrice,
-          priceType,
-          unitPriceExcludingTax: priceType === 'excl_tax' ? priceForContract(inclPrice, taxRate, priceType) : undefined,
-        };
-      }),
-      amount: Math.round(mine.reduce((s, r) => s + priceForContract(r.unitPrice, taxRate, priceType) * r.quantity, 0) * 100) / 100,
+      counterpartyName: row.supplierName,
+      priceType: incl ? 'incl_tax' : 'excl_tax',
+      taxRate: incl ? row.taxRate : undefined,
+      detailLinks: links,
+      amount: r2(total),
     });
   };
 
   // ===== 🆕 一合同一供应商 =====
-  // 计算某需求下全部「可签」中标记录（编辑时排除本合同自身占用）；旧单值中标兜底同 winningRecordRows
-  const computeSignableRecords = (demand: (typeof procurementDemands)[number], bidding: (typeof biddings)[number] | null) => {
+  // 计算某需求下「可签」的中标供应商名单（本需求已被其他合同签约的供应商排除；编辑时排除本合同自身）
+  const computeSignableSuppliers = (demand: (typeof procurementDemands)[number], bidding: (typeof biddings)[number] | null) => {
     const occ = new Set<string>();
     contractLedgers.forEach((c) => {
       if (editing && c.id === editing.id) return;
-      (c.detailLinks ?? []).forEach((l) => { if (l.supplierId) occ.add(`${l.detailId}|${l.supplierId}`); });
+      (c.detailLinks ?? []).forEach((l) => { if (l.demandId === demand.id && l.supplierId) occ.add(l.supplierId); });
     });
-    const findLine = (did: string) => {
-      if (!bidding) return null;
-      const item = (bidding.items || []).find((it) => it.demandDetailId === did);
-      if (item) return item;
-      return (bidding.offlineDetails || []).find((o) => o.demandDetailId === did) ?? null;
-    };
-    const out: { detailId: string; supplierId: string; supplierName: string; unitPrice: number; quantity: number }[] = [];
-    (demand.details ?? []).forEach((d) => {
-      const line = findLine(d.id);
-      const legacy = line as { winningSupplierName?: string; execUnitPriceIncludingTax?: number; unitPriceIncludingTax?: number } | null;
-      const rows = (line?.winningSuppliers ?? []).length > 0
-        ? line!.winningSuppliers!.map((w) => ({ supplierId: w.supplierId, supplierName: w.supplierName, unitPrice: w.unitPrice }))
-        : legacy?.winningSupplierName
-          ? [{ supplierId: suppliers.find((s) => s.name === legacy.winningSupplierName)?.id || '', supplierName: legacy.winningSupplierName, unitPrice: legacy.execUnitPriceIncludingTax ?? legacy.unitPriceIncludingTax ?? 0 }]
-          : [];
-      rows.forEach((w) => {
-        if (!w.supplierId || occ.has(`${d.id}|${w.supplierId}`)) return;
-        out.push({ detailId: d.id, supplierId: w.supplierId, supplierName: w.supplierName, unitPrice: w.unitPrice || 0, quantity: d.quantity });
-      });
-    });
-    return out;
+    return extractDemandWinners(bidding).filter((w) => w.unitPrice > 0 && !occ.has(w.supplierId));
   };
 
-  // 本合同供应商下拉：仅列出「至少还有 1 条可签记录」的供应商（全部签完的不出现）
+  // 本合同供应商下拉：仅列出「未被他合同签约」的中标供应商（全部签完的不出现）
   const contractSupplierOptions = [
     { value: '', label: '-- 请选择本合同供应商（一份合同对应一个供应商）--' },
-    ...[...new Set(winningRecordRows.filter((r) => r.supplierId && !r.signedBy).map((r) => r.supplierId as string))].map((sid) => ({
-      value: sid,
-      label: winningRecordRows.find((r) => r.supplierId === sid)?.supplierName || sid,
+    ...winningSupplierRows.filter((r) => r.supplierId && !r.signedBy).map((r) => ({
+      value: r.supplierId,
+      label: r.supplierName,
     })),
   ];
 
@@ -700,15 +643,9 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
     const autoFormation: ProcurementFormation | undefined =
       bidding?.procurementMethod ? BIDDING_METHOD_TO_FORMATION[bidding.procurementMethod] : undefined;
 
-    // 🆕 方案A：从中标结果提取供应商（覆盖目录内比价多中标/随机抽取/线下单中标），主中标人 = 第一家
-    const winningList = extractWinningSuppliers(bidding);
-    const primaryWinner = winningList[0];
-
-    // 🆕 一合同一供应商：默认选中主中标人；主中标人无可签记录时，退选第一家有可签记录的供应商
-    const signable = computeSignableRecords(demand, bidding);
-    let defaultSid = primaryWinner?.supplierId || '';
-    if (defaultSid && !signable.some((r) => r.supplierId === defaultSid)) defaultSid = '';
-    if (!defaultSid) defaultSid = signable[0]?.supplierId || '';
+    // 🆕 需求级多家中标：默认选中第一家「可签」供应商（本需求未被他合同签约的）
+    const signable = computeSignableSuppliers(demand, bidding);
+    const defaultSid = signable[0]?.supplierId || '';
 
     // ====== 自动回填规则：需求有值就覆盖（以需求为准） ======
     const patch: Partial<ContractLedger> = {
@@ -748,18 +685,18 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
       patch.amount = demand.estimatedAmount;
     }
 
-    // 🆕 按中标记录签约：选需求后清空勾选，由用户在中标记录表格按「明细+供应商」逐条挑选（每条记录只能签一份合同）
-    // 🆕 一合同一供应商：默认全勾所选供应商的全部可签中标记录，金额 = Σ(中标单价×数量)（有记录时覆盖预估金额）
-    const mine = signable.filter((r) => r.supplierId === defaultSid);
-    patch.detailLinks = mine.map((r) => ({
-      demandId: demand.id,
-      demandNo: demand.demandNo,
-      detailId: r.detailId,
-      supplierId: r.supplierId,
-      unitPrice: r.unitPrice,
-    }));
-    if (mine.length > 0) {
-      patch.amount = Math.round(mine.reduce((s, r) => s + r.unitPrice * r.quantity, 0) * 100) / 100;
+    // 🆕 需求级多中标：明细关联自动生成（无需手动勾选明细）+ 签约口径取自招采执行定标
+    const defaultRow = signable.find((r) => r.supplierId === defaultSid);
+    if (defaultRow) {
+      const incl = defaultRow.taxRate != null;
+      const r2 = (v: number) => Math.round(v * 100) / 100;
+      patch.counterpartyName = defaultRow.supplierName;
+      patch.priceType = incl ? 'incl_tax' : 'excl_tax';
+      patch.taxRate = incl ? defaultRow.taxRate : undefined;
+      patch.detailLinks = buildLinksForSupplier(demand, defaultRow);
+      patch.amount = r2((demand.details ?? []).reduce((s, d) => s + defaultRow.unitPrice * d.quantity, 0));
+    } else {
+      patch.detailLinks = [];
     }
 
     update(patch);
@@ -844,7 +781,7 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
           />
 
           {/* 🆕 按中标记录签约：需求明细 × 各家中标 展开成行，每条记录只能被一份合同占用 */}
-          {form.demandId && winningRecordRows.length > 0 && (
+          {form.demandId && winningSupplierRows.length > 0 && (
             <div className="col-span-2 rounded-lg border border-amber-200 bg-amber-50/50 p-4">
               {/* 🆕 一合同一供应商：先选供应商，自动全勾其可签记录；其他供应商禁用置灰 */}
               <div className="mb-3 flex items-center gap-3 flex-wrap">
@@ -860,165 +797,48 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
                   />
                 </div>
                 <span className="text-xs text-amber-700">
-                  选定后自动全勾该供应商的全部可签中标记录；其他供应商请分别新建合同
+                  选定后自动带出签约口径与合同金额；其他中标供应商请分别新建合同
                 </span>
               </div>
 
-              {/* 🆕 签约口径：含税/不含税 + 税率 */}
-              <div className="mb-3 flex items-center gap-3 flex-wrap pt-3 border-t border-amber-100">
-                <label className="text-sm font-semibold text-amber-900 whitespace-nowrap">
-                  本合同签约口径
-                </label>
-                <div className="w-48">
-                  <Select
-                    options={[
-                      { value: 'incl_tax', label: '① 按含税价签（合同金额 = Σ含税单价×数量）' },
-                      { value: 'excl_tax', label: '② 按不含税价签（合同金额 = Σ不含税单价×数量）' },
-                    ]}
-                    value={form.priceType || 'incl_tax'}
-                    onChange={(e) => {
-                      const newPriceType = e.target.value as 'incl_tax' | 'excl_tax';
-                      update({ priceType: newPriceType });
-                      // 立即按新口径重算所有已勾记录 + 重算合同金额
-                      if (form.supplierId && (form.detailLinks ?? []).length > 0) {
-                        const oldLinks = form.detailLinks ?? [];
-                        const taxRate = form.taxRate ?? 0.13;
-                        const newLinks = oldLinks.map((l) => {
-                          const r = winningRecordRows.find((w) => w.detailId === l.detailId && w.supplierId === l.supplierId);
-                          const rowTax = (r as any)?.taxRate ?? taxRate;
-                          return {
-                            ...l,
-                            priceType: newPriceType,
-                            unitPriceExcludingTax: newPriceType === 'excl_tax'
-                              ? ((l.unitPrice ?? 0) / (1 + rowTax))
-                              : undefined,
-                          };
-                        });
-                        let total = 0;
-                        newLinks.forEach((l) => {
-                          const r = winningRecordRows.find((w) => w.detailId === l.detailId && w.supplierId === l.supplierId);
-                          if (!r) return;
-                          const rowTax = (r as any).taxRate ?? taxRate;
-                          total += priceForContract(l.unitPrice ?? 0, rowTax, newPriceType) * r.quantity;
-                        });
-                        update({ detailLinks: newLinks, amount: Math.round(total * 100) / 100 });
-                      }
-                    }}
-                  />
+              {/* 🆕 签约口径：自动取自招采执行定标（中标时填了税率=按含税价签；没填=按不含税价签），只读不可改 */}
+              {form.supplierId && selectedWinRow ? (
+                <div className="rounded-lg border border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50/40 px-4 py-3 mb-3">
+                  <div className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
+                    📌 本合同签约口径（自动取自招采执行定标，不可修改）
+                  </div>
+                  <div className="mt-2 flex items-center gap-3 flex-wrap text-[13px]">
+                    {selectedWinRow.taxRate != null ? (
+                      <>
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-indigo-100 border border-indigo-300 text-indigo-700 font-semibold text-xs">
+                          按含税价签（税率 {(selectedWinRow.taxRate * 100).toFixed(0)}%）
+                        </span>
+                        <span className="text-slate-600">该供应商中标时已填税率</span>
+                        <span className="text-slate-600">含税单价 <b className="text-indigo-700">¥{selectedWinRow.unitPrice.toFixed(2)}</b></span>
+                        <span className="text-slate-500">不含税 ¥{inclToExcl(selectedWinRow.unitPrice, selectedWinRow.taxRate).toFixed(2)}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-700 font-semibold text-xs">
+                          按不含税价签
+                        </span>
+                        <span className="text-slate-600">该供应商中标时未填税率</span>
+                        <span className="text-slate-600">不含税单价 <b className="text-emerald-700">¥{selectedWinRow.unitPrice.toFixed(2)}</b></span>
+                      </>
+                    )}
+                  </div>
+                  <div className="mt-2 text-xs text-slate-500">
+                    💰 合同金额（自动）= 口径单价 × 需求各明细数量合计；本需求每家中标供应商各签一份合同
+                  </div>
                 </div>
-                <label className="text-xs text-slate-500">税率</label>
-                <div className="w-24">
-                  <Select
-                    options={[
-                      { value: '0.13', label: '13%' },
-                      { value: '0.09', label: '9%' },
-                      { value: '0.06', label: '6%' },
-                      { value: '0', label: '0%（免税）' },
-                    ]}
-                    value={String(form.taxRate ?? 0.13)}
-                    onChange={(e) => update({ taxRate: Number(e.target.value) })}
-                  />
+              ) : form.supplierId ? (
+                <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700 mb-3">
+                  ⚠ 该供应商不在本需求的中标名单中，请从下拉中选择中标供应商
                 </div>
-                <span className="text-xs text-amber-700">
-                  同一需求所有中标供应商单价统一，签约口径只影响本合同取哪条单价线
-                </span>
-              </div>
-              <div className="mb-3 flex items-center justify-between">
-                <div className="text-sm font-semibold text-amber-900">
-                  📌 关联需求明细·中标记录（共 {winningRecordRows.length} 条记录，已勾选{' '}
-                  {(form.detailLinks ?? []).length} 条）
-                </div>
-                <div className="text-xs text-amber-700">
-                  每条中标记录只能签一份合同，已被其他合同签约的行锁定不可再选
-                </div>
-              </div>
-              <div className="max-h-60 overflow-auto rounded-md border border-amber-100 bg-white">
-                <table className="w-full text-xs">
-                  <thead className="bg-amber-100/60 text-amber-800">
-                    <tr>
-                      <th className="w-10 px-2 py-1.5 text-center">签</th>
-                      <th className="px-2 py-1.5 text-left">需求明细</th>
-                      <th className="px-2 py-1.5 text-left">中标供应商</th>
-                      <th className="px-2 py-1.5 text-right">
-                        {form.priceType === 'excl_tax' ? '不含税单价' : '含税单价'}
-                      </th>
-                      <th className="px-2 py-1.5 text-right">数量</th>
-                      <th className="px-2 py-1.5 text-right">本合同金额{form.priceType === 'excl_tax' ? '(不含税)' : '(含税)'}(元)</th>
-                      <th className="px-2 py-1.5 text-left">状态</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {winningRecordRows.map((r, idx) => {
-                      const undecided = !r.supplierId;
-                      const locked = !!r.signedBy;
-                      // 🆕 一合同一供应商：未选供应商 → 全部禁用；非本合同供应商 → 禁用置灰
-                      const foreign = !undecided && !!form.supplierId && r.supplierId !== form.supplierId;
-                      const noSupplier = !form.supplierId && !locked && !undecided;
-                      const disabled = locked || undecided || foreign || noSupplier;
-                      const dim = foreign || noSupplier;
-                      const checked = !undecided && isRecordChecked(r.detailId, r.supplierId);
-                      // 🆕 按签约口径显示单价和金额
-                      const taxRate = (r as any).taxRate ?? form.taxRate ?? 0.13;
-                      const displayPrice = priceForContract(r.unitPrice, taxRate, form.priceType);
-                      return (
-                        <tr
-                          key={`${r.detailId}|${r.supplierId}|${idx}`}
-                          className={locked ? 'bg-red-50/50' : checked ? 'bg-indigo-50/60' : dim ? 'opacity-45' : 'hover:bg-slate-50'}
-                        >
-                          <td className="px-2 py-1.5 text-center">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              disabled={disabled}
-                              title={locked ? '该记录已被其他合同签约' : foreign ? '一份合同只能签一个供应商，该供应商请另行新建合同' : noSupplier ? '请先选择本合同供应商' : undefined}
-                              onChange={(e) => toggleWinningRecord(r, e.target.checked)}
-                              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                            />
-                          </td>
-                          <td className="px-2 py-1.5">
-                            <div className="font-medium text-slate-800">{r.detailName}</div>
-                            {r.specification && <div className="text-slate-400">{r.specification}</div>}
-                          </td>
-                          <td className="px-2 py-1.5 text-slate-700">
-                            {undecided ? <span className="text-slate-400">未定标</span> : r.supplierName}
-                          </td>
-                          <td className="px-2 py-1.5 text-right text-slate-700">
-                            {undecided ? '-' : `¥${displayPrice.toFixed(2)}`}
-                            {!undecided && form.priceType === 'incl_tax' && <div className="text-[10px] text-slate-400">不含税 ¥{(r.unitPrice / (1 + taxRate)).toFixed(2)}</div>}
-                            {!undecided && form.priceType === 'excl_tax' && <div className="text-[10px] text-slate-400">含税 ¥{r.unitPrice.toFixed(2)}</div>}
-                          </td>
-                          <td className="px-2 py-1.5 text-right text-slate-700">
-                            {r.quantity} {r.unit}
-                          </td>
-                          <td className="px-2 py-1.5 text-right font-semibold text-indigo-600">
-                            {checked ? `¥${(displayPrice * r.quantity).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
-                          </td>
-                          <td className="px-2 py-1.5">
-                            {locked ? (
-                              <span className="inline-block whitespace-nowrap px-1.5 py-0.5 rounded text-[11px] bg-red-50 text-red-600 border border-red-200">
-                                🔒 已签约 {r.signedBy}
-                              </span>
-                            ) : undecided ? (
-                              <span className="inline-block px-1.5 py-0.5 rounded text-[11px] bg-slate-100 text-slate-400 border border-slate-200">
-                                未定标·不可签
-                              </span>
-                            ) : (
-                              <span className="inline-block px-1.5 py-0.5 rounded text-[11px] bg-green-50 text-green-700 border border-green-200">
-                                可签
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              {(form.detailLinks ?? []).length === 0 && (
-                <div className="mt-2 rounded-md bg-red-50 px-3 py-1.5 text-xs text-red-600">
-                  ⚠️ 合同没有勾选任何中标记录，预警看板将无法关联到需求明细级预警
-                </div>
+              ) : (
+                <div className="text-xs text-slate-400 mb-3">请先选择本合同供应商，签约口径将自动从招采执行定标带出</div>
               )}
+
             </div>
           )}
 
@@ -1197,12 +1017,12 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
             </div>
             <div className="space-y-3">
               {/* 🆕 方案A：关联供应商档案下拉（选需求自动带中标供应商，可手动改） */}
-              {/* 🆕 一合同一供应商：已选需求（有中标记录）时，切换供应商 = 重勾其全部可签中标记录并联动相对方/金额 */}
+              {/* 🆕 一合同一供应商：已选需求（有中标供应商）时，切换供应商 = 自动带出签约口径/明细关联/合同金额 */}
               <div>
                 <Select
                   label="关联供应商档案"
                   options={
-                    form.demandId && winningRecordRows.length > 0
+                    form.demandId && winningSupplierRows.length > 0
                       ? contractSupplierOptions
                       : [
                           { value: '', label: '未关联档案（手填下方单位名称）' },
@@ -1214,7 +1034,7 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
                   }
                   value={form.supplierId || ''}
                   onChange={(e) => {
-                    if (form.demandId && winningRecordRows.length > 0) {
+                    if (form.demandId && winningSupplierRows.length > 0) {
                       handleContractSupplierChange(e.target.value);
                       return;
                     }
@@ -1231,7 +1051,7 @@ function ContractProcurementForm({ form, update, biddings, procurementDemands, i
                     ⚠ 关联的供应商未在档案中找到（可能来自工单侧旧数据），请重新选择
                   </p>
                 )}
-                {/* 🆕 一合同一供应商：勾选入口已统一（上方中标记录表格只允许勾本合同供应商的记录） */}
+                {/* 🆕 一合同一供应商：已选需求时供应商下拉只列本需求中标名单（未签约的），明细关联自动生成 */}
               </div>
               <Input label="单位名称 *" required value={form.counterpartyName || ''}
                 onChange={(e) => update({ counterpartyName: e.target.value })} placeholder="中标供应商全称" />

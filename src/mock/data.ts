@@ -6050,7 +6050,7 @@ export function build1125Demo() {
       projectName: demandNames[i - 1],
       estimatedAmount: (itemA.budget + itemB.budget) * 1,
       requiredDeliveryDate: '2026-12-20',
-      reason: '1125 演示数据：一条明细多家中标 → 按中标记录分别签约',
+      reason: '1125 演示数据：一份需求多家中标 → 每家中标供应商按各自签约口径各签一份合同',
       status: 'confirm_approved',
       createTime: '2026-11-20',
       approveTime: '2026-11-21 10:00:00',
@@ -6062,15 +6062,32 @@ export function build1125Demo() {
       details,
     });
 
-    // ===== 工单：目录内比价，需求级统一多中标 + 统一单价 + 3 家全量报价 =====
-    // 🆕 所有中标供应商共享同一含税单价（取该需求所有被勾供应商的最低含税报价）
-    const allWinnerPrices = [
-      ...winnersA.map((w) => itemA.price[w.k]),
-      ...winnersB.map((w) => itemB.price[w.k]),
-    ];
-    const unifiedPrice = Math.min(...allWinnerPrices);
+    // ===== 工单：目录内比价，需求级多家中标（每家独立签约口径）+ 3 家全量报价 =====
+    // 🆕 中标价基准 = 该需求全部中标供应商的最低含税报价；每家按各自签约口径换算出签约口径单价：
+    //    湘展(supA)=按含税价签(税率13%) / 声光(supB)=按不含税价签(未填税率) / 视联(supC)=按含税价签(税率9%)
+    const inclRefPrice = Math.min(
+      ...[...winnersA.map((w) => itemA.price[w.k]), ...winnersB.map((w) => itemB.price[w.k])],
+    );
+    const WINNER_CALIBER: Record<SupKey, { taxRate: number | undefined; priceOf: (inclRef: number) => number }> = {
+      a: { taxRate: TAX, priceOf: (p) => p },
+      b: { taxRate: undefined, priceOf: (p) => toEx(p) },
+      c: { taxRate: 0.09, priceOf: (p) => p },
+    };
+    const toWinner = (w: { k: SupKey; sup: typeof supA }) => ({
+      supplierId: w.sup.id,
+      supplierName: w.sup.name,
+      unitPrice: WINNER_CALIBER[w.k].priceOf(inclRefPrice),
+      taxRate: WINNER_CALIBER[w.k].taxRate,
+      confirmedAt: '2026-11-24T10:00:00Z',
+    });
 
-    const buildLine = (it: (typeof catalog)[number], idx: number, winners: Array<{ k: SupKey; sup: typeof supA }>) => ({
+    // 🆕 需求级中标名单（明细A+B 去重合并），每家独立口径价
+    const allWinnerSups = [...new Map([...winnersA, ...winnersB].map((w) => [w.sup.id, w])).values()];
+    const topWinners = allWinnerSups.map(toWinner);
+    const w0 = topWinners[0];
+    const w0Ex = w0.taxRate != null ? Math.round((w0.unitPrice / (1 + w0.taxRate)) * 100) / 100 : w0.unitPrice;
+
+    const buildLine = (it: (typeof catalog)[number], idx: number) => ({
       productCode: it.code,
       productName: it.name,
       unit: it.unit,
@@ -6080,21 +6097,20 @@ export function build1125Demo() {
       demandUnitPriceExcludingTax: toEx(it.budget),
       demandId,
       demandDetailId: `DD-1125${seq}-${idx}`,
-      winningSupplierId: winners[0].sup.id,
-      winningSupplierName: winners[0].sup.name,
-      // 🆕 统一单价：所有中标供应商共享同一个含税价
-      winningSuppliers: winners.map((w) => ({ supplierId: w.sup.id, supplierName: w.sup.name, unitPrice: unifiedPrice, confirmedAt: '2026-11-24T10:00:00Z' })),
-      execUnitPriceIncludingTax: unifiedPrice,
+      winningSupplierId: w0.supplierId,
+      winningSupplierName: w0.supplierName,
+      // 🆕 需求级中标名单（每家独立口径）铺到每条明细行，清单明细弹窗只读回显
+      winningSuppliers: topWinners,
+      // 明细行执行价回显 = 第一家中标供应商口径价换算（与招采执行保存逻辑一致）
+      execUnitPriceIncludingTax: w0.taxRate != null ? w0.unitPrice : w0Ex,
+      execUnitPriceExcludingTax: w0Ex,
+      supplierAmountExTax: Math.round(w0Ex * it.qty * 100) / 100,
       isCatalogCompare: true,
       rowNo: idx,
     });
-    const lines = [buildLine(itemA, 1, winnersA), buildLine(itemB, 2, winnersB)];
+    const lines = [buildLine(itemA, 1), buildLine(itemB, 2)];
 
-    // 🆕 工单顶层 winningSuppliers（需求级中标名单）
-    const allWinnerSups = [...new Map([...winnersA, ...winnersB].map((w) => [w.sup.id, w])).values()];
-    const topWinningSuppliers = allWinnerSups.map((w) => ({ supplierId: w.sup.id, supplierName: w.sup.name, unitPrice: unifiedPrice, confirmedAt: '2026-11-24T10:00:00Z' }));
-
-    const totalInc = unifiedPrice * (itemA.qty + itemB.qty);
+    const totalInc = inclRefPrice * (itemA.qty + itemB.qty);
 
     biddings.push({
       id: biddingId,
@@ -6110,10 +6126,12 @@ export function build1125Demo() {
       creator: '测试用户',
       createTime: '2026-11-22',
       inviteSupplierIds: supAll.map((s) => s.id),
-      // 🆕 需求级中标名单顶层字段
-      winningSuppliers: topWinningSuppliers,
-      winningSupplierId: topWinningSuppliers[0]?.supplierId || '',
-      winningSupplierName: topWinningSuppliers[0]?.supplierName || '',
+      // 🆕 需求级中标名单顶层字段（每家独立签约口径）
+      winningSuppliers: topWinners,
+      winningSupplierId: w0.supplierId,
+      winningSupplierName: w0.supplierName,
+      // 🆕 中标金额 = Σ 每家中标供应商口径单价 × 需求总数量（与招采执行完成定标逻辑一致）
+      contractAmount: Math.round(topWinners.reduce((s, w) => s + w.unitPrice * (itemA.qty + itemB.qty), 0) * 100) / 100,
       items: lines,
       quotes: (['a', 'b', 'c'] as SupKey[]).map((k, qi) => {
         const s = supRef[k];
@@ -6140,51 +6158,35 @@ export function build1125Demo() {
       }),
     });
 
-    // ===== 合同：前 5 条需求已签约（验证锁定效果 + 签约口径混合） =====
-    // 🆕 需求级多中标后，每家供应商签一份合同，统一单价 = unifiedPrice
-    if (i <= 5) {
-      // 取第一名中标供应商（winnersA 里的第一家）签合同
-      const mainSup = winnersA[0];
-      // 🆕 签约口径轮换：1-2 含税，3-4 不含税，5 不含税
-      const contractPriceType: 'incl_tax' | 'excl_tax' = (i === 1 || i === 2) ? 'incl_tax' : 'excl_tax';
-      const contractTaxRate = TAX;
-      // 统一价在两条明细里一样
-      const inB = winnersB.find((w) => w.sup.id === mainSup.sup.id);
-      const unitPriceForContract = contractPriceType === 'excl_tax'
-        ? Math.round(unifiedPrice / (1 + contractTaxRate) * 100) / 100
-        : unifiedPrice;
-      const links: any[] = [];
-      let amount = 0;
-      // 明细A
-      if (winnersA.some((w) => w.sup.id === mainSup.sup.id)) {
-        links.push({
-          detailId: `DD-1125${seq}-1`, demandId, demandNo, supplierId: mainSup.sup.id,
-          unitPrice: unifiedPrice, priceType: contractPriceType,
-          unitPriceExcludingTax: contractPriceType === 'excl_tax' ? unitPriceForContract : undefined,
-        });
-        amount += unitPriceForContract * itemA.qty;
-      }
-      // 明细B（仅当中标供应商也在 winnersB 里时）
-      if (inB) {
-        links.push({
-          detailId: `DD-1125${seq}-2`, demandId, demandNo, supplierId: mainSup.sup.id,
-          unitPrice: unifiedPrice, priceType: contractPriceType,
-          unitPriceExcludingTax: contractPriceType === 'excl_tax' ? unitPriceForContract : undefined,
-        });
-        amount += unitPriceForContract * itemB.qty;
-      }
+    // ===== 合同：一份需求多家中标 → 每家中标供应商按各自签约口径各签一份合同 =====
+    // 🆕 合同口径自动取自招采执行定标（中标供应商填了税率=按含税价签；没填=按不含税价签），页面内不可手改
+    // 演示占用/可签：i=1 签 2 家、i=2 签 1 家、i=3 全签、i=4 签 2 家、i=5 签 1 家 → i=1/2/4/5 剩余中标供应商供手动演示新建合同
+    const SIGN_PLAN: Partial<Record<number, SupKey[]>> = { 1: ['b', 'c'], 2: ['a'], 3: ['b', 'c'], 4: ['a', 'b'], 5: ['c'] };
+    (SIGN_PLAN[i] || []).forEach((k, ci) => {
+      const w = topWinners.find((x) => x.supplierId === supRef[k].id);
+      if (!w) return;
+      const incl = w.taxRate != null;
+      const r2 = (v: number) => Math.round(v * 100) / 100;
+      // 🆕 一份合同自动关联需求全部明细（无需按明细勾选），单价 = 该供应商签约口径单价
+      const links = details.map((d) => ({
+        detailId: d.id, demandId, demandNo, supplierId: w.supplierId,
+        unitPrice: w.unitPrice,
+        priceType: incl ? ('incl_tax' as const) : ('excl_tax' as const),
+        unitPriceExcludingTax: incl ? r2(w.unitPrice / (1 + (w.taxRate as number))) : r2(w.unitPrice),
+      }));
+      const amount = r2(details.reduce((s, d) => s + w.unitPrice * d.quantity, 0));
       contracts.push({
-        id: `CL-1125${seq}`,
-        contractId: `HT-20261125${seq}`,
-        contractNo: `HT-20261125${seq}`,
-        contractName: `${demandNames[i - 1]}合同—${mainSup.sup.name}`,
+        id: `CL-1125${seq}-${k.toUpperCase()}`,
+        contractId: `HT-20261125${seq}-${ci + 1}`,
+        contractNo: `HT-20261125${seq}-${ci + 1}`,
+        contractName: `${demandNames[i - 1]}合同—${w.supplierName}`,
         contractNature: 'procurement',
         contractTier: 'primary',
         category: 'procurement',
         contractType: 'non_engineering',
         formation: 'state_owned_framework',
-        supplierId: mainSup.sup.id,
-        counterpartyName: mainSup.sup.name,
+        supplierId: w.supplierId,
+        counterpartyName: w.supplierName,
         handler: '测试用户',
         handlerContact: '0731-85001101',
         handlingDepartment: '采购部',
@@ -6199,17 +6201,17 @@ export function build1125Demo() {
         projectName: demandNames[i - 1],
         winningDate: '2026-11-24',
         isModelText: true,
-        amount: Math.round(amount * 100) / 100,
+        amount,
         paidAmount: i === 1 ? Math.round(amount * 0.85) : Math.round(amount * 0.3),
         settlementAmount: i === 1 ? Math.round(amount * 0.85) : Math.round(amount * 0.3),
         businessCategory: 'expense',
         archiveStatus: 'not_started',
         status: 'active',
-        priceType: contractPriceType,
-        taxRate: contractTaxRate,
+        priceType: incl ? ('incl_tax' as const) : ('excl_tax' as const),
+        taxRate: incl ? w.taxRate : undefined,
         detailLinks: links,
       });
-    }
+    });
   }
 
   return {

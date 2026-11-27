@@ -617,123 +617,83 @@ export default function CompetitiveBiddingPage() {
   };
 
   /**
-   * 🆕 需求级统一中标：
-   * 给定中标供应商 ID 列表 + 工单，算一个统一含税单价并同步写入工单顶层 winningSuppliers + 所有明细行
-   * - 目录内比价（有供应商自发报价）：取所有被勾供应商里的"最低含税合格报价"作为默认统一价
-   * - 线下流程（手填价）：取清单第一条明细的 execUnitPriceIncludingTax 作为默认统一价
-   * 返回 { suppliers: Array<{supplierId, supplierName, unitPrice}>, unifiedPrice: number }
+   * 🆕 需求级多家中标（每家独立口径）：
+   * 给定中标供应商 ID 列表 + 工单，生成每家中标记录（单价 + 税率口径）
+   * - 已在名单里的供应商：保留其手改单价/税率
+   * - 新选中的供应商：
+   *   · 目录内比价 → 从其合格报价取最低含税单价（自动锁定）+ 报价税率（含税口径）
+   *   · 线下流程 → 默认取清单第一条明细的不含税执行价，默认不含税口径（taxRate 空）
    */
-  const computeUnifiedWinning = (bidding: Bidding, supplierIds: string[]): {
-    suppliers: Array<{ supplierId: string; supplierName: string; unitPrice: number }>;
-    unifiedPrice: number;
-  } => {
-    if (supplierIds.length === 0) return { suppliers: [], unifiedPrice: 0 };
+  const computeUnifiedWinning = (bidding: Bidding, supplierIds: string[]): Array<{
+    supplierId: string; supplierName: string; unitPrice: number; taxRate?: number;
+  }> => {
+    if (supplierIds.length === 0) return [];
     const supList = (suppliers as Supplier[]).filter((s) => supplierIds.includes(s.id));
+    const existing = bidding.winningSuppliers || [];
 
-    let unifiedPrice = 0;
-    if (isCatalogCompare(bidding.procurementMethod)) {
-      // 目录内比价：从合格报价里找最低含税单价
-      const allQuotes = (bidding.quotes || []).filter((q) => supplierIds.includes(q.supplierId) && q.isQualified);
-      const candidates: number[] = [];
-      allQuotes.forEach((q) => {
-        (q.details || []).forEach((d) => {
-          if (d.unitPrice > 0) candidates.push(d.unitPrice);
+    return supList.map((s) => {
+      // 已在名单里 → 保留手改值
+      const prev = existing.find((w) => w.supplierId === s.id);
+      if (prev) return { supplierId: s.id, supplierName: s.name, unitPrice: prev.unitPrice, taxRate: prev.taxRate };
+
+      if (isCatalogCompare(bidding.procurementMethod)) {
+        // 目录内比价：该供应商合格报价里的最低含税单价（自动锁定含税口径）
+        const myQuotes = (bidding.quotes || []).filter((q) => q.supplierId === s.id && q.isQualified);
+        const prices: number[] = [];
+        let rate = 0.13;
+        myQuotes.forEach((q) => {
+          if (q.taxRate != null) rate = q.taxRate;
+          (q.details || []).forEach((d) => { if (d.unitPrice > 0) prices.push(d.unitPrice); });
         });
-      });
-      // 兜底：从 items 的原始合格报价里找（有些报价还没进 bidding.quotes）
-      if (candidates.length === 0) {
-        const items = (bidding.items || []) as any[];
-        supplierIds.forEach((sid) => {
-          items.forEach((item) => {
-            const rowQuotes = ((bidding.quotes || []) as any[])
-              .flatMap((q: any) => {
-                const idx = items.indexOf(item);
-                const d = q.details?.[idx];
-                if (!d || q.supplierId !== sid) return [];
-                return [{ price: d.unitPrice, qualified: q.isQualified }];
-              });
-            rowQuotes.forEach((r: any) => { if (r.price > 0 && r.qualified) candidates.push(r.price); });
-          });
-        });
+        return { supplierId: s.id, supplierName: s.name, unitPrice: prices.length > 0 ? Math.min(...prices) : 0, taxRate: rate };
       }
-      unifiedPrice = candidates.length > 0 ? Math.min(...candidates) : 0;
-    } else {
-      // 线下流程：取清单第一条明细的含税执行价（手填的）
+      // 线下流程：清单第一条明细的不含税执行价，默认不含税口径
       const firstItem = (bidding.offlineDetails || bidding.items || [])[0] as any;
-      if (firstItem) {
-        unifiedPrice = firstItem.execUnitPriceIncludingTax ?? firstItem.unitPriceIncludingTax ?? firstItem.unitPrice ?? 0;
-      }
-    }
-
-    // 统一单价可能已经在顶层 winningSuppliers 里被用户手动改过了，保留用户改动
-    const existingTop = bidding.winningSuppliers || [];
-    if (existingTop.length > 0 && existingTop[0].unitPrice > 0) {
-      unifiedPrice = existingTop[0].unitPrice;
-    }
-
-    return {
-      suppliers: supList.map((s) => ({ supplierId: s.id, supplierName: s.name, unitPrice: unifiedPrice })),
-      unifiedPrice,
-    };
-  };
-
-  /** 把统一中标名单 + 单价同步到工单顶层 + 所有明细行（items 和 offlineDetails 都同步） */
-  const applyUnifiedWinningToBidding = (
-    biddingId: string,
-    suppliers2: Array<{ supplierId: string; supplierName: string; unitPrice: number }>,
-  ) => {
-    const current = biddings.find((b) => b.id === biddingId);
-    if (!current || !updateBidding) return;
-
-    const unitPrice = suppliers2[0]?.unitPrice ?? 0;
-    const items = (current.items || []).map((it: any) => ({
-      ...it,
-      winningSuppliers: suppliers2.map((s) => ({
-        supplierId: s.supplierId, supplierName: s.supplierName, unitPrice: s.unitPrice,
-      })),
-      winningSupplierId: suppliers2[0]?.supplierId || undefined,
-      winningSupplierName: suppliers2[0]?.supplierName || undefined,
-      // 同步统一单价到明细行的含税执行价（目录内比价场景下让执行价也等于中标价）
-      ...(isCatalogCompare(current.procurementMethod) ? {
-        execUnitPriceIncludingTax: unitPrice || it.execUnitPriceIncludingTax,
-      } : {}),
-    }));
-    const offlineDetails = (current.offlineDetails || []).map((o: any) => ({
-      ...o,
-      winningSuppliers: suppliers2.map((s) => ({
-        supplierId: s.supplierId, supplierName: s.supplierName, unitPrice: s.unitPrice,
-      })),
-      winningSupplierId: suppliers2[0]?.supplierId || undefined,
-      winningSupplierName: suppliers2[0]?.supplierName || undefined,
-    }));
-
-    updateBidding(biddingId, {
-      winningSuppliers: suppliers2,
-      winningSupplierId: suppliers2[0]?.supplierId || '',
-      winningSupplierName: suppliers2[0]?.supplierName || '',
-      items: items as any,
-      offlineDetails: offlineDetails as any,
+      const defPrice = firstItem
+        ? (firstItem.unitPriceExcludingTax ?? (firstItem.execUnitPriceIncludingTax ? firstItem.execUnitPriceIncludingTax / 1.13 : (firstItem.unitPrice ?? 0)))
+        : 0;
+      return { supplierId: s.id, supplierName: s.name, unitPrice: Math.round(defPrice * 100) / 100, taxRate: undefined };
     });
   };
 
-  /** 线下流程/编辑弹窗里，本地更新 editItem：统一中标名单 + 单价 → 顶层 + 所有明细行 */
+  /** 线下流程/编辑弹窗里，本地更新 editItem：中标名单（每家口径价）→ 顶层 + 所有明细行 + 明细价格同步回显 */
   const applyUnifiedWinningToEditLocal = (
-    suppliers2: Array<{ supplierId: string; supplierName: string; unitPrice: number }>,
+    suppliers2: Array<{ supplierId: string; supplierName: string; unitPrice: number; taxRate?: number }>,
   ) => {
     if (!editItem) return;
-    const unitPrice = suppliers2[0]?.unitPrice ?? 0;
+    // 第一家的口径价同步到明细行做只读回显（价源 = 中标供应商价格表，单一数据源）
+    const w0 = suppliers2[0];
+    const wEx = w0 ? (w0.taxRate != null ? w0.unitPrice / (1 + w0.taxRate) : w0.unitPrice) : null;
+    const wIncl = w0 && w0.taxRate != null ? w0.unitPrice : null;
+    const r2 = (v: number) => Math.round(v * 100) / 100;
     const items = (editItem.items || []).map((it: any) => ({
       ...it,
-      winningSuppliers: suppliers2.map((s) => ({ supplierId: s.supplierId, supplierName: s.supplierName, unitPrice: s.unitPrice })),
+      winningSuppliers: suppliers2.map((s) => ({ supplierId: s.supplierId, supplierName: s.supplierName, unitPrice: s.unitPrice, taxRate: s.taxRate })),
       winningSupplierId: suppliers2[0]?.supplierId || undefined,
       winningSupplierName: suppliers2[0]?.supplierName || undefined,
+      ...(isCatalogCompare(editItem.procurementMethod) && wEx != null ? {
+        execUnitPriceExcludingTax: r2(wEx),
+        execUnitPriceIncludingTax: wIncl != null ? r2(wIncl) : r2(wEx),
+        supplierAmountExTax: r2(wEx * (it.quantity || 0)),
+      } : {}),
     }));
     const offlineDetails = (editItem.offlineDetails || []).map((o: any) => ({
       ...o,
-      winningSuppliers: suppliers2.map((s) => ({ supplierId: s.supplierId, supplierName: s.supplierName, unitPrice: s.unitPrice })),
+      winningSuppliers: suppliers2.map((s) => ({ supplierId: s.supplierId, supplierName: s.supplierName, unitPrice: s.unitPrice, taxRate: s.taxRate })),
       winningSupplierId: suppliers2[0]?.supplierId || undefined,
       winningSupplierName: suppliers2[0]?.supplierName || undefined,
+      ...(wEx != null ? {
+        unitPriceExcludingTax: r2(wEx),
+        taxRate: w0?.taxRate ?? 0,
+        unitPriceIncludingTax: wIncl != null ? r2(wIncl) : r2(wEx),
+        amountExcludingTax: r2(wEx * (o.quantity || 0)),
+        amountIncludingTax: r2((wIncl != null ? wIncl : wEx) * (o.quantity || 0)),
+      } : {}),
     }));
+    const totalQty = (offlineDetails.length > 0 ? offlineDetails : items).reduce((s, o: any) => s + (o.quantity || 0), 0);
+    const totalAmount = suppliers2.length > 0
+      ? Math.round(suppliers2.reduce((sum, s) => sum + s.unitPrice * totalQty, 0) * 100) / 100
+      : undefined;
     setEditItem({
       ...editItem,
       winningSuppliers: suppliers2,
@@ -742,19 +702,38 @@ export default function CompetitiveBiddingPage() {
       winningSupplierLegalPerson: editItem.winningSupplierLegalPerson || (suppliers2[0]?.supplierName ? '' : editItem.winningSupplierLegalPerson),
       items: items as any,
       offlineDetails: offlineDetails as any,
-      contractAmount: unitPrice > 0 ? Math.round(unitPrice * (
-        (offlineDetails.length > 0 ? offlineDetails.reduce((s, o: any) => s + (o.quantity || 0), 0) : 1)
-      ) * 100) / 100 : editItem.contractAmount,
+      contractAmount: totalAmount ?? editItem.contractAmount,
     });
   };
 
-  /** 统一单价修改后，保留现有中标名单，只更新单价（顶层 + 所有明细） */
-  const applyUnifiedPriceToEditLocal = (newPrice: number) => {
+  /** 修改一家中标供应商的单价/税率（保留其他家），同步全单 */
+  const updateWinningSupplierRow = (
+    supplierId: string,
+    patch: { unitPrice?: number; taxRate?: number | undefined },
+  ) => {
     if (!editItem) return;
-    const current = editItem.winningSuppliers || [];
-    if (current.length === 0) return;
-    const suppliers2 = current.map((s) => ({ ...s, unitPrice: newPrice }));
-    applyUnifiedWinningToEditLocal(suppliers2);
+    const current = (editItem.winningSuppliers || []).map((w: any) => ({ ...w }));
+    const idx = current.findIndex((w) => w.supplierId === supplierId);
+    if (idx < 0) return;
+    if (patch.unitPrice != null) current[idx].unitPrice = patch.unitPrice;
+    if (patch.taxRate !== undefined) current[idx].taxRate = patch.taxRate === null ? undefined : patch.taxRate;
+    applyUnifiedWinningToEditLocal(current);
+  };
+
+  /** 切换一家中标供应商的「是否含税」开关：开 → 默认 13% 税率（可改）；关 → 清空税率（不含税口径） */
+  const toggleWinningTaxSwitch = (supplierId: string, on: boolean) => {
+    if (!editItem) return;
+    const w = (editItem.winningSuppliers || []).find((x: any) => x.supplierId === supplierId);
+    if (!w) return;
+    if (on) {
+      // 开启含税：当前单价视为不含税价 → 换算成含税价（×1.13），税率默认 13%
+      const inclPrice = Math.round(w.unitPrice * 1.13 * 100) / 100;
+      updateWinningSupplierRow(supplierId, { unitPrice: inclPrice, taxRate: 0.13 });
+    } else {
+      // 关闭含税：当前单价视为含税价 → 换算成不含税价，清空税率
+      const exPrice = Math.round((w.unitPrice / (1 + (w.taxRate ?? 0.13))) * 100) / 100;
+      updateWinningSupplierRow(supplierId, { unitPrice: exPrice, taxRate: undefined });
+    }
   };
 
   const handleComplete = (bidding: Bidding) => {
@@ -766,8 +745,8 @@ export default function CompetitiveBiddingPage() {
       return;
     }
 
-    // 优先用工单顶层 winningSuppliers（需求级统一中标名单）
-    let unifiedSuppliers = bidding.winningSuppliers || [];
+    // 优先用工单顶层 winningSuppliers（需求级多家中标名单，每家独立口径）
+    let unifiedSuppliers = (bidding.winningSuppliers || []) as Array<{ supplierId: string; supplierName: string; unitPrice: number; taxRate?: number }>;
 
     if (unifiedSuppliers.length === 0 && isCatalogCompare(bidding.procurementMethod)) {
       // 兜底：如果明细行里有勾选的，取所有明细行里勾选的供应商去重（向下兼容）
@@ -777,8 +756,7 @@ export default function CompetitiveBiddingPage() {
       });
       if (dedup.size > 0) {
         const ids = Array.from(dedup.keys());
-        const computed = computeUnifiedWinning(bidding, ids);
-        unifiedSuppliers = computed.suppliers;
+        unifiedSuppliers = computeUnifiedWinning(bidding, ids);
       }
     }
 
@@ -791,42 +769,66 @@ export default function CompetitiveBiddingPage() {
             const idx = (bidding.items || []).indexOf(firstItem);
             const d = q.details?.[idx];
             if (!d) return null;
-            return { supplierId: q.supplierId, supplierName: q.supplierName, unitPrice: d.unitPrice, isOverLimit: !!d.isOverSingleLimit };
+            return { supplierId: q.supplierId, supplierName: q.supplierName, unitPrice: d.unitPrice, taxRate: q.taxRate, isOverLimit: !!d.isOverSingleLimit };
           })
           .filter((x): x is any => !!x && !x.isOverLimit);
         if (firstItemQuotes.length > 0) {
           const lowest = firstItemQuotes.reduce((m, q) => (q.unitPrice < m.unitPrice ? q : m));
-          unifiedSuppliers = [{ supplierId: lowest.supplierId, supplierName: lowest.supplierName, unitPrice: lowest.unitPrice }];
+          unifiedSuppliers = [{ supplierId: lowest.supplierId, supplierName: lowest.supplierName, unitPrice: lowest.unitPrice, taxRate: lowest.taxRate ?? 0.13 }];
         }
       }
     }
 
-    // 统一单价：如果 computed 里已有就用；没有就从第一条明细兜底
-    const finalUnitPrice = unifiedSuppliers[0]?.unitPrice || (() => {
-      const firstItem = (bidding.items || bidding.offlineDetails || [])[0] as any;
-      return firstItem?.execUnitPriceIncludingTax ?? firstItem?.unitPriceIncludingTax ?? 0;
-    })();
-    unifiedSuppliers = unifiedSuppliers.map((s) => ({ ...s, unitPrice: finalUnitPrice }));
+    // 线下流程兜底：一个中标供应商都没有时，不允许完成定标（清单外/新增供应商必须在执行阶段确认单价）
+    if (unifiedSuppliers.length === 0 && !isCatalogCompare(bidding.procurementMethod)) {
+      alert('请先在「中标结果」区选择中标供应商（清单外/新增供应商需在招采执行阶段确认单价与税率）');
+      return;
+    }
 
-    // 写入工单顶层 + 同步所有明细行
+    // 校验每家中标供应商单价已确认
+    if (unifiedSuppliers.some((s) => !s.unitPrice || s.unitPrice <= 0)) {
+      alert('有中标供应商未填写单价，请在中标供应商价格表中补齐后再完成定标');
+      return;
+    }
+
+    // 每家口径价同步到明细行回显 + 中标金额自动
+    const w0 = unifiedSuppliers[0];
+    const r2 = (v: number) => Math.round(v * 100) / 100;
+    const wEx = w0 ? (w0.taxRate != null ? w0.unitPrice / (1 + w0.taxRate) : w0.unitPrice) : null;
+    const wIncl = w0 && w0.taxRate != null ? w0.unitPrice : null;
     const items = (bidding.items || []).map((it: any) => ({
       ...it,
       winningSuppliers: unifiedSuppliers,
       winningSupplierId: unifiedSuppliers[0]?.supplierId || undefined,
       winningSupplierName: unifiedSuppliers[0]?.supplierName || undefined,
+      ...(isCatalogCompare(bidding.procurementMethod) && wEx != null ? {
+        execUnitPriceExcludingTax: r2(wEx),
+        execUnitPriceIncludingTax: wIncl != null ? r2(wIncl) : r2(wEx),
+        supplierAmountExTax: r2(wEx * (it.quantity || 0)),
+      } : {}),
     }));
     const offlineDetails = (bidding.offlineDetails || []).map((o: any) => ({
       ...o,
       winningSuppliers: unifiedSuppliers,
       winningSupplierId: unifiedSuppliers[0]?.supplierId || undefined,
       winningSupplierName: unifiedSuppliers[0]?.supplierName || undefined,
+      ...(!isCatalogCompare(bidding.procurementMethod) && wEx != null ? {
+        unitPriceExcludingTax: r2(wEx),
+        taxRate: w0?.taxRate ?? 0,
+        unitPriceIncludingTax: wIncl != null ? r2(wIncl) : r2(wEx),
+        amountExcludingTax: r2(wEx * (o.quantity || 0)),
+        amountIncludingTax: r2((wIncl != null ? wIncl : wEx) * (o.quantity || 0)),
+      } : {}),
     }));
+    const totalQty = (offlineDetails.length > 0 ? offlineDetails : items).reduce((s, o: any) => s + (o.quantity || 0), 0);
+    const totalAmount = Math.round(unifiedSuppliers.reduce((sum, s) => sum + s.unitPrice * totalQty, 0) * 100) / 100;
 
     updateBidding?.(bidding.id, {
       status: 'completed',
       winningSuppliers: unifiedSuppliers,
       winningSupplierId: unifiedSuppliers[0]?.supplierId || '',
       winningSupplierName: unifiedSuppliers[0]?.supplierName || '',
+      contractAmount: totalAmount,
       items: items as any,
       offlineDetails: offlineDetails as any,
       awardTime: bidding.awardTime || new Date().toISOString().slice(0, 10),
@@ -1025,6 +1027,18 @@ export default function CompetitiveBiddingPage() {
         if (!editItem.announcementPublishTime) { alert('请填写公告发布时间！'); return; }
         if (!editItem.bidOpeningTime) { alert('请填写开标时间！'); return; }
         if (!editItem.judgeMethod?.trim()) { alert('请填写评标办法！'); return; }
+      }
+      // 🆕 需求级多家中标校验：清单外/新增供应商需求 → 必须选中标供应商且每家单价已确认（单价税率在招采执行阶段定）
+      const linkedDemand = procurementDemands.find((d) => d.id === editItem.demandId);
+      const needManualWinning = linkedDemand?.procurementType === 'outside_framework' || linkedDemand?.procurementType === 'new_supplier';
+      const winners = (editItem.winningSuppliers || []) as Array<{ unitPrice: number }>;
+      if (needManualWinning && winners.length === 0) {
+        alert('清单外/新增供应商需求：请在「中标结果」区选择中标供应商（单价与税率在招采执行阶段确认）！');
+        return;
+      }
+      if (winners.some((w) => !w.unitPrice || w.unitPrice <= 0)) {
+        alert('有中标供应商未填写单价，请在「中标结果」区的中标供应商价格表中补齐！');
+        return;
       }
     }
 
@@ -1583,104 +1597,22 @@ export default function CompetitiveBiddingPage() {
               </span>
             </div>
 
-            {/* 🆕 中标供应商统一选名单区（整单级，贯穿所有明细；明细行内不再选供应商） */}
-            <div className="mb-3 rounded-lg border border-indigo-200 bg-gradient-to-r from-indigo-50/70 to-purple-50/40 px-3 py-2.5">
-              <div className="flex items-start gap-3 flex-wrap">
-                <div className="shrink-0 pt-0.5">
-                  <span className="text-[13px] font-semibold text-indigo-700">🏆 中标供应商（整单统一）</span>
-                  <div className="text-[11px] text-slate-400 mt-0.5">所有中标供应商共享同一单价，贯穿本单全部明细</div>
-                </div>
-
-                <div className="flex-1 min-w-[280px]">
-                  {/* 已选中标供应商 chips */}
-                  {(editItem.winningSuppliers || []).length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {(editItem.winningSuppliers || []).map((w: any) => (
-                        <span key={w.supplierId}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-700 text-[12px] font-medium">
-                          ✅ {w.supplierName}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-[12px] text-slate-400 pt-0.5">尚未选中标供应商</div>
-                  )}
-                </div>
-
-                {/* 统一含税单价（可编辑）+ 不含税自动 */}
-                {(editItem.winningSuppliers || []).length > 0 && (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[12px] text-indigo-700 font-medium whitespace-nowrap">统一含税单价：</span>
-                    <input type="number" step="0.01" min={0}
-                      className="w-28 h-8 px-2 border border-indigo-200 rounded-md text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                      value={(editItem.winningSuppliers || [])[0]?.unitPrice ?? ''}
-                      onChange={(e) => {
-                        const v = e.target.value === '' ? 0 : Number(e.target.value);
-                        applyUnifiedPriceToEditLocal(v);
-                      }} />
-                    <span className="text-[11px] text-slate-500 whitespace-nowrap">
-                      不含税 ¥{((editItem.winningSuppliers || [])[0]?.unitPrice ?? 0) > 0
-                        ? ((editItem.winningSuppliers || [])[0].unitPrice / 1.13).toFixed(2)
-                        : '0.00'}
+            {/* 🆕 已定标提示条（只读提示：中标供应商与口径价在主弹窗「中标结果」区维护） */}
+            {(editItem.winningSuppliers || []).length > 0 && (
+              <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2 flex items-center gap-2 flex-wrap">
+                <span className="text-[12.5px] font-semibold text-emerald-700">🏆 已定标：</span>
+                {(editItem.winningSuppliers || []).map((w: any) => (
+                  <span key={w.supplierId}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-emerald-300 text-emerald-700 text-[12px] font-medium">
+                    ✅ {w.supplierName}
+                    <span className="text-[10.5px] text-slate-500 font-normal">
+                      {w.taxRate != null ? `含税 ¥${Number(w.unitPrice).toFixed(2)}（${(w.taxRate * 100).toFixed(0)}%）` : `不含税 ¥${Number(w.unitPrice).toFixed(2)}`}
                     </span>
-                  </div>
-                )}
-
-                {/* 操作按钮：目录内比价 = 从参与报价供应商勾选；线下 = 从供应商档案多选 */}
-                {isCatalogMode ? (
-                  <span className="text-[11px] text-slate-400 self-center">在下方报价供应商列表中勾选中标方</span>
-                ) : (
-                  <div className="flex gap-1.5 shrink-0">
-                    <button type="button" onClick={() => setEditWinningPickerOpen(true)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:opacity-90 transition-all duration-200 shadow-sm">
-                      🔍 选择中标供应商
-                    </button>
-                    {(editItem.winningSuppliers || []).length > 0 && (
-                      <button type="button" onClick={() => applyUnifiedWinningToEditLocal([])}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-300 text-slate-600 hover:border-rose-400 hover:text-rose-500 transition-all duration-200">
-                        清空
-                      </button>
-                    )}
-                  </div>
-                )}
+                  </span>
+                ))}
+                <span className="text-[11px] text-slate-400 ml-auto">单价与税率请回主弹窗「中标结果」区维护，此处只读回显</span>
               </div>
-
-              {/* 目录内比价专属：参与报价供应商统一勾选（整单级，替代原明细行内勾选） */}
-              {isCatalogMode && (editItem.quotes || []).length > 0 && (
-                <div className="mt-2 pt-2 border-t border-indigo-100 flex flex-wrap gap-x-4 gap-y-1.5">
-                  {(editItem.quotes || []).map((q) => {
-                    const checked = (editItem.winningSuppliers || []).some((s: any) => s.supplierId === q.supplierId);
-                    const disabled = q.isQualified === false;
-                    // 该供应商在所有明细里的最低合格报价
-                    const minPrice = Math.min(...(q.details || []).map((d) => d.unitPrice).filter((p) => p > 0));
-                    return (
-                      <label key={q.supplierId}
-                        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-[12px] transition-colors ${
-                          checked ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : disabled ? 'bg-slate-50 border-slate-200 text-slate-400 opacity-60' : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300'
-                        }`}>
-                        <input type="checkbox"
-                          checked={checked}
-                          disabled={disabled}
-                          onChange={() => {
-                            const prevIds = (editItem.winningSuppliers || []).map((s: any) => s.supplierId);
-                            const nextIds = checked
-                              ? prevIds.filter((id: string) => id !== q.supplierId)
-                              : [...prevIds, q.supplierId];
-                            const computed = computeUnifiedWinning(editItem as Bidding, nextIds);
-                            applyUnifiedWinningToEditLocal(computed.suppliers);
-                          }}
-                          className="accent-emerald-500 w-3.5 h-3.5 disabled:opacity-30"
-                          title={disabled ? '不合格报价不可中标' : checked ? '取消中标' : '标记为中标方（整单统一 + 统一单价自动同步）'} />
-                        <span className="font-medium">{q.supplierName}</span>
-                        {minPrice > 0 && <span className="text-[11px] text-slate-400">最低 ¥{minPrice.toFixed(2)}</span>}
-                        {q.isQualified === false && <span className="text-[10px] text-slate-400">不合格</span>}
-                        {checked && <span className="text-[10px] text-emerald-600">中标</span>}
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            )}
 
             {/* 明细表格：按采购方式渲染，分页切片（每页20条，保留原索引定位编辑） */}
             <div className="border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -1951,6 +1883,10 @@ export default function CompetitiveBiddingPage() {
 
                 const commonInput = 'w-full h-8 px-2.5 border border-slate-200 rounded-md text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-400 transition-all';
 
+                // 🆕 已定标锁定：中标供应商存在时，线下明细价格/税率列只读回显（价源 = 主弹窗中标供应商价格表）
+                const winner0 = (editItem.winningSuppliers || [])[0] as any || null;
+                const priceLocked = !!winner0;
+
                 // ===== 直接采购 / 电子商城采购 简化表格（双价格列；🆕 供应商列已删除 — 中标供应商整单统一选） =====
                 if (isDirectOrMall(editItem.procurementMethod)) {
                   return (
@@ -2088,15 +2024,22 @@ export default function CompetitiveBiddingPage() {
                                   onChange={(e) => updateOfflineItem(idx, { unit: e.target.value })} />
                               </td>
                               <td className="px-3 py-2.5">
-                                <select className={commonInput + ' cursor-pointer'}
-                                  value={row.taxRate ?? 0.13}
-                                  onChange={(e) => updateOfflineItem(idx, { taxRate: Number(e.target.value) })}>
-                                  <option value={0.13}>13%</option>
-                                  <option value={0.09}>9%</option>
-                                  <option value={0.06}>6%</option>
-                                  <option value={0.03}>3%</option>
-                                  <option value={0}>0%</option>
-                                </select>
+                                {priceLocked ? (
+                                  /* 🆕 已定标：税率只读回显（价源 = 主弹窗中标供应商价格表） */
+                                  <div className={`h-8 px-2.5 py-1.5 rounded-md text-[13px] leading-5 text-left border ${(winner0 as any)?.taxRate != null && isOverBudget ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
+                                    {(winner0 as any)?.taxRate != null ? `${((winner0 as any).taxRate * 100).toFixed(0)}%` : '不含税签'}
+                                  </div>
+                                ) : (
+                                  <select className={commonInput + ' cursor-pointer'}
+                                    value={row.taxRate ?? 0.13}
+                                    onChange={(e) => updateOfflineItem(idx, { taxRate: Number(e.target.value) })}>
+                                    <option value={0.13}>13%</option>
+                                    <option value={0.09}>9%</option>
+                                    <option value={0.06}>6%</option>
+                                    <option value={0.03}>3%</option>
+                                    <option value={0}>0%</option>
+                                  </select>
+                                )}
                               </td>
                               {/* 预算审定单价（灰底只读） */}
                               <td className="px-3 py-2.5">
@@ -2106,13 +2049,19 @@ export default function CompetitiveBiddingPage() {
                                     : <span className="text-slate-300">—</span>}
                                 </div>
                               </td>
-                              {/* 招采执行单价（可编辑） */}
+                              {/* 招采执行单价（🆕 已定标只读回显中标口径价；未定标可手填） */}
                               <td className="px-3 py-2.5">
-                                <input type="number" step="0.01" min={0}
-                                  className={`${commonInput} ${isOverBudget ? 'border-rose-400 bg-rose-50 text-rose-700 font-semibold ring-2 ring-rose-200' : ''}`}
-                                  placeholder={budgetPrice != null ? `≤ ¥${budgetPrice.toFixed(2)}` : undefined}
-                                  value={execPrice ?? ''}
-                                  onChange={(e) => updateOfflineItem(idx, { unitPriceExcludingTax: Number(e.target.value) })} />
+                                {priceLocked ? (
+                                  <div className={`h-8 px-2.5 py-1.5 rounded-md text-[13px] leading-5 text-right border font-semibold ${isOverBudget ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-indigo-200 bg-indigo-50/60 text-indigo-700'}`}>
+                                    {execPrice != null ? `¥${execPrice.toFixed(2)}` : '—'}
+                                  </div>
+                                ) : (
+                                  <input type="number" step="0.01" min={0}
+                                    className={`${commonInput} ${isOverBudget ? 'border-rose-400 bg-rose-50 text-rose-700 font-semibold ring-2 ring-rose-200' : ''}`}
+                                    placeholder={budgetPrice != null ? `≤ ¥${budgetPrice.toFixed(2)}` : undefined}
+                                    value={execPrice ?? ''}
+                                    onChange={(e) => updateOfflineItem(idx, { unitPriceExcludingTax: Number(e.target.value) })} />
+                                )}
                               </td>
                               <td className={`px-3 py-2.5 font-semibold text-[13px] ${isOverBudget ? 'text-rose-600' : 'text-indigo-600'}`}>
                                 ¥{(row.unitPriceIncludingTax ?? 0).toLocaleString()}
@@ -3036,68 +2985,147 @@ export default function CompetitiveBiddingPage() {
             </div>
             )}
 
-            {/* ============ 线下流程专属：中标结果（需求级多家中标 + 统一单价） ============ */}
-            {isOfflineExecution(editItem.procurementMethod) && (
+            {/* ============ 中标结果（需求级多家中标 · 每家独立单价与税率口径） ============ */}
+            {(isOfflineExecution(editItem.procurementMethod) || isCatalogCompare(editItem.procurementMethod)) && (
             <div className="space-y-3 pt-3 border-t border-slate-200">
               <div className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
-                <span>🏆</span> 中标结果（需求级多家中标 · 统一单价）
-                <span className="text-xs text-slate-400 font-normal">所有中标供应商共享同一含税单价，全明细贯穿</span>
+                <span>🏆</span> 中标结果（需求级多家中标 · 每家独立单价与税率）
+                <span className="text-xs text-slate-400 font-normal">填了税率 = 按含税价签合同；没填税率 = 按不含税价签合同（合同签约时自动取口径）</span>
               </div>
 
-              {/* 🆕 中标供应商 chip 区 + 选择按钮 */}
-              <div className="border border-indigo-100 rounded-lg bg-gradient-to-br from-indigo-50/60 to-purple-50/30 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="text-xs text-indigo-700 font-medium mb-1.5">中标供应商（可多选）</div>
-                    {((editItem.winningSuppliers || [])).length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {(editItem.winningSuppliers || []).map((w: any) => (
-                          <span key={w.supplierId}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-700 text-[12px] font-medium">
-                            ✅ {w.supplierName}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-xs text-slate-400">尚未选中中标供应商，点击右侧"选择"按钮从供应商档案多选</div>
-                    )}
+              {/* 目录内比价专属：参与报价供应商统一勾选（价格自动锁定最低合格报价） */}
+              {isCatalogCompare(editItem.procurementMethod) && (editItem.quotes || []).length > 0 && (
+                <div className="border border-indigo-100 rounded-lg bg-gradient-to-r from-indigo-50/70 to-purple-50/40 px-3 py-2.5">
+                  <div className="text-xs text-indigo-700 font-medium mb-1.5">参与报价供应商（勾选 = 中标，价格自动锁定为最低合格报价，含报价税率）</div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                    {(editItem.quotes || []).map((q) => {
+                      const checked = (editItem.winningSuppliers || []).some((s: any) => s.supplierId === q.supplierId);
+                      const disabled = q.isQualified === false;
+                      const minPrice = Math.min(...(q.details || []).map((d) => d.unitPrice).filter((p) => p > 0));
+                      return (
+                        <label key={q.supplierId}
+                          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-[12px] transition-colors ${
+                            checked ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : disabled ? 'bg-slate-50 border-slate-200 text-slate-400 opacity-60' : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300'
+                          }`}>
+                          <input type="checkbox"
+                            checked={checked}
+                            disabled={disabled}
+                            onChange={() => {
+                              const prevIds = (editItem.winningSuppliers || []).map((s: any) => s.supplierId);
+                              const nextIds = checked
+                                ? prevIds.filter((id: string) => id !== q.supplierId)
+                                : [...prevIds, q.supplierId];
+                              applyUnifiedWinningToEditLocal(computeUnifiedWinning(editItem as Bidding, nextIds));
+                            }}
+                            className="accent-emerald-500 w-3.5 h-3.5 disabled:opacity-30"
+                            title={disabled ? '不合格报价不可中标' : checked ? '取消中标' : '标记为中标方（整单统一 + 价格自动锁定）'} />
+                          <span className="font-medium">{q.supplierName}</span>
+                          {minPrice > 0 && <span className="text-[11px] text-slate-400">最低 ¥{minPrice.toFixed(2)}</span>}
+                          {q.isQualified === false && <span className="text-[10px] text-slate-400">不合格</span>}
+                          {checked && <span className="text-[10px] text-emerald-600">中标</span>}
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
+              )}
 
-                {/* 🆕 统一含税单价 + 不含税自动显示 */}
-                <div className="mt-3 pt-3 border-t border-indigo-100 flex flex-wrap items-end gap-3">
-                  <div className="flex-1 min-w-[200px]">
-                    <div className="text-xs text-indigo-700 font-medium mb-1">统一含税单价（元）</div>
-                    <input type="number" step="0.01" min={0}
-                      className="w-full h-8 px-2 border border-indigo-200 rounded text-sm bg-white"
-                      placeholder="所有中标供应商共享此含税单价"
-                      value={(editItem.winningSuppliers || [])[0]?.unitPrice ?? ''}
-                      onChange={(e) => {
-                        const v = e.target.value === '' ? 0 : Number(e.target.value);
-                        applyUnifiedPriceToEditLocal(v);
-                      }} />
-                  </div>
-                  <div className="shrink-0 text-xs text-slate-500 pt-2.5">
-                    不含税单价自动算：¥{((editItem.winningSuppliers || [])[0]?.unitPrice ?? 0) > 0
-                      ? (((editItem.winningSuppliers || [])[0].unitPrice / 1.13) * 100).toFixed(2)
-                      : '0.00'}
+              {/* 中标供应商价格表：每家一行（单价 + 是否含税开关 + 税率），口径自动换算 */}
+              {(editItem.winningSuppliers || []).length > 0 ? (
+                <div className="rounded-lg border border-slate-200 overflow-hidden">
+                  <table className="w-full text-[12.5px] border-collapse">
+                    <thead className="bg-indigo-50 text-indigo-700">
+                      <tr>
+                        <th className="px-2.5 py-2 text-left">中标供应商</th>
+                        <th className="px-2.5 py-2 text-left w-32">单价（元）</th>
+                        <th className="px-2.5 py-2 text-center w-20">是否含税</th>
+                        <th className="px-2.5 py-2 text-left w-36">税率</th>
+                        <th className="px-2.5 py-2 text-right w-28">不含税单价（自动）</th>
+                        <th className="px-2.5 py-2 text-right w-28">含税单价（自动）</th>
+                        <th className="px-2.5 py-2 text-center w-14">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(editItem.winningSuppliers || []).map((w: any) => {
+                        const isCatalog = isCatalogCompare(editItem.procurementMethod);
+                        const incl = w.taxRate != null;
+                        const exPrice = incl ? w.unitPrice / (1 + w.taxRate) : w.unitPrice;
+                        // 预算校验：清单明细的不含税预算审定价最小值
+                        const detailList = (editItem.offlineDetails?.length ? editItem.offlineDetails : editItem.items) as any[] || [];
+                        const budgets = detailList.map((o) => o.demandUnitPriceExcludingTax).filter((v) => v != null && v > 0);
+                        const minBudget = budgets.length > 0 ? Math.min(...budgets) : null;
+                        const overBudget = minBudget != null && exPrice > minBudget;
+                        return (
+                          <tr key={w.supplierId} className="border-t border-slate-100 hover:bg-indigo-50/20">
+                            <td className="px-2.5 py-2 font-medium text-slate-800">{w.supplierName}</td>
+                            <td className="px-2.5 py-2">
+                              <input type="number" step="0.01" min={0} disabled={isCatalog}
+                                className={`w-full h-8 px-2 border rounded text-[12.5px] ${overBudget ? 'border-rose-400 bg-rose-50 text-rose-700' : 'border-slate-200'} disabled:bg-slate-50 disabled:text-slate-500`}
+                                value={w.unitPrice ?? ''}
+                                onChange={(e) => updateWinningSupplierRow(w.supplierId, { unitPrice: e.target.value === '' ? 0 : Number(e.target.value) })} />
+                              {overBudget && <div className="text-[10.5px] text-rose-500 mt-0.5">⚠ 超预算审定 ¥{minBudget?.toFixed(2)}</div>}
+                            </td>
+                            <td className="px-2.5 py-2 text-center">
+                              <button type="button" disabled={isCatalog}
+                                onClick={() => toggleWinningTaxSwitch(w.supplierId, !incl)}
+                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${incl ? 'bg-indigo-500' : 'bg-slate-300'} disabled:opacity-50`}
+                                title={incl ? '按含税价签合同（点击切换为不含税）' : '按不含税价签合同（开启后才能填税率）'}>
+                                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${incl ? 'translate-x-[19px]' : 'translate-x-[3px]'}`} />
+                              </button>
+                            </td>
+                            <td className="px-2.5 py-2">
+                              {incl ? (
+                                <select disabled={isCatalog}
+                                  className="w-full h-8 px-1.5 border border-slate-200 rounded text-[12.5px] bg-white disabled:bg-slate-50"
+                                  value={String(w.taxRate)}
+                                  onChange={(e) => updateWinningSupplierRow(w.supplierId, { taxRate: Number(e.target.value) })}>
+                                  <option value="0.13">13%</option>
+                                  <option value="0.09">9%</option>
+                                  <option value="0.06">6%</option>
+                                  <option value="0.03">3%</option>
+                                  <option value="0">0%（免税）</option>
+                                </select>
+                              ) : (
+                                <span className="text-[11px] text-slate-400">未填税率 → 按不含税价签</span>
+                              )}
+                            </td>
+                            <td className="px-2.5 py-2 text-right text-slate-700">¥{exPrice.toFixed(2)}</td>
+                            <td className="px-2.5 py-2 text-right text-slate-700">{incl ? `¥${w.unitPrice.toFixed(2)}` : <span className="text-slate-300">—</span>}</td>
+                            <td className="px-2.5 py-2 text-center">
+                              <button type="button"
+                                onClick={() => applyUnifiedWinningToEditLocal((editItem.winningSuppliers || []).filter((x: any) => x.supplierId !== w.supplierId))}
+                                className="text-rose-400 hover:text-rose-600 text-[12px]" title="移除该中标供应商">🗑️</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <div className="bg-indigo-50/50 border-t border-indigo-100 px-2.5 py-1.5 text-[11px] text-indigo-700">
+                    💰 中标/合同金额自动 = Σ 每家口径单价 × 清单合计数量；清单外/新增供应商需求：单价在此必填确认
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="text-xs text-slate-400 border border-dashed border-slate-200 rounded-lg px-3 py-2.5">
+                  {isCatalogCompare(editItem.procurementMethod) ? '尚未勾选中标供应商，请在上方参与报价供应商中勾选' : '尚未选中标供应商，点击下方「选择中标供应商」从供应商档案多选'}
+                </div>
+              )}
 
-              {/* 选择中标供应商按钮 */}
-              <div className="flex gap-2">
-                <DefaultButton onClick={() => setEditWinningPickerOpen(true)}>
-                  🔍 选择中标供应商（从档案搜选，可多选）
-                </DefaultButton>
-                {(editItem.winningSuppliers || []).length > 0 && (
-                  <DefaultButton onClick={() => {
-                    applyUnifiedWinningToEditLocal([]);
-                  }}>
-                    🔄 清空中标供应商
+              {/* 线下流程：选择/清空中标供应商（目录内比价用上方报价勾选） */}
+              {isOfflineExecution(editItem.procurementMethod) && (
+                <div className="flex gap-2">
+                  <DefaultButton onClick={() => setEditWinningPickerOpen(true)}>
+                    🔍 选择中标供应商（从档案搜选，可多选）
                   </DefaultButton>
-                )}
-              </div>
+                  {(editItem.winningSuppliers || []).length > 0 && (
+                    <DefaultButton onClick={() => {
+                      applyUnifiedWinningToEditLocal([]);
+                    }}>
+                      🔄 清空中标供应商
+                    </DefaultButton>
+                  )}
+                </div>
+              )}
 
               {/* 原有字段保留：法人、得分、合同金额、中标时间、质疑 */}
               <div className="grid grid-cols-3 gap-3 pt-2 border-t border-slate-100">
@@ -3892,8 +3920,7 @@ export default function CompetitiveBiddingPage() {
         title="选择线下中标供应商（需求级多选）"
         onConfirm={(ids) => {
           if (!editItem) { setEditWinningPickerOpen(false); return; }
-          const computed = computeUnifiedWinning(editItem as Bidding, ids);
-          applyUnifiedWinningToEditLocal(computed.suppliers);
+          applyUnifiedWinningToEditLocal(computeUnifiedWinning(editItem as Bidding, ids));
           setEditWinningPickerOpen(false);
         }}
       />
