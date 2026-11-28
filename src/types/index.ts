@@ -2129,6 +2129,7 @@ export type NonProcurementFormation =
   | 'exhibitor_contract'     // 展览服务-参展商合同
   | 'exhibition_display'     // 展览展示服务
   | 'investment_contract'    // 招商合同
+  | 'agency_contract'        // 代理合同（展会业务通过代理商签订，对方单位=代理商档案）
   | 'other';                 // 其他
 
 // 合同形成方式（联合类型，根据 contractNature 动态取对应枚举）
@@ -2369,6 +2370,7 @@ export const NON_PROCUREMENT_FORMATION_LABELS: Record<NonProcurementFormation, s
   exhibitor_contract: '展览服务-参展商合同',
   exhibition_display: '展览展示服务',
   investment_contract: '招商合同',
+  agency_contract: '代理合同',
   other: '其他',
 };
 
@@ -2398,6 +2400,100 @@ export const BUSINESS_CATEGORY_LABELS: Record<'expense' | 'income' | 'other', st
   income: '收入合同',
   other: '其他合同',
 };
+
+// ==================== 代理商档案 ====================
+/**
+ * 代理商（展会业务代理合作方，独立于供应商档案的独立模块）
+ * 代理合同（NonProcurementFormation='agency_contract'）的对方单位从这里下拉选择；
+ * 付款申请的收款账户信息（开户行/账号）也从这里带出
+ */
+export interface SupplierAgent {
+  id: string;
+  code: string;                 // 代理商编号（手工输入）
+  name: string;                 // 代理商名称
+  contact: string;              // 联系人
+  phone: string;                // 联系电话
+  address: string;              // 地址
+  bankName?: string;            // 开户行（付款申请收款账户带出用）
+  bankAccountNo?: string;       // 银行账号
+  businessScope?: string;       // 代理范围/经营范围
+  status: 'enabled' | 'disabled';
+  remark?: string;
+  createTime: string;
+  creator?: string;
+}
+
+// ==================== 付款申请 ====================
+/** 付款申请状态：草稿 → 提交待审批 → 通过/驳回（与合同归档审批模式一致） */
+export type PaymentRequestStatus = 'draft' | 'pending' | 'approved' | 'rejected';
+
+export const PAYMENT_REQUEST_STATUS_LABELS: Record<PaymentRequestStatus, string> = {
+  draft: '草稿',
+  pending: '待审批',
+  approved: '已通过',
+  rejected: '已驳回',
+};
+
+/** 发票类型 */
+export const INVOICE_TYPE_LABELS: Record<string, string> = {
+  vat_special: '增值税专用发票',
+  vat_normal: '增值税普通发票',
+  no_invoice: '不开票',
+};
+
+/** 付款申请附件分类 */
+export type PaymentAttachmentType = 'contract_scan' | 'invoice_scan' | 'other';
+
+export const PAYMENT_ATTACHMENT_TYPE_LABELS: Record<PaymentAttachmentType, string> = {
+  contract_scan: '合同扫描件',
+  invoice_scan: '发票扫描件',
+  other: '其他附件',
+};
+
+/** 付款申请附件条目（分类 + 文件，文件复用项目 Attachment idb 存储体系） */
+export interface PaymentAttachment {
+  type: PaymentAttachmentType;
+  file: Attachment;
+}
+
+/**
+ * 付款申请（按合同付款）
+ * 范围限定：自办展/合办展合同 + 形成方式=代理合同（收款方=代理商）
+ * 对方单位信息与收款账户从代理商档案自动带出并留存快照（档案后续修改不影响已提交申请）
+ */
+export interface PaymentRequest {
+  id: string;
+  paymentNo: string;              // 付款申请编号（自动生成 FK+YYYYMMDD+3位）
+  contractId: string;             // 关联合同 ID
+  contractNo: string;             // 合同编号
+  contractName: string;           // 合同名称
+  contractType?: string;          // 合同类型（self_host/joint_host）
+  formation?: string;             // 合同形成方式（agency_contract）
+  agentId?: string;               // 代理商档案 ID
+  counterpartyName: string;       // 对方名称（=代理商名称）
+  counterpartyAddress?: string;   // 对方地址
+  counterpartyContact?: string;   // 对方联系人
+  counterpartyPhone?: string;     // 对方联系电话
+  bankName?: string;              // 对方开户行（收款账户）
+  bankAccountNo?: string;         // 对方银行账号（收款账户）
+  contractAmount: number;         // 合同金额（元）
+  paidPercent: number;            // 本次付款比例（%，按合同金额）
+  requestAmount: number;          // 本次申请付款 = 合同金额 × 比例（元，自动计算）
+  invoiceType?: string;           // 发票类型（INVOICE_TYPE_LABELS）
+  taxRate?: number;               // 税率（%）
+  expenseDepartment?: string;     // 支出部门
+  expenseType?: string;           // 费用类型
+  summary?: string;               // 合同摘要
+  remark?: string;                // 备注
+  attachments?: PaymentAttachment[]; // 附件（合同扫描件/发票扫描件/其他）
+  totalAppliedAmount?: number;    // 累计申请付款（保存时自动聚合该合同全部已提交申请，含本笔）
+  status: PaymentRequestStatus;
+  applicant?: string;
+  createTime?: string;
+  approver?: string;
+  approveTime?: string;
+  approveRemark?: string;
+}
 
 // ==================== 合同考核绑定 ====================
 

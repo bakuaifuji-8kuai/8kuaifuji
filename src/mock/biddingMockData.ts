@@ -18,6 +18,8 @@ import type {
   ContractPurchaseOrderDetail,
   ContractPurchaseOrderStatus,
   Supplier,
+  SupplierAgent,
+  PaymentRequest,
   InboundOrder,
   BatchInventory,
   StockTransaction,
@@ -2283,6 +2285,114 @@ export const MOCK_SUPPLIERS: Supplier[] = [
     businessScope: mkSupplierBusinessScope(12),
     createTime: '2025-01-20 10:00:00',
     creator: '系统',
+  },
+];
+
+// ====================================================================
+// 🆕 代理商档案 + 代理合同 + 付款申请 测试数据（一切数据皆有源，链路闭环）
+// 业务链路：代理商(AG-1128xx) → 代理合同(HT-AG-DEM Ox, self_host/joint_host + 形成方式=代理合同)
+//          → 付款申请(FK-202611xx-xxx，挂代理合同，本次申请付款 = 合同金额 × 付款比例%)
+// ====================================================================
+
+/** 代理商档案 ×3（代理合同对方单位下拉 + 付款申请收款账户来源） */
+export const MOCK_SUPPLIER_AGENTS: SupplierAgent[] = [
+  {
+    id: 'AG-112801', code: 'DLS-001', name: '长沙星展会展代理有限公司',
+    contact: '王代理', phone: '0731-86621128', address: '长沙市天心区会展大道 88 号',
+    bankName: '中国工商银行长沙会展支行', bankAccountNo: '1901002109201128001',
+    businessScope: '展会招展代理、观众组织代理', status: 'enabled', createTime: '2026-11-01', creator: '系统',
+  },
+  {
+    id: 'AG-112802', code: 'DLS-002', name: '湖南中展招商代理有限公司',
+    contact: '李经理', phone: '0731-86621228', address: '长沙市开福区湘江北路 66 号',
+    bankName: '中国建设银行长沙湘江支行', bankAccountNo: '4300150119201128002',
+    businessScope: '招商代理、展位销售代理', status: 'enabled', createTime: '2026-11-01', creator: '系统',
+  },
+  {
+    id: 'AG-112803', code: 'DLS-003', name: '广州联展商务代理有限公司',
+    contact: '陈总', phone: '020-38891128', address: '广州市海珠区新港东路 66 号',
+    bankName: '招商银行广州琶洲支行', bankAccountNo: '1202101119201128003',
+    businessScope: '商务代理、合作展会推广代理', status: 'enabled', createTime: '2026-11-01', creator: '系统',
+  },
+];
+
+/**
+ * 代理合同 ×2（自办展/合办展 + 形成方式=代理合同，active 可被付款申请选中）
+ * 数据来源：对方单位 = 上述代理商档案（AG-112801 / AG-112802）
+ */
+export const MOCK_AGENT_CONTRACTS: ContractLedger[] = [
+  {
+    id: 'HT-AG-DEMO1', contractId: 'HT-AG-DEMO1', contractNo: 'HT-20261128AG1',
+    contractName: '2027 新春自办展招展代理合同—长沙星展',
+    contractNature: 'non_procurement', category: 'exhibition_service', contractType: 'self_host', formation: 'agency_contract',
+    isModelText: true, handlingDepartment: '招商部', handler: '林招商', handlerContact: '0731-88880101',
+    supplierId: 'AG-112801', counterpartyName: '长沙星展会展代理有限公司', counterpartyContact: '王代理',
+    mainContent: '2027 新春自办展招展代理（代理费按展位销售分成）',
+    signingDate: '2026-11-20', effectiveDate: '2026-11-25', terminationDate: '2027-03-31',
+    amount: 860000, paidAmount: 258000, businessCategory: 'expense', status: 'active',
+    performanceBond: { gateByFormation: false, isEnabled: false }, archiveStatus: 'not_started', enableExpireAlert: true,
+  },
+  {
+    id: 'HT-AG-DEMO2', contractId: 'HT-AG-DEMO2', contractNo: 'HT-20261128AG2',
+    contractName: '2027 春季合办展招商代理合同—湖南中展',
+    contractNature: 'non_procurement', category: 'exhibition_service', contractType: 'joint_host', formation: 'agency_contract',
+    isModelText: true, handlingDepartment: '市场部', handler: '周市场', handlerContact: '0731-88880102',
+    supplierId: 'AG-112802', counterpartyName: '湖南中展招商代理有限公司', counterpartyContact: '李经理',
+    mainContent: '2027 春季合办展招商代理（按招商金额 5% 结算代理费）',
+    signingDate: '2026-11-22', effectiveDate: '2026-11-26', terminationDate: '2027-05-31',
+    amount: 450000, paidAmount: 0, businessCategory: 'expense', status: 'active',
+    performanceBond: { gateByFormation: false, isEnabled: false }, archiveStatus: 'not_started', enableExpireAlert: true,
+  },
+];
+
+/**
+ * 付款申请 ×3（全部挂上方代理合同，无孤立单据）
+ * - HT-AG-DEMO1：30% 已通过 + 30% 待审批 → 累计申请付款 516000（与合同 paidAmount 首期 258000 对齐）
+ * - HT-AG-DEMO2：20% 草稿（草稿不计入累计）→ 累计 0
+ */
+export const MOCK_PAYMENT_REQUESTS: PaymentRequest[] = [
+  {
+    id: 'PR-112801', paymentNo: 'FK-20261125-001',
+    contractId: 'HT-AG-DEMO1', contractNo: 'HT-20261128AG1', contractName: '2027 新春自办展招展代理合同—长沙星展',
+    contractType: 'self_host', formation: 'agency_contract', agentId: 'AG-112801',
+    counterpartyName: '长沙星展会展代理有限公司', counterpartyAddress: '长沙市天心区会展大道 88 号',
+    counterpartyContact: '王代理', counterpartyPhone: '0731-86621128',
+    bankName: '中国工商银行长沙会展支行', bankAccountNo: '1901002109201128001',
+    contractAmount: 860000, paidPercent: 30, requestAmount: 258000,
+    invoiceType: 'vat_special', taxRate: 6, expenseDepartment: '招商部', expenseType: '代理费',
+    summary: '2027 新春自办展招展代理（代理费按展位销售分成）',
+    remark: '首期款，招展进度达成 30%',
+    attachments: [], totalAppliedAmount: 258000,
+    status: 'approved', applicant: '测试用户', createTime: '2026-11-25 10:00:00',
+    approver: '财务主管-钱', approveTime: '2026-11-26 14:00:00',
+  },
+  {
+    id: 'PR-112802', paymentNo: 'FK-20261127-002',
+    contractId: 'HT-AG-DEMO1', contractNo: 'HT-20261128AG1', contractName: '2027 新春自办展招展代理合同—长沙星展',
+    contractType: 'self_host', formation: 'agency_contract', agentId: 'AG-112801',
+    counterpartyName: '长沙星展会展代理有限公司', counterpartyAddress: '长沙市天心区会展大道 88 号',
+    counterpartyContact: '王代理', counterpartyPhone: '0731-86621128',
+    bankName: '中国工商银行长沙会展支行', bankAccountNo: '1901002109201128001',
+    contractAmount: 860000, paidPercent: 30, requestAmount: 258000,
+    invoiceType: 'vat_special', taxRate: 6, expenseDepartment: '招商部', expenseType: '代理费',
+    summary: '2027 新春自办展招展代理（代理费按展位销售分成）',
+    remark: '第二期款',
+    attachments: [], totalAppliedAmount: 516000,
+    status: 'pending', applicant: '测试用户', createTime: '2026-11-27 09:30:00',
+  },
+  {
+    id: 'PR-112803', paymentNo: 'FK-20261127-003',
+    contractId: 'HT-AG-DEMO2', contractNo: 'HT-20261128AG2', contractName: '2027 春季合办展招商代理合同—湖南中展',
+    contractType: 'joint_host', formation: 'agency_contract', agentId: 'AG-112802',
+    counterpartyName: '湖南中展招商代理有限公司', counterpartyAddress: '长沙市开福区湘江北路 66 号',
+    counterpartyContact: '李经理', counterpartyPhone: '0731-86621228',
+    bankName: '中国建设银行长沙湘江支行', bankAccountNo: '4300150119201128002',
+    contractAmount: 450000, paidPercent: 20, requestAmount: 90000,
+    invoiceType: 'vat_normal', taxRate: 6, expenseDepartment: '市场部', expenseType: '代理费',
+    summary: '2027 春季合办展招商代理（按招商金额 5% 结算代理费）',
+    remark: '首期预付款（草稿，尚未提交审批）',
+    attachments: [], totalAppliedAmount: 0,
+    status: 'draft', applicant: '测试用户', createTime: '2026-11-27 16:00:00',
   },
 ];
 

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   Boxes, ArrowDownToLine, ArrowUpFromLine, Package, FileText, ChevronRight, Warehouse, RotateCcw, AlertTriangle,
-  ClipboardList, Users, FileCheck, ShoppingCart, CheckSquare, ArrowRightLeft, LayoutGrid, Workflow, Award, GitBranch
+  ClipboardList, Users, FileCheck, ShoppingCart, CheckSquare, ArrowRightLeft, LayoutGrid, Workflow, Award, GitBranch,
+  Banknote, UserCog
 } from 'lucide-react';
 
 interface MenuChild {
@@ -68,9 +69,11 @@ const menuItems: MenuItem[] = [
         { title: '合同履约评估', path: '/procurement/contract-performance' },
         { title: '履约评估记录', path: '/procurement/contract-eval-record' },
       ]},
+      { title: '付款申请', path: '/procurement/payment-request', icon: Banknote },
       { title: '招采订单管理', path: '/procurement/contract-purchase-order' },
       { title: '供应商管理', path: '/procurement/supplier-group', children: [
         { title: '供应商列表', path: '/procurement/supplier' },
+        { title: '代理商管理', path: '/procurement/supplier-agent' },
         { title: '考核评价管理', path: '/procurement/evaluation', icon: Award, children: [
           { title: '考核评价模版管理', path: '/procurement/evaluation-template' },
           { title: '考核评价执行', path: '/procurement/evaluation-execute' },

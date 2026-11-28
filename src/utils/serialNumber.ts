@@ -70,4 +70,6 @@ export const SERIAL_CONFIG = {
   INSPECTION: { prefix: 'YS', includeDay: true, seqLength: 3 },
   // 合同归档：CA + YYYY + 4位（按年分片）
   ARCHIVE: { prefix: 'CA', includeDay: false, seqLength: 4 },
+  // 付款申请：FK + YYYYMMDD + 3位
+  PAYMENT: { prefix: 'FK', includeDay: true, seqLength: 3 },
 } as const;

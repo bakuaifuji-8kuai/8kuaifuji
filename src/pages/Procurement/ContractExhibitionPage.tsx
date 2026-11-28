@@ -7,6 +7,7 @@ import type {
   Bidding,
   ProcurementDemand,
   BiddingProcurementMethod,
+  SupplierAgent,
 } from '@/types';
 import {
   NON_PROCUREMENT_FORMATION_LABELS,
@@ -59,6 +60,7 @@ export default function ContractExhibitionPage() {
   const contractLedgers = useStore((s) => s.contractLedgers);
   const addContractLedger = useStore((s) => s.addContractLedger);
   const updateContractLedger = useStore((s) => s.updateContractLedger);
+  const supplierAgents = useStore((s) => s.supplierAgents);
   const biddings = useStore((s) => s.biddings);
   const procurementDemands = useStore((s) => s.procurementDemands);
   const currentUser = useStore((s) => s.currentUser);
@@ -386,6 +388,7 @@ export default function ContractExhibitionPage() {
           procurementDemands={procurementDemands}
           isEdit={!!editing}
           contractLedgers={contractLedgers}
+          supplierAgents={supplierAgents}
           primaryOptions={primaryOptions}
           currentSupplementCount={currentSupplementCount}
         />
@@ -402,12 +405,17 @@ interface FormProps {
   procurementDemands: ProcurementDemand[];
   isEdit: boolean;
   contractLedgers: ContractLedger[];
+  /** 🆕 代理商档案（形成方式=代理合同时，对方单位从这里下拉选择） */
+  supplierAgents: SupplierAgent[];
   primaryOptions: Array<{ value: string; label: string }>;
   currentSupplementCount: number;
 }
 
-function ContractExhibitionForm({ form, update, biddings, procurementDemands, isEdit, contractLedgers, primaryOptions, currentSupplementCount }: FormProps) {
+function ContractExhibitionForm({ form, update, biddings, procurementDemands, isEdit, contractLedgers, supplierAgents, primaryOptions, currentSupplementCount }: FormProps) {
   const formationOptions = Object.entries(NON_PROCUREMENT_FORMATION_LABELS).map(([v, l]) => ({ value: v, label: l }));
+  // 🆕 代理合同模式：对方单位改为下拉选择代理商（其余形成方式保持手填）
+  const isAgency = form.formation === 'agency_contract';
+  const selectedAgent = supplierAgents.find((a) => a.id === form.supplierId);
   const contractTypeOptions = Object.entries(NON_PROCUREMENT_CONTRACT_TYPE_LABELS)
     .filter(([v]) => v === 'self_host' || v === 'joint_host')
     .map(([v, l]) => ({ value: v, label: l }));
@@ -691,10 +699,47 @@ function ContractExhibitionForm({ form, update, biddings, procurementDemands, is
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>对方单位
             </div>
             <div className="space-y-3">
-              <Input label="单位名称 *" required value={form.counterpartyName || ''}
-                onChange={(e) => update({ counterpartyName: e.target.value })} placeholder="中标供应商全称" />
-              <Input label="负责人" value={form.counterpartyContact || ''}
-                onChange={(e) => update({ counterpartyContact: e.target.value })} placeholder="对方项目负责人" />
+              {isAgency ? (
+                <>
+                  {/* 🆕 代理合同：对方单位 = 代理商档案下拉（合同 supplierId 存代理商档案 ID，付款申请按此带出收款账户） */}
+                  <Select
+                    label="代理商（对方单位） *"
+                    required
+                    options={[
+                      { value: '', label: '-- 请选择代理商 --' },
+                      ...supplierAgents.filter((a) => a.status === 'enabled').map((a) => ({ value: a.id, label: a.name })),
+                    ]}
+                    value={form.supplierId || ''}
+                    onChange={(e) => {
+                      const agent = supplierAgents.find((a) => a.id === e.target.value);
+                      update({
+                        supplierId: e.target.value || undefined,
+                        counterpartyName: agent?.name || '',
+                        counterpartyContact: agent?.contact || '',
+                      });
+                    }}
+                    placeholder="形成方式=代理合同时从代理商档案选择"
+                  />
+                  {!form.supplierId && form.counterpartyName && (
+                    <p className="text-xs text-amber-600">⚠ 当前对方单位为手填值未关联代理商档案，请从下拉选择代理商</p>
+                  )}
+                  {selectedAgent && (
+                    <div className="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-slate-600 space-y-0.5">
+                      <div>联系人：<b className="text-slate-800">{selectedAgent.contact}</b> · 联系电话：<b className="text-slate-800">{selectedAgent.phone}</b></div>
+                      <div>地址：{selectedAgent.address || '-'}</div>
+                      <div>开户行：<b className="text-emerald-700">{selectedAgent.bankName || '-'}</b> · 银行账号：<b className="text-emerald-700">{selectedAgent.bankAccountNo || '-'}</b></div>
+                      <div className="text-slate-400">收款账户信息在付款申请时自动从代理商档案带出</div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Input label="单位名称 *" required value={form.counterpartyName || ''}
+                    onChange={(e) => update({ counterpartyName: e.target.value })} placeholder="中标供应商全称" />
+                  <Input label="负责人" value={form.counterpartyContact || ''}
+                    onChange={(e) => update({ counterpartyContact: e.target.value })} placeholder="对方项目负责人" />
+                </>
+              )}
             </div>
           </div>
         </div>

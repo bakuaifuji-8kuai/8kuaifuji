@@ -60,6 +60,8 @@ import ContractIncomeLedgerPage from "@/pages/Procurement/ContractIncomeLedgerPa
 import ContractProcurementPage from "@/pages/Procurement/ContractProcurementPage";
 import ContractNonProcurementPage from "@/pages/Procurement/ContractNonProcurementPage";
 import ContractExhibitionPage from "@/pages/Procurement/ContractExhibitionPage";
+import PaymentRequestPage from "@/pages/Procurement/PaymentRequestPage";
+import SupplierAgentPage from "@/pages/Procurement/SupplierAgentPage";
 import ContractArchivePage from "@/pages/Procurement/ContractArchivePage";
 import ContractPerformancePage from "@/pages/Procurement/ContractPerformancePage";
 import EvaluationRecordPage from "@/pages/Procurement/EvaluationRecordPage";
@@ -178,6 +180,8 @@ export default function App() {
           <Route path="procurement/contract-eval-record" element={<EvaluationRecordPage defaultType="contract_performance" />} />
           <Route path="procurement/contract-archive" element={<ContractArchivePage />} />
           <Route path="procurement/contract-purchase-order" element={<ContractPurchaseOrderPage />} />
+          <Route path="procurement/payment-request" element={<PaymentRequestPage />} />
+          <Route path="procurement/supplier-agent" element={<SupplierAgentPage />} />
           <Route path="procurement/order" element={<ProcurementOrderPage />} />
           <Route path="procurement/supplier" element={<SupplierPage />} />
           <Route path="procurement/inspection" element={<ProcurementInspectionPage />} />

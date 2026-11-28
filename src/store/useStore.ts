@@ -21,6 +21,8 @@ import type {
   ContractText, ContractTextVersion, TextAnnotation, TextSupplement, Attachment,
   // 履约评估
   EvaluationTemplate, EvaluationRecord, EvaluationIndicator,
+  // 🆕 代理商档案 + 付款申请
+  SupplierAgent, PaymentRequest,
   // 合同提醒设置
   ContractReminderSettings,
   // 非工程类-服务独立类型（B 方案）
@@ -42,6 +44,9 @@ import {
   MOCK_PROCUREMENT_INBOUNDS,
   MOCK_PROCUREMENT_BATCH_INVENTORIES,
   MOCK_PROCUREMENT_STOCK_TXNS,
+  MOCK_SUPPLIER_AGENTS,
+  MOCK_PAYMENT_REQUESTS,
+  MOCK_AGENT_CONTRACTS,
 } from '@/mock/biddingMockData';
 import {
   INSPECTION_DEMO_CONTRACTS,
@@ -386,6 +391,20 @@ interface WarehouseState {
   contractProcurementLedgers: ContractLedger[];
   /** 非招采类合同（contractNature='non_procurement'） */
   contractNonProcurementLedgers: ContractLedger[];
+
+  // 🆕 代理商档案（代理合同的对方单位 + 付款申请收款账户来源）
+  supplierAgents: SupplierAgent[];
+  setSupplierAgents: (data: SupplierAgent[]) => void;
+  addSupplierAgent: (agent: SupplierAgent) => void;
+  updateSupplierAgent: (id: string, data: Partial<SupplierAgent>) => void;
+  deleteSupplierAgent: (id: string) => void;
+
+  // 🆕 付款申请（按合同付款：自办展/合办展 + 代理合同）
+  paymentRequests: PaymentRequest[];
+  setPaymentRequests: (data: PaymentRequest[]) => void;
+  addPaymentRequest: (req: PaymentRequest) => void;
+  updatePaymentRequest: (id: string, data: Partial<PaymentRequest>) => void;
+  deletePaymentRequest: (id: string) => void;
 
   // 合同归档记录（跨台账/归档板块共享）
   contractArchives: ContractArchive[];
@@ -1255,7 +1274,7 @@ export const useStore = create<WarehouseState>()(
   })),
 
   // 合同台账
-  contractLedgers: [...(mockData.contractLedgers || []), ...MOCK_CONTRACT_LEDGERS, ...INSPECTION_DEMO_CONTRACTS, ...SUPPLEMENT_DEMO_DATA.contractLedgers],
+  contractLedgers: [...(mockData.contractLedgers || []), ...MOCK_CONTRACT_LEDGERS, ...INSPECTION_DEMO_CONTRACTS, ...SUPPLEMENT_DEMO_DATA.contractLedgers, ...MOCK_AGENT_CONTRACTS],
   contractArchives: [...SUPPLEMENT_DEMO_DATA.contractArchives], // 合同归档记录（含 v11 补充演示单，用户提交的归档单继续追加）
   setContractLedgers: (data) => set({ contractLedgers: data }),
   addContractLedger: (ledger) => set((state) => ({
@@ -1287,6 +1306,32 @@ export const useStore = create<WarehouseState>()(
   }),
   deleteContractLedger: (id) => set((state) => ({
     contractLedgers: state.contractLedgers.filter((l) => l.id !== id)
+  })),
+
+  // 🆕 代理商档案
+  supplierAgents: MOCK_SUPPLIER_AGENTS,
+  setSupplierAgents: (data) => set({ supplierAgents: data }),
+  addSupplierAgent: (agent) => set((state) => ({
+    supplierAgents: [...state.supplierAgents, agent],
+  })),
+  updateSupplierAgent: (id, data) => set((state) => ({
+    supplierAgents: state.supplierAgents.map((a) => (a.id === id ? { ...a, ...data } : a)),
+  })),
+  deleteSupplierAgent: (id) => set((state) => ({
+    supplierAgents: state.supplierAgents.filter((a) => a.id !== id),
+  })),
+
+  // 🆕 付款申请
+  paymentRequests: MOCK_PAYMENT_REQUESTS,
+  setPaymentRequests: (data) => set({ paymentRequests: data }),
+  addPaymentRequest: (req) => set((state) => ({
+    paymentRequests: [...state.paymentRequests, req],
+  })),
+  updatePaymentRequest: (id, data) => set((state) => ({
+    paymentRequests: state.paymentRequests.map((r) => (r.id === id ? { ...r, ...data } : r)),
+  })),
+  deletePaymentRequest: (id) => set((state) => ({
+    paymentRequests: state.paymentRequests.filter((r) => r.id !== id),
   })),
   // contractNature 过滤快捷方法（每次调用从 state.contractLedgers 实时 filter）
   // 注意：必须用 creator 注入的 get()，不能引用 useStore.getState()——persist 默认 merge 在
@@ -1650,8 +1695,20 @@ export const useStore = create<WarehouseState>()(
       onRehydrateStorage: () => (state) => {
         console.log('[Zustand] store restored from localStorage:', state ? 'ok' : 'empty');
       },
-      version: 29,
+      version: 30,
       migrate: (persistedState: any, version: number) => {
+        if (version < 30) {
+          // v29→v30：🆕 付款申请 + 代理商档案新模块 —— 注入测试数据（代理商→代理合同→付款申请链路完整）
+          persistedState.supplierAgents = MOCK_SUPPLIER_AGENTS;
+          persistedState.paymentRequests = MOCK_PAYMENT_REQUESTS;
+          // 代理合同 mock 注入（老用户 localStorage 里的合同台账不含新增的 2 条代理合同，按 id 排重后拼接）
+          persistedState.contractLedgers = [
+            ...((persistedState.contractLedgers as any[]) || []).filter(
+              (c) => !MOCK_AGENT_CONTRACTS.some((m) => m.id === c.id),
+            ),
+            ...MOCK_AGENT_CONTRACTS,
+          ];
+        }
         if (version < 29) {
           // v28→v29：刷新 1125 测试数据（需求明细×多中标记录→按记录签约、3份合同、3家供应商档案），旧缓存数据整体废弃
           return undefined as any;
