@@ -2434,20 +2434,11 @@ export const PAYMENT_REQUEST_STATUS_LABELS: Record<PaymentRequestStatus, string>
   rejected: '已驳回',
 };
 
-/** 发票类型 */
-export const INVOICE_TYPE_LABELS: Record<string, string> = {
-  vat_special: '增值税专用发票',
-  vat_normal: '增值税普通发票',
-  no_invoice: '不开票',
-};
-
 /** 付款申请附件分类 */
-export type PaymentAttachmentType = 'contract_scan' | 'invoice_scan' | 'other';
+export type PaymentAttachmentType = 'payment_material';
 
 export const PAYMENT_ATTACHMENT_TYPE_LABELS: Record<PaymentAttachmentType, string> = {
-  contract_scan: '合同扫描件',
-  invoice_scan: '发票扫描件',
-  other: '其他附件',
+  payment_material: '付款说明材料',
 };
 
 /** 付款申请附件条目（分类 + 文件，文件复用项目 Attachment idb 存储体系） */
@@ -2479,13 +2470,11 @@ export interface PaymentRequest {
   contractAmount: number;         // 合同金额（元）
   paidPercent: number;            // 本次付款比例（%，按合同金额）
   requestAmount: number;          // 本次申请付款 = 合同金额 × 比例（元，自动计算）
-  invoiceType?: string;           // 发票类型（INVOICE_TYPE_LABELS）
-  taxRate?: number;               // 税率（%）
   expenseDepartment?: string;     // 支出部门
   expenseType?: string;           // 费用类型
   summary?: string;               // 合同摘要
   remark?: string;                // 备注
-  attachments?: PaymentAttachment[]; // 附件（合同扫描件/发票扫描件/其他）
+  attachments?: PaymentAttachment[]; // 付款说明材料（合同付款条款/进度确认单/结算单等）
   totalAppliedAmount?: number;    // 累计申请付款（保存时自动聚合该合同全部已提交申请，含本笔）
   status: PaymentRequestStatus;
   applicant?: string;

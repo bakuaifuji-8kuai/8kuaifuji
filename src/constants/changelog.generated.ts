@@ -1,8 +1,19 @@
 // ⚠️ 此文件由 scripts/gen-changelog.cjs 构建时自动生成（数据源：git log），请勿手改
-// 生成时间：2026-11-28 12:54 · 统计范围：2026-10-12 起 · git 解析成功
+// 生成时间：2026-11-28 13:34 · 统计范围：2026-10-12 起 · git 解析成功
 import type { ChangeDay } from './changelog';
 
 export const AUTO_CHANGELOG: ChangeDay[] = [
+  {
+    "date": "2026-11-28",
+    "entries": [
+      {
+        "type": "feat",
+        "scope": "合同",
+        "title": "付款申请模块+代理商档案 — 代理合同形成方式、按合同比例付款、收款账户自动带出",
+        "commit": "8317a87"
+      }
+    ]
+  },
   {
     "date": "2026-11-27",
     "entries": [
@@ -911,14 +922,12 @@ export const AUTO_CHANGELOG: ChangeDay[] = [
   }
 ];
 
-export const AUTO_GENERATED_AT = '2026-11-28 12:54';
+export const AUTO_GENERATED_AT = '2026-11-28 13:34';
 
 // 功能说明防过期护栏：构建时检测「最近触碰页面代码的功能提交」是否晚于 procurementHelp.ts 最后更新
 export const HELP_STALE = {
-  "stale": true,
-  "count": 1,
-  "commits": [
-    "2026-11-27 定标口径到合同全链路 — 每家中标供应商独立单价+是否含税开关定税率，合同自动带口径免勾明细"
-  ],
-  "helpDate": "2026-11-26"
+  "stale": false,
+  "count": 0,
+  "commits": [],
+  "helpDate": "2026-11-28"
 };

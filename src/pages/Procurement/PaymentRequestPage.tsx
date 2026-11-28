@@ -22,7 +22,6 @@ import type {
 } from '@/types';
 import {
   PAYMENT_REQUEST_STATUS_LABELS,
-  INVOICE_TYPE_LABELS,
   PAYMENT_ATTACHMENT_TYPE_LABELS,
   NON_PROCUREMENT_FORMATION_LABELS,
   NON_PROCUREMENT_CONTRACT_TYPE_LABELS,
@@ -83,12 +82,12 @@ export default function PaymentRequestPage() {
   // ========== 搜索筛选（字段尽量多：应用式） ==========
   const [f, setF] = useState({
     paymentNo: '', contractKw: '', contractType: '', agentKw: '',
-    expenseDepartment: '', invoiceType: '', status: '',
+    expenseDepartment: '', status: '',
     dateFrom: '', dateTo: '', amountMin: '', amountMax: '',
   });
   const [applied, setApplied] = useState<typeof f>({
     paymentNo: '', contractKw: '', contractType: '', agentKw: '',
-    expenseDepartment: '', invoiceType: '', status: '',
+    expenseDepartment: '', status: '',
     dateFrom: '', dateTo: '', amountMin: '', amountMax: '',
   });
 
@@ -105,7 +104,6 @@ export default function PaymentRequestPage() {
         if (applied.contractType && r.contractType !== applied.contractType) return false;
         if (applied.agentKw && !(r.counterpartyName || '').includes(applied.agentKw)) return false;
         if (applied.expenseDepartment && r.expenseDepartment !== applied.expenseDepartment) return false;
-        if (applied.invoiceType && r.invoiceType !== applied.invoiceType) return false;
         if (applied.status && r.status !== applied.status) return false;
         const ct = (r.createTime || '').slice(0, 10);
         if (applied.dateFrom && ct < applied.dateFrom) return false;
@@ -121,7 +119,6 @@ export default function PaymentRequestPage() {
   const [editing, setEditing] = useState<PaymentRequest | null>(null);
   const [form, setForm] = useState<Partial<PaymentRequest>>({});
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const uploadTypeRef = useRef<PaymentAttachmentType>('contract_scan');
 
   const update = (patch: Partial<PaymentRequest>) => setForm((p) => ({ ...p, ...patch }));
 
@@ -138,7 +135,7 @@ export default function PaymentRequestPage() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ invoiceType: 'vat_special', taxRate: 6, paidPercent: undefined });
+    setForm({ paidPercent: undefined });
     setModalOpen(true);
   };
 
@@ -186,13 +183,13 @@ export default function PaymentRequestPage() {
     update({ paidPercent: percent, requestAmount: amount });
   };
 
-  // ========== 附件上传（分类：合同扫描件/发票扫描件/其他附件） ==========
+  // ========== 付款说明材料上传（附件字段） ==========
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>, type: PaymentAttachmentType) => {
     const files = e.target.files;
     if (!files) return;
-    const cur = (form.attachments || []).filter((a) => a.type === type);
+    const cur = form.attachments || [];
     if (cur.length + files.length > 5) {
-      alert('每类附件最多上传 5 个文件！');
+      alert('付款说明材料最多上传 5 个文件！');
       return;
     }
     const added: PaymentAttachment[] = Array.from(files).map((file) => ({
@@ -225,8 +222,8 @@ export default function PaymentRequestPage() {
       alert(`累计申请比例超限：该合同已提交申请合计 ${totals.percent}%，本次 ${form.paidPercent}%，合计超过 100%！`);
       return;
     }
-    if (submit && (form.attachments || []).filter((a) => a.type === 'invoice_scan').length === 0) {
-      if (!confirm('提交审批前建议上传发票扫描件，确定不带发票扫描件直接提交吗？')) return;
+    if (submit && (form.attachments || []).length === 0) {
+      if (!confirm('提交审批前建议上传付款说明材料（付款条件、进度确认单等），确定不上传直接提交吗？')) return;
     }
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const totalsWithThis = totals.amount + (form.requestAmount || 0);
@@ -325,8 +322,6 @@ export default function PaymentRequestPage() {
     { key: 'paidPercent', title: '付款比例', width: '80px', align: 'right', render: (r) => (r.paidPercent != null ? `${r.paidPercent}%` : '-') },
     { key: 'requestAmount', title: '本次申请付款', width: '120px', align: 'right', render: (r) => <span className="font-semibold text-indigo-600">{fmt(r.requestAmount)}</span> },
     { key: 'totalAppliedAmount', title: '累计申请付款', width: '120px', align: 'right', render: (r) => fmt(r.totalAppliedAmount) },
-    { key: 'invoiceType', title: '发票类型', width: '110px', render: (r) => (r.invoiceType ? INVOICE_TYPE_LABELS[r.invoiceType] || r.invoiceType : '-') },
-    { key: 'taxRate', title: '税率', width: '60px', align: 'right', render: (r) => (r.taxRate != null ? `${r.taxRate}%` : '-') },
     { key: 'expenseDepartment', title: '支出部门', width: '90px' },
     { key: 'applicant', title: '申请人', width: '90px' },
     { key: 'createTime', title: '申请时间', width: '160px' },
@@ -373,7 +368,7 @@ export default function PaymentRequestPage() {
         <SearchBar
           onSearch={() => setApplied({ ...f })}
           onReset={() => {
-            const empty = { paymentNo: '', contractKw: '', contractType: '', agentKw: '', expenseDepartment: '', invoiceType: '', status: '', dateFrom: '', dateTo: '', amountMin: '', amountMax: '' };
+            const empty = { paymentNo: '', contractKw: '', contractType: '', agentKw: '', expenseDepartment: '', status: '', dateFrom: '', dateTo: '', amountMin: '', amountMax: '' };
             setF(empty); setApplied(empty);
           }}
         >
@@ -390,10 +385,6 @@ export default function PaymentRequestPage() {
           <SearchField
             label="支出部门" type="select" value={f.expenseDepartment} onChange={(v) => setF({ ...f, expenseDepartment: v })}
             options={EXPENSE_DEPARTMENTS.map((d) => ({ value: d, label: d }))}
-          />
-          <SearchField
-            label="发票类型" type="select" value={f.invoiceType} onChange={(v) => setF({ ...f, invoiceType: v })}
-            options={Object.entries(INVOICE_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
           />
           <SearchField
             label="状态" type="select" value={f.status} onChange={(v) => setF({ ...f, status: v })}
@@ -504,29 +495,6 @@ export default function PaymentRequestPage() {
                 </div>
               </div>
               <Select
-                label="发票类型"
-                value={form.invoiceType || ''}
-                onChange={(e) => update({ invoiceType: e.target.value || undefined })}
-                disabled={isDetail}
-                options={[
-                  { value: '', label: '请选择' },
-                  ...Object.entries(INVOICE_TYPE_LABELS).map(([value, label]) => ({ value, label })),
-                ]}
-              />
-              <div className="space-y-1">
-                <label className="block text-sm font-medium text-slate-700">税率（%）</label>
-                <div className="relative">
-                  <input
-                    type="number" min="0" max="100" step="0.01"
-                    disabled={isDetail}
-                    value={form.taxRate ?? ''}
-                    onChange={(e) => update({ taxRate: e.target.value === '' ? undefined : Number(e.target.value) })}
-                    className="w-full h-9 px-3 pr-7 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">%</span>
-                </div>
-              </div>
-              <Select
                 label="支出部门"
                 value={form.expenseDepartment || ''}
                 onChange={(e) => update({ expenseDepartment: e.target.value || undefined })}
@@ -537,6 +505,12 @@ export default function PaymentRequestPage() {
                 ]}
               />
               <Input label="费用类型" value={form.expenseType || ''} onChange={(e) => update({ expenseType: e.target.value })} disabled={isDetail} placeholder="如：代理费" />
+              <div>
+                <label className="block text-sm font-medium text-slate-700">付款说明材料</label>
+                <div className="h-9 px-3 flex items-center border border-slate-200 rounded-lg bg-slate-50 text-xs text-slate-500">
+                  在下方附件区上传（合同扫描件、进度确认单、结算单等）
+                </div>
+              </div>
               <div className="col-span-3">
                 <label className="block text-sm font-medium text-slate-700 mb-1">备注</label>
                 <textarea
@@ -550,10 +524,10 @@ export default function PaymentRequestPage() {
             </div>
           </div>
 
-          {/* ===== 四、附件（分类上传，参考截图：附件类型/附件/操作） ===== */}
+          {/* ===== 三、付款说明材料（附件上传） ===== */}
           <div>
             <div className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>三、附件
+              <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>三、付款说明材料
             </div>
             <div className="rounded-lg border border-slate-200 overflow-hidden">
               <table className="w-full text-sm">
@@ -565,52 +539,47 @@ export default function PaymentRequestPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(['contract_scan', 'invoice_scan', 'other'] as PaymentAttachmentType[]).map((t) => {
-                    const list = (form.attachments || []).filter((a) => a.type === t);
-                    return (
-                      <tr key={t} className="border-t border-slate-100">
-                        <td className="px-3 py-2 font-medium text-slate-700">{PAYMENT_ATTACHMENT_TYPE_LABELS[t]}</td>
-                        <td className="px-3 py-2">
-                          {list.length === 0 ? (
-                            <span className="text-slate-400">-</span>
-                          ) : (
-                            <div className="flex flex-wrap gap-2">
-                              {list.map((a) => (
-                                <span key={a.file.id} className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-indigo-50 border border-indigo-100 text-xs text-indigo-700">
-                                  📄 {a.file.fileName}（{fmtSize(a.file.fileSize)}）
-                                  {!isDetail && (
-                                    <button onClick={() => removeAttachment(a.file.id)} className="text-red-400 hover:text-red-600">✕</button>
-                                  )}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          {!isDetail && (
-                            <>
-                              <button
-                                onClick={() => { uploadTypeRef.current = t; fileRef.current?.click(); }}
-                                className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
-                              >
-                                ⬆ 上传
-                              </button>
-                              <input
-                                ref={fileRef} type="file" multiple className="hidden"
-                                onChange={(e) => handleUpload(e, uploadTypeRef.current)}
-                              />
-                            </>
-                          )}
-                          {isDetail && <span className="text-slate-300 text-xs">只读</span>}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  <tr className="border-t border-slate-100">
+                    <td className="px-3 py-2 font-medium text-slate-700">{PAYMENT_ATTACHMENT_TYPE_LABELS.payment_material}</td>
+                    <td className="px-3 py-2">
+                      {(form.attachments || []).length === 0 ? (
+                        <span className="text-slate-400">-</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {(form.attachments || []).map((a) => (
+                            <span key={a.file.id} className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-indigo-50 border border-indigo-100 text-xs text-indigo-700">
+                              📄 {a.file.fileName}（{fmtSize(a.file.fileSize)}）
+                              {!isDetail && (
+                                <button onClick={() => removeAttachment(a.file.id)} className="text-red-400 hover:text-red-600">✕</button>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {!isDetail && (
+                        <>
+                          <button
+                            onClick={() => fileRef.current?.click()}
+                            className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                          >
+                            ⬆ 上传
+                          </button>
+                          <input
+                            ref={fileRef} type="file" multiple className="hidden"
+                            onChange={(e) => handleUpload(e, 'payment_material')}
+                          />
+                        </>
+                      )}
+                      {isDetail && <span className="text-slate-300 text-xs">只读</span>}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
             <div className="mt-1.5 text-xs text-slate-400">
-              每类附件最多 5 个；提交审批前建议上传发票扫描件；文件保存在浏览器本地（演示原型）
+              付款说明材料：合同付款条款扫描件、进度确认单、结算单、验收资料等证明材料，最多 5 个；文件保存在浏览器本地（演示原型）
             </div>
           </div>
 

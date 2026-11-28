@@ -730,8 +730,8 @@ export const PROCUREMENT_HELP: Record<string, HelpContent> = {
       ]},
     ],
     operations: [
-      { name: '新增付款申请', condition: '顶部，随时可点', detail: '选代理合同 → 自动带出合同信息/对方单位/收款账户 → 填付款比例% → 发票类型/税率/支出部门/备注 → 附件分类上传（合同扫描件/发票扫描件/其他）', impact: '保存草稿可反复改；提交审批后锁定' },
-      { name: '搜索/重置', condition: '筛选区（11 个条件）', detail: '付款编号、合同、合同类型、对方单位、支出部门、发票类型、状态、申请日期区间、金额区间', impact: '只过滤显示' },
+      { name: '新增付款申请', condition: '顶部，随时可点', detail: '选代理合同 → 自动带出合同信息/对方单位/收款账户 → 填付款比例% → 支出部门/费用类型/备注 → 上传付款说明材料（合同付款条款、进度确认单、结算单等）', impact: '保存草稿可反复改；提交审批后锁定' },
+      { name: '搜索/重置', condition: '筛选区（10 个条件）', detail: '付款编号、合同、合同类型、对方单位、支出部门、状态、申请日期区间、金额区间', impact: '只过滤显示' },
       { name: '提交（草稿行）', condition: '草稿状态行内', detail: '校验累计比例≤100% 后进入待审批', impact: '提交后不可编辑，等待审批' },
       { name: '通过 / 驳回（待审批行）', condition: '待审批状态行内', detail: '弹窗确认并填审批意见（驳回必填）', impact: '通过→已通过；驳回→已驳回（可删除后重新起草）' },
       { name: '详情（行内）', condition: '每行', detail: '只读查看全部字段、收款账户、附件与审批记录', impact: '纯查看' },
@@ -740,7 +740,7 @@ export const PROCUREMENT_HELP: Record<string, HelpContent> = {
       { name: '付款申请编号', meaning: 'FK+YYYYMMDD+3位序号', logic: '自动生成', relation: '-' },
       { name: '本次付款比例', meaning: '按合同金额的百分比', logic: '本次申请付款 = 合同金额 × 比例%，累计不超 100%', relation: '合同金额' },
       { name: '对方单位/收款账户', meaning: '代理商名称与开户行、银行账号', logic: '选合同后自动从代理商档案带出，留存快照', relation: '代理商档案' },
-      { name: '附件', meaning: '合同扫描件/发票扫描件/其他附件', logic: '按分类上传，每类最多 5 个，保存在浏览器本地', relation: '-' },
+      { name: '付款说明材料', meaning: '付款依据的证明材料附件', logic: '合同付款条款扫描件、进度确认单、结算单、验收资料等，最多 5 个，保存在浏览器本地', relation: '-' },
     ],
     related: {
       upstream: ['代理商档案', '自办展与合办展合同（代理合同）'],
